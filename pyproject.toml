@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "moos"
+version = "0.1.0"
+description = "model-oriented operation system"
+authors = ["thirdgerb <thirdgerb@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.7.0"
+pytest = "^8.1.1"
+openai = "^1.19.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
