@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import inspect
 
 
-class PromptAbleClass(ABC):
+class PromptAbleType(ABC):
     """
     any class that prompt-able for llm
     """
@@ -14,21 +14,19 @@ class PromptAbleClass(ABC):
         pass
 
 
-class PromptAbleIns(ABC):
-
-    @classmethod
-    @abstractmethod
-    def prompt_class(cls) -> Type[PromptAbleClass]:
-        pass
+class PromptAbleObject(ABC):
 
     @abstractmethod
     def instance_prompt(self) -> str:
+        """
+        additional prompt of the object
+        """
         pass
 
 
-def class_source_prompt(cls: Any) -> str:
+def get_prompt_by_source(cls: Any) -> str:
     """
     use source code as prompt
     """
-    # todo: if is interface of a class, will raise TypeError. 合理否?
+    # todo: 随便乱写的, 需要根据实际使用情况修改.
     return inspect.getsource(cls)

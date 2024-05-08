@@ -14,6 +14,13 @@ class Variable(BaseModel):
     data: Any = Field(default=None, description="data of the variable")
 
 
+class PythonOS(ABC):
+
+    @abstractmethod
+    def import_module(self, name: str) -> None:
+        pass
+
+
 class PythonContext(ABC):
     """
     the context of the python runtime for llm-based agent
@@ -23,28 +30,22 @@ class PythonContext(ABC):
     """
 
     @abstractmethod
-    def python_runtime_codes(self) -> str:
+    def runtime_codes(self) -> str:
         """
         生成 python runtime 依赖的代码, 会输出到代码的上文里.
         """
         pass
 
     @abstractmethod
-    def python_runtime_vars(self) -> Dict[str, Any]:
+    def runtime_vars(self) -> Dict[str, Any]:
         """
         输出 python runtime 可以调用的上下文变量.
         可能用 exec 去执行代码.
         """
         pass
 
-    @property
     @abstractmethod
-    def imported(self) -> Iterator[str]:
-        """
-        packages that should be imported
-
-        python runtime 运行时会动态引入这些包.
-        """
+    def os(self) -> PythonOS:
         pass
 
 

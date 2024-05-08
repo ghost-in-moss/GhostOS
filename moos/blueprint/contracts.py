@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 
 INSTRUCTION = """
 系统里必须依赖的底层模块. 比如 Cache 之类的? 
+考虑放到一个独立的文件夹里?
 """
 
 

@@ -12,23 +12,28 @@ Contract = TypeVar('Contract', bound=object)
 
 class Container:
     """
-    一个简单的容器, 用来存放一些有隔离级别的单例.
+    一个简单的 IoC 容器.
+    IOC Container: 用来解耦各种 interface 和实现.
 
-    Python 没有比较方便的 IOC, 用来解耦各种与架构设计无关的 interface 获取.
-    所以自己做了一个极简的方式, 方便各种工具封装成 Provider, 在工程里解耦使用.
+    # dev logs:
+    - python 没有好用的 container (或者我没发现), 所以自己先简单封装一个.
+    - 对于 MoOS 而言, Container 也是必要的. 这样可以只把 interface 暴露给 LLM, 但又可以让它使用实例.
+    - 仍然需要考虑加入 RAG Memories 来支持. 获取做到 OS 层.
     """
 
     def __init__(self, parent: Container | None = None):
+        # container extended by children container
         if parent is not None:
             if not isinstance(parent, Container):
                 raise AttributeError("container can only initialized with parent Container")
             if parent is self:
                 raise AttributeError("container's parent must not be itself")
         self.parent = parent
+        # global singletons.
         self.__instances: Dict[Type[Contract], Contract] = {}
+        # providers bounds
         self.__providers: Dict[Type[Contract], Provider] = {}
         self.__bound: Set = set()
-        self.__meta_repo_contracts: Set = set()
 
     def set(self, contract: Type[Contract], instance: Contract) -> None:
         """
@@ -39,21 +44,28 @@ class Container:
 
     def _bind_contract(self, contract: Type[Contract]) -> None:
         self.__bound.add(contract)
-        if self.parent is None and isinstance(contract, type(object)):
-            self.__meta_repo_contracts.add(contract)
 
     def bound(self, contract: Type[Contract]) -> bool:
+        """
+        return whether contract is bound.
+        """
         return contract in self.__bound or (self.parent is not None and self.parent.bound(contract))
 
     def get(self, contract: Type[Contract], params: Dict | None = None) -> Contract | None:
         """
-        获取一个实例.
+        get bound instance or initialize one of the contract
+
+        # dev logs:
+
+        - params 感觉不需要.
         """
+
+        # get bound instance
         got = self.__instances.get(contract, None)
         if got is not None:
             return got
 
-        #  第二高优先级.
+        # use provider as factory to initialize instance of the contract
         if contract in self.__providers:
             provider = self.__providers[contract]
             made = provider.factory(self, params)
@@ -67,6 +79,9 @@ class Container:
         return None
 
     def register(self, provider: Provider) -> None:
+        """
+        register factory of the contract by provider
+        """
         contract = provider.contract()
         self._bind_contract(contract)
         if contract in self.__instances:
@@ -74,6 +89,9 @@ class Container:
         self.__providers[contract] = provider
 
     def fetch(self, contract: Type[Contract], strict: bool = False) -> Contract | None:
+        """
+        get contract with type check
+        """
         instance = self.get(contract)
         if instance is not None:
             if strict and not isinstance(instance, contract):
@@ -82,35 +100,52 @@ class Container:
         return None
 
     def force_fetch(self, contract: Type[Contract], strict: bool = False) -> Contract:
+        """
+        if fetch contract failed, raise error.
+        """
         ins = self.fetch(contract, strict)
         if ins is None:
-            raise Exception(f"contract {contract} not register in container")
+            raise NotImplemented(f"contract {contract} not register in container")
         return ins
 
     def destroy(self) -> None:
+        """
+        Manually delete the container to prevent memory leaks.
+        """
         del self.__instances
         del self.parent
         del self.__providers
         del self.__bound
-        del self.__meta_repo_contracts
 
 
 class Provider(metaclass=ABCMeta):
 
     @abstractmethod
     def singleton(self) -> bool:
+        """
+        if singleton, return True.
+        """
         pass
 
     @abstractmethod
     def contract(self) -> Type[Contract]:
+        """
+        contract for this provider.
+        """
         pass
 
     @abstractmethod
     def factory(self, con: Container, params: Dict | None = None) -> Contract | None:
+        """
+        factory method to generate an instance of the contract.
+        """
         pass
 
 
-class AbsProvider(Provider):
+class ProviderAdapter(Provider):
+    """
+    create a provider without class.
+    """
 
     def __init__(
             self,

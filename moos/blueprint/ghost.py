@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import List, Dict, Iterator, ClassVar, TYPE_CHECKING, Type
 from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field
 
 from .kernel import Kernel, Operator
+from .messages import Messenger
 
 INSTRUCTION = """
 ghost 应该是系统使用者看到的对象. 
@@ -38,7 +40,7 @@ class Ghost(ABC):
     @abstractmethod
     def mindset(self) -> Mindset:
         """
-        思维状态.
+        思维集合.
         """
         pass
 
@@ -90,19 +92,16 @@ class Event(ABC):
     pass
 
 
-class Messenger(ABC):
-    """
-    消息的传递模块.
-    需要支持各种消息的传递方式. 常见的有:
-    1. 同步整体返回
-    2. 同步流式 (多模态, 可扩展) 返回.
-    """
-
+# ---- 会话管理.
 
 class Session(ABC):
     """
     Ghost 的会话构建.
     """
+
+    @abstractmethod
+    def shells(self) -> Dict[str, Shell]:
+        pass
 
 
 class Shell(ABC):
@@ -111,6 +110,11 @@ class Shell(ABC):
     提供 API 操作自己的 Shell.
     一个有状态的 Ghost 可以同时存在于多个 Shell.
     """
+
+    @property
+    @abstractmethod
+    def id(self) -> str:
+        pass
 
 
 # ---- bot 的思维空间.
@@ -125,7 +129,7 @@ class Mindset(ABC):
 
     @property
     @abstractmethod
-    def knowledge(self) -> Knowledge:
+    def knowledge_base(self) -> KnowledgeBase:
         pass
 
     @property
@@ -144,12 +148,123 @@ class Thought(ABC):
         pass
 
 
-class Knowledge(ABC):
+# knowledge
+
+class KnowledgeIndex(BaseModel):
+    id: str
+    tags: List[str]
+
+
+class Knowledge(ABC, BaseModel):
+    """
+    知识的原型结构.
+    用 pydantic base model 的形式存储, 因此有它的 schema.
+    数据结构就用 dict 了.
+    而 type 就是 Knowledge 的类名好了.
+    """
+
+    @abstractmethod
+    def id(self) -> str:
+        """
+        每个 knowledge 都需要有一个唯一的 id, 用来做存储和读取的主键.
+        """
+        pass
+
+    @abstractmethod
+    def desc(self) -> str:
+        """
+        对知识的基础描述,
+        """
+        pass
+
+    # @abstractmethod
+    # def tags(self) -> Dict[str, str]:
+    #     """
+    #     知识存储时用的索引 tag
+    #     tag name => tag description
+    #     用来描述 tag indexes 的 key
+    #     """
+    #     pass
+    #
+    # @abstractmethod
+    # def tag_indexes(self) -> Dict[str, str]:
+    #     """
+    #     knowledge 的索引使用这种结构:
+    #     tag => nature language value
+    #     存储时根据 tag 生成相应的 rag index
+    #     搜索时, 根据 tag 做多路搜索?
+    #     感觉没想明白.
+    #     """
+    #     pass
+
+
+class KnowledgeDriver(ABC):
+
+    @abstractmethod
+    def match(self, typ: Type[Knowledge]) -> bool:
+        pass
+
+    @abstractmethod
+    def search(self, desc: str, limit: int, offset: int = 0) -> Iterator[Knowledge]:
+        pass
+
+    @abstractmethod
+    def retrieve(self, knowledge_id: str) -> Knowledge:
+        pass
+
+    @abstractmethod
+    def save(self, knowledge: Knowledge) -> None:
+        pass
+
+
+class KnowledgeBase(ABC):
     """
     Ghost 的知识. 要有一种允许开发者给 Ghost 提供知识的方式.
-    """
-    pass
 
+    # dev logs:
+
+    - 如何给知识定义一个超级通用的抽象, 真是难啊.
+    - 先简单设计一下
+    """
+
+    @abstractmethod
+    def register(self, driver: KnowledgeDriver):
+        """
+        注册一个知识驱动器.
+        """
+        pass
+
+    @abstractmethod
+    def drivers(self) -> Iterator[KnowledgeDriver]:
+        pass
+
+    @abstractmethod
+    def retrieve(self, typ: Type[Knowledge], knowledge_id: str) -> Knowledge | None:
+        pass
+
+    @abstractmethod
+    def save(self, knowledge: Knowledge) -> None:
+        pass
+
+    @abstractmethod
+    def search(
+            self,
+            typ: Type[Knowledge],
+            desc: str,
+            limit: int = 5,
+            condition: str | None = None,
+            offset: int = 0,
+    ) -> Iterator[Knowledge]:
+        """
+        搜索的基本原理:
+        1. 条件粗筛
+        2. 精筛
+
+        """
+        pass
+
+
+# ---- bot 的 memory
 
 class Memory(ABC):
     """
