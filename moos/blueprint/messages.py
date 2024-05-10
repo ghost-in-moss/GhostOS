@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from abc import ABC, abstractmethod
-from typing import List, Dict, Iterator, Optional, Tuple
+from typing import List, Dict, Iterator, Optional, Tuple, ClassVar
 from pydantic import BaseModel, Field
 
 
@@ -46,55 +46,80 @@ class Level(str, enum.Enum):
     CRITICAL = "critical"
 
 
+class Role(str, enum.Enum):
+    """
+    Role of who send this message
+    """
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    FUNCTION = "function"
+
+
+class Kind(str, enum.Enum):
+    TEXT = "text"
+    PYTHON = "python"
+
+
 class Header(BaseModel):
     """
     message header
     """
 
     trace: str = Field(default="", description="Message trace")
-    id: str = Field(default="", description="Message id")
-    reply_to: str = Field(default="", description="Message reply to")
     thread_id: str = Field(description="Message thread id")
-    role: str = Field(description="Message role")
-    name: str = Field(description="Message sender name")
     kind: str = Field(description="Message kind")
-    level: str = Field(default=Level.INFO, description="Message level")
-
-
-class Body(BaseModel):
-    content: str = Field(description="Message content")
-    memory: str = Field(default="", description="Message memory")
-    payload: Optional[Dict[str, Dict]] = Field(default=None, description="Message payload")
-
-    def buff(self, package: Package) -> None:
-        if package.update:
-            # 执行 update.
-            self.update(package)
-            return
-
-        if package.content:
-            self.content = self.content + package.content
-        if package.memory:
-            self.memory = package.memory
-        if package.payload is not None:
-            self.payload = package.payload
-
-    def update(self, package: Package) -> None:
-        self.content = package.content
-        self.memory = package.memory
-        self.payload = package.payload
 
 
 class Message(BaseModel):
-    header: Header = Field(description="Message header")
-    body: Body = Field(default_factory=Body, description="Message body")
+    kind: str = Field(default=Kind.TEXT, description="Message kind")
+    role: str = Field(description="Message role")
+    name: str = Field(description="Message sender name")
+    level: Optional[str] = Field(default=Level.INFO, description="Message level")
+    done: bool = Field(default=True, description="if is streaming, done means it is last package")
+    content: str = Field(default="", description="Message content")
+    memory: str = Field(default="", description="Message as memory to the llm")
+    additions: Optional[Dict[str, Dict]] = Field(default_factory=dict, description="Message additional information")
+
+    # def buff(self, package: Package) -> None:
+    #     if package.update:
+    #         # 执行 update.
+    #         self.update(package)
+    #         return
+    #
+    #     if package.content:
+    #         self.content = self.content + package.content
+    #     if package.memory:
+    #         self.memory = package.memory
+    #     if package.payload is not None:
+    #         self.payload = package.payload
+    #
+    # def update(self, package: Package) -> None:
+    #     self.content = package.content
+    #     self.memory = package.memory
+    #     self.payload = package.payload
+
+
+class Addition(ABC, BaseModel):
+    key: ClassVar[str] = ""
 
     @classmethod
-    def from_package(cls, package: Package) -> Message | None:
-        if package.head:
-            return cls(header=package.payload,
-                       body=Body(content=package.content, memory=package.memory, payload=package.payload))
+    def from_msg(cls, msg: Message) -> Optional[Addition]:
+        if cls.key in msg.additional:
+            return cls(**msg.additional[cls.key])
         return None
+
+
+# class Message(BaseModel):
+#     header: Header = Field(description="Message header")
+#     body: Body = Field(default_factory=Body, description="Message body")
+#
+#     @classmethod
+#     def from_package(cls, package: Package) -> Message | None:
+#         if package.head:
+#             return cls(header=package.payload,
+#                        body=Body(content=package.content, memory=package.memory, payload=package.payload))
+#         return None
 
 
 class MessagesBuffer:

@@ -21,7 +21,7 @@ class Imported:
         pass
 
 
-class ImportedTree:
+class ExportedTrie:
     pass
 
 
@@ -41,5 +41,5 @@ def export(*values: Any) -> None:
     raise NotImplemented("Export not implemented yet")
 
 
-def exported() -> ImportedTree:
+def exported() -> ExportedTrie:
     raise NotImplemented("Export not implemented yet")

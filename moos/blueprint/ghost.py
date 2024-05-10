@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import List, Dict, Iterator, ClassVar, TYPE_CHECKING, Type
+from typing import List, Iterator, TYPE_CHECKING, Type
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 
-from .kernel import Kernel, Operator
-from .messages import Messenger
+if TYPE_CHECKING:  # 同目录的引用全部都用 type checking. python 这一点比 golang 麻烦, 更容易形成循环引用.
+    from .kernel import Kernel
+    from .messages import Message
+    from .thought import Event
+    from .context import Context
 
 INSTRUCTION = """
 ghost 应该是系统使用者看到的对象. 
@@ -26,33 +29,9 @@ class Ghost(ABC):
     Prototype 动态去构建 Ghost 的各种组件.
     """
 
-    # properties
-
-    @property
     @abstractmethod
-    def shells(self) -> Dict[str, Shell]:
-        """
-        可以操作的躯壳. 跟随会话状态可能会变.
-        """
+    def kernel(self) -> Kernel:
         pass
-
-    @property
-    @abstractmethod
-    def mindset(self) -> Mindset:
-        """
-        思维集合.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def session(self) -> Session:
-        """
-        会话状态.
-        """
-        pass
-
-    # api
 
     @abstractmethod
     def answer(self, question: str) -> str:
@@ -62,15 +41,7 @@ class Ghost(ABC):
         pass
 
     @abstractmethod
-    def think(self, thought: Thought) -> Messenger:
-        """
-        直接控制 Ghost 思维状态.
-        还没想好这个方法要不要.
-        """
-        pass
-
-    @abstractmethod
-    def on_message(self) -> Messenger:
+    def on_message(self, ctx: "Context", message: Message) -> Iterator[Message]:
         """
         假设 Ghost 接受到了一个格式化的消息.
         消息会转化为一个 event, 继续触发.
@@ -78,43 +49,14 @@ class Ghost(ABC):
         pass
 
     @abstractmethod
-    def on_event(self) -> Messenger:
+    def on_event(self, ctx: "Context",  event: "Event") -> Iterator[Message]:
         """
         on_event 是系统的底层.
         """
         pass
 
 
-class Event(ABC):
-    """
-    Ghost 的事件体系. 不同层的事件体系处理逻辑不一样.
-    """
-    pass
-
-
 # ---- 会话管理.
-
-class Session(ABC):
-    """
-    Ghost 的会话构建.
-    """
-
-    @abstractmethod
-    def shells(self) -> Dict[str, Shell]:
-        pass
-
-
-class Shell(ABC):
-    """
-    Ghost 所在的 Shell.
-    提供 API 操作自己的 Shell.
-    一个有状态的 Ghost 可以同时存在于多个 Shell.
-    """
-
-    @property
-    @abstractmethod
-    def id(self) -> str:
-        pass
 
 
 # ---- bot 的思维空间.
@@ -135,16 +77,6 @@ class Mindset(ABC):
     @property
     @abstractmethod
     def memory(self) -> Memory:
-        pass
-
-
-class Thought(ABC):
-    """
-    思维能力的定义.
-    """
-
-    @abstractmethod
-    def on_event(self) -> Operator:
         pass
 
 

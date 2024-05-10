@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from .container import Container
+from .session import Session
+from .python import PythonInterpreter
 
 INSTRUCTION = """
 面向内核开发者看到的 Kernel 实现. 
@@ -25,6 +27,24 @@ class Kernel(ABC):
         """
         pass
 
+
+    @property
+    @abstractmethod
+    def mindset(self) -> Mindset:
+        """
+        思维集合.
+        """
+        return self.container.force_fetch(Mindset)
+
+    @property
+    @abstractmethod
+    def session(self) -> Session:
+        """
+        会话状态.
+        """
+        return self.container.force_fetch(Session)
+
+
     @property
     @abstractmethod
     def runtime(self) -> Runtime:
@@ -36,7 +56,10 @@ class Kernel(ABC):
     @property
     @abstractmethod
     def python(self) -> PythonInterpreter:
-        pass
+        """
+        返回 python interpreter
+        """
+        return self.container.force_fetch(PythonInterpreter, True)
 
     # 运行代码.
 
