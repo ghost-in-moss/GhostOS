@@ -3,9 +3,10 @@ from __future__ import annotations
 import enum
 from abc import ABC, abstractmethod
 
-from moos import helpers
-from typing import List, Tuple, Iterator, ClassVar, Dict, Optional
+from typing import List, Tuple, Iterator, ClassVar, Dict, Optional, TypeVar, Generic
 from pydantic import BaseModel, Field
+from ghostiss.context import Context
+from ghostiss.messages import Message, Messenger, Attachment
 
 """
 Dev logs: 
@@ -22,8 +23,8 @@ class ServiceConf(BaseModel):
     api_key: str = Field(default="$MOONSHOT_API_KEY", description="api access key")
 
 
-class APIConf(BaseModel):
-    name: str = Field(description="api name")
+class ModelConf(BaseModel):
+    service: str = Field(description="api service")
     model: str = Field(description="llm model name that service provided")
     temperature: float = Field(default=0.7, description="temperature")
     n: int = Field(default=1, description="number of iterations")
@@ -32,12 +33,21 @@ class APIConf(BaseModel):
     request_timeout: float = Field(default=40, description="request timeout")
 
 
-class Function(ABC, BaseModel):
+class Tool(ABC, BaseModel):
     """
     openai function
     """
-    func_name: ClassVar[str]
-    func_desc: ClassVar[str]
+    tool_name: ClassVar[str]
+    tool_desc: ClassVar[str]
+
+    def as_function(self) -> Function:
+        return Function(name=self.tool_name, desc=self.tool_desc, schema=self.model_json_schema())
+
+
+class Function(BaseModel):
+    name: str = Field(default="", description="Reaction name")
+    desc: str = Field(default="", description="Reaction description")
+    schema: Dict = Field(default={}, description="Reaction schema")
 
 
 class ChatRole(enum.Enum):
@@ -69,17 +79,41 @@ class ChatMsg(BaseModel):
         return result
 
 
-class LLMAPI(ABC):
+class ChatContext(BaseModel):
+    # trace_id: str = Field(description="trace id")
+    model: ModelConf = Field(description="llm model")
+    service: Optional[ServiceConf] = Field(description="llm service")
+    context: List[ChatMsg] = Field(default_factory=list)
+    functions: Tool = Field(default_factory=list)
+    function_call: str = Field(default="auto"),
+    stop: Optional[List[str]] = Field(default=None)
+
+
+class Run(BaseModel):
+    """
+    尝试运行一次线程.
+    """
+    model: ModelConf = Field(description="api configuration")
+    service: Optional[ServiceConf] = Field(default=None, description="service configuration")
+
+    instructions: str = Field(default="", description="system prompt")
+    messages: List[Message] = Field(default_factory=list, description="可以指定不同的上下文来运行.")
+    function_call: str = Field(default="auto"),
+    functions: List[Function] = Field(default_factory=list)
+    output_attachments: List[Attachment] = Field(default_factory=list)
+
+
+class LLM(ABC):
 
     @abstractmethod
-    def with_service_conf(self, service_conf: ServiceConf) -> "LLMAPI":
+    def with_service_conf(self, service_conf: ServiceConf) -> "LLM":
         """
         get new api with the given service_conf and return new LLMAPI
         """
         pass
 
     @abstractmethod
-    def with_api_conf(self, api_conf: APIConf) -> "LLMAPI":
+    def with_api_conf(self, api_conf: ModelConf) -> "LLM":
         """
         get new api with the given api_conf and return new LLMAPI
         """
@@ -99,20 +133,16 @@ class LLMAPI(ABC):
     @abstractmethod
     def chat_completion(
             self,
-            chat_context: List[ChatMsg],
-            functions: List[Function] | None = None,
-            function_call: str = "",
-            stop: List[str] | None = None,
-    ) -> ChatMsg:
+            ctx: Context,
+            chat_context: ChatContext,
+    ) -> List[ChatMsg]:
         pass
 
     @abstractmethod
-    def async_chat_completion(
+    def chat_completion_chunks(
             self,
-            chat_context: List[ChatMsg],
-            functions: List[Function] | None = None,
-            function_call: str = "",
-            stop: List[str] | None = None,
+            ctx: Context,
+            chat_context: ChatContext,
     ) -> Iterator[ChatMsg]:
         """
         todo: 暂时先这么定义了.
@@ -120,14 +150,14 @@ class LLMAPI(ABC):
         pass
 
 
-class LLMRepository(ABC):
+class LLMs(ABC):
 
     @abstractmethod
-    def register_service(self, service_conf: ServiceConf) -> LLMRepository:
+    def register_service(self, service_conf: ServiceConf) -> LLMs:
         pass
 
     @abstractmethod
-    def register_model(self, api_conf: APIConf) -> LLMRepository:
+    def register_api(self, name: str, model_conf: ModelConf) -> LLMs:
         pass
 
     @abstractmethod
@@ -135,13 +165,24 @@ class LLMRepository(ABC):
         pass
 
     @abstractmethod
-    def each_api_conf(self) -> Iterator[Tuple[ServiceConf, APIConf]]:
+    def each_api_conf(self) -> Iterator[Tuple[ServiceConf, ModelConf]]:
         pass
 
     @abstractmethod
-    def new_api(self, service_conf: ServiceConf, api_conf: APIConf, trace: Optional[Dict] = None) -> LLMAPI:
+    def new_api(self, service_conf: ServiceConf, api_conf: ModelConf) -> LLM:
         pass
 
     @abstractmethod
-    def get_api(self, api_name: str, fail_if_none: bool = False, trace: Optional[Dict] = None) -> LLMAPI | None:
+    def get_api(self, api_name: str, fail_if_none: bool = False, trace: Optional[Dict] = None) -> LLM | None:
+        pass
+
+    @abstractmethod
+    def run(self, ctx: Context, run: Run, messenger: Messenger) -> None:
+        """
+        基于 chat completion 运行一个 run, 运行结果转换成 Message 然后通过 messenger 来发送.
+        """
+        pass
+
+    @abstractmethod
+    def run_to_chat(self, run: Run) -> ChatContext:
         pass

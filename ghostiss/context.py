@@ -1,15 +1,7 @@
+from typing import Any, Optional
+
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Iterator, ClassVar
-
-from .errors import RuntimeInfo
-
-"""
-考虑引入一个 Ctx, 用来方便在上下文中传递这个框架无法感知的数据. 
-
-- 希望下游可以用 with ctx: 的方式来使用它. 甚至放入到一个循环里. 
-- 父不知子, 子知道父.  
-
-"""
+from ghostiss.core.errors import RuntimeInfo
 
 
 class ContextIsDone(RuntimeInfo):
@@ -44,7 +36,7 @@ class Context(ABC):
         pass
 
     @abstractmethod
-    def fail(self, error: Exception) -> bool:
+    def fail(self, error: Exception) -> Optional[Exception]:
         pass
 
     @abstractmethod

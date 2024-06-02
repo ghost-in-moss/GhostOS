@@ -6,7 +6,8 @@ def test_class_name():
 
 
 class Bar:
-    pass
+    bar = "test"
+    """PEP258"""
 
 
 def test_module_name():
@@ -15,5 +16,9 @@ def test_module_name():
     assert Bar.__module__ == 'test_class'
 
 
-def test_runtime_path():
-    from runpy import run_path
+def test_class_attr_docstring():
+    assert Bar.bar == 'test'
+    # 暂时没发现如何获取属性的注释.
+    # print(Bar.bar.__doc__)
+
+

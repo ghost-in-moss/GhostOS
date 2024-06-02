@@ -1,5 +1,0 @@
-
-
-DEVELOPING_NOTES = """
-
-"""
