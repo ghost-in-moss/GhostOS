@@ -1,10 +1,13 @@
 from typing import Any, Optional
 
 from abc import ABC, abstractmethod
-from ghostiss.core.errors import RuntimeInfo
 
 
-class ContextIsDone(RuntimeInfo):
+class ContextException(Exception):
+    pass
+
+
+class ContextIsDone(ContextException):
     pass
 
 
@@ -12,7 +15,7 @@ class ContextIsCanceled(ContextIsDone):
     pass
 
 
-class ContextIsFailed(ContextIsDone):
+class ContextIsTimeout(ContextIsDone):
     pass
 
 
@@ -33,18 +36,37 @@ class Context(ABC):
 
     @abstractmethod
     def err(self) -> Optional[Exception]:
+        """
+        是否有异常.
+        """
         pass
 
     @abstractmethod
     def fail(self, error: Exception) -> Optional[Exception]:
-        pass
-
-    @abstractmethod
-    def cancel(self) -> None:
+        """
+        接收一个异常.
+        """
         pass
 
     @abstractmethod
     def done(self) -> bool:
+        """
+        ctx 已经不能再运行.
+        """
+        pass
+
+    @abstractmethod
+    def life_left(self) -> float:
+        """
+        剩余运行时间. <= 0 表示无限.
+        """
+        pass
+
+    @abstractmethod
+    def destroy(self) -> None:
+        """
+        垃圾回收.
+        """
         pass
 
     # @abstractmethod

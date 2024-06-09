@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, get_args
+from typing import Generic, TypeVar, Optional
 from abc import ABC, abstractmethod
 
 
@@ -36,3 +36,30 @@ def test_generic_class_ide_prediction():
     assert foo.foo() == "hello"
     # ide can predict bar() method.
     assert foo.bar() == "hello world"
+
+
+C = TypeVar("C")
+
+K = TypeVar("K")
+
+
+class Operator(Generic[C, K], ABC):
+
+    def run(self, ctx: C, kernel: K) -> Optional["Operator"]:
+        return None
+
+
+class IntOp(Operator[int, str]):
+    pass
+
+
+class StrOp(Operator[str, str]):
+    pass
+
+
+def test_generic_typehint_is_working():
+    op = IntOp()
+    # 泛型校验实际上有效果.
+    assert not isinstance(op, StrOp)
+    assert isinstance(op, IntOp)
+    assert isinstance(op, Operator)

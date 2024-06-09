@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Optional, Union
+from typing import Generic, TypeVar, Optional, List, Dict, Type, ClassVar, Union
 from pydantic import BaseModel, Field
 
 
@@ -13,7 +13,6 @@ class MetaData(BaseModel):
 
     id: str = Field(description="meta id")
     kind: str = Field(description="")
-    clazz: str = Field(description="")
     data: dict = Field(default_factory=dict, description="meta data for create a meta object")
 
 
@@ -23,8 +22,78 @@ class Meta(ABC):
     """
 
     @abstractmethod
-    def to_meta_data(self) -> MetaData:
+    def meta_kind(self) -> str:
         pass
+
+    @abstractmethod
+    def get_meta_data(self) -> MetaData:
+        """
+        generate transportable meta-data
+        """
+        pass
+
+
+class MetaClass(Meta, ABC):
+
+    @classmethod
+    @abstractmethod
+    def meta_kind(cls) -> str:
+        pass
+
+    @abstractmethod
+    def meta_id(self) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def meta_make(cls, meta_data: MetaData) -> "MetaClass":
+        pass
+
+
+class BaseMetaClass(MetaClass, BaseModel, ABC):
+    """
+    基于 pydantic 实现的 MetaClass.
+    """
+
+    def get_meta_data(self) -> MetaData:
+        return MetaData(
+            id=self.meta_id(),
+            kind=self.meta_kind(),
+            data=self.model_dump(),
+        )
+
+    @classmethod
+    def meta_make(cls, meta_data: MetaData) -> "MetaClass":
+        return cls(**meta_data.model_dump())
+
+
+T = TypeVar("T", bound=MetaClass)
+
+
+class MetaClassLoader(Generic[T]):
+
+    def __init__(self, kinds: List[Type[T]]):
+        self.kinds: Dict[str, Type[T]] = {}
+        for kind in kinds:
+            self.register_meta_class(kind)
+
+    def load_meta_class(self, clazz: str) -> Optional[Type[T]]:
+        return self.kinds.get(clazz, None)
+
+    def register_meta_class(self, clazz: Type[T]) -> None:
+        self.kinds[clazz.meta_class()] = clazz
+
+    def force_load_class(self, clazz: str) -> Type[T]:
+        load = self.load_meta_class(clazz)
+        if load is None:
+            raise NotImplemented("Meta class {} not found".format(clazz))
+        return load
+
+    def meta_make(self, meta_data: MetaData) -> Optional[T]:
+        clazz = self.load_meta_class(meta_data.kind)
+        if clazz is None:
+            return None
+        return clazz.meta_make(meta_data)
 
 
 M = TypeVar("M", bound=Meta)
@@ -37,56 +106,54 @@ class MetaObject(Generic[M], ABC):
         pass
 
 
-class MetaClass(Generic[M], ABC):
+META_TYPE = TypeVar('META_TYPE', Meta, MetaObject)
+
+
+class MetaMaker(Generic[META_TYPE], ABC):
+    """
+    simple and stupid 的命名.
+    """
 
     @abstractmethod
     def meta_kind(self) -> str:
         pass
 
     @abstractmethod
-    def meta_class(self) -> str:
-        pass
-
-    @abstractmethod
-    def meta_new(self, meta_data: MetaData) -> M:
-        pass
-
-
-C = TypeVar("C", bound=MetaClass)
-
-
-class MetaFactory(Generic[C], ABC):
-
-    @abstractmethod
-    def kind(self) -> str:
-        pass
-
-    @abstractmethod
-    def factory(self, meta_data: MetaData) -> Optional[C]:
+    def meta_make(self, meta_data: MetaData) -> META_TYPE:
+        """
+        :raise NotImplemented: when meta kind is not implemented
+        """
         pass
 
 
-class MetaRepository(Generic[M], ABC):
-    """
-    save meta object.
-    """
+class MetaFactory(Generic[META_TYPE], ABC):
 
     @abstractmethod
-    def kind(self) -> str:
+    def register(self, maker: Union[MetaMaker[META_TYPE], Type[MetaClass]]) -> None:
         pass
 
     @abstractmethod
-    def register_class(self, meta_class: MetaClass[M]) -> None:
+    def get_factory(self, meta_kind: str) -> Optional[MetaMaker[META_TYPE], Type[MetaClass]]:
         pass
 
     @abstractmethod
-    def get_class(self, clazz_name: str) -> Optional[MetaClass[M]]:
+    def meta_make(self, meta_data: MetaData) -> Optional[META_TYPE]:
+        pass
+
+    def force_meta_make(self, meta_data: MetaData) -> META_TYPE:
+        mind = self.meta_make(meta_data)
+        if mind is None:
+            raise NotImplemented("todo")
+        return mind
+
+    @abstractmethod
+    def register_meta(self, data: Union[MetaData, Meta, MetaObject]) -> None:
         pass
 
     @abstractmethod
-    def register_meta(self, meta: Union[M, MetaData]) -> None:
+    def get(self, meta_id: str) -> Optional[META_TYPE]:
         pass
 
     @abstractmethod
-    def get_meta(self, meta_id: str) -> Optional[M]:
+    def has(self, mind_kind: str) -> bool:
         pass

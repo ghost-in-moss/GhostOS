@@ -32,3 +32,10 @@ def test_class_object_source():
         e = exp
     finally:
         assert e is not None
+
+
+def test_class_attribute_source():
+    class Test:
+        foo: str
+
+    inspect.getmembers_static()

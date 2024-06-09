@@ -3,10 +3,10 @@ from __future__ import annotations
 import enum
 from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Iterator, ClassVar, Dict, Optional, TypeVar, Generic
+from typing import List, Tuple, Iterator, ClassVar, Dict, Optional
 from pydantic import BaseModel, Field
 from ghostiss.context import Context
-from ghostiss.messages import Message, Messenger, Attachment
+from ghostiss import helpers
 
 """
 Dev logs: 
@@ -56,11 +56,11 @@ class ChatRole(enum.Enum):
     ASSISTANT = "assistant"
     FUNCTION = "function"
 
-    def new(self, content: str, name: str | None = None) -> ChatMsg:
-        return ChatMsg(role=self.value, content=content, name=name)
+    def new(self, content: str, name: str | None = None) -> LlmMsg:
+        return LlmMsg(role=self.value, content=content, name=name)
 
 
-class ChatMsg(BaseModel):
+class LlmMsg(BaseModel):
     """
     OpenAI 接口的消息.
     """
@@ -70,8 +70,8 @@ class ChatMsg(BaseModel):
     name: str | None = None
     function_call: Dict | None = None
 
-    def say(self) -> ChatMsg:
-        return ChatMsg(content=self.content, name=self.name, role=self.role, function_call=self.function_call)
+    def say(self) -> LlmMsg:
+        return LlmMsg(content=self.content, name=self.name, role=self.role, function_call=self.function_call)
 
     def to_message(self) -> Dict:
         data = self.model_dump(include={"role", "content", "name", "function_call"})
@@ -79,28 +79,28 @@ class ChatMsg(BaseModel):
         return result
 
 
-class ChatContext(BaseModel):
-    # trace_id: str = Field(description="trace id")
+class Chat(BaseModel):
+    id: str = Field(default="", description="run id")
     model: ModelConf = Field(description="llm model")
     service: Optional[ServiceConf] = Field(description="llm service")
-    context: List[ChatMsg] = Field(default_factory=list)
+    context: List[LlmMsg] = Field(default_factory=list)
     functions: Tool = Field(default_factory=list)
     function_call: str = Field(default="auto"),
     stop: Optional[List[str]] = Field(default=None)
 
 
-class Run(BaseModel):
-    """
-    尝试运行一次线程.
-    """
-    model: ModelConf = Field(description="api configuration")
-    service: Optional[ServiceConf] = Field(default=None, description="service configuration")
-
-    instructions: str = Field(default="", description="system prompt")
-    messages: List[Message] = Field(default_factory=list, description="可以指定不同的上下文来运行.")
-    function_call: str = Field(default="auto"),
-    functions: List[Function] = Field(default_factory=list)
-    output_attachments: List[Attachment] = Field(default_factory=list)
+# class Request(BaseModel):
+#     """
+#     尝试运行一次线程.
+#     """
+#     model: ModelConf = Field(description="api configuration")
+#     service: Optional[ServiceConf] = Field(default=None, description="service configuration")
+#
+#     instructions: str = Field(default="", description="system prompt")
+#     messages: List[Message] = Field(default_factory=list, description="可以指定不同的上下文来运行.")
+#     function_call: str = Field(default="auto"),
+#     functions: List[Function] = Field(default_factory=list)
+#     output_attachments: List[Attachment] = Field(default_factory=list)
 
 
 class LLM(ABC):
@@ -134,16 +134,16 @@ class LLM(ABC):
     def chat_completion(
             self,
             ctx: Context,
-            chat_context: ChatContext,
-    ) -> List[ChatMsg]:
+            chat: Chat,
+    ) -> LlmMsg:
         pass
 
     @abstractmethod
     def chat_completion_chunks(
             self,
             ctx: Context,
-            chat_context: ChatContext,
-    ) -> Iterator[ChatMsg]:
+            chat: Chat,
+    ) -> Iterator[LlmMsg]:
         """
         todo: 暂时先这么定义了.
         """
@@ -176,13 +176,13 @@ class LLMs(ABC):
     def get_api(self, api_name: str, fail_if_none: bool = False, trace: Optional[Dict] = None) -> LLM | None:
         pass
 
-    @abstractmethod
-    def run(self, ctx: Context, run: Run, messenger: Messenger) -> None:
-        """
-        基于 chat completion 运行一个 run, 运行结果转换成 Message 然后通过 messenger 来发送.
-        """
-        pass
-
-    @abstractmethod
-    def run_to_chat(self, run: Run) -> ChatContext:
-        pass
+    # @abstractmethod
+    # def run(self, ctx: Context, run: Request, messenger: Messenger) -> None:
+    #     """
+    #     基于 chat completion 运行一个 run, 运行结果转换成 Message 然后通过 messenger 来发送.
+    #     """
+    #     pass
+    #
+    # @abstractmethod
+    # def run_to_chat(self, run: Request) -> ChatContext:
+    #     pass

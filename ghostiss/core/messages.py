@@ -67,7 +67,8 @@ class Kind(str, enum.Enum):
     # 需要用 python 引擎执行的代码.
     PYTHON = "python"
     # 调用了一个 function
-    CALLER = "caller"
+    REACTION_CALL = "reaction_call"
+    REACTION_CALLBACK = "reaction_callback"
 
 
 class Header(BaseModel):
@@ -96,48 +97,16 @@ class Header(BaseModel):
     #     return True
 
 
-class Message(BaseModel, Meta):
+class Message(BaseModel):
     """
     通用的 message 协议.
     在支持流式传输的基础上, 允许使用 attachments 添加弱类型的数据信息.
     """
 
     header: Optional[Header] = Field(default=None, description="message header")
-    done: bool = Field(default=False, description="if is last package of the message")
     content: str = Field(default="", description="Message content")
     memory: str = Field(default="", description="Message as memory to the llm")
     attachments: Optional[Dict[str, Dict[str, Any]]] = Field(default=None, description="Message additional information")
-
-    def to_meta(self) -> MetaData:
-        """
-        继承 meta 类型.
-        """
-        return MetaData(
-            id=self.header.msg_id,
-            kind="ghostiss_message",
-            factory=self.header.kind,
-            data=self.model_dump(),
-        )
-
-    @classmethod
-    def new_pack(cls, content: str, memory: str = "", additions: Optional[Dict[str, Dict]] = None) -> Message:
-        """
-
-        """
-        return cls(content=content, memory=memory, additions=additions)
-
-    @classmethod
-    def first_pack(cls, header: Header) -> Message:
-        return cls(header=header)
-
-    @classmethod
-    def final_pack(cls, reset: Optional[Dict] = None) -> Message:
-        if reset:
-            data = reset
-        else:
-            data = {}
-        data["finish"] = True
-        return cls(**data)
 
     def get_memory(self) -> str:
         if self.memory:
@@ -193,6 +162,57 @@ class Attachment(ABC, BaseModel):
         set attachment to message
         """
         msg.attachments[self.attachment_name] = self.model_dump()
+
+
+class Package(Message):
+    done: bool = Field(description="")
+    final: bool = Field(description="")
+
+    @classmethod
+    def new_header(cls, header: Header) -> "Package":
+        return cls(header=header, first=True)
+
+    @classmethod
+    def new_content(cls, data: Dict) -> "Package":
+        data["done"] = False
+        data["final"] = False
+        return cls(**data)
+
+    @classmethod
+    def new_tail(cls, data: Dict) -> "Package":
+        data["done"] = True
+        data["final"] = False
+        return cls(**data)
+
+    @classmethod
+    def new_final(cls) -> "Package":
+        return cls(final=True)
+
+    @classmethod
+    def new_msg(cls, data: Dict) -> "Package":
+        data["done"] = True
+        data["final"] = False
+        return cls(**data)
+
+    # @classmethod
+    # def new_pack(cls, content: str, memory: str = "", additions: Optional[Dict[str, Dict]] = None) -> Message:
+    #     """
+    #
+    #     """
+    #     return cls(content=content, memory=memory, additions=additions)
+    #
+    # @classmethod
+    # def first_pack(cls, header: Header) -> Message:
+    #     return cls(header=header)
+    #
+    # @classmethod
+    # def final_pack(cls, reset: Optional[Dict] = None) -> Message:
+    #     if reset:
+    #         data = reset
+    #     else:
+    #         data = {}
+    #     data["finish"] = True
+    #     return cls(**data)
 
 
 class MsgChoices(Attachment):
@@ -264,16 +284,13 @@ class Interceptor(ABC):
         pass
 
 
-class Stream(ABC):
+class Output(ABC):
 
     def send(self, package: Message) -> None:
         pass
 
-    def output(self) -> Output:
-        pass
 
-
-class Output(ABC):
+class Retriever(ABC):
     """
     拉取消息.
     """
@@ -297,81 +314,83 @@ class Output(ABC):
         pass
 
 
-class MessageBuffer(ABC):
-
+class Stream(ABC):
     @abstractmethod
-    def buff(self, package: Message) -> Iterator[Message]:
-        """
-        尝试缓冲一个 package, 进行粘包等操作.
-        返回这一轮需要发送的包, 和完成粘包的包.
-        有可能产生多个待发送的包.
-        """
+    def output(self) -> Output:
         pass
 
     @abstractmethod
-    def pop(self) -> Optional[Message]:
-        """
-        吐出一个经过 buff, 已经完成了 buff 的消息体.
-        """
+    def retriever(self) -> Retriever:
         pass
 
-    @abstractmethod
-    def buffer(self) -> List[Message]:
-        pass
+# class MessageBuffer(ABC):
+#
+#     @abstractmethod
+#     def buff(self, package: Message) -> Iterator[Message]:
+#         """
+#         尝试缓冲一个 package, 进行粘包等操作.
+#         返回这一轮需要发送的包, 和完成粘包的包.
+#         有可能产生多个待发送的包.
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def pop(self) -> Optional[Message]:
+#         """
+#         吐出一个经过 buff, 已经完成了 buff 的消息体.
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def buffer(self) -> List[Message]:
+#         pass
+#
+#     @abstractmethod
+#     def clear(self) -> MessageBuffer:
+#         """
+#         清空 buffer 并返回.
+#         """
+#         pass
 
-    @abstractmethod
-    def clear(self) -> MessageBuffer:
-        """
-        清空 buffer 并返回.
-        """
-        pass
 
-
-class Messenger(ABC):
-
-    @abstractmethod
-    def new(
-            self,
-            buffer: Optional[MessageBuffer] = None,
-            deliver: bool = True,
-            *pipeline: Pipe,
-    ) -> Messenger:
-        """
-        清除所有的缓存.
-        """
-        pass
-
-    @abstractmethod
-    def retrieve(self, msg_id: str) -> Optional[Message]:
-        """
-        读取一个完整的 msg
-        """
-        pass
-
-    @abstractmethod
-    def parse(self, *messages: Message) -> Iterator[Message]:
-        """
-        将消息协议处理和转换的能力.
-        """
-        pass
-
-    @abstractmethod
-    def deliver(self, *packages: Message) -> None:
-        """
-        发送连续的包
-        """
-        pass
-
-    @abstractmethod
-    def send(self, *messages: Message) -> Messenger:
-        """
-        发送消息体到端上.
-        """
-        pass
-
-    @abstractmethod
-    def wait(self) -> List[Message]:
-        """
-        :return: buffed messages
-        """
-        pass
+# class Messenger(ABC):
+#
+#     @abstractmethod
+#     def new(
+#             self,
+#             buffer: Optional[MessageBuffer] = None,
+#             deliver: bool = True,
+#             *pipeline: Pipe,
+#     ) -> Messenger:
+#         """
+#         清除所有的缓存.
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def retrieve(self, msg_id: str) -> Optional[Message]:
+#         """
+#         读取一个完整的 msg
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def parse(self, *messages: Message) -> Iterator[Message]:
+#         """
+#         将消息协议处理和转换的能力.
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def send(self, *messages: Message) -> Messenger:
+#         """
+#         发送消息体到端上.
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def wait(self) -> List[Message]:
+#         """
+#         :return: buffed messages
+#         """
+#         pass
