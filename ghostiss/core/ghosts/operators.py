@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from ghostiss.context import Context
-    from ghostiss.core.ghosts.ghost import Ghost
+    from ghostiss.core.ghosts.ghost import Ghost, TaskCtx
 
 
 class Operator(ABC):
@@ -12,9 +11,5 @@ class Operator(ABC):
     """
 
     @abstractmethod
-    def run(self, ctx: "Context", g: "Ghost") -> Optional["Operator"]:
+    def run(self, ctx: "TaskCtx", g: "Ghost") -> Optional["Operator"]:
         pass
-
-
-class Operations(ABC):
-    pass

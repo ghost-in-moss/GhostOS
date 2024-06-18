@@ -5,9 +5,8 @@ from ghostiss.context import Context
 
 if TYPE_CHECKING:
     from ghostiss.core.kernel.runs import Run
-    from ghostiss.core.kernel.llms import Chat
+    from ghostiss.core.llms import Chat
     from ghostiss.core.messages import Message
-    from ghostiss.core.ghosts.ghost import Ghost
 
 R = TypeVar('R', bound=BaseModel)
 

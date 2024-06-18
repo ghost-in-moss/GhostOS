@@ -7,42 +7,12 @@ import time
 from abc import ABC, abstractmethod
 from typing import List, Dict, Iterator, Optional, Tuple, ClassVar, Any
 from pydantic import BaseModel, Field
-from ghostiss.meta import Meta, MetaData
-
-
-#
-# class Package:
-#     def __init__(self, head: bool, finish: bool, content: str, memory: str = "",
-#                  payload: Optional[Dict] = None) -> None:
-#         self.head: bool = head
-#         self.finish: bool = finish
-#         self.content: str = content
-#         self.memory: str = memory
-#         self.payload: Optional[Dict] = payload
-#         self.update: bool = False
-#
-#     @classmethod
-#     def header(cls, data: Dict) -> "Package":
-#         return cls(True, False, "", "", data)
-#
-#     @classmethod
-#     def content(cls, content: str, memory: str = "", data: Optional[Dict] = None) -> "Package":
-#         return cls(False, False, "", memory, data)
-#
-#     @classmethod
-#     def fin(cls) -> "Package":
-#         return cls(False, True, "", "", None)
-#
-#     @classmethod
-#     def update(cls, content: str, memory: str = "", data: Optional[Dict] = None) -> "Package":
-#         return cls(False, False, content, memory, data)
-#
-#     @classmethod
-#     def message(cls, data: Dict) -> "Package":
-#         return cls(True, True, "", "", data)
 
 
 class Level(str, enum.Enum):
+    """
+    todo: level 可能去掉.
+    """
     DEBUG = "debug"
     INFO = "info"
     NOTICE = "notice"
@@ -83,18 +53,8 @@ class Header(BaseModel):
     role: str = Field(default="", description="Message role")
     name: str = Field(default="", description="Message sender name")
 
-    # def update(self, header: Header) -> bool:
-    #     if header.msg_id != self.msg_id:
-    #         return False
-    #     if header.level:
-    #         self.level = header.level
-    #     if header.kind:
-    #         self.kind = header.kind
-    #     if header.role:
-    #         self.role = header.role
-    #     if header.name:
-    #         self.name = header.name
-    #     return True
+    def new(self) -> "Message":
+        return Message(header=self)
 
 
 class Message(BaseModel):
@@ -103,7 +63,7 @@ class Message(BaseModel):
     在支持流式传输的基础上, 允许使用 attachments 添加弱类型的数据信息.
     """
 
-    header: Optional[Header] = Field(default=None, description="message header")
+    header: Header = Field(description="message header")
     content: str = Field(default="", description="Message content")
     memory: str = Field(default="", description="Message as memory to the llm")
     attachments: Optional[Dict[str, Dict[str, Any]]] = Field(default=None, description="Message additional information")
@@ -146,22 +106,22 @@ class Attachment(ABC, BaseModel):
     message attachment
     """
 
-    attachment_name: ClassVar[str] = ""
+    attach_key: ClassVar[str] = ""
 
     @classmethod
     def retrieve(cls, msg: Message) -> Optional[Attachment]:
         """
         retrieve attachment from message
         """
-        if cls.attachment_name in msg.additional:
-            return cls(**msg.attachments[cls.attachment_name])
+        if cls.attach_key in msg.attachments:
+            return cls(**msg.attachments[cls.attach_key])
         return None
 
     def set(self, msg: Message) -> None:
         """
         set attachment to message
         """
-        msg.attachments[self.attachment_name] = self.model_dump()
+        msg.attachments[self.attach_key] = self.model_dump()
 
 
 class Package(Message):
@@ -213,34 +173,34 @@ class Package(Message):
     #         data = {}
     #     data["finish"] = True
     #     return cls(**data)
-
-
-class MsgChoices(Attachment):
-    """
-    单选的选项.
-    """
-    property_name = "suggestions"
-    choices: List[str] = Field(default_factory=list)
-
-
-class MsgSelections(Attachment):
-    """
-    多选的消息. 输入, 输出消息都可以包含多选的选项.
-    """
-    property_name = "selections"
-    choices: List[str] = Field(default_factory=list)
-
-
-class MsgFile(Attachment):
-    """
-    文件的封装.
-    """
-    property_name = "file"
-
-    file_id: str = Field(default="", description="File id")
-    file_name: str = Field(default="", description="File name")
-    url: str = Field(default="", description="File url")
-    desc: str = Field(default="", description="File description")
+#
+#
+# class MsgChoices(Attachment):
+#     """
+#     单选的选项.
+#     """
+#     property_name = "suggestions"
+#     choices: List[str] = Field(default_factory=list)
+#
+#
+# class MsgSelections(Attachment):
+#     """
+#     多选的消息. 输入, 输出消息都可以包含多选的选项.
+#     """
+#     property_name = "selections"
+#     choices: List[str] = Field(default_factory=list)
+#
+#
+# class MsgFile(Attachment):
+#     """
+#     文件的封装.
+#     """
+#     property_name = "file"
+#
+#     file_id: str = Field(default="", description="File id")
+#     file_name: str = Field(default="", description="File name")
+#     url: str = Field(default="", description="File url")
+#     desc: str = Field(default="", description="File description")
 
 
 class Pipe(ABC):

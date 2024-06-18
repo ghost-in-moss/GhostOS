@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional, Union
 from ghostiss.context import Context
-from ghostiss.core.kernel.llms import LlmMsg
+from ghostiss.core.llms import LlmMsg
 from ghostiss.core.messages import Package, Message, Attachment
 from ghostiss.core.operators import Operator
 

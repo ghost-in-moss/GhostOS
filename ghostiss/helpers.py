@@ -14,6 +14,9 @@ uuid: Callable[[], str] = __uuid
 
 
 def dict_without_none(data: dict) -> dict:
+    """
+    Removes None values from a dictionary.
+    """
     result = {}
     for key, value in data.items():
         if value is not None:
@@ -22,8 +25,12 @@ def dict_without_none(data: dict) -> dict:
 
 
 def dict_without_zero(data: dict) -> dict:
+    """
+    Removes zero values from a dictionary.
+    """
     result = {}
     for key, value in data.items():
         if not value:
             result[key] = value
     return result
+

@@ -28,8 +28,6 @@ class Context(ABC):
     todo: 有很大风险, 如果垃圾回收拉胯, 则所有代码都要修改了.
     """
 
-    _err: Optional[Exception] = None
-
     @abstractmethod
     def get(self, key: str) -> Optional[Any]:
         pass
@@ -59,13 +57,6 @@ class Context(ABC):
     def life_left(self) -> float:
         """
         剩余运行时间. <= 0 表示无限.
-        """
-        pass
-
-    @abstractmethod
-    def destroy(self) -> None:
-        """
-        垃圾回收.
         """
         pass
 

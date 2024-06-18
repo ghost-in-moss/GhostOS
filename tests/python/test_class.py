@@ -22,3 +22,20 @@ def test_class_attr_docstring():
     # print(Bar.bar.__doc__)
 
 
+def test_extends_with_property():
+    from abc import ABC, abstractmethod
+
+    class Foo(ABC):
+        @property
+        @abstractmethod
+        def foo(self) -> str:
+            pass
+
+    class Foo2(Foo):
+
+        @property
+        def foo(self) -> str:
+            return "bar"
+
+    bar = Foo2()
+    assert bar.foo == "bar"

@@ -6,3 +6,8 @@ def test_slice_pop_and_insert():
     v.insert(0, 0)
     assert k == v
 
+
+def test_slice_negative_index():
+    arr = [0, 1]
+    assert arr[-1] == 1
+    assert arr[:-1] == [0]

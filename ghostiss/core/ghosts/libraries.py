@@ -8,41 +8,5 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.ghost import Ghost
 
 
-class Driver(PromptAbleClass, PromptAbleObject, ABC):
-    pass
-
-
-R = TypeVar('R', bound=BaseModel)
-
-
-class Caller(Generic[R], BaseModel, ABC):
-    pass
-
-
-C = TypeVar('C', bound=Caller)
-
-
-class Tool(Generic[C, R], ABC):
-
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @abstractmethod
-    def caller(self) -> Type[C]:
-        pass
-
-    def callback(self, ctx: "Context", g: "Ghost", arguments: Dict) -> R:
-        pass
-
-
 class Libraries(ABC):
-
-    def get_drivers(self, types: Dict[str, Type[Driver]]) -> Dict[str, Driver]:
-        pass
-
-    def get_tools(self, names: List[str]) -> Dict[str, Tool]:
-        pass
-
-    def run_tool(self, caller: Caller) -> Any:
-        pass
+    pass

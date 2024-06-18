@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, List, Optional, Union
 from abc import ABC, abstractmethod
-from ghostiss.meta import MetaData
+from ghostiss.entity import Normalized
 from ghostiss.core.messages import Message, Retriever
 from pydantic import BaseModel, Field
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ class Inputs(BaseModel):
 
 class GhostInShellSystem(ABC):
 
-    def send(self, ghost: Union[MetaData, "GhostMeta"], inputs: Inputs) -> Retriever:
+    def send(self, ghost: Union[Normalized, "GhostMeta"], inputs: Inputs) -> Retriever:
         pass
 
     def background_run_ghosts(self) -> None:

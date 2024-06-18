@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from ghostiss.container import Container
 
 if TYPE_CHECKING:
-    from ghostiss.core.kernel.llms import LLMs
+    from ghostiss.core.llms import LLMs
     from ghostiss.core.kernel.threads import Threads
     from ghostiss.core.kernel.runs import Runs
     from ghostiss.core.kernel.queues import Queues
