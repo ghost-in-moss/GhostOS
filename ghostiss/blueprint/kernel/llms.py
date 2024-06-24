@@ -171,11 +171,13 @@ class Embeddings(BaseModel):
 class LLMApi(ABC):
 
     @abstractmethod
-    def with_service(self, conf: ServiceConf) -> "LLMApi":
+    def get_service(self) -> ServiceConf:
+        """
+        """
         pass
 
     @abstractmethod
-    def with_model(self, api_conf: ModelConf) -> "LLMApi":
+    def get_model(self) -> ModelConf:
         """
         get new api with the given api_conf and return new LLMAPI
         """

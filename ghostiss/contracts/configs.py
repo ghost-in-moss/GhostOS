@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from ghostiss.container import Container, Provider, Contract
 from ghostiss.contracts.storage import Storage
 
-__all__ = ['Config', 'Configs', 'YamlConfig', 'StorageConfigs', 'StorageConfigsProvider']
+__all__ = ['Config', 'Configs', 'YamlConfig', 'StorageConfigs', 'ConfigsByStorageProvider']
 
 
 class Config(ABC):
@@ -65,7 +65,7 @@ class StorageConfigs(Configs):
         return conf_type.load(content)
 
 
-class StorageConfigsProvider(Provider):
+class ConfigsByStorageProvider(Provider):
 
     def __init__(self, conf_dir: str):
         self._conf_dir = conf_dir

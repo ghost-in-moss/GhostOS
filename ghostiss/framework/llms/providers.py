@@ -6,8 +6,10 @@ from ghostiss.blueprint.kernel.llms import LLMs, LLMsConfig
 from ghostiss.framework.llms.llms import LLMsImpl
 from ghostiss.framework.llms.openai_driver import OpenAIDriver
 
+__all__ = ['LLMsConfigBasedProvider']
 
-class ConfigBasedLLMsProvider(Provider):
+
+class LLMsConfigBasedProvider(Provider):
     """
     基于 Config 来读取
     """
@@ -35,4 +37,3 @@ class ConfigBasedLLMsProvider(Provider):
         llms = LLMsImpl(conf=conf, default_driver=openai_driver)
         llms.register_driver(openai_driver)
         return llms
-

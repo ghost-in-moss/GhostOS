@@ -1,14 +1,14 @@
 import os
 from typing import List
 from ghostiss.container import Container
-from ghostiss.contracts.configs import YamlConfig, StorageConfigsProvider, Configs
+from ghostiss.contracts.configs import YamlConfig, ConfigsByStorageProvider, Configs
 from ghostiss.contracts.storage import FileStorageProvider
 
 
 def test_configs():
     curr = os.path.dirname(__file__)
     container = Container()
-    container.register(StorageConfigsProvider(""))
+    container.register(ConfigsByStorageProvider(""))
     container.register(FileStorageProvider(curr))
 
     configs = container.force_fetch(Configs)

@@ -1,6 +1,11 @@
 # 详细配置逻辑见 ghostiss.framework.llms.llms::LLMsYamlConfig
+# 这个文件是配合单元测试的, 请不要修改.
 services:
   - name: moonshot
     # driver: use default
     base_url: https://api.moonshot.cn/v1
     token_key: MOONSHOT_API_KEY
+models:
+  test:
+    service: moonshot
+    model: "v1"

@@ -36,11 +36,11 @@ class OpenAIAdapter(LLMApi):
             max_retries=0,
         )
 
-    def with_service(self, conf: ServiceConf) -> "LLMApi":
-        return OpenAIAdapter(conf, self._model)
+    def get_service(self) -> ServiceConf:
+        return self._service
 
-    def with_model(self, model: ModelConf) -> "LLMApi":
-        return OpenAIAdapter(self._service, model)
+    def get_model(self) -> ModelConf:
+        return self._model
 
     def text_completion(self, ctx: Context, prompt: str) -> str:
         raise NotImplemented("text_completion is deprecated, implement it later")
