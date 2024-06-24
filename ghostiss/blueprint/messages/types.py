@@ -1,29 +1,27 @@
 import enum
-import json
-from typing import List, Type, Optional, Dict, ClassVar, TypedDict, Iterable
+from typing import List, Type, Optional, ClassVar, Iterable
 from typing_extensions import Literal
-from pydantic import BaseModel, Field
+from pydantic import Field
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
-from ghostiss.blueprint.messages.message import Message, Role, FunctionCall, ToolCall, PACK
+from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
+from openai.types.chat.chat_completion_assistant_message_param import ChatCompletionAssistantMessageParam
+from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
+from openai.types.chat.chat_completion_system_message_param import ChatCompletionSystemMessageParam
+from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
+
+from ghostiss.blueprint.messages.message import Message, Role, FunctionCall, ToolCall, PACK, Final
 from ghostiss.entity import EntityFactory, EntityMeta
-from ghostiss.blueprint.messages.openai import (
-    ChatCompletionMessage,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionToolMessageParam,
-    ChatCompletionFunctionMessageParam,
-)
 
 __all__ = [
     "DefaultTypes",
     "TextMsg", "AssistantMsg", "ToolMsg",
+    "MessageFactory",
 ]
 
 
 class DefaultTypes(str, enum.Enum):
     # 文本类型的消息.
-    TEXT = "text"
+    TEXT = "ghostiss.messages.text"
     """标准的文本类型消息"""
 
     # DEBUG = "debug"
@@ -32,9 +30,11 @@ class DefaultTypes(str, enum.Enum):
     # VARIABLE = "variable"
     # """变量类型的消息. 需要作为 llm 可以理解的变量, 同时对端上展示一个结构化的 json. """
 
-    ASSISTANT = "assistant"
+    ASSISTANT = "ghostiss.messages.assistant"
 
-    TOOL_CALLBACK = "tool_callback"
+    TOOL = "ghostiss.messages.tool"
+
+    FINAL = Final.type
 
     IMAGES = "images"
     """对齐 gpt 多模态的 images 类型"""
@@ -48,21 +48,25 @@ class TextMsg(Message):
     文本消息.
     """
 
-    type: Literal[DefaultTypes.TEXT]
+    type: ClassVar[str] = DefaultTypes.TEXT
     content: str = Field(default="", description="Message content")
     memory: Optional[str] = Field(default=None, description="Message as memory")
+
+    @classmethod
+    def new(cls, *, role: str, content: str, memory: Optional[str] = None) -> "TextMsg":
+        return cls(role=role, content=content, memory=memory)
 
     def buff(self, pack: PACK) -> bool:
         # 不接受 buff.
         return False
 
-    def as_openai_message(self) -> Iterable[ChatCompletionMessageParam]:
+    def as_openai_message(self) -> Iterable[ChatCompletionAssistantMessageParam]:
         content = self.content
         if not content:
             return []
         yield new_openai_text(self.role, self.content, self.name)
 
-    def as_openai_memory(self) -> Iterable[ChatCompletionMessageParam]:
+    def as_openai_memory(self) -> Iterable[ChatCompletionAssistantMessageParam]:
         content = self.memory
         if content is None:
             content = self.content
@@ -76,12 +80,16 @@ class ToolMsg(Message):
     对齐 openai 的 tool message.
     """
 
-    type: Literal[DefaultTypes.TOOL_CALLBACK]
+    type: ClassVar[str] = DefaultTypes.TOOL
 
-    content: str
-    tool_call_id: str
+    content: str = Field(default="", description="tool content")
+    tool_call_id: str = Field()
 
-    role: Literal["tool"]
+    role: Literal["tool"] = "tool"
+
+    @classmethod
+    def new(cls, *, content: str, tool_call_id: str) -> "ToolMsg":
+        return cls(content=content, tool_call_id=tool_call_id)
 
     def buff(self, pack: PACK) -> bool:
         return False
@@ -107,7 +115,7 @@ class AssistantMsg(Message):
     type: ClassVar[str] = DefaultTypes.ASSISTANT
     # --- content --- #
 
-    role: Literal[Role.ASSISTANT]
+    role: Literal[Role.ASSISTANT] = Role.ASSISTANT
     content: Optional[str] = Field(default=None, description="Message content")
     memory: Optional[str] = Field(default=None, description="Message as memory")
     reset: bool = False
@@ -117,9 +125,22 @@ class AssistantMsg(Message):
     function_call: Optional[FunctionCall] = Field(default=None, description="Function call")
     tool_calls: Optional[List[ToolCall]] = Field(default=None, description="Tool calls")
 
+    @classmethod
+    def new(
+            cls, *,
+            content: Optional[str] = None,
+            memory: Optional[str] = None,
+            function_call: Optional[FunctionCall] = None,
+            tool_calls: Optional[List[ToolCall]] = None,
+            reset: bool = False,
+    ) -> "AssistantMsg":
+        return cls(content=content, memory=memory, function_call=function_call, tool_calls=tool_calls, reset=reset)
+
     def buff(self, pack: PACK) -> bool:
         if isinstance(pack, AssistantMsg):
             return self._buff(pack)
+        elif isinstance(pack, Message):
+            return False
 
         item = AssistantMsg.new_entity(pack)
         if item is None:
@@ -157,6 +178,7 @@ class AssistantMsg(Message):
             self.attachments = item.attachments
         elif item.attachments is not None:
             self.attachments.update(item.attachments)
+        return True
 
     def as_openai_message(self) -> Iterable[ChatCompletionMessageParam]:
         data = self.model_dump(include={"role", "content", "function_call", "tool_calls"})
@@ -171,10 +193,6 @@ class AssistantMsg(Message):
         data = self.model_dump(include={"role", "function_call", "tool_calls"})
         data["content"] = content
         yield ChatCompletionAssistantMessageParam(**data)
-
-    @classmethod
-    def new_pack_from_openai(cls, pack: ChatCompletionMessage) -> "AssistantMsg":
-        return cls(**pack.model_dump())
 
 
 def new_openai_text(role: str, content: str, name: Optional[str] = None) -> ChatCompletionMessageParam:
@@ -198,106 +216,6 @@ def new_openai_text(role: str, content: str, name: Optional[str] = None) -> Chat
         raise ValueError(f"Unsupported role: {role}")
 
 
-# # ---- messages ---- #
-#
-# class TextMsg(Message):
-#     """
-#     最基础的文本类型的消息.
-#     """
-#
-#     msg_type: ClassVar[str] = DefaultTypes.TEXT.value
-#
-#     content: str = Field(description="Message content")
-#     memory: Optional[str] = Field(default=None, description="Message memory")
-#
-#     def as_openai_message(self) -> Iterable[ChatCompletionMessageParam]:
-#         yield new_openai_text(self.role, self.content, self.name)
-#
-#     def as_openai_memory(self) -> Iterable[ChatCompletionMessageParam]:
-#         content = self.content
-#         if self.memory is not None:
-#             content = self.content
-#         if content:
-#             yield new_openai_text(self.role, content, self.name)
-#
-#
-# class AIMsg(Message, ChatCompletionMessage):
-#     """
-#     基于 openai chat completion 实现的 ai msg.
-#     """
-#
-#     memory: Optional[str] = Field(default=None, description="Message memory")
-#
-#     def as_openai_chat_completion(self, content: str = None) -> ChatCompletionMessage:
-#         data = self.model_dump()
-#         if content:
-#             data["content"] = content
-#         return ChatCompletionMessage(**data)
-#
-#     def as_openai_message(self) -> Iterable[ChatCompletionMessage]:
-#         # 由于参数一样, 所以可以直接覆盖.
-#         yield self.as_openai_chat_completion()
-#
-#     def as_openai_memory(self) -> Optional[ChatCompletionMessage]:
-#         if self.memory is None:
-#             yield self.as_openai_chat_completion()
-#         elif self.memory != "":
-#             yield self.as_openai_chat_completion(self.memory)
-#
-#
-# class DefaultToolResult(TypedDict):
-#     result: dict
-#     err: Optional[str]
-
-
-# class FuncResp(Message):
-#     """
-#     设计一种标准的 function 返回消息体.
-#     """
-#
-#     msg_type: ClassVar[str] = DefaultTypes.FUNC_RESP.value
-#     name: Optional[str] = Field(default=None, description="tool name")
-#     role: str = Field(const=Role.FUNCTION, description="tool role")
-#
-#     call_id: str = Field(description="tool call ID")
-#     memory: Optional[str] = Field(default=None, description="Caller memory")
-#
-#     result: dict = Field(description="Caller result")
-#     err: Optional[str] = Field(description="Caller error")
-#
-#     def as_openai_memory(self) -> Iterable[ChatCompletionMessageParam]:
-#         if self.memory == "":
-#             return []
-#         return self.as_openai_message()
-#
-#     def as_openai_message(self) -> Iterable[ChatCompletionMessageParam]:
-#         content = self.memory
-#         if not content:
-#             result = DefaultToolResult(result=self.result, err=self.err)
-#             content = json.dumps(result)
-#
-#         if self.id:
-#             yield ChatCompletionToolMessageParam(
-#                 content=content,
-#                 role="tool",
-#                 tool_call_id=self.call_id,
-#             )
-#         elif self.name:
-#             yield ChatCompletionFunctionMessageParam(
-#                 content=content,
-#                 name=self.name,
-#                 role="function",
-#             )
-#         else:
-#             # 默认使用 dict.
-#             yield dict(
-#                 content=content,
-#                 role="tool",
-#                 tool_call_id=self.id,
-#                 name=self.name,
-#             )
-
-
 # ---- factory ---- #
 
 class MessageFactory(EntityFactory[Message]):
@@ -305,16 +223,28 @@ class MessageFactory(EntityFactory[Message]):
     用来生成 messages 的.
     """
 
-    def __init__(self, types: Optional[List[Type[Message]]]):
+    def __init__(self, *, default_type: Optional[Type[Message]] = None, types: Optional[List[Type[Message]]] = None):
+        """
+        注册各种消息类型.
+        """
         self._types = {}
         if types is None:
-            types = [TextMsg, AssistantMsg, ToolMsg]
+            # 默认的 types
+            types = [TextMsg, AssistantMsg, ToolMsg, Final]
 
         for type_ in types:
-            self._types[type_.entity_kind()] = type_
+            # 注册 types.
+            self._types[type_.entity_type()] = type_
+        if default_type is None:
+            default_type = TextMsg
+        self._default_type = default_type
 
     def new_entity(self, meta_data: EntityMeta) -> Optional[Message]:
         kind = self._types.get(meta_data["type"], None)
         if kind is None:
-            return None
+            try:
+                return self._default_type.new_entity(meta_data)
+            except ValueError:
+                return None
+
         return kind.new_entity(meta_data)

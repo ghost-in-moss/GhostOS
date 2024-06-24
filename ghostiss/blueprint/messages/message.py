@@ -1,6 +1,6 @@
 import enum
 import time
-from typing import Optional, Dict, Any, ClassVar, Set, Iterable, Union
+from typing import Optional, Dict, Any, ClassVar, Set, Iterable, Union, TypeVar
 from typing_extensions import Literal
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
@@ -114,8 +114,10 @@ class Message(EntityClass, BaseModel, ABC):
 
 PACK = Union[EntityMeta, Message]
 
+M = TypeVar("M", bound=Message)
 
-def first_pack(message: Message) -> PACK:
+
+def first_pack(message: M) -> M:
     if not message.msg_id:
         message.msg_id = uuid()
     if not message.created:
@@ -127,7 +129,7 @@ class Final(Message):
     """
     流式消息的尾包.
     """
-    type: Literal["ghostiss.final"]
+    type: ClassVar[str] = "ghostiss.messages.final"
 
     def buff(self, pack: "PACK") -> bool:
         return False
