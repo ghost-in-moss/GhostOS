@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict, TypeVar, Callable, Set
+from typing import Type, Dict, TypeVar, Callable, Set, Optional
 
 INSTRUCTION = """
 打算实现一个 IoC 容器用来管理大量可替换的中间库. 
@@ -150,7 +150,7 @@ class ProviderAdapter(Provider):
     def __init__(
             self,
             contract_type: Type[Contract],
-            factory: Callable[[Container, Dict | None], Contract | None],
+            factory: Callable[[Container, Optional[Dict]], Optional[Contract]],
             singleton: bool = True
     ):
         self._contract_type = contract_type
@@ -163,5 +163,5 @@ class ProviderAdapter(Provider):
     def contract(self) -> Type[Contract]:
         return self._contract_type
 
-    def factory(self, con: Container, params: Dict | None = None) -> Contract | None:
+    def factory(self, con: Container, params: Optional[Dict] = None) -> Optional[Contract]:
         return self._factory(con, params)

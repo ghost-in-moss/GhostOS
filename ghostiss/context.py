@@ -1,6 +1,7 @@
 from typing import Any, Optional
 
 from abc import ABC, abstractmethod
+from ghostiss.contracts.logger import LoggerItf
 
 
 class ContextException(Exception):
@@ -27,6 +28,10 @@ class Context(ABC):
 
     todo: 有很大风险, 如果垃圾回收拉胯, 则所有代码都要修改了.
     """
+
+    @abstractmethod
+    def logger(self) -> LoggerItf:
+        pass
 
     @abstractmethod
     def get(self, key: str) -> Optional[Any]:
@@ -78,6 +83,8 @@ class Context(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         # todo: 要不要在这里做垃圾回收的动作?
         if exc_type is None:
+            return True
+        elif exc_val is self.err():
             return True
         elif isinstance(exc_val, ContextIsDone):
             return True

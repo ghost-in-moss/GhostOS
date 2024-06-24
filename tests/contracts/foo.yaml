@@ -1,0 +1,6 @@
+foo: foo
+bar: bar
+arr:
+  - 1
+  - 2
+  - 3

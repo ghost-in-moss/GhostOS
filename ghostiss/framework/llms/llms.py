@@ -1,7 +1,9 @@
 from typing import Optional, Dict, Iterator, Tuple, List
 from os import environ
 
-from ghostiss.core.llms import LLMs, LLMApi, ServiceConf, ModelConf, LLMDriver, LLMsConfig
+from ghostiss.blueprint.kernel.llms import LLMs, LLMApi, ServiceConf, ModelConf, LLMDriver, LLMsConfig
+
+__all__ = ['LLMsImpl']
 
 
 class LLMsImpl(LLMs):
@@ -11,9 +13,10 @@ class LLMsImpl(LLMs):
 
     def __init__(
             self,
+            *,
+            conf: Optional[LLMsConfig],
             default_driver: LLMDriver,
             drivers: Optional[List[LLMDriver]] = None,
-            conf: Optional[LLMsConfig] = None,
     ):
         self.llm_drivers: Dict[str, LLMDriver] = {}
         self.llm_services: Dict[str, ServiceConf] = {}
