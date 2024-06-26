@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, TypeVar, Generic, Tuple, Optional
 from pydantic import BaseModel
-from ghostiss.context import Context
 
 if TYPE_CHECKING:
     from ghostiss.blueprint.kernel.runs import Run
@@ -27,7 +26,7 @@ class Thinks(ABC):
     基于大模型实现各种底层范式.
     """
 
-    def chat(self, ctx: Context, run: Run):
+    def chat(self, run: Run):
         """
         一轮对话.
         """

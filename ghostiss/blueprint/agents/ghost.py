@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional, Dict, Any
-from ghostiss.context import Context
 from ghostiss.contracts.logger import LoggerItf
 from ghostiss.entity import Entity, EntityMeta, EntityFactory
 
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
     from ghostiss.blueprint.agents.runtime import Runtime, Task
     from ghostiss.blueprint.agents.shell import Shell
     from ghostiss.blueprint.agents.minds import Ideas
-    from ghostiss.blueprint.agents.configs import Configs
+    from ghostiss.contracts.configs import Configs
     from ghostiss.blueprint.agents.libraries import Libraries
     from ghostiss.blueprint.agents.operators import Operator
 
@@ -26,14 +25,12 @@ class TaskCtx(Context):
 
     def __init__(
             self,
-            ctx: Context,
             task: "Task",
             envs: "Envs",
             logger: "LoggerItf",
             messenger: "Messenger",
             trace: Dict,
     ):
-        self._ctx = ctx
         self.task = task
         """当前任务的状态, 如果操作数据变更, 会影响后续的逻辑."""
 
@@ -62,9 +59,6 @@ class TaskCtx(Context):
 
     def done(self) -> bool:
         return self._ctx.done()
-
-    def life_left(self) -> float:
-        return self._ctx.life_left()
 
 
 class Ghost(Entity, ABC):

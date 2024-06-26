@@ -1,7 +1,7 @@
 from typing import Dict, Type, Optional
 
 from ghostiss.contracts.configs import YamlConfig, Configs
-from ghostiss.container import Provider, Container, Contract
+from ghostiss.container import Provider, Container, CONTRACT
 from ghostiss.blueprint.kernel.llms import LLMs, LLMsConfig
 from ghostiss.framework.llms.llms import LLMsImpl
 from ghostiss.framework.llms.openai_driver import OpenAIDriver
@@ -9,7 +9,7 @@ from ghostiss.framework.llms.openai_driver import OpenAIDriver
 __all__ = ['LLMsConfigBasedProvider']
 
 
-class LLMsConfigBasedProvider(Provider):
+class LLMsConfigBasedProvider(Provider[LLMs]):
     """
     基于 Config 来读取
     """
@@ -20,10 +20,10 @@ class LLMsConfigBasedProvider(Provider):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Contract]:
+    def contract(self) -> Type[LLMs]:
         return LLMs
 
-    def factory(self, con: Container, params: Optional[Dict] = None) -> Optional[Contract]:
+    def factory(self, con: Container) -> Optional[LLMs]:
         class LLMsYamlConfig(YamlConfig, LLMsConfig):
             """
             配置项存储位置.

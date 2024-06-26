@@ -1,0 +1,24 @@
+# logging_config.yml
+
+version: 1
+
+formatters:
+  default:
+    format: "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
+  context_formatter:
+    format: "%(asctime)s - %(name)s - %(levelname)s: %(message)s - %(trace)s"
+
+handlers:
+  rotate_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    filename: demo/runtime/logs/ghostiss.log
+    when: midnight
+    encoding: utf-8
+    formatter: default
+    backupCount: 6
+
+loggers:
+  ghostiss:
+    handlers: [ rotate_file ]
+    level: DEBUG

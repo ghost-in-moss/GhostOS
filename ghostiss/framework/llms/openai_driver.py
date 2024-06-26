@@ -5,8 +5,6 @@ from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
-from ghostiss.context import Context
-from ghostiss.contracts.logger import LoggerItf
 from ghostiss.blueprint.errors import GhostissIOError
 from ghostiss.blueprint.messages import Message, AssistantMsg
 from ghostiss.blueprint.kernel.llms import LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME
@@ -42,14 +40,10 @@ class OpenAIAdapter(LLMApi):
     def get_model(self) -> ModelConf:
         return self._model
 
-    def text_completion(self, ctx: Context, prompt: str) -> str:
+    def text_completion(self, prompt: str) -> str:
         raise NotImplemented("text_completion is deprecated, implement it later")
 
-    def get_embeddings(self, ctx: Context, texts: List[str]) -> Embeddings:
-        with ctx:
-            return self._text_embedding(texts)
-
-    def _text_embedding(self, texts: List[str]) -> Embeddings:
+    def get_embeddings(self, texts: List[str]) -> Embeddings:
         try:
             model = self._model.model
             resp = self._openai.embeddings.create(

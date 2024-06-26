@@ -9,7 +9,6 @@ from openai.types.chat.chat_completion_message_param import ChatCompletionMessag
 from openai.types.chat.completion_create_params import Function, FunctionCall, ChatCompletionFunctionCallOptionParam
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.context import Context
 from ghostiss.contracts.logger import LoggerItf
 from ghostiss.blueprint.messages import Message, Stream, Final
 
@@ -184,14 +183,14 @@ class LLMApi(ABC):
         pass
 
     @abstractmethod
-    def text_completion(self, ctx: Context, prompt: str) -> str:
+    def text_completion(self, prompt: str) -> str:
         """
         deprecated text completion
         """
         pass
 
     @abstractmethod
-    def get_embeddings(self, ctx: Context, text: List[str]) -> Embeddings:
+    def get_embeddings(self, text: List[str]) -> Embeddings:
         pass
 
     @abstractmethod
@@ -205,19 +204,15 @@ class LLMApi(ABC):
         """
         pass
 
-    def deliver_chat_completion(self, ctx: Context, chat: Chat, up_stream: Stream) -> None:
+    def deliver_chat_completion(self, chat: Chat, up_stream: Stream) -> None:
         """
         逐个发送消息的包.
         """
         items = self.chat_completion_chunks(chat)
-        if ctx.done():
-            return None
         for item in items:
-            with ctx:
-                up_stream.deliver(item)
-        with ctx:
-            # 发送尾包.
-            up_stream.deliver(Final())
+            up_stream.deliver(item)
+        # 发送尾包.
+        up_stream.deliver(Final())
 
 
 class LLMDriver(ABC):

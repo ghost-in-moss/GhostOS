@@ -1,6 +1,7 @@
 import enum
-from typing import List, Type, Optional, ClassVar, Iterable
+from typing import List, Type, Optional, ClassVar, Iterable, Dict
 from typing_extensions import Literal
+from abc import ABC, abstractmethod
 from pydantic import Field
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
@@ -9,13 +10,14 @@ from openai.types.chat.chat_completion_user_message_param import ChatCompletionU
 from openai.types.chat.chat_completion_system_message_param import ChatCompletionSystemMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 
+from ghostiss.container import Provider, Container, CONTRACT
 from ghostiss.blueprint.messages.message import Message, Role, FunctionCall, ToolCall, PACK, Final
 from ghostiss.entity import EntityFactory, EntityMeta
 
 __all__ = [
     "DefaultTypes",
     "TextMsg", "AssistantMsg", "ToolMsg",
-    "MessageFactory",
+    "MessageFactory", "MessageDefaultFactory",
 ]
 
 
@@ -218,10 +220,17 @@ def new_openai_text(role: str, content: str, name: Optional[str] = None) -> Chat
 
 # ---- factory ---- #
 
-class MessageFactory(EntityFactory[Message]):
+class MessageFactory(EntityFactory[Message], ABC):
     """
-    用来生成 messages 的.
+    用来生成 messages 的容器. 也可以绑定.
     """
+
+    @abstractmethod
+    def new_entity(self, meta_data: EntityMeta) -> Optional[Message]:
+        pass
+
+
+class MessageDefaultFactory(MessageFactory):
 
     def __init__(self, *, default_type: Optional[Type[Message]] = None, types: Optional[List[Type[Message]]] = None):
         """
@@ -248,3 +257,15 @@ class MessageFactory(EntityFactory[Message]):
                 return None
 
         return kind.new_entity(meta_data)
+
+
+class MessageFactoryProvider(Provider[MessageFactory]):
+
+    def singleton(self) -> bool:
+        return True
+
+    def contract(self) -> Type[MessageFactory]:
+        return MessageFactory
+
+    def factory(self, con: Container) -> Optional[MessageFactory]:
+        return MessageDefaultFactory()

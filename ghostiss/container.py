@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict, TypeVar, Callable, Set, Optional
+from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic
 
 INSTRUCTION = """
 打算实现一个 IoC 容器用来管理大量可替换的中间库. 
 """
 
-Contract = TypeVar('Contract', bound=object)
+CONTRACT = TypeVar('CONTRACT', bound=object)
 
 
 class Container:
@@ -30,28 +30,42 @@ class Container:
                 raise AttributeError("container's parent must not be itself")
         self.parent = parent
         # global singletons.
-        self.__instances: Dict[Type[Contract], Contract] = {}
+        self._instances: Dict[Type[CONTRACT], CONTRACT] = {}
         # providers bounds
-        self.__providers: Dict[Type[Contract], Provider] = {}
-        self.__bound: Set = set()
+        self._providers: Dict[Type[CONTRACT], Provider] = {}
+        self._bound: Set = set()
+        self._bootstrapper: List["Bootstrapper"] = []
+        self._bootstrapped: bool = False
 
-    def set(self, contract: Type[Contract], instance: Contract) -> None:
+    def bootstrap(self) -> None:
+        """
+        执行 bootstrap, 只执行一次. 可以操作依赖关系. 比如实例化后反向注册.
+        """
+        if self._bootstrapped:
+            return
+        if not self._bootstrapper:
+            return
+        for b in self._bootstrapper:
+            b.bootstrap(self)
+        self._bootstrapped = True
+
+    def set(self, contract: Type[CONTRACT], instance: CONTRACT) -> None:
         """
         设置一个实例, 不会污染父容器.
         """
         self._bind_contract(contract)
-        self.__instances[contract] = instance
+        self._instances[contract] = instance
 
-    def _bind_contract(self, contract: Type[Contract]) -> None:
-        self.__bound.add(contract)
+    def _bind_contract(self, contract: Type[CONTRACT]) -> None:
+        self._bound.add(contract)
 
-    def bound(self, contract: Type[Contract]) -> bool:
+    def bound(self, contract: Type[CONTRACT]) -> bool:
         """
         return whether contract is bound.
         """
-        return contract in self.__bound or (self.parent is not None and self.parent.bound(contract))
+        return contract in self._bound or (self.parent is not None and self.parent.bound(contract))
 
-    def get(self, contract: Type[Contract], params: Dict | None = None) -> Contract | None:
+    def get(self, contract: Type[CONTRACT]) -> CONTRACT | None:
         """
         get bound instance or initialize one of the contract
 
@@ -59,16 +73,19 @@ class Container:
 
         - params 感觉不需要.
         """
+        if not self._bootstrapped:
+            # 进行初始化.
+            self.bootstrap()
 
         # get bound instance
-        got = self.__instances.get(contract, None)
+        got = self._instances.get(contract, None)
         if got is not None:
             return got
 
         # use provider as factory to initialize instance of the contract
-        if contract in self.__providers:
-            provider = self.__providers[contract]
-            made = provider.factory(self, params)
+        if contract in self._providers:
+            provider = self._providers[contract]
+            made = provider.factory(self)
             if made is not None and provider.singleton():
                 self.set(contract, made)
             return made
@@ -82,13 +99,20 @@ class Container:
         """
         register factory of the contract by provider
         """
+        if isinstance(provider, Bootstrapper):
+            # 添加 bootstrapper.
+            self.add_bootstrapper(provider)
+
         contract = provider.contract()
         self._bind_contract(contract)
-        if contract in self.__instances:
-            del self.__instances[contract]
-        self.__providers[contract] = provider
+        if contract in self._instances:
+            del self._instances[contract]
+        self._providers[contract] = provider
 
-    def fetch(self, contract: Type[Contract], strict: bool = False) -> Contract | None:
+    def add_bootstrapper(self, bootstrapper: Bootstrapper) -> None:
+        self._bootstrapper.append(bootstrapper)
+
+    def fetch(self, contract: Type[CONTRACT], strict: bool = False) -> CONTRACT | None:
         """
         get contract with type check
         """
@@ -99,7 +123,7 @@ class Container:
             return instance
         return None
 
-    def force_fetch(self, contract: Type[Contract], strict: bool = False) -> Contract:
+    def force_fetch(self, contract: Type[CONTRACT], strict: bool = False) -> CONTRACT:
         """
         if fetch contract failed, raise error.
         """
@@ -112,13 +136,15 @@ class Container:
         """
         Manually delete the container to prevent memory leaks.
         """
-        del self.__instances
+        del self._instances
         del self.parent
-        del self.__providers
-        del self.__bound
+        del self._providers
+        del self._bound
+        del self._bootstrapper
+        del self._bootstrapped
 
 
-class Provider(metaclass=ABCMeta):
+class Provider(Generic[CONTRACT], metaclass=ABCMeta):
 
     @abstractmethod
     def singleton(self) -> bool:
@@ -128,18 +154,35 @@ class Provider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def contract(self) -> Type[Contract]:
+    def contract(self) -> Type[CONTRACT]:
         """
         contract for this provider.
         """
         pass
 
     @abstractmethod
-    def factory(self, con: Container, params: Dict | None = None) -> Contract | None:
+    def factory(self, con: Container) -> Optional[CONTRACT]:
         """
         factory method to generate an instance of the contract.
         """
         pass
+
+
+class Bootstrapper(metaclass=ABCMeta):
+    """
+    完成所有的绑定之后, 进行容器之间的初始化.
+    """
+
+    @abstractmethod
+    def bootstrap(self, container: Container) -> None:
+        pass
+
+
+class BootstrappingProvider(Provider, Bootstrapper, metaclass=ABCMeta):
+    """
+    将 bootstrapper 和 Provider 可以融合在一起.
+    """
+    pass
 
 
 class ProviderAdapter(Provider):
@@ -149,8 +192,8 @@ class ProviderAdapter(Provider):
 
     def __init__(
             self,
-            contract_type: Type[Contract],
-            factory: Callable[[Container, Optional[Dict]], Optional[Contract]],
+            contract_type: Type[CONTRACT],
+            factory: Callable[[Container], Optional[CONTRACT]],
             singleton: bool = True
     ):
         self._contract_type = contract_type
@@ -160,8 +203,8 @@ class ProviderAdapter(Provider):
     def singleton(self) -> bool:
         return self._singleton
 
-    def contract(self) -> Type[Contract]:
+    def contract(self) -> Type[CONTRACT]:
         return self._contract_type
 
-    def factory(self, con: Container, params: Optional[Dict] = None) -> Optional[Contract]:
-        return self._factory(con, params)
+    def factory(self, con: Container) -> Optional[CONTRACT]:
+        return self._factory(con)
