@@ -1,8 +1,7 @@
 from typing import Optional, Iterable
 from abc import ABC, abstractmethod
 from ghostiss.blueprint.messages.message import Message
-# from ghostiss.blueprint.messages.packs import Pack
-from ghostiss.entity import EntityMeta
+
 
 class Retriever(ABC):
     """
@@ -13,17 +12,9 @@ class Retriever(ABC):
     """
 
     @abstractmethod
-    def headers(self) -> Iterable[Message]:
-        pass
-
-    @abstractmethod
-    def msg_chunks(self, msg_id: str) -> Iterable[EntityMeta]:
+    def packs(self) -> Iterable[Message]:
         pass
 
     @abstractmethod
     def messages(self) -> Iterable[Message]:
-        pass
-
-    @abstractmethod
-    def packs(self) -> Iterable[Pack]:
         pass

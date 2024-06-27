@@ -9,7 +9,6 @@ from openai.types.chat.chat_completion_message_param import ChatCompletionMessag
 from openai.types.chat.completion_create_params import Function, FunctionCall, ChatCompletionFunctionCallOptionParam
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.contracts.logger import LoggerItf
 from ghostiss.blueprint.messages import Message, Stream, Final
 
 """
@@ -71,49 +70,6 @@ class LLMFunc(BaseModel):
     description: str = Field(default="", description="function description")
     parameters: Optional[Dict] = Field(default=None, description="function parameters")
 
-    # def to_openai(self) -> completion_create_params.Function:
-    #     return completion_create_params.Function(**self.model_dump())
-
-
-#
-# class LlmMsg(BaseModel):
-#     """
-#     OpenAI 接口的消息.
-#     """
-#
-#     role: str = Field(enum={"system", "user", "assistant", "function"})
-#     content: str = ""
-#     kind: str = Field(enum={"text", "function", "image"})
-#     name: Optional[str] = None
-#     payload: Optional[Dict[str, Any]] = Field(default=None, description="对齐 openai 特殊类型. ")
-#
-#     def say(self) -> LlmMsg:
-#         return LlmMsg(content=self.content, name=self.name, role=self.role, function_call=self.function_call)
-#
-#     def get_openai_content(self) -> Union[str, ]:
-#         if self.kind == LlmKind.TEXT:
-#             pass
-#         elif self.kind == LlmKind.TEXTS:
-#             pass
-#         else:
-#             return self.content
-#
-#     def to_openai(self) -> completion_create_params.ChatCompletionMessageParam:
-#         if self.role == ChatRole.USER:
-#             return chat_completion_user_message_param.ChatCompletionUserMessageParam(
-#                 content=self.content, name=self.name, role="user",
-#             )
-#         elif self.role == ChatRole.SYSTEM:
-#             return chat_completion_system_message_param.ChatCompletionSystemMessageParam(
-#                 content=self.content, name=self.name, role="system",
-#             )
-#
-#     def to_message(self) -> Dict:
-#         data = self.model_dump(include={"role", "content", "name", "function_call"})
-#         # remove none values.
-#         result = helpers.dict_without_none(data)
-#         return result
-
 
 class FunctionalTokens(BaseModel):
     tokens: str
@@ -129,7 +85,7 @@ class Chat(BaseModel):
     functions: List[LLMFunc] = Field(default_factory=list)
     functional_tokens: List[FunctionalTokens] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
-    stop: Optional[List[str]] = Field(default=None)
+    # stop: Optional[List[str]] = Field(default=None)
 
     def get_openai_functions(self) -> Iterable[Function]:
         for func in self.functions:
@@ -166,6 +122,11 @@ class Embeddings(BaseModel):
     # todo: 未来再管这些.
     # cast: Cast = Field(description="cast")
 
+
+# --- test case --- #
+
+
+# --- interfaces --- #
 
 class LLMApi(ABC):
 

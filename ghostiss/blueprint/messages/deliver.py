@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Iterable, NamedTuple
 if TYPE_CHECKING:
-    from ghostiss.blueprint.messages.message import Message, Future, PACK
+    from ghostiss.blueprint.messages.message import Message, Caller
 
 __all__ = [
     "Deliver",
@@ -14,7 +14,7 @@ class Decoded(NamedTuple):
     messages: Iterable["Message"]
     """已经向上游发送的消息"""
 
-    callers: Iterable["Future"]
+    callers: Iterable["Caller"]
     """过滤出来的 caller. """
 
 
@@ -24,7 +24,7 @@ class Stream(ABC):
     """
 
     @abstractmethod
-    def deliver(self, pack: "PACK") -> bool:
+    def deliver(self, pack: "Message") -> bool:
         pass
 
 
@@ -34,7 +34,7 @@ class Deliver(Stream, ABC):
     """
 
     @abstractmethod
-    def deliver(self, pack: "PACK") -> bool:
+    def deliver(self, pack: "Message") -> bool:
         """
         发送一个包.
         """

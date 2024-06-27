@@ -1,14 +1,15 @@
 import enum
 import time
-from typing import Optional, Dict, Any, ClassVar, Set, Iterable, Union, TypeVar
-from typing_extensions import Literal
+from typing import Optional, Dict, Any, ClassVar, Set, Iterable, Union, TypeVar, NamedTuple, TypedDict, List, Type
+from typing_extensions import Literal, Required
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from ghostiss.helpers import uuid
-from ghostiss.entity import EntityMeta, EntityClass
 
-__all__ = ["Message", "Future", "Role", "FunctionCall", "ToolCall", "PACK", "Final", "first_pack"]
+__all__ = [
+    "Message", "Caller", "Role", "DefaultTypes",
+    "FunctionCall", "FunctionalToken",
+]
 
 
 class Role(str, enum.Enum):
@@ -16,7 +17,6 @@ class Role(str, enum.Enum):
     ASSISTANT = "assistant"
     SYSTEM = "system"
     FUNCTION = "function"
-    TOOL = "tool"
 
     @classmethod
     def all(cls) -> Set[str]:
@@ -28,114 +28,148 @@ class FunctionCall(BaseModel):
     name: str
 
 
-class ToolCall(BaseModel):
+class FunctionalToken(BaseModel):
     id: str
-    """The ID of the tool call."""
-
+    token: str
     function: FunctionCall
-    """The function that the model called."""
-
-    type: Literal["function"]
-    """The type of the tool. Currently, only `function` is supported."""
+    deliver: bool
 
 
-class Future(BaseModel):
-    id: str
-    """The ID of the tool call."""
-    name: str
-    arguments: str
+class DefaultTypes(str, enum.Enum):
+    DEFAULT = ""
+    CHAT_COMPLETION = "chat_completion"
+
+    def new(
+            self, *, content: str, role: str = "assistant", memory: Optional[str] = None, name: Optional[str] = None,
+    ) -> "Message":
+        return Message(content=content, memory=memory, name=name, type=self.value, role=role)
 
 
-class Message(EntityClass, BaseModel, ABC):
+class Caller(TypedDict, total=False):
+    id: Optional[str]
+    name: Required[str]
+    arguments: Required[str]
+
+
+class Message(BaseModel):
     """
     消息体的容器. 通用的抽象设计.
-    重点是实现不同类型的消息体, 把角色等讯息当成通用的.
     """
-    type: ClassVar[str]
-
-    # --- header --- #
 
     msg_id: str = Field(default="")
+    type: str = Field(default="", description="消息类型是对 payload 的约定. 默认的 type就是 text.")
+    created: int = Field(default=0, description="Message creation time")
+    pack: bool = Field(default=True, description="Message reset time")
 
     role: str = Field(default="", description="Message role", enum=Role.all())
     name: Optional[str] = Field(default=None, description="Message sender name")
-    created: int = Field(default=0, description="Message creation time")
+
+    content: Optional[str] = Field(default=None, description="Message content")
+    memory: Optional[str] = Field(default=None, description="Message memory")
 
     # --- attachments --- #
 
-    attachments: Optional[Dict[str, Any]] = Field(default=None, description="""
-- attachments 不能是和记忆转换逻辑有关的. 
-""")
+    payload: Dict[str, Dict] = Field(default_factory=dict, description="k/v 结构的强类型参数.")
+    attachments: Dict[str, List[Dict]] = Field(default_factory=dict, description="k/list[v] 类型的强类型参数.")
 
-    def to_entity_meta(self):
-        return EntityMeta(
-            id=self.msg_id,
-            type=self.type,
-            # !!exclude defaults
-            data=self.model_dump(exclude_defaults=True),
+    @classmethod
+    def new(
+            cls, *,
+            role: str,
+            type_: str = "",
+            content: Optional[str] = None,
+            memory: Optional[str] = None,
+            name: Optional[str] = None,
+            msg_id: Optional[str] = None,
+            created: int = 0,
+    ):
+        if msg_id is None:
+            msg_id = uuid()
+        if created <= 0:
+            created = int(time.time())
+        if role is None:
+            role = Role.ASSISTANT.value
+        return cls(
+            role=role, name=name, content=content, memory=memory, pack=False,
+            type=type_,
+            msg_id=msg_id, created=created,
         )
 
     @classmethod
-    def entity_type(cls) -> str:
-        return cls.type
+    def new_pack(
+            cls, *,
+            type_: str = "",
+            role: Optional[str] = None,
+            content: Optional[str] = None,
+            memory: Optional[str] = None,
+            name: Optional[str] = None,
+    ):
+        return cls(
+            role=role, name=name, content=content, memory=memory, pack=True,
+            type=type_,
+        )
 
-    @classmethod
-    def match(cls, meta: EntityMeta) -> bool:
-        return meta["type"] == cls.type
+    def get_content(self) -> Optional[str]:
+        if self.memory is None:
+            return self.content
+        return self.memory
 
-    @classmethod
-    def new_entity(cls, meta: EntityMeta) -> Optional["Message"]:
-        if meta["type"] != cls.entity_type():
-            return None
-        try:
-            return cls(**meta["data"])
-        except TypeError:
-            return None
+    def buff(self, pack: "Message") -> bool:
+        if pack.get_type() != self.get_type():
+            return False
+        if pack.msg_id and self.msg_id and pack.msg_id != self.msg_id:
+            return False
+        if not pack.pack:
+            self.reset(pack)
+            return True
+        self.update(pack)
+        return True
 
-    @abstractmethod
-    def buff(self, pack: "PACK") -> bool:
-        pass
+    def reset(self, pack: "Message") -> None:
+        self.msg_id = pack.msg_id
+        self.type = pack.type
+        self.created = pack.created
+        self.pack = False
+        self.role = pack.role
+        self.name = pack.name
+        self.content = pack.content
+        self.memory = pack.memory
+        self.payload = pack.payload
+        self.attachments = pack.attachments
 
-    @abstractmethod
-    def as_openai_message(self) -> Iterable[ChatCompletionMessageParam]:
-        """
-        以 openai 的消息协议, 返回可展示的消息.
-        """
-        pass
+    def get_copy(self) -> "Message":
+        return self.model_copy()
 
-    @abstractmethod
-    def as_openai_memory(self) -> Iterable[ChatCompletionMessageParam]:
-        """
-        以 openai 的消息协议, 返回 memory 消息.
-        通常就是 as_openai_message
-        """
-        pass
+    def update(self, pack: "Message") -> None:
+        if not self.msg_id:
+            self.msg_id = pack.msg_id
+        if not self.type:
+            self.type = pack.type
+        if not self.role:
+            self.role = pack.role
+        if self.name is None:
+            self.name = pack.name
+
+        if self.content is None:
+            self.content = pack.content
+        elif pack.content is not None:
+            self.content += pack.content
+
+        if pack.memory is not None:
+            self.memory = pack.memory
+
+        self.payload.update(pack.payload)
+
+        if pack.attachments is not None:
+            for key, items in pack.attachments.items():
+                saved = self.attachments.get(key, [])
+                saved.append(*items)
+                self.attachments[key] = saved
+
+    def get_type(self) -> str:
+        return self.type or DefaultTypes.DEFAULT
+
+    def dump(self) -> Dict:
+        return self.model_dump(exclude_defaults=True)
 
 
-PACK = Union[EntityMeta, Message]
-
-M = TypeVar("M", bound=Message)
-
-
-def first_pack(message: M) -> M:
-    if not message.msg_id:
-        message.msg_id = uuid()
-    if not message.created:
-        message.created = int(time.time())
-    return message
-
-
-class Final(Message):
-    """
-    流式消息的尾包.
-    """
-    type: ClassVar[str] = "ghostiss.messages.final"
-
-    def buff(self, pack: "PACK") -> bool:
-        return False
-
-    def as_openai_message(self) -> Iterable[ChatCompletionMessageParam]:
-        return []
-
-    def as_openai_memory(self) -> Iterable[ChatCompletionMessageParam]:
-        return []

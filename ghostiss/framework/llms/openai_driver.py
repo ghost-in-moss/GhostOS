@@ -65,6 +65,7 @@ class OpenAIAdapter(LLMApi):
             raise GhostissIOError("failed to get text embedding", e)
 
     def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterator[ChatCompletionChunk]]:
+        # todo: try catch
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True if stream else False)
         return self._openai.chat.completions.create(
             # messages=messages,

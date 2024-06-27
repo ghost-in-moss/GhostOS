@@ -26,3 +26,23 @@ def test_dict_update():
     assert a["cool"] == "cool"
     a.update([("loo", "loo")])
     assert a["loo"] == "loo"
+
+
+def test_typed_dict_with_undefined():
+    class Foo(TypedDict, total=False):
+        a: Optional[int]
+
+    # typed script do not validate values
+    foo = Foo(a=1, b=2)
+    assert "b" in foo
+
+    class Bar(TypedDict, total=True):
+        a: Optional[int]
+
+    bar = Bar(a=None)
+    assert "a" not in bar
+    bar = Bar(b=1)
+    assert "b" in bar
+
+    bar2 = Bar(a="world")
+    assert "a" in bar2
