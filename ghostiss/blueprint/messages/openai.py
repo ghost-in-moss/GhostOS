@@ -39,7 +39,7 @@ class OpenAIParser(ABC):
                 yield item
 
     @abstractmethod
-    def from_chat_completion(self, message: ChatCompletionMessage) -> Iterable[Message]:
+    def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
         """
         将 openai chat completion 转换.
         """
@@ -111,7 +111,7 @@ class DefaultOpenAIParser(OpenAIParser):
             tool_calls=tool_calls,
         )]
 
-    def from_chat_completion(self, message: ChatCompletionMessage) -> Iterable[Message]:
+    def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
         pack = Message.new(type_=DefaultTypes.CHAT_COMPLETION, role=message.role, content=message.content)
         if message.function_call:
             function_call = FunctionCall(**message.function_call.model_dump())
@@ -120,7 +120,7 @@ class DefaultOpenAIParser(OpenAIParser):
             tool_calls = ToolCall()
             tool_calls.calls = message.tool_calls
             tool_calls.add(pack)
-        yield pack
+        return pack
 
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         # 创建首包, 并发送.

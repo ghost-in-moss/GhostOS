@@ -38,6 +38,7 @@ class FunctionalToken(BaseModel):
 class DefaultTypes(str, enum.Enum):
     DEFAULT = ""
     CHAT_COMPLETION = "chat_completion"
+    ERROR = "error"
 
     def new(
             self, *, content: str, role: str = "assistant", memory: Optional[str] = None, name: Optional[str] = None,

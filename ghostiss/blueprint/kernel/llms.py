@@ -206,6 +206,10 @@ class LLMs(ABC):
         pass
 
     @abstractmethod
+    def get_service(self, name: str) -> Optional[ServiceConf]:
+        pass
+
+    @abstractmethod
     def each_api_conf(self) -> Iterable[Tuple[ServiceConf, ModelConf]]:
         pass
 
@@ -214,14 +218,14 @@ class LLMs(ABC):
         pass
 
     @abstractmethod
-    def get_api(self, api_name: str, trace: Optional[Dict] = None) -> Optional[LLMApi]:
+    def get_api(self, api_name: str) -> Optional[LLMApi]:
         pass
 
-    def force_get_api(self, api_name: str, trace: Optional[Dict] = None) -> LLMApi:
+    def force_get_api(self, api_name: str) -> LLMApi:
         """
         sugar
         """
-        api = self.get_api(api_name, trace)
+        api = self.get_api(api_name)
         if api is None:
             raise NotImplemented("LLM API {} not implemented.".format(api_name))
         return api

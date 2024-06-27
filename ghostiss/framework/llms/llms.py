@@ -54,6 +54,9 @@ class LLMsImpl(LLMs):
     def services(self) -> List[ServiceConf]:
         return list(self._llm_services.values())
 
+    def get_service(self, name: str) -> Optional[ServiceConf]:
+        return self._llm_services.get(name, None)
+
     def each_api_conf(self) -> Iterator[Tuple[ServiceConf, ModelConf]]:
         for model_conf in self._llm_models.values():
             service = self._llm_services.get(model_conf.service, None)
@@ -66,7 +69,7 @@ class LLMsImpl(LLMs):
         driver = self._llm_drivers.get(service_conf.driver, self._default_driver)
         return driver.new(service_conf, api_conf)
 
-    def get_api(self, api_name: str, trace: Optional[Dict] = None) -> Optional[LLMApi]:
+    def get_api(self, api_name: str) -> Optional[LLMApi]:
         api = self._apis.get(api_name, None)
         if api is not None:
             return api

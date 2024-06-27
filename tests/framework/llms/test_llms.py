@@ -3,7 +3,7 @@ from ghostiss.container import Container
 from ghostiss.blueprint.kernel.llms import LLMsConfig, LLMs
 from ghostiss.contracts.configs import YamlConfig, ConfigsByStorageProvider, Configs
 from ghostiss.contracts.storage import FileStorageProvider
-from ghostiss.framework.llms import LLMsConfigBasedProvider
+from ghostiss.framework.llms import ConfigBasedLLMsProvider
 
 
 def _prepare_container() -> Container:
@@ -40,7 +40,7 @@ def test_llms():
     存在文件依赖关系.
     """
     container: Container = _prepare_container()
-    container.register(LLMsConfigBasedProvider("llms/test_llms_conf.yaml"))
+    container.register(ConfigBasedLLMsProvider("llms/test_llms_conf.yaml"))
 
     llms = container.force_fetch(LLMs)
     api = llms.get_api("test")

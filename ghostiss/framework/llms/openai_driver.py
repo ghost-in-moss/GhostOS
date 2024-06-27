@@ -1,4 +1,4 @@
-from typing import List, Iterator, Union
+from typing import List, Iterable, Union, Optional
 
 from openai import OpenAI
 from openai.types.chat import ChatCompletion
@@ -6,13 +6,13 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostiss.blueprint.errors import GhostissIOError
-from ghostiss.blueprint.messages import Message, AssistantMsg
-from ghostiss.blueprint.kernel.llms import LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME
+from ghostiss.blueprint.messages import Message, OpenAIParser, DefaultOpenAIParser
+from ghostiss.blueprint.kernel.llms import LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME
 from ghostiss.blueprint.kernel.llms import Chat
 from ghostiss.blueprint.kernel.llms import Embedding, Embeddings
-from ghostiss.helpers import uuid
+from ghostiss.container import Bootstrapper, Container
 
-__all__ = ['OpenAIDriver', 'OpenAIAdapter']
+__all__ = ['OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper']
 
 
 class OpenAIAdapter(LLMApi):
@@ -24,6 +24,7 @@ class OpenAIAdapter(LLMApi):
             self,
             service_conf: ServiceConf,
             model_conf: ModelConf,
+            parser: OpenAIParser,
     ):
         self._service = service_conf
         self._model = model_conf
@@ -33,6 +34,7 @@ class OpenAIAdapter(LLMApi):
             # todo: 未来再做更多细节.
             max_retries=0,
         )
+        self._parser = parser
 
     def get_service(self) -> ServiceConf:
         return self._service
@@ -86,18 +88,11 @@ class OpenAIAdapter(LLMApi):
 
     def chat_completion(self, chat: Chat) -> Message:
         message: ChatCompletion = self._chat_completion(chat, stream=False)
-        values = message.choices[0].message.model_dump()
-        values["msg_id"] = uuid()
-        return AssistantMsg(**values)
+        return self._parser.from_chat_completion(message.choices[0].message)
 
-    def chat_completion_chunks(self, chat: Chat) -> Iterator[Message]:
-        messages: Iterator[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
-        first = AssistantMsg(msg_id=uuid())
-        for item in messages:
-            if first:
-                yield first
-                first = None
-            yield AssistantMsg(**item.choices[0].delta.model_dump())
+    def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
+        messages: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
+        return self._parser.from_chat_completion_chunks(messages)
 
 
 class OpenAIDriver(LLMDriver):
@@ -105,8 +100,20 @@ class OpenAIDriver(LLMDriver):
     adapter
     """
 
+    def __init__(self, parser: Optional[OpenAIParser] = None):
+        if parser is None:
+            parser = DefaultOpenAIParser()
+        self._parser = parser
+
     def driver_name(self) -> str:
         return OPENAI_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
-        return OpenAIAdapter(service, model)
+        return OpenAIAdapter(service, model, self._parser)
+
+
+class OpenAIDriverBootstrapper(Bootstrapper):
+
+    def bootstrap(self, container: Container) -> None:
+        llms = container.force_fetch(LLMs)
+        llms.register_driver(OpenAIDriver())
