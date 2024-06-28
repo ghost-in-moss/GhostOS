@@ -1,0 +1,10 @@
+# conf: ghostiss.framework.llms.test_case::ChatCompletionTestCase
+chat:
+  messages:
+    - role: user
+      content: hello world!
+apis:
+  - api: moonshot-v1-32k
+  - api: moonshot-v1-128k
+#  - api: gpt-3.5-turbo
+#  - api: gpt-4-turbo

@@ -129,7 +129,7 @@ class Container:
         """
         ins = self.fetch(contract, strict)
         if ins is None:
-            raise NotImplemented(f"contract {contract} not register in container")
+            raise NotImplementedError(f"contract {contract} not register in container")
         return ins
 
     def destroy(self) -> None:

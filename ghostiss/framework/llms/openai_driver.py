@@ -1,6 +1,8 @@
 from typing import List, Iterable, Union, Optional
 
 from openai import OpenAI
+from httpx import Client
+from httpx_socks import SyncProxyTransport
 from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
@@ -28,11 +30,16 @@ class OpenAIAdapter(LLMApi):
     ):
         self._service = service_conf
         self._model = model_conf
-        self._openai = OpenAI(
+        http_client = None
+        if service_conf.proxy:
+            transport = SyncProxyTransport.from_url(service_conf.proxy)
+            http_client = Client(transport=transport)
+        self._client = OpenAI(
             api_key=service_conf.token,
             base_url=service_conf.base_url,
             # todo: 未来再做更多细节.
             max_retries=0,
+            http_client=http_client,
         )
         self._parser = parser
 
@@ -48,7 +55,7 @@ class OpenAIAdapter(LLMApi):
     def get_embeddings(self, texts: List[str]) -> Embeddings:
         try:
             model = self._model.model
-            resp = self._openai.embeddings.create(
+            resp = self._client.embeddings.create(
                 input=texts,
                 model=model,
                 # todo: 未来再做更多细节.
@@ -66,13 +73,12 @@ class OpenAIAdapter(LLMApi):
             # todo: log
             raise GhostissIOError("failed to get text embedding", e)
 
-    def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterator[ChatCompletionChunk]]:
+    def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         # todo: try catch
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True if stream else False)
-        return self._openai.chat.completions.create(
-            # messages=messages,
-            # messages=[],
-            messages=chat.get_openai_messages(),
+        messages = self._parser.parse_message_list(chat.messages)
+        return self._client.chat.completions.create(
+            messages=messages,
             model=self._model.model,
             function_call=chat.get_openai_function_call(),
             functions=chat.get_openai_functions(),

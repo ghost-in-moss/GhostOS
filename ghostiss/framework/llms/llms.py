@@ -37,8 +37,7 @@ class LLMsImpl(LLMs):
         self._llm_drivers[driver.driver_name()] = driver
 
     def register_service(self, service: ServiceConf) -> None:
-        if not service.token:
-            service.token = self._get_token(service.token_key)
+        service.load()
         self._llm_services[service.name] = service
 
     @staticmethod

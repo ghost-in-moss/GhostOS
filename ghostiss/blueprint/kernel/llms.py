@@ -3,13 +3,13 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Iterable, Dict, Optional, Any, Union
+from typing import List, Tuple, Iterable, Dict, Optional, Any
+from openai.types.chat.completion_create_params import Function, FunctionCall
+from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
 
-from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
-from openai.types.chat.completion_create_params import Function, FunctionCall, ChatCompletionFunctionCallOptionParam
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.blueprint.messages import Message, Stream, Final
+from ghostiss.blueprint.messages import Message, Stream
 
 """
 Dev logs: 
@@ -46,12 +46,20 @@ class ServiceConf(BaseModel):
     name: str = Field(description="Service name")
     driver: str = Field(default=OPENAI_DRIVER_NAME, description="driver name")
     base_url: str = Field(description="llm service provider")
-    token_key: str = Field(description="use token key to get token from env")
     token: str = Field(default="", description="token")
+    proxy: Optional[str] = Field(default=None, description="proxy")
 
     def load(self) -> None:
-        if not self.token:
-            self.token = os.environ.get(self.token_key, "")
+        self.token = self._load_env(self.token)
+        if self.proxy is not None:
+            self.proxy = self._load_env(self.proxy)
+
+    @staticmethod
+    def _load_env(value: str) -> str:
+        if value.startswith("$"):
+            value_key = value[1:]
+            value = os.environ.get(value_key, "")
+        return value
 
 
 class LLMsConfig(BaseModel):
@@ -85,6 +93,7 @@ class Chat(BaseModel):
     functions: List[LLMFunc] = Field(default_factory=list)
     functional_tokens: List[FunctionalTokens] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
+
     # stop: Optional[List[str]] = Field(default=None)
 
     def get_openai_functions(self) -> Iterable[Function]:
@@ -95,11 +104,6 @@ class Chat(BaseModel):
         if self.function_call is None:
             return "auto"
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
-
-    def get_openai_messages(self) -> Iterable[ChatCompletionMessageParam]:
-        for message in self.messages:
-            for item in message.as_openai_memory():
-                yield item
 
 
 # todo: 未来再做这些意义不大的.
@@ -172,8 +176,6 @@ class LLMApi(ABC):
         items = self.chat_completion_chunks(chat)
         for item in items:
             up_stream.deliver(item)
-        # 发送尾包.
-        up_stream.deliver(Final())
 
 
 class LLMDriver(ABC):
