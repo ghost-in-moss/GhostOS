@@ -9,7 +9,7 @@ from openai.types.chat.chat_completion_function_call_option_param import ChatCom
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.blueprint.messages import Message, Stream
+from ghostiss.blueprint.messages import Message, Stream, FunctionalToken
 
 """
 Dev logs: 
@@ -79,19 +79,13 @@ class LLMFunc(BaseModel):
     parameters: Optional[Dict] = Field(default=None, description="function parameters")
 
 
-class FunctionalTokens(BaseModel):
-    tokens: str
-    name: str
-    description: str
-
-
 # ---- api objects ---- #
 
 class Chat(BaseModel):
     id: str = Field(default_factory=helpers.uuid, description="trace id")
     messages: List[Message] = Field(default_factory=list)
     functions: List[LLMFunc] = Field(default_factory=list)
-    functional_tokens: List[FunctionalTokens] = Field(default_factory=list)
+    functional_tokens: List[FunctionalToken] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
 
     # stop: Optional[List[str]] = Field(default=None)

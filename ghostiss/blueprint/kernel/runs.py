@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from ghostiss.interfaces8.messages import Message
-from ghostiss.interfaces8.python.__init__ import PyContext
+from ghostiss.blueprint.messages.message import Message
 
 
 class Run(BaseModel):
