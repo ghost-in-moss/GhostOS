@@ -3,6 +3,7 @@ from typing import List, Iterable, Union, Optional
 from openai import OpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
+from openai import NOT_GIVEN
 from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
@@ -75,7 +76,7 @@ class OpenAIAdapter(LLMApi):
 
     def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         # todo: try catch
-        include_usage = ChatCompletionStreamOptionsParam(include_usage=True if stream else False)
+        include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = self._parser.parse_message_list(chat.messages)
         return self._client.chat.completions.create(
             messages=messages,
@@ -83,7 +84,6 @@ class OpenAIAdapter(LLMApi):
             function_call=chat.get_openai_function_call(),
             functions=chat.get_openai_functions(),
             max_tokens=self._model.max_tokens,
-            parallel_tool_calls=False,
             temperature=self._model.temperature,
             n=self._model.n,
             timeout=self._model.timeout,

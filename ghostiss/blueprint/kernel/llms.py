@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Iterable, Dict, Optional, Any
+from typing import List, Tuple, Iterable, Dict, Optional, Any, Union
 from openai.types.chat.completion_create_params import Function, FunctionCall
+from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
 
 from pydantic import BaseModel, Field
@@ -90,11 +91,18 @@ class Chat(BaseModel):
 
     # stop: Optional[List[str]] = Field(default=None)
 
-    def get_openai_functions(self) -> Iterable[Function]:
+    def get_openai_functions(self) -> Union[List[Function], NotGiven]:
+        if not self.functions:
+            return NOT_GIVEN
+        functions = []
         for func in self.functions:
-            yield Function(**func.model_dump())
+            openai_func = Function(**func.model_dump())
+            functions.append(openai_func)
+        return functions
 
-    def get_openai_function_call(self) -> FunctionCall:
+    def get_openai_function_call(self) -> Union[FunctionCall, NotGiven]:
+        if not self.functions:
+            return NOT_GIVEN
         if self.function_call is None:
             return "auto"
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
