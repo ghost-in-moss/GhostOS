@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, SupportsAbs as _SupportsAbs
 import inspect
 
 
@@ -114,3 +114,23 @@ def test_method_set_attr():
     setattr(f, 'foo', 'foo')
     # 可以变更属性的类型.
     assert f.foo == "foo"
+
+
+def test_type_qualname():
+    assert _SupportsAbs.__qualname__ == "_SupportsAbs"
+
+
+def test_get_members():
+    class Foo:
+
+        def foo(self) -> int:
+            return 123
+
+        @staticmethod
+        def bar(self) -> int:
+            return 456
+
+    # 类里取不到 staticmethod
+    assert len(list(inspect.getmembers(Foo(), inspect.ismethod))) == 1
+    # 类里取不到 method
+    assert len(list(inspect.getmembers(Foo, inspect.ismethod))) == 0

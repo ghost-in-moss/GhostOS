@@ -23,7 +23,7 @@ from ghostiss.helpers import BufferPrint
 AttrTypes = Union[int, float, str, bool, list, dict, None, Provider, ModelType]
 
 
-class LaMOS(ABC):
+class MoOS(ABC):
     """
     language Model-oriented Operating System
     full python code interface for large language models
@@ -32,7 +32,7 @@ class LaMOS(ABC):
     # --- 创建 MoOS 的方法 --- #
 
     @abstractmethod
-    def new(self, *named_vars, **variables) -> "LaMOS":
+    def new(self, *named_vars, **variables) -> "MoOS":
         """
         return a new instance
         """
@@ -46,14 +46,13 @@ class LaMOS(ABC):
             alias: Optional[str] = None,
             doc: Optional[str] = None,
             prompt: Optional[str] = None,
-    ):
+    ) -> None:
         """
-        add a method to LaMOS
-        :param doc:
-        :param method:
-        :param alias:
-        :param prompt:
-        :return:
+        attach a method to MoOS
+        :param method: any callable such as function, method, callable object
+        :param alias: use custom alias replace of the method.__name__
+        :param doc: use custom docstring replace of the method.__doc__
+        :param prompt: use custom prompt, not default code prompt generator
         """
         pass
 
@@ -67,6 +66,15 @@ class LaMOS(ABC):
             prompt: Optional[str] = None,
             doc: Optional[str] = None,
     ) -> None:
+        """
+        attach a value as attribute to MoOS instance.
+
+        :param value: value cant be any object, when it is a Provider, will use it factory to make an instance attribute.
+        :param name: attr name
+        :param implements: if defined, will announce the attribute typehint is the implements.
+        :param prompt: 
+        :param doc: 
+        """
         pass
 
     @abstractmethod
@@ -221,11 +229,14 @@ class LaMOS(ABC):
         return None
 
 
-class BaseLaMOS(LaMOS):
+class BaseMoOS(MoOS):
 
     def __init__(self, *, doc: str, container: Container):
         self.__doc__ = doc
-        self.__container = container
+        self.__container = Container(parent=container)
+        # 取代当前实例.
+        self.__container.set(MoOS, self)
+
         self.__importer: Importer = container.force_fetch(Importer)
         """ioc container"""
         self.__python_context: PyContext = PyContext()
@@ -240,11 +251,14 @@ class BaseLaMOS(LaMOS):
         self.__local_type_prompts: Dict[str, str] = {}
         self.__local_type_implements: Dict[str, Optional[List[type]]] = {}
         self.__reserved_property_names: Set[str] = {'', }
-        self.__reserved_type_names: Set[str] = {'os', 'LaMOS'}
+        self.__reserved_locals_names: Set[str] = {'os', 'MoOS', 'print'}
 
         self.__bootstrapped = False
 
     def destroy(self) -> None:
+        # 当前 container 也必须要销毁.
+        self.__container.destroy()
+
         del self.__buffer_print
         del self.__container
         del self.__importer
@@ -257,6 +271,15 @@ class BaseLaMOS(LaMOS):
         del self.__local_types
         del self.__local_type_names
         del self.__local_type_prompts
+
+    def new(self, *named_vars, **variables) -> "MoOS":
+        # 复制创造一个新的实例.
+        os = BaseMoOS(doc=self.__doc__, container=self.__container)
+        for var in named_vars:
+            os.__add_any_var(value=var)
+        for name, var in variables.items():
+            os.__add_any_var(value=var, name=name)
+        return os
 
     def define(
             self,
@@ -280,7 +303,7 @@ class BaseLaMOS(LaMOS):
             desc=desc,
             model_name=model_name,
         )
-        self.print(f"> defined attr {name} to LaMOS")
+        self.print(f"> defined attr {name} to MoOS")
         return value
 
     def imports(self, module: str, *specs: str, **aliases: str) -> Dict[str, Any]:
@@ -311,7 +334,7 @@ class BaseLaMOS(LaMOS):
             # self.set_attr(name=name, value=v)
             self.__python_context.imports[name] = imp
             result[name] = v
-        log += ") # attach to LaMOS"
+        log += ") # attach to MoOS"
         self.print(log)
         return result
 
@@ -334,12 +357,9 @@ class BaseLaMOS(LaMOS):
         local_values['os'] = self
         return local_values
 
-    def new(self, *named_vars, **variables) -> "LaMOS":
-        pass
-
     def update_context(self, context: PyContext) -> None:
         if self.__bootstrapped:
-            raise RuntimeError("LaMOS is already bootstrapped")
+            raise RuntimeError("MoOS is already bootstrapped")
         self.__python_context.imports.update(context.imports)
         self.__python_context.defines.update(context.defines)
 
@@ -467,26 +487,6 @@ class BaseLaMOS(LaMOS):
             raise TypeError(f"type must be an typing or a class, not {typ}")
         return name
 
-        # name = alias
-        # if not prompt:
-        #     prompt = get_class_prompt(cls=typ, name=name, doc=doc, methods=methods, init=init, attrs=attrs)
-        #     if module is None:
-        #         module = typ.__module__
-        #     if module_spec is None:
-        #         module_spec = typ.__name__
-        # # add comment to type
-        # comment = f"# from {module} import {module_spec}"
-        # if name != module_spec:
-        #     comment += f" as {name}"
-        # if implements:
-        #     typehints = []
-        #     for imp in implements:
-        #         typehint = self.__get_typehint(imp)
-        #         typehints.append(typehint)
-        #     comment += f"\n implements {', '.join(typehints)}"
-        # prompt = comment + "\n" + prompt
-        # self.__add_raw_type(name, typ, prompt)
-
     def add_method(
             self, *,
             method: Callable,
@@ -528,12 +528,11 @@ class BaseLaMOS(LaMOS):
             *,
             name: str,
             typ: Type,
-            doc: Optional[str] = None,
             implements: Optional[type] = None,
             prompt: Optional[str] = None,
     ) -> None:
-        if name in self.__reserved_type_names:
-            raise NameError(f'{name} is reserved for LaMOS')
+        if name in self.__reserved_locals_names:
+            raise NameError(f'{name} is reserved for MoOS')
         if typ in self.__local_type_names:
             # only register once
             name = self.__local_type_names[typ]
@@ -547,269 +546,3 @@ class BaseLaMOS(LaMOS):
         if not typehint:
             typehint = str(implement)
         return typehint
-
-# class BasicLaMOS(LaMOS):
-#
-#     def __init__(self, *, doc: str, container: Container):
-#         self.__doc__ = doc
-#         self.__container = container
-#         """ioc container"""
-#         self.__python_context: PyContext = PyContext()
-#         """默认的 py context """
-#         # self.__loaded_variables: Dict[str, Var] = {}
-#         # self.__duplicated_name_idx = duplicated_name_idx
-#         self.__local_types: Dict[type, str] = {}
-#         self.__local_types_order: List[str] = []
-#         self.__local_type_vars: Dict[str, Var] = {}
-#         self.__local_type_prompts: Dict[str, str] = {}
-#         self.__model_types: Dict[str, type] = {}
-#
-#         self.__mos_attrs: Dict[str, Var] = {}
-#         self.__mos_attrs_order: List[str] = []
-#         self.__mos_attr_prompts: Dict[str, str] = {}
-#
-#     def __add_type_var(self, name: str, var: Var) -> None:
-#         """
-#         添加一个本地变量.
-#         """
-#         kind = var.kind()
-#         if not kind.is_type():
-#             # 只添加 type.
-#             return
-#
-#         if kind.is_contract_type():
-#             # 如果是 container 的 contract, 则需要从 container 中生成实例然后绑定.
-#             self.__add_contract_type(name, var)
-#         elif kind.is_model_type():
-#             # 如果是 model 类型的 type,
-#             self.__add_model_type(name, var)
-#         elif kind.is_type():
-#             self.__add_local_type(name, var)
-#
-#     def __add_attr_var(self, name: str, var: Var) -> None:
-#         """
-#         添加一个属性到 moos 上.
-#         """
-#         kind = var.kind()
-#         if not kind.is_attr():
-#             return
-#         elif kind.is_lib():
-#             self.__add_lib_attr(name, var)
-#         else:
-#             self.__add_property(name, var)
-#
-#     def __add_caller_attr(self, name: str, var: Var) -> None:
-#         """
-#         添加一个 caller 到 moos 上.
-#         """
-#         caller = self.__add_raw_property(name, var)
-#         if not isinstance(caller, Callable):
-#             raise ValueError(f"{caller} is not callable")
-#         # caller 的 prompt 机制不同.
-#         prompt = self.__get_caller_prompt(name, var)
-#         self.__mos_attr_prompts[name] = prompt
-#
-#     def __add_model_type(self, name: str, var: Var) -> None:
-#         t = self.__add_local_type(name, var)
-#         # 注册 model 的类型, 方便后续查找.
-#         import_from = var.import_from()
-#         if import_from:
-#             self.__model_types[import_from] = t
-#
-#     def __add_local_type(self, name: str, var: Var) -> type:
-#         if name in self.__local_type_vars:
-#             # 不解决重名问题.
-#             raise NameError(f"duplicate type name {name}")
-#         v = var.value(self.__container)
-#         if not isinstance(v, type):
-#             # 不注册非类型.
-#             raise ValueError(f"type {v} not supported as a type")
-#         if v in self.__local_types:
-#             # 强制要求一个 type 只注册一次.
-#             raise ValueError(f"duplicate type {v}")
-#
-#         self.__local_types[v] = name
-#         self.__local_types_order.append(name)
-#         self.__local_type_vars[name] = var
-#
-#         # 解决 prompt 的问题. 解决办法是通用的.
-#         prompt = self.__get_type_prompt(name, var)
-#         self.__local_type_prompts[name] = prompt
-#         return v
-#
-#     def __add_contract_type(self, name: str, var: Var) -> None:
-#         v = self.__add_local_type(name, var)
-#         ins = self.__container.force_fetch(v)
-#         attr_name = camel_to_snake(name)
-#         self.__add_lib_attr(attr_name, lib(val=ins, contract=v))
-#
-#     def __add_lib_attr(self, name: str, var: Var) -> None:
-#         v = self.__add_raw_property(name, var)
-#         # 准备 prompt.
-#         contract = var.implements()
-#         if contract is None:
-#             contract = type(v)
-#         doc = var.desc()
-#         type_hint = self.__get_implement_type_hint(contract)
-#         prompt = get_attr_prompt(name, type_hint, doc)
-#         self.__mos_attr_prompts[name] = prompt
-#
-#     def __get_implement_type_hint(self, contract: Optional[Type]) -> Optional[str]:
-#         """
-#         返回类型约束. 类型约束有可能是
-#         """
-#         if contract is None:
-#             return None
-#         if contract in {str, bool, int, float}:
-#             # 支持标量.
-#             return str(contract)
-#         type_hint = self.__local_types.get(contract, None)
-#         if type_hint:
-#             type_hint = '"' + str(contract) + '"'
-#         return type_hint
-#
-#     def __add_property(self, name: str, var: Var) -> None:
-#         v = self.__add_raw_property(name, var)
-#
-#     def __add_raw_property(self, name: str, var: Var) -> Any:
-#         if name in self.__mos_attrs:
-#             raise NameError(f"duplicate property name {name}")
-#         self.__mos_attrs[name] = var
-#         v = var.value(self.__container)
-#         setattr(self, name, v)
-#         return v
-#
-#         # types
-#         # self.__registered_types: Dict[type, Var] = {}
-#         # self.__descriptive_types: Dict[type, Var] = {}
-#         # self.__name_to_types: Dict[str, Var] = {}
-#
-#         # 对自身状态的描述.
-#
-#         # self.__libraries: Dict[str, Var] = {}
-#         # """绑定到 moos 上的 library 库, 对外只展示 interface. """
-#         #
-#         # self.__local_callers: Dict[str, Var] = {}
-#         # """本地展示的类型, 包括类和方法."""
-#         #
-#         # self.__local_types: Dict[type, Optional[Var]] = {}
-#         # """各种要独立展示的类型, 和这些类型对外展示的名字. """
-#         #
-#         # self.__raw_attrs: Dict[str, Var] = {}
-#         # """添加到上下文中的 property. """
-#         #
-#         # self.__type_dict_attrs: Dict[str, Dict[str, Var]] = {}
-#         # """相同类型的 value 以 dict 形式注册的 attr."""
-#         #
-#         # self.__attr_orders: List[str] = []
-#         # """属性的顺序列表. 和加载顺序有关. """
-#         #
-#         # self.__attr_names: Set[str] = set()
-#         # """已经存在的名字. 用来排除冲突."""
-#         #
-#         # self.__property_prompts: Dict[str, str] = {}
-#         # """每一个 property 对应的 code prompt """
-#     #
-#     # def new(self, local_values: Dict[str, Any]) -> "LaMOS":
-#     #     for key, val in local_values.items():
-#     #         if isinstance(val, Var):
-#     #             self.__add_local_var(key, val)
-#     #         elif isinstance(val, type):
-#     #             self.__add_local_type(key, val)
-#     #         elif is_caller(val):
-#     #             self.__add_caller(key, val)
-#     #         else:
-#     #             self.__add_local_value(key, val)
-#     #     return self
-#     #
-#     # def __add_local_type(self, name: str, value: type) -> None:
-#     #     if isinstance(value, ModelType):
-#     #         self.__add_local_var(name, model_var(value))
-#     #
-#     #
-#     #
-#     #
-#     # def __add_local_var(self, key: str, val: Var) -> None:
-#     #     pass
-#     #
-#     # def update_variables(self, variables: Iterable[Var]) -> None:
-#     #     for var in variables:
-#     #         self.__add_var(var)
-#     #
-#     # def update_context(self, context: PyContext) -> None:
-#     #     pass
-#     #
-#     # def define(self, name: str, value: Union[str, int, float, bool, Dict, List, BaseModel], desc: str) -> Any:
-#     #     define = Define(name=name, value=value, desc=desc)
-#     #     if isinstance(value, BaseModel) or isinstance(value, TypedDict):
-#     #         model = type(value)
-#     #         type_name = self.__add_type(model)
-#     #         define.model = type_name
-#     #     self.__python_context.add_var(define)
-#     #     # todo: var
-#     #     self.__bind_property()
-#     #     return value
-#     #
-#     # def dump_locals(self) -> Dict[str, Any]:
-#     #     pass
-#     #
-#     # def dump_context(self) -> PyContext:
-#     #     pass
-#     #
-#     # def dump_code_prompt(self) -> str:
-#     #     pass
-#     #
-#     # def __add_type(self, var: Var) -> Var:
-#     #     kind = var.kind()
-#     #     if VarKind.LIBRARY == kind:
-#     #         return var
-#     #     elif VarKind.VALUE == kind:
-#     #         return var
-#     #     elif VarKind.CLASS == kind:
-#     #         t = var.value(self.__container)
-#     #         name = var.name()
-#     #         if name in self.__name_to_types:
-#     #             name = self.__reassign_var_name(name)
-#     #             var = var.with_name(name)
-#     #         if t in self.__registered_types:
-#     #
-#     #     elif VarKind.CALLER == kind:
-#     #         v = var.value(self.__container)
-#     #         self.__local_callers[v] =
-#     #     elif VarKind.ABSTRACT == kind:
-#     #         pass
-#     #     elif VarKind.MODEL == kind:
-#     #         pass
-#     #     else:
-#     #         raise ValueError(f"unknown kind of var: {var}")
-#     #
-#     #
-#     # def __add_var(self, var: Var) -> None:
-#     #     kind = var.kind()
-#     #     if VarKind.LIBRARY == kind:
-#     #         self.__add_lib(var)
-#     #     elif VarKind.CLASS == kind:
-#     #         self.__add_class(var)
-#     #     elif VarKind.VALUE == kind:
-#     #         self.__add_value(var)
-#     #     elif VarKind.CALLER == kind:
-#     #         pass
-#     #     elif VarKind.ABSTRACT == kind:
-#     #         pass
-#     #     elif VarKind.MODEL == kind:
-#     #         pass
-#     #     else:
-#     #         raise ValueError(f"unknown kind of var: {var}")
-#     #
-#     # def __bind_defaults(self) -> None:
-#     #     pass
-#     #
-#     # def __add_type(self, typ: type) -> str:
-#     #     pass
-#     #
-#     # def __bind_property(self, var: Var) -> None:
-#     #     """
-#     #     绑定一个变量.
-#     #     """
-#     #
-#     #

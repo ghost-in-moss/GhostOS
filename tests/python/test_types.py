@@ -46,3 +46,7 @@ def test_type_add_property():
     f = Foo()
     setattr(f, '__desc__', "desc")
     assert getattr(f, '__desc__') == "desc"
+
+
+def test_caller_module_and_spec():
+    assert inspect.getargspec(inspect.getargspec) == 'getargspec'
