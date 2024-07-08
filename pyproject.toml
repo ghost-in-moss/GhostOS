@@ -7,13 +7,14 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.14"
 pydantic = "^2.7.0"
 pytest = "^8.1.1"
 openai = "^1.19.0"
 pyyaml = "^6.0.1"
 rich = "^13.7.1"
 httpx-socks = "^0.9.1"
+restrictedpython = "^7.1"
 
 [tool.poetry.scripts]
 llm_test = "ghostiss.scripts.llm_tests:main"
