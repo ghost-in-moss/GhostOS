@@ -1,29 +1,37 @@
 import inspect
 import re
-from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union
+from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union, Type
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
 
 __all__ = [
-    'BasicTypes',
+    'BasicTypes', 'ModelClass', 'ModelInstance',
     'Reflection',
     'Attr',
     'Class',
     'ClassPrompter', 'Library', 'Interface',
     'Locals',
     'reflect', 'reflects',
-    'is_callable', 'is_typing', 'is_public_callable', 'is_builtin', 'is_classmethod', 'is_model_class',
-    'parse_comments', 'parse_doc_string', 'parse_doc_string_with_quotes', 'parse_callable_to_method_def',
+
+    'is_typing',  'is_builtin', 'is_classmethod',
+    'is_model_class', 'get_model_object_meta', 'is_model_instance', 'new_model_instance',
+    'parse_comments',
+    'parse_doc_string', 'parse_doc_string_with_quotes',
+    'is_callable', 'is_public_callable', 'parse_callable_to_method_def',
     'get_typehint_string', 'get_default_typehint', 'get_import_comment', 'get_implement_comment',
-    'get_str_from_func_or_attr',
     'get_class_def_from_source',
 ]
 
 BasicTypes = Union[str, int, float, bool, list, dict]
+ModelInstance = Union[BaseModel, TypedDict, EntityClass]
+ModelClass = Union[Type[BaseModel], Type[TypedDict], Type[EntityClass]]
 
 
 class Reflection(ABC):
+    """
+    对任意值的封装, 提供面向 Model 的 Prompt, 并且支持 import Reflection 并且添加到 MoOS
+    """
 
     def __init__(
             self,
@@ -67,6 +75,9 @@ class Reflection(ABC):
 
 
 class Attr(Reflection):
+    """
+    实现类的属性, 可以挂载到一个虚拟类上, 并提供 Prompt.
+    """
 
     def __init__(
             self, *,
@@ -81,6 +92,20 @@ class Attr(Reflection):
             print_val: Optional[bool] = None,
             comments: Optional[str] = None,
     ):
+        """
+        初始化一个 Attr.
+
+        :param name: Attr 的 name.
+        :param value: 任意类型, 但主要分为: 1. 标量; 2. 实例; 3. typehint
+        :param prompt: 如果 prompt 不为 None, 默认使用它作为 prompt.
+        :param typehint: 描述 value 的类型. 如果是 str 就直接展示, 否则暂时为 'str(typehint)'. BasicTypes 类型的 values 默认展示.
+        :param implements: 强调 value 实现了什么类型. 会添加为注释: # implements xxx, yyy.  推荐使用 str 来描述.
+        :param doc: 给属性添加 doc. 符合 python 标准.
+        :param module: 指定所属的 module
+        :param module_spec: 指定从 module 的 spec 中 import. 不一定是真实的.
+        :param print_val: 决定 attr 的 prompt 是否展示其赋值.
+        :param comments: 提供额外的注释, 必须以 # 开头.
+        """
         self._value = value
         if typehint is None and isinstance(value, BasicTypes):
             typehint = get_default_typehint(value)
@@ -88,7 +113,8 @@ class Attr(Reflection):
         self._implements = implements
         self._doc = doc
         self._prompt = prompt
-        self._print_val = print_val
+        # 如果是 typing 里的类型, 则默认打印其赋值. 比如 foo = Union[str, int]
+        self._print_val = True if is_typing(value) else print_val
         super().__init__(
             name=name,
             doc=doc,
@@ -126,6 +152,9 @@ class Attr(Reflection):
 
 
 class Method(Reflection):
+    """
+    将一个 Callable 对象封装成 Method, 可以添加到 MoOS 上.
+    """
 
     def __init__(
             self, *,
@@ -166,6 +195,10 @@ class Method(Reflection):
 
 
 class Class(Reflection):
+    """
+    对一个类型的封装.
+    类型通常需要放到 Locals 里对外展示.
+    """
 
     def __init__(
             self, *,
@@ -212,6 +245,12 @@ class Class(Reflection):
 
 
 class ClassPrompter(Class):
+    """
+    自由拼装一个类的 Prompt. 可以指定:
+    1. constructor: __init__ 方法.
+    2. methods
+    3. attrs
+    """
 
     def __init__(
             self, *,
@@ -236,8 +275,8 @@ class ClassPrompter(Class):
         __name = alias if alias else cls.__name__
         __attr_prompts: List[str] = []
         if constructor:
-            __names = add_name_to_set(__names, constructor.name())
-            __attr_prompts.append(constructor.prompt())
+            __names = add_name_to_set(__names, '__init__')
+            __attr_prompts.append(constructor.with_name('__init__').prompt())
         if attrs:
             for attr in attrs:
                 __names = add_name_to_set(__names, attr.name())
@@ -260,6 +299,9 @@ class ClassPrompter(Class):
 
 
 class BuildObject(Attr):
+    """
+    使用 Attr & Method 组装出一个临时对象.
+    """
 
     def __init__(
             self, *,
@@ -296,6 +338,9 @@ class BuildObject(Attr):
 
 
 class Library(ClassPrompter):
+    """
+    只暴露指定 public 方法的类.
+    """
     def __init__(
             self, *,
             cls: type,
@@ -336,6 +381,9 @@ class Library(ClassPrompter):
 
 
 class Interface(Library):
+    """
+    只暴露 class + doc 的类.
+    """
 
     def __init__(
             self, *,
@@ -718,6 +766,30 @@ def add_name_to_set(names: set, name: str) -> set:
 
 def is_model_class(typ: type) -> bool:
     return issubclass(typ, BaseModel) or issubclass(typ, TypedDict) or issubclass(typ, EntityClass)
+
+
+def is_model_instance(obj: Any) -> bool:
+    return isinstance(obj, ModelInstance)
+
+
+def get_model_object_meta(obj: Any) -> Optional[Dict]:
+    if isinstance(obj, BaseModel):
+        return obj.model_dump()
+    elif isinstance(obj, TypedDict):
+        result = {}
+        for k, v in obj.items():
+            result[k] = v
+        return result
+    elif isinstance(obj, EntityClass):
+        return obj.to_entity_meta()
+    return None
+
+
+def new_model_instance(model: Type[ModelClass], meta: Dict) -> ModelClass:
+    if issubclass(model, EntityClass):
+        return model.new_entity(meta)
+    else:
+        return model(**meta)
 
 
 def get_default_typehint(val: Any) -> Optional[str]:
