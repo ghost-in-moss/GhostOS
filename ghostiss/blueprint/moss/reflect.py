@@ -6,15 +6,15 @@ from pydantic import BaseModel
 from ghostiss.entity import EntityClass
 
 __all__ = [
-    'BasicTypes', 'ModelClass', 'ModelInstance',
+    'BasicTypes', 'ModelType', 'ModelObject',
     'Reflection',
-    'Attr',
+    'Attr', 'Method',
     'Class',
     'ClassPrompter', 'Library', 'Interface',
     'Locals',
     'reflect', 'reflects',
 
-    'is_typing',  'is_builtin', 'is_classmethod',
+    'is_typing', 'is_builtin', 'is_classmethod',
     'is_model_class', 'get_model_object_meta', 'is_model_instance', 'new_model_instance',
     'parse_comments',
     'parse_doc_string', 'parse_doc_string_with_quotes',
@@ -24,8 +24,11 @@ __all__ = [
 ]
 
 BasicTypes = Union[str, int, float, bool, list, dict]
-ModelInstance = Union[BaseModel, TypedDict, EntityClass]
-ModelClass = Union[Type[BaseModel], Type[TypedDict], Type[EntityClass]]
+"""scalar types"""
+
+ModelObject = Union[BaseModel, TypedDict, EntityClass]
+
+ModelType = Union[Type[BaseModel], Type[TypedDict], Type[EntityClass]]
 
 
 class Reflection(ABC):
@@ -48,14 +51,27 @@ class Reflection(ABC):
         self._comments = comments
 
     def name(self) -> str:
+        """
+        reflection name:
+        1. variable name
+        2. attribute name
+        3. method name
+        4. class name
+        """
         return self._name
 
     @abstractmethod
     def value(self) -> Any:
+        """
+        real value of the reflection
+        """
         pass
 
     @abstractmethod
     def prompt(self) -> str:
+        """
+        get the prompt of the reflection
+        """
         pass
 
     def module(self) -> Optional[str]:
@@ -114,7 +130,7 @@ class Attr(Reflection):
         self._doc = doc
         self._prompt = prompt
         # 如果是 typing 里的类型, 则默认打印其赋值. 比如 foo = Union[str, int]
-        self._print_val = True if is_typing(value) else print_val
+        self._print_val = True if is_typing(value) or isinstance(value, BasicTypes) else print_val
         super().__init__(
             name=name,
             doc=doc,
@@ -166,6 +182,15 @@ class Method(Reflection):
             module_spec: Optional[str] = None,
             comments: Optional[str] = None,
     ):
+        """
+        :param caller: callable object, may be function, method or object that callable
+        :param alias: alias name for the method
+        :param doc: replace the origin doc string
+        :param prompt:
+        :param module:
+        :param module_spec:
+        :param comments:
+        """
         self._caller = caller
         self._prompt = prompt
         name = alias
@@ -341,6 +366,7 @@ class Library(ClassPrompter):
     """
     只暴露指定 public 方法的类.
     """
+
     def __init__(
             self, *,
             cls: type,
@@ -408,36 +434,46 @@ class Interface(Library):
 
 
 class Locals(Reflection):
+    """
+    local variables
+    """
 
     def __init__(
             self,
             methods: Optional[Iterable[Method]] = None,
             classes: Optional[Iterable[Class]] = None,
     ):
-        self.methods = methods
-        self.classes = classes
-        super(Reflection).__init__(
+        self.__locals: Dict[str, Reflection] = {}
+        self.__local_var_orders: List[str] = []
+        if methods:
+            for method in methods:
+                name = method.name()
+                if name in self.__locals:
+                    raise NameError(f"Duplicate method name: {name}")
+                self.__local_var_orders.append(name)
+                self.__locals[method.name()] = method
+        if classes:
+            for cls in classes:
+                name = cls.name()
+                if name in self.__locals:
+                    raise NameError(f"Duplicate method name: {name}")
+                self.__local_var_orders.append(name)
+                self.__locals[name] = cls
+        super().__init__(
             name="",
         )
 
     def value(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
-        if self.methods:
-            for method in self.methods:
-                result[method.name()] = method.value()
-        if self.classes:
-            for cls in self.classes:
-                result[cls.name()] = cls.value()
+        for name, reflection in self.__locals.items():
+            result[name] = reflection.value()
         return result
 
     def prompt(self) -> str:
         prompts = []
-        if self.methods:
-            for method in self.methods:
-                prompts.append(method.prompt())
-        if self.classes:
-            for cls in self.classes:
-                prompts.append(cls.prompt())
+        for name in self.__local_var_orders:
+            prompt = self.__locals[name].prompt()
+            prompts.append(prompt)
         return "\n\n".join(prompts)
 
 
@@ -450,6 +486,9 @@ def reflect(
         doc: Optional[str] = None,
         comments: Optional[str] = None,
 ) -> Optional[Reflection]:
+    """
+    reflect any variable to Reflection
+    """
     if isinstance(var, Reflection):
         if module and module_spec:
             var = var.with_from(module_spec=module_spec, module=module)
@@ -477,6 +516,9 @@ def reflect(
 
 
 def reflects(*args, **kwargs) -> Iterable[Reflection]:
+    """
+    reflect any variable to Reflection
+    """
     for arg in args:
         r = reflect(var=arg)
         if r is not None:
@@ -564,15 +606,17 @@ def make_class_prompt(
 ) -> str:
     class_def = get_class_def_from_source(source)
     class_def = replace_class_def_name(class_def, name)
-    blocks = []
     if doc:
         doc = parse_doc_string(doc, inline=False, quote='"""')
-        blocks.append(doc)
+    if doc:
+        class_def += "\n" + add_source_indent(doc, 4)
+    blocks = []
     if attrs:
         for attr in attrs:
             blocks.append(attr)
     if len(blocks) == 0:
-        blocks.append("pass")
+        class_def += "\n" + add_source_indent("pass", 4)
+        return class_def
 
     i = 0
     for block in blocks:
@@ -659,20 +703,19 @@ def parse_callable_to_method_def(
     if doc:
         doc = doc.strip()
     if not inspect.isfunction(caller) and not inspect.ismethod(caller):
-        if isinstance(caller, Callable) and hasattr(caller, '__call__'):
-            real_caller = getattr(caller, '__call__')
+        if not inspect.isclass(caller) and isinstance(caller, Callable) and hasattr(caller, '__call__'):
+            caller = getattr(caller, '__call__')
             if not alias:
                 alias = type(caller).__name__
-            if not doc:
-                doc = caller.__doc__ or ""
-            return parse_callable_to_method_def(real_caller, alias, doc)
-        raise TypeError(f'"{caller}" is not function or method')
+        else:
+            raise TypeError(f'"{caller}" is not function or method')
 
     source_code = inspect.getsource(caller)
     stripped_source = strip_source_indent(source_code)
     source_lines = stripped_source.split('\n')
     definition = []
 
+    # 获取 method def
     for line in source_lines:
         # if line.startswith('def ') or len(definition) > 0:
         line = line.rstrip()
@@ -687,19 +730,14 @@ def parse_callable_to_method_def(
         found = re.search(r'def\s+(\w+)\(', defined)
         if found:
             defined = defined.replace(found.group(0), "def {name}(".format(name=alias), 1)
-    indent = ' ' * 4
+    indent_str = ' ' * 4
     if doc is None:
-        doc = inspect.getdoc(caller)
+        doc = caller.__doc__ or ""
     if doc:
-        doc_lines = doc.split('\n')
-        doc_block = [indent + '"""']
-        for line in doc_lines:
-            line = line.replace('"""', '\\"""')
-            doc_block.append(indent + line)
-        doc_block.append(indent + '"""')
-        doc = '\n'.join(doc_block)
+        doc = parse_doc_string(doc, inline=False)
+        doc = add_source_indent(doc, indent=4)
         defined = defined + "\n" + doc
-    defined = defined + "\n" + indent + "pass"
+    defined = defined + "\n" + indent_str + "pass"
     return defined.strip()
 
 
@@ -707,6 +745,7 @@ def add_source_indent(source: str, indent: int = 4) -> str:
     """
     给代码添加前缀
     """
+    source = source.rstrip()
     lines = source.split('\n')
     result = []
     indent_str = ' ' * indent
@@ -717,11 +756,12 @@ def add_source_indent(source: str, indent: int = 4) -> str:
     return "\n".join(result)
 
 
-def strip_source_indent(source_code: str) -> str:
+def strip_source_indent(source_code: str, indent: Optional[int] = None) -> str:
     """
     一个简单的方法, 用来删除代码前面的 indent.
     """
-    indent = count_source_indent(source_code)
+    if indent is None:
+        indent = count_source_indent(source_code)
     if indent == 0:
         return source_code
     indent_str = ' ' * indent
@@ -769,7 +809,7 @@ def is_model_class(typ: type) -> bool:
 
 
 def is_model_instance(obj: Any) -> bool:
-    return isinstance(obj, ModelInstance)
+    return isinstance(obj, ModelObject)
 
 
 def get_model_object_meta(obj: Any) -> Optional[Dict]:
@@ -785,7 +825,7 @@ def get_model_object_meta(obj: Any) -> Optional[Dict]:
     return None
 
 
-def new_model_instance(model: Type[ModelClass], meta: Dict) -> ModelClass:
+def new_model_instance(model: Type[ModelType], meta: Dict) -> ModelType:
     if issubclass(model, EntityClass):
         return model.new_entity(meta)
     else:

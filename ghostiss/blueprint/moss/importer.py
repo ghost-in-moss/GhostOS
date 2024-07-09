@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Dict, List
 from pydantic import BaseModel, Field
-from ghostiss.blueprint.moos.variable import Var
+from ghostiss.blueprint.moss.variable import Var
 
 #
 # class Index(BaseModel):

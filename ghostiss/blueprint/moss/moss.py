@@ -6,33 +6,26 @@ from contextlib import redirect_stdout
 from pydantic import BaseModel
 from importlib.abc import MetaPathFinder
 from ghostiss.container import Container, CONTRACT
-from ghostiss.blueprint.moos.variable import Var, VarKind, Descriptive, ClassVar, ModelType, lib
-from ghostiss.blueprint.moos.context import PyContext, Define, Import
-from ghostiss.blueprint.moos.importer import Importer
+from ghostiss.blueprint.moss.variable import Var, VarKind, Descriptive, ClassVar, ModelType, lib
+from ghostiss.blueprint.moss.context import PyContext, Define, Import
+from ghostiss.blueprint.moss.importer import Importer
 from ghostiss.helpers import camel_to_snake
 from ghostiss.container import Provider
-from ghostiss.blueprint.moos.helpers import (
-    is_caller, get_callable_definition, get_attr_prompt, get_description,
-    get_module_name,
-    is_model_instance,
-    is_typing,
-    is_model_class, get_model_type_value, new_model_from_value,
-)
 from ghostiss.helpers import BufferPrint
 
 AttrTypes = Union[int, float, str, bool, list, dict, None, Provider, ModelType]
 
 
-class MoOS(ABC):
+class MOSS(ABC):
     """
-    language Model-oriented Operating System
+    language Model-oriented Operating System Simulation
     full python code interface for large language models
     """
 
     # --- 创建 MoOS 的方法 --- #
 
     @abstractmethod
-    def new(self, *named_vars, **variables) -> "MoOS":
+    def new(self, *named_vars, **variables) -> "MOSS":
         """
         return a new instance
         """
@@ -229,13 +222,13 @@ class MoOS(ABC):
         return None
 
 
-class BaseMoOS(MoOS):
+class BaseMOSS(MOSS):
 
     def __init__(self, *, doc: str, container: Container):
         self.__doc__ = doc
         self.__container = Container(parent=container)
         # 取代当前实例.
-        self.__container.set(MoOS, self)
+        self.__container.set(MOSS, self)
 
         self.__importer: Importer = container.force_fetch(Importer)
         """ioc container"""
@@ -272,9 +265,9 @@ class BaseMoOS(MoOS):
         del self.__local_type_names
         del self.__local_type_prompts
 
-    def new(self, *named_vars, **variables) -> "MoOS":
+    def new(self, *named_vars, **variables) -> "MOSS":
         # 复制创造一个新的实例.
-        os = BaseMoOS(doc=self.__doc__, container=self.__container)
+        os = BaseMOSS(doc=self.__doc__, container=self.__container)
         for var in named_vars:
             os.__add_any_var(value=var)
         for name, var in variables.items():

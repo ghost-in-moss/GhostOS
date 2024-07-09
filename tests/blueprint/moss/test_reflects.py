@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ghostiss.blueprint.moos.reflect import *
+from ghostiss.blueprint.moss.reflect import *
 from typing import Dict, NamedTuple, List
 
 
@@ -13,6 +13,10 @@ class Foo(ABC):
 
 
 class Foo1(Foo):
+
+    def __init__(self):
+        self.bar = 123
+
     def foo(self) -> str:
         """
         hello world
@@ -83,7 +87,6 @@ class Foo1(Foo):
     \"""
     test
     \"""
-
     def foo(self) -> str:
         \"""
         hello world
@@ -104,6 +107,7 @@ class Foo1(Foo):
     \"""
     test
     \"""
+    pass
 """,
     )
     assert c.a.prompt() == c.expect.strip()
@@ -136,3 +140,42 @@ class Foo(ABC):
 """,
     )
     assert c.a.prompt() == c.expect.strip()
+
+    c = Case(
+        Interface(
+            cls=Foo,
+            doc="test",
+        ),
+        """
+class Foo(ABC):
+    \"""
+    test
+    \"""
+    pass
+""",
+    )
+    assert c.a.prompt() == c.expect.strip()
+
+
+def test_build_class_prompt():
+    builder = ClassPrompter(
+        cls=Foo,
+        constructor=Method(caller=Foo1.__init__),
+        methods=[Method(caller=Foo1.foo)],
+        attrs=[Attr(name="a", value=123)],
+    )
+
+    expect = """
+class Foo(ABC):
+    def __init__(self):
+        pass
+
+    a: int = 123
+
+    def foo(self) -> str:
+        \"""
+        hello world
+        \"""
+        pass
+"""
+    assert builder.prompt() == expect.strip()

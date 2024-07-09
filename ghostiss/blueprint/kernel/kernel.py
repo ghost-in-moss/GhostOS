@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from ghostiss.blueprint.kernel.threads import Threads
     from ghostiss.blueprint.kernel.runs import Runs
     from ghostiss.blueprint.kernel.queues import Queues
-    from ghostiss.blueprint.moos import Python
+    from ghostiss.blueprint.moss import Python
 
 
 class Kernel(ABC):

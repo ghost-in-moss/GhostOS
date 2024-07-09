@@ -1,4 +1,4 @@
-from ghostiss.blueprint.moos.reflect import *
+from ghostiss.blueprint.moss.reflect import *
 
 
 def test_get_callable_definition():
