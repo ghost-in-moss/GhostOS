@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from ghostiss.blueprint.moos.reflect import *
-from typing import Dict, NamedTuple
+from typing import Dict, NamedTuple, List
 
 
 class Foo(ABC):
