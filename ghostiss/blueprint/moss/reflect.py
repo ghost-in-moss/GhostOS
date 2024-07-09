@@ -8,10 +8,13 @@ from ghostiss.entity import EntityClass
 __all__ = [
     'BasicTypes', 'ModelType', 'ModelObject',
     'Reflection',
+    'TypeReflection', 'ValueReflection', 'CallerReflection',
+
     'Attr', 'Method',
-    'Class',
+    'Class', 'Model',
     'ClassPrompter', 'Library', 'Interface',
-    'Locals',
+    'Locals', 'BuildObject',
+
     'reflect', 'reflects',
 
     'is_typing', 'is_builtin', 'is_classmethod',
@@ -42,13 +45,19 @@ class Reflection(ABC):
             doc: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
+            typehint: Optional[str, Any] = None,
             comments: Optional[str] = None,
+            prompt: Optional[str] = None,
+            extends: Optional[List[Any]] = None,
     ):
         self._name = name
         self._doc = doc
         self._module = module
         self._module_spec = module_spec
         self._comments = comments
+        self._typehint = typehint
+        self._prompt = prompt
+        self._extends = extends
 
     def name(self) -> str:
         """
@@ -67,11 +76,16 @@ class Reflection(ABC):
         """
         pass
 
-    @abstractmethod
     def prompt(self) -> str:
         """
         get the prompt of the reflection
         """
+        if self._prompt:
+            return self._prompt
+        return self._generate_prompt()
+
+    @abstractmethod
+    def _generate_prompt(self) -> str:
         pass
 
     def module(self) -> Optional[str]:
@@ -80,17 +94,63 @@ class Reflection(ABC):
     def module_spec(self) -> Optional[str]:
         return self._module_spec
 
-    def with_name(self, name: str) -> "Reflection":
-        self._name = name
+    def extends(self) -> Optional[List[Any]]:
+        return self._extends
+
+    def typehint(self) -> Optional[Union[str, Any]]:
+        return self._typehint
+
+    def update(
+            self,
+            name: Optional[str] = None,
+            doc: Optional[str] = None,
+            module: Optional[str] = None,
+            module_spec: Optional[str] = None,
+            typehint: Optional[str, Any] = None,
+            comments: Optional[str] = None,
+            prompt: Optional[str] = None,
+            extends: Optional[List[Any]] = None,
+    ) -> "Reflection":
+        if name is not None:
+            self._name = name
+        if doc is not None:
+            self._doc = doc
+        if module and module_spec:
+            self._module_spec = module_spec
+            self._module = module
+        if typehint is not None:
+            self._typehint = typehint
+        if comments is not None:
+            self._comments = comments
+        if prompt is not None:
+            self._prompt = prompt
+        if extends is not None:
+            self._extends = extends
         return self
 
-    def with_from(self, module: str, module_spec: str) -> "Reflection":
-        self._module = module
-        self._module_spec = module_spec
-        return self
+
+class ValueReflection(Reflection, ABC):
+    """
+    is value
+    """
+    pass
 
 
-class Attr(Reflection):
+class TypeReflection(Reflection, ABC):
+    """
+    is type
+    """
+    pass
+
+
+class CallerReflection(Reflection, ABC):
+    """
+    is callable
+    """
+    pass
+
+
+class Attr(ValueReflection):
     """
     实现类的属性, 可以挂载到一个虚拟类上, 并提供 Prompt.
     """
@@ -100,7 +160,7 @@ class Attr(Reflection):
             name: str,
             value: Any,
             typehint: Optional[Any] = None,
-            implements: Optional[List[Any]] = None,
+            extends: Optional[List[Any]] = None,
             prompt: Optional[str] = None,
             doc: Optional[str] = None,
             module: Optional[str] = None,
@@ -115,7 +175,7 @@ class Attr(Reflection):
         :param value: 任意类型, 但主要分为: 1. 标量; 2. 实例; 3. typehint
         :param prompt: 如果 prompt 不为 None, 默认使用它作为 prompt.
         :param typehint: 描述 value 的类型. 如果是 str 就直接展示, 否则暂时为 'str(typehint)'. BasicTypes 类型的 values 默认展示.
-        :param implements: 强调 value 实现了什么类型. 会添加为注释: # implements xxx, yyy.  推荐使用 str 来描述.
+        :param extends: 强调 value 实现了什么类型. 会添加为注释: # extends xxx, yyy.  推荐使用 str 来描述.
         :param doc: 给属性添加 doc. 符合 python 标准.
         :param module: 指定所属的 module
         :param module_spec: 指定从 module 的 spec 中 import. 不一定是真实的.
@@ -125,10 +185,6 @@ class Attr(Reflection):
         self._value = value
         if typehint is None and isinstance(value, BasicTypes):
             typehint = get_default_typehint(value)
-        self._typehint = typehint
-        self._implements = implements
-        self._doc = doc
-        self._prompt = prompt
         # 如果是 typing 里的类型, 则默认打印其赋值. 比如 foo = Union[str, int]
         self._print_val = True if is_typing(value) or isinstance(value, BasicTypes) else print_val
         super().__init__(
@@ -136,20 +192,20 @@ class Attr(Reflection):
             doc=doc,
             module=module,
             module_spec=module_spec,
+            extends=extends,
             comments=comments,
+            typehint=typehint,
+            prompt=prompt,
         )
 
     def value(self) -> Any:
         return self._value
 
-    def prompt(self) -> str:
-        if self._prompt is not None:
-            return self._prompt
-
+    def _generate_prompt(self) -> str:
         comments = parse_comments(self._comments)
         name = self.name()
         import_from = get_import_comment(self._module, self._module_spec, self.name())
-        implements = get_implement_comment(self._implements)
+        extends = get_implement_comment(self._extends)
         typehint = get_typehint_string(self._typehint)
         value = ""
         if self._print_val is not None and self._print_val:
@@ -160,14 +216,14 @@ class Attr(Reflection):
         doc = parse_doc_string(self._doc, inline=True)
         return join_prompt_lines(
             import_from,
-            implements,
+            extends,
             comments,
             name + typehint + value,
             doc,
         )
 
 
-class Method(Reflection):
+class Method(CallerReflection):
     """
     将一个 Callable 对象封装成 Method, 可以添加到 MoOS 上.
     """
@@ -181,6 +237,7 @@ class Method(Reflection):
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
             comments: Optional[str] = None,
+            typehint: Optional[Callable] = None,
     ):
         """
         :param caller: callable object, may be function, method or object that callable
@@ -192,7 +249,6 @@ class Method(Reflection):
         :param comments:
         """
         self._caller = caller
-        self._prompt = prompt
         name = alias
         if not name:
             name = module_spec
@@ -204,22 +260,64 @@ class Method(Reflection):
             module=module,
             module_spec=module_spec,
             comments=comments,
+            prompt=prompt,
+            typehint=typehint,
         )
 
     def value(self) -> Callable:
         return self._caller
 
-    def prompt(self) -> str:
-        if self._prompt is not None:
-            return self._prompt
-
-        prompt = parse_callable_to_method_def(caller=self._caller, alias=self.name(), doc=self._doc)
+    def _generate_prompt(self) -> str:
+        caller = self._typehint if self._typehint else self._caller
+        prompt = parse_callable_to_method_def(caller=caller, alias=self.name(), doc=self._doc)
         comments = parse_comments(self._comments)
         import_from = get_import_comment(self._module, self._module_spec, self.name())
         return join_prompt_lines(comments, import_from, prompt)
 
 
-class Class(Reflection):
+class Model(TypeReflection):
+
+    def __init__(
+            self,
+            model: Union[Type[BaseModel], Type[TypedDict]],
+            alias: Optional[str] = None,
+            prompt: Optional[str] = None,
+            module: Optional[str] = None,
+            module_spec: Optional[str] = None,
+            comments: Optional[str] = None,
+            extends: Optional[List[Any]] = None,
+    ):
+        name = alias
+        if not name:
+            name = module_spec
+        if not name:
+            name = model.__name__
+        self._model = model
+        if module is None:
+            module = model.__module__
+        if module_spec is None:
+            module_spec = model.__name__
+
+        super().__init__(
+            name=name,
+            prompt=prompt,
+            module=module,
+            module_spec=module_spec,
+            comments=comments,
+            extends=extends,
+        )
+
+    def value(self) -> Any:
+        return self._model
+
+    def _generate_prompt(self) -> str:
+        prompt = inspect.getsource(self._model)
+        comments = parse_comments(self._comments)
+        import_from = get_import_comment(self._module, self._module_spec, self.name())
+        return join_prompt_lines(comments, import_from, prompt)
+
+
+class Class(TypeReflection):
     """
     对一个类型的封装.
     类型通常需要放到 Locals 里对外展示.
@@ -232,16 +330,15 @@ class Class(Reflection):
             alias: Optional[str] = None,
             comments: Optional[str] = None,
             doc: Optional[str] = None,
+            typehint: Optional[type] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
-            implements: Optional[List[Any]] = None,
+            extends: Optional[List[Any]] = None,
     ):
         if not inspect.isclass(cls):
             raise TypeError(f"Class must be a class, not {cls}")
 
         self._cls = cls
-        self._prompt = prompt
-        self._implements = implements
         name = alias
         if not name:
             name = module_spec
@@ -253,18 +350,22 @@ class Class(Reflection):
             module=module,
             module_spec=module_spec,
             comments=comments,
+            prompt=prompt,
+            typehint=typehint,
+            extends=extends,
         )
 
     def value(self) -> type:
         return self._cls
 
-    def prompt(self) -> str:
+    def _generate_prompt(self) -> str:
         comments = parse_comments(self._comments)
-        implementation = get_implement_comment(self._implements)
+        implementation = get_implement_comment(self._extends)
         import_from = get_import_comment(self._module, self._module_spec, self.name())
         prompt = self._prompt
         if not prompt:
-            source = inspect.getsource(self._cls)
+            cls = self._typehint if self._typehint else self._cls
+            source = inspect.getsource(cls)
             prompt = make_class_prompt(source=source, name=self._name, doc=self._doc, attrs=None)
         return join_prompt_lines(comments, import_from, implementation, prompt)
 
@@ -281,46 +382,61 @@ class ClassPrompter(Class):
             self, *,
             cls: type,
             alias: Optional[str] = None,
+            prompt: Optional[str] = None,
             doc: Optional[str] = None,
             constructor: Optional[Method] = None,
             attrs: Optional[Iterable[Attr]] = None,
             methods: Optional[Iterable[Method]] = None,
+            typehint: Optional[Callable] = None,
             comments: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
-            implements: Optional[List[Any]] = None,
+            extends: Optional[List[Any]] = None,
     ):
         if not inspect.isclass(cls):
             raise TypeError(f"Class must be a class, not {cls}")
+        self._attrs = attrs
+        self._constructor: Optional[Method] = constructor
+        self._methods = methods
 
+        super().__init__(
+            cls=cls,
+            prompt=prompt,
+            doc=doc,
+            alias=alias,
+            typehint=typehint,
+            comments=comments,
+            module=module,
+            module_spec=module_spec,
+            extends=extends,
+        )
+
+    def _generate_prompt(self) -> str:
+        cls = self._typehint if self._typehint else self._cls
         source = inspect.getsource(cls)
+        doc = self._doc
         if not doc:
             doc = cls.__doc__
         __names: set = set()
-        __name = alias if alias else cls.__name__
+        __name = self.name()
         __attr_prompts: List[str] = []
+        constructor = self._constructor
         if constructor:
             __names = add_name_to_set(__names, '__init__')
-            __attr_prompts.append(constructor.with_name('__init__').prompt())
+            constructor = constructor.update(name='__init__')
+            __attr_prompts.append(constructor.prompt())
+        attrs = self._attrs
         if attrs:
             for attr in attrs:
                 __names = add_name_to_set(__names, attr.name())
                 __attr_prompts.append(attr.prompt())
+        methods = self._methods
         if methods:
             for method in methods:
                 __names = add_name_to_set(__names, method.name())
                 __attr_prompts.append(method.prompt())
         prompt = make_class_prompt(source=source, name=__name, doc=doc, attrs=__attr_prompts)
-
-        super().__init__(
-            cls=cls,
-            prompt=prompt,
-            alias=alias,
-            comments=comments,
-            module=module,
-            module_spec=module_spec,
-            implements=implements,
-        )
+        return prompt
 
 
 class BuildObject(Attr):
@@ -334,7 +450,7 @@ class BuildObject(Attr):
             attrs: Optional[Iterable[Attr]] = None,
             methods: Optional[Iterable[Method]] = None,
             typehint: Optional[Any] = None,
-            implements: Optional[List[Any]] = None,
+            extends: Optional[List[Any]] = None,
             doc: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
@@ -354,7 +470,7 @@ class BuildObject(Attr):
             name=name,
             value=value,
             typehint=typehint,
-            implements=implements,
+            extends=extends,
             doc=doc,
             module=module,
             module_spec=module_spec,
@@ -376,7 +492,7 @@ class Library(ClassPrompter):
             comments: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
-            implements: Optional[List[Any]] = None,
+            extends: Optional[List[Any]] = None,
     ):
         allows = None
         if methods is not None:
@@ -402,7 +518,7 @@ class Library(ClassPrompter):
             comments=comments,
             module=module,
             module_spec=module_spec,
-            implements=implements,
+            extends=extends,
         )
 
 
@@ -419,7 +535,7 @@ class Interface(Library):
             comments: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
-            implements: Optional[List[Any]] = None,
+            extends: Optional[List[Any]] = None,
     ):
         super().__init__(
             cls=cls,
@@ -429,19 +545,20 @@ class Interface(Library):
             comments=comments,
             module=module,
             module_spec=module_spec,
-            implements=implements,
+            extends=extends,
         )
 
 
-class Locals(Reflection):
+class Locals(ValueReflection):
     """
     local variables
     """
 
     def __init__(
             self,
-            methods: Optional[Iterable[Method]] = None,
-            classes: Optional[Iterable[Class]] = None,
+            methods: Optional[Iterable[CallerReflection]] = None,
+            types: Optional[Iterable[TypeReflection]] = None,
+            prompt: Optional[str] = None,
     ):
         self.__locals: Dict[str, Reflection] = {}
         self.__local_var_orders: List[str] = []
@@ -452,8 +569,8 @@ class Locals(Reflection):
                     raise NameError(f"Duplicate method name: {name}")
                 self.__local_var_orders.append(name)
                 self.__locals[method.name()] = method
-        if classes:
-            for cls in classes:
+        if types:
+            for cls in types:
                 name = cls.name()
                 if name in self.__locals:
                     raise NameError(f"Duplicate method name: {name}")
@@ -461,6 +578,7 @@ class Locals(Reflection):
                 self.__locals[name] = cls
         super().__init__(
             name="",
+            prompt=prompt,
         )
 
     def value(self) -> Dict[str, Any]:
@@ -469,7 +587,7 @@ class Locals(Reflection):
             result[name] = reflection.value()
         return result
 
-    def prompt(self) -> str:
+    def _generate_prompt(self) -> str:
         prompts = []
         for name in self.__local_var_orders:
             prompt = self.__locals[name].prompt()
@@ -481,19 +599,12 @@ def reflect(
         *,
         var: Any,
         name: Optional[str] = None,
-        module: Optional[str] = None,
-        module_spec: Optional[str] = None,
-        doc: Optional[str] = None,
-        comments: Optional[str] = None,
 ) -> Optional[Reflection]:
     """
     reflect any variable to Reflection
     """
     if isinstance(var, Reflection):
-        if module and module_spec:
-            var = var.with_from(module_spec=module_spec, module=module)
-        if name:
-            var = var.with_name(name)
+        var = var.update(name=name)
         return var
 
     elif is_builtin(var):
@@ -502,15 +613,14 @@ def reflect(
     elif is_typing(var):
         if not name:
             raise ValueError('Name must be a non-empty string for typing')
-        return Attr(name=name, value=var, doc=doc, comments=comments, module=module, module_spec=module_spec)
+        return Attr(name=name, value=var)
     elif isinstance(var, type):
         if is_model_class(var):
-            # todo
-            pass
+            return Model(model=var, alias=name)
         else:
-            return Class(cls=var, alias=name, doc=doc, comments=comments, module=module, module_spec=module_spec)
+            return Class(cls=var, alias=name)
     elif isinstance(var, Callable):
-        return Method(caller=var, alias=name, doc=doc, comments=comments, module=module, module_spec=module_spec)
+        return Method(caller=var, alias=name)
     else:
         return None
 
@@ -543,18 +653,18 @@ def get_import_comment(module: Optional[str], module_spec: Optional[str], alias:
     return None
 
 
-def get_implement_comment(implements: Optional[List[Any]]) -> Optional[str]:
-    if not implements:
+def get_implement_comment(extends: Optional[List[Any]]) -> Optional[str]:
+    if not extends:
         return None
     result = []
-    for imp in implements:
+    for imp in extends:
         if not imp:
             continue
         elif isinstance(imp, str):
             result.append(imp)
         else:
             result.append('"' + str(imp) + '"')
-    return "# implements " + ", ".join(result)
+    return "# extends " + ", ".join(result)
 
 
 def join_prompt_lines(*prompts: Optional[str]) -> str:
@@ -628,7 +738,7 @@ def make_class_prompt(
 
 
 def replace_class_def_name(class_def: str, new_name: str) -> str:
-    found = re.search(r'class\s+\w+[\(:]', class_def)
+    found = re.search(r'class\s+\w+[(:]', class_def)
     if not found:
         raise ValueError(f"Could not find class definition in {class_def}")
     found_str = found.group(0)

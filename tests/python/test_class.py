@@ -117,7 +117,8 @@ def test_method_set_attr():
 
 
 def test_type_qualname():
-    assert _SupportsAbs.__qualname__ == "_SupportsAbs"
+    assert _SupportsAbs.__qualname__ == "SupportsAbs"
+    assert Bar.__qualname__ == "Bar"
 
 
 def test_get_members():

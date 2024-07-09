@@ -4,7 +4,7 @@ from ghostiss.entity import EntityMeta
 from ghostiss.blueprint.messages import Message, Retriever
 from pydantic import BaseModel, Field
 if TYPE_CHECKING:
-    from ghostiss.blueprint.agents.ghost import GhostMeta
+    from ghostiss.blueprint.ghosts.ghost import GhostMeta
 
 
 class Inputs(BaseModel):

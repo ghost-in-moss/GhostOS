@@ -4,10 +4,10 @@ from ghostiss.entity import Entity, EntityMeta, EntityFactory
 
 if TYPE_CHECKING:
     from ghostiss.blueprint.agent import Agent
-    from ghostiss.blueprint.agents.ghost import Ghost
-    from ghostiss.blueprint.agents.operators import Operator
-    from ghostiss.blueprint.agents.events import Event, EventLoader
-    from ghostiss.blueprint.agents.runtime import Task
+    from ghostiss.blueprint.ghosts.ghost import Ghost
+    from ghostiss.blueprint.ghosts.operators import Operator
+    from ghostiss.blueprint.ghosts.events import Event, EventLoader
+    from ghostiss.blueprint.kernel.runtime import Task
 
 
 class Mind(Entity, ABC):

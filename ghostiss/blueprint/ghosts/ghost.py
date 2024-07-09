@@ -8,14 +8,14 @@ if TYPE_CHECKING:
     from ghostiss.blueprint.messages import Message
     from ghostiss.blueprint.messenger import Messenger
     from ghostiss.blueprint.kernel.kernel import Kernel
-    from ghostiss.blueprint.agents.envs import Envs
-    from ghostiss.blueprint.agents.events import EVENT_TYPES
-    from ghostiss.blueprint.agents.runtime import Runtime, Task
-    from ghostiss.blueprint.agents.shell import Shell
-    from ghostiss.blueprint.agents.minds import Ideas
+    from ghostiss.blueprint.shell.envs import Envs
+    from ghostiss.blueprint.ghosts.events import EVENT_TYPES
+    from ghostiss.blueprint.kernel.runtime import Runtime, Task
+    from ghostiss.blueprint.shell.shell import Shell
+    from ghostiss.blueprint.ghosts.minds import Ideas
     from ghostiss.contracts.configs import Configs
-    from ghostiss.blueprint.agents.libraries import Libraries
-    from ghostiss.blueprint.agents.operators import Operator
+    from ghostiss.blueprint.ghosts.libraries import Libraries
+    from ghostiss.blueprint.ghosts.operators import Operator
 
 
 class TaskCtx(Context):

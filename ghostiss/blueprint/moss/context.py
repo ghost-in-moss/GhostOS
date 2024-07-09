@@ -13,7 +13,6 @@ class Import(BaseModel):
     module: str
     spec: str
     alias: Optional[str]
-    description: Optional[str] = Field(default=None)
 
     def get_name(self) -> str:
         if self.alias:
@@ -31,6 +30,7 @@ class Define(BaseModel):
     """
     可以在上下文中声明的变量.
     """
+    name: str = Field()
     desc: Optional[str] = Field(default=None)
     value: VARIABLE_TYPES = Field(default=None, description="")
     model: Optional[str] = Field(
@@ -47,8 +47,34 @@ class PyContext(BaseModel):
     不需要全部用 pickle 之类的库做序列化, 方便管理 bot 的思维空间.
     """
 
-    imports: Dict[str, Import] = Field(default_factory=dict, description="通过 python 引入的包, 类, 方法 等.")
-    defines: Dict[str, Define] = Field(default_factory=list, description="在上下文中定义的变量.")
+    imports: List[Import] = Field(default_factory=list, description="通过 python 引入的包, 类, 方法 等.")
+    defines: List[Define] = Field(default_factory=list, description="在上下文中定义的变量.")
+
+    def add_import(self, imp: Import) -> None:
+        imports = []
+        done = False
+        for _imp in self.imports:
+            if _imp.get_name() == imp.get_name():
+                imports.append(imp)
+                done = True
+            else:
+                imports.append(_imp)
+        if not done:
+            imports.append(imp)
+        self.imports = imports
+
+    def add_define(self, d: Define) -> None:
+        defines = []
+        done = False
+        for d_ in self.defines:
+            if d_.name == d.name:
+                defines.append(d)
+                done = True
+            else:
+                defines.append(d_)
+        if not done:
+            defines.append(d)
+        self.defines = defines
 
     def join(self, ctx: "PyContext") -> "PyContext":
         """

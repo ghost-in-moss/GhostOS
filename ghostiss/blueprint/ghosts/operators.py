@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from ghostiss.blueprint.agents.ghost import Ghost, TaskCtx
+    from ghostiss.blueprint.ghosts.ghost import Ghost, TaskCtx
 
 
 class Operator(ABC):

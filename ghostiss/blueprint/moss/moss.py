@@ -1,14 +1,17 @@
-from typing import List, Set, Dict, Any, Optional, Union, TypedDict, Iterable, Type, Callable
+from typing import List, Set, Dict, Any, Optional, Union, Tuple
 from abc import ABC, abstractmethod
-import re
-import inspect
-from contextlib import redirect_stdout
 from pydantic import BaseModel
-from importlib.abc import MetaPathFinder
-from ghostiss.container import Container, CONTRACT
-from ghostiss.blueprint.moss.variable import Var, VarKind, Descriptive, ClassVar, ModelType, lib
+from ghostiss.container import Container
 from ghostiss.blueprint.moss.context import PyContext, Define, Import
 from ghostiss.blueprint.moss.importer import Importer
+from ghostiss.blueprint.moss.reflect import (
+    reflect, reflects,
+    Reflection, TypeReflection,
+    Model, ModelType, ModelObject,
+    Attr, Method, ClassPrompter, Locals, Library,
+    get_typehint_string,
+    get_model_object_meta, new_model_instance
+)
 from ghostiss.helpers import camel_to_snake
 from ghostiss.container import Provider
 from ghostiss.helpers import BufferPrint
@@ -16,87 +19,12 @@ from ghostiss.helpers import BufferPrint
 AttrTypes = Union[int, float, str, bool, list, dict, None, Provider, ModelType]
 
 
-class MOSS(ABC):
-    """
-    language Model-oriented Operating System Simulation
-    full python code interface for large language models
-    """
-
-    # --- 创建 MoOS 的方法 --- #
-
-    @abstractmethod
-    def new(self, *named_vars, **variables) -> "MOSS":
-        """
-        return a new instance
-        """
-        pass
-
-    @abstractmethod
-    def add_method(
-            self,
-            method: Callable,
-            *,
-            alias: Optional[str] = None,
-            doc: Optional[str] = None,
-            prompt: Optional[str] = None,
-    ) -> None:
-        """
-        attach a method to MoOS
-        :param method: any callable such as function, method, callable object
-        :param alias: use custom alias replace of the method.__name__
-        :param doc: use custom docstring replace of the method.__doc__
-        :param prompt: use custom prompt, not default code prompt generator
-        """
-        pass
-
-    @abstractmethod
-    def set_attr(
-            self,
-            value: AttrTypes,
-            *,
-            name: Optional[str] = None,
-            implements: Optional[type] = None,
-            prompt: Optional[str] = None,
-            doc: Optional[str] = None,
-    ) -> None:
-        """
-        attach a value as attribute to MoOS instance.
-
-        :param value: value cant be any object, when it is a Provider, will use it factory to make an instance attribute.
-        :param name: attr name
-        :param implements: if defined, will announce the attribute typehint is the implements.
-        :param prompt: 
-        :param doc: 
-        """
-        pass
-
-    @abstractmethod
-    def add_type(
-            self,
-            typ: Type[CONTRACT],
-            *,
-            alias: Optional[str] = None,
-            prompt: Optional[str] = None,
-            doc: Optional[str] = None,
-            implements: Optional[List[type]] = None,
-    ) -> str:
-        pass
-
-    @abstractmethod
-    def update_context(self, context: PyContext) -> None:
-        """
-        为 MoOS 添加更多的变量, 可以覆盖掉之前的.
-        :param context:
-        :return:
-        """
-        pass
-
-    # --- MoOS 默认暴露的基础方法 --- #
+class System(ABC):
 
     @abstractmethod
     def imports(self, module: str, *specs: str, **aliases: str) -> Dict[str, Any]:
         """
-        import from module
+        replace from ... import ... as ...
         :param module: module name
         :param specs: module spec
         :param aliases: alias=module spec
@@ -114,6 +42,33 @@ class MOSS(ABC):
         replace builtin print
         """
         pass
+
+
+class MOSS(System, ABC):
+    """
+    language Model-oriented Operating System Simulation
+    full python code interface for large language models
+    """
+
+    # --- 创建 MoOS 的方法 --- #
+
+    @abstractmethod
+    def new(self, *named_vars, **variables) -> "MOSS":
+        """
+        return a new instance
+        """
+        pass
+
+    @abstractmethod
+    def update_context(self, context: PyContext) -> None:
+        """
+        为 MoOS 添加更多的变量, 可以覆盖掉之前的.
+        :param context:
+        :return:
+        """
+        pass
+
+    # --- MoOS 默认暴露的基础方法 --- #
 
     @abstractmethod
     def flush(self) -> str:
@@ -222,7 +177,7 @@ class MOSS(ABC):
         return None
 
 
-class BaseMOSS(MOSS):
+class BasicMOSSImpl(MOSS):
 
     def __init__(self, *, doc: str, container: Container):
         self.__doc__ = doc
@@ -235,16 +190,16 @@ class BaseMOSS(MOSS):
         self.__python_context: PyContext = PyContext()
         self.__buffer_print: BufferPrint = BufferPrint()
 
-        self.__property_prompts: Dict[str, Optional[str]] = {}
-        self.__property_docs: Dict[str, Optional[str]] = {}
-        self.__property_implements: Dict[str, Optional[type]] = {}
+        self.__reserved_locals_names: Set[str] = {'os', 'MOOS', 'print', 'imports'}
 
-        self.__local_types: Dict[str, type] = {}
+        self.__reflections: Dict[str, Reflection] = {}
+        self.__reflection_names: List[str] = []
+        self.__attrs: Dict[str, Attr] = {}
+        self.__methods: Dict[str, Method] = {}
+        self.__local_types: Dict[str, TypeReflection] = {}
         self.__local_type_names: Dict[type, str] = {}
-        self.__local_type_prompts: Dict[str, str] = {}
-        self.__local_type_implements: Dict[str, Optional[List[type]]] = {}
-        self.__reserved_property_names: Set[str] = {'', }
-        self.__reserved_locals_names: Set[str] = {'os', 'MoOS', 'print'}
+
+        self.__reassign_name_idx: int = 1
 
         self.__bootstrapped = False
 
@@ -257,45 +212,111 @@ class BaseMOSS(MOSS):
         del self.__importer
         del self.__python_context
 
-        del self.__property_docs
-        del self.__property_implements
-        del self.__property_prompts
+        del self.__attrs
+        del self.__methods
+        del self.__reflections
+        del self.__reflection_names
 
         del self.__local_types
         del self.__local_type_names
-        del self.__local_type_prompts
 
     def new(self, *named_vars, **variables) -> "MOSS":
+        args = []
+        kwargs = {}
+        for arg in named_vars:
+            if isinstance(arg, Provider):
+                self.__add_provider(arg, None)
+            else:
+                args.append(arg)
+        for name, arg in variables.items():
+            if isinstance(arg, Provider):
+                self.__add_provider(arg, name)
+            else:
+                kwargs[name] = arg
         # 复制创造一个新的实例.
-        os = BaseMOSS(doc=self.__doc__, container=self.__container)
-        for var in named_vars:
-            os.__add_any_var(value=var)
-        for name, var in variables.items():
-            os.__add_any_var(value=var, name=name)
+        os = BasicMOSSImpl(doc=self.__doc__, container=self.__container.parent)
+        reflections = reflects(*args, **kwargs)
+        for r in reflections:
+            os.add_reflection(r)
         return os
+
+    def __add_provider(self, provider: Provider, name: Optional[str]) -> None:
+        contract = provider.contract()
+        impl = provider.factory(self.__container)
+
+        contract_reflect = Library(cls=contract, alias=name)
+        attr = Attr(value=impl, name=camel_to_snake(contract_reflect.name()))
+        self.__add_type(contract_reflect)
+        self.__add_attr(attr)
+
+    def add_reflection(self, reflection: Reflection, reassign_name: bool = False) -> None:
+        name = reflection.name()
+        if name in self.__reserved_locals_names:
+            raise NameError(f"'{name}' is reserved name")
+        if name in self.__reflections:
+            if reassign_name:
+                name = self.__reassign_name(name, set(self.__reflections.keys()))
+                reflection.update(name=name)
+            else:
+                raise NameError(f'{name} already defined')
+        self.__reflections[name] = reflection
+        self.__reflection_names.append(name)
+
+        # 正式添加.
+        if isinstance(reflection, Attr):
+            self.__add_attr(reflection)
+        elif isinstance(reflection, Method):
+            self.__add_method(reflection)
+        elif isinstance(reflection, TypeReflection):
+            typ = reflection.value()
+            if typ in self.__local_type_names:
+                # 不重复添加类型. 所有类型使用第一个定义的.
+                return
+            self.__add_type(reflection)
+
+            # 默认判断是否要添加 lib.
+            impl = self.__container.get(typ)
+            if impl:
+                lib = Attr(value=impl, typehint=typ, name=camel_to_snake(reflection.name()))
+                self.add_reflection(lib, reassign_name=True)
+        else:
+            raise AttributeError(f"{reflection} not supported yet")
+
+    def __add_type(self, reflection: TypeReflection) -> None:
+        self.__local_types[reflection.name()] = reflection
+        self.__local_type_names[reflection.value()] = reflection.name()
+
+    def __add_attr(self, attr: Attr) -> None:
+        self.__attrs[attr.name()] = attr
+        self.__dict__[attr.name()] = attr.value()
+
+    def __add_method(self, method: Method) -> None:
+        self.__methods[method.name()] = method
+        self.__dict__[method.name()] = method.value()
 
     def define(
             self,
             name: str,
-            value: Union[str, int, float, bool, Dict, List, ModelType],
+            value: Union[str, int, float, bool, Dict, List, ModelObject],
             desc: Optional[str] = None,
     ) -> Any:
-        model: Optional[Type[ModelType]] = None
-        model_name = None
-        typ = type(value)
-        real_value = value
-        if isinstance(value, ModelType):
-            model = type(value)
-            real_value = get_model_type_value(value)
-        if model:
-            model_name = self.add_type(typ=model)
+        defined_value = value
+        model_name: Optional[str] = None
+        if isinstance(value, ModelObject):
+            defined_value = get_model_object_meta(value)
+            typehint = type(value)
+            model_name = self.__local_type_names.get(typehint)
+            if not typehint:
+                self.add_reflection(Model(model=typehint), reassign_name=True)
+                model_name = self.__local_type_names.get(typehint, typehint.__name__)
 
-        self.__python_context.defines[name] = Define(
+        d = Define(
             name=name,
-            value=real_value,
+            value=defined_value,
             desc=desc,
             model_name=model_name,
         )
+        self.__python_context.add_define(d)
         self.print(f"> defined attr {name} to MoOS")
         return value
 
@@ -324,8 +345,7 @@ class BaseMOSS(MOSS):
                 log += f"{spec} as {alias},"
             else:
                 log += f"{spec},"
-            # self.set_attr(name=name, value=v)
-            self.__python_context.imports[name] = imp
+            self.__python_context.add_import(imp)
             result[name] = v
         log += ") # attach to MoOS"
         self.print(log)
@@ -345,197 +365,118 @@ class BaseMOSS(MOSS):
         if not self.__bootstrapped:
             self.__bootstrapped = True
             self.__bootstrap_py_context()
-        local_values: Dict[str, Any] = self.__local_types
+
+        local_values: Dict[str, Any] = {}
+        for key, reflection in self.__local_types.items():
+            local_values[key] = reflection.value()
         local_values['print'] = self.print
         local_values['os'] = self
         return local_values
 
+    def __get_defined_attrs_and_methods(self) -> Tuple[List[Attr], List[Method]]:
+        attrs = []
+        methods = []
+        for name in self.__reflection_names:
+            if name in self.__attrs:
+                attrs.append(self.__attrs[name])
+            elif name in self.__methods:
+                methods.append(self.__methods[name])
+        return attrs, methods
+
+    def dump_code_prompt(self) -> str:
+        if not self.__bootstrapped:
+            self.__bootstrapped = True
+            self.__bootstrap_py_context()
+        attrs, methods = self.__get_defined_attrs_and_methods()
+        for attr in attrs:
+            self.__update_typehint_and_extends(attr)
+        for method in methods:
+            self.__update_typehint_and_extends(method)
+
+        methods.append(
+            Method(caller=System.imports)
+        )
+        local_types: List[TypeReflection] = []
+        for name in self.__reflection_names:
+            if name in self.__local_types:
+                local_types.append(self.__local_types[name])
+
+        moos = ClassPrompter(
+            cls=System,
+            alias="MOOS",
+            doc=MOSS.__doc__,
+            attrs=attrs,
+            methods=methods,
+        )
+        local_types.append(moos)
+        local_prompter = Locals(
+            methods=[],
+            types=local_types,
+        )
+        return local_prompter.prompt()
+
+    def __update_typehint_and_extends(self, r: Reflection) -> Reflection:
+        typehint = r.typehint()
+        if typehint is not None:
+            typehint = self.__get_typehint(typehint)
+        extends = r.extends()
+        new_extends = []
+        if extends:
+            for ext in extends:
+                ext_typehint = self.__get_typehint(ext)
+                new_extends.append(ext_typehint)
+        r = r.update(typehint=typehint, extends=new_extends)
+        return r
+
     def update_context(self, context: PyContext) -> None:
         if self.__bootstrapped:
             raise RuntimeError("MoOS is already bootstrapped")
-        self.__python_context.imports.update(context.imports)
-        self.__python_context.defines.update(context.defines)
+        self.__python_context.join(context)
 
     def __bootstrap_py_context(self) -> None:
-        for name in self.__python_context.imports:
-            imp = self.__python_context.imports[name]
+        for imp in self.__python_context.imports:
+            name = imp.get_name()
             value = self.__importer.imports(imp.module, imp.spec)
-            desc = imp.description
-            self.__add_any_var(value=value, name=name, desc=desc)
+            r = reflect(var=value, name=name)
+            self.add_reflection(r, reassign_name=False)
 
-        for name in self.__python_context.defines:
-            defined = self.__python_context.defines[name]
+        for defined in self.__python_context.defines:
+            name = defined.name
             real_value = defined.value
             if defined.model:
-                model_type = self.__local_types[defined.model]
-                real_value = new_model_from_value(model_type, defined.value)
-            self.set_attr(
-                real_value,
-                name=name,
-                doc=defined.desc,
-                implements=None,
-            )
-
-    def __add_any_var(self, *, value: Any, name: Optional[str] = None, desc: Optional[str] = None) -> None:
-        if isinstance(value, Var):
-            if value.is_caller():
-                self.add_method(
-                    method=value.value(self.__container),
-                    alias=name,
-                    doc=value.desc(),
-                    prompt=value.code_prompt(),
-                )
-            elif value.is_type():
-                self.add_type(
-                    typ=value.value(self.__container),
-                    name=name,
-                    prompt=value.code_prompt(),
-                    doc=value.desc(),
-                    implements=value.implements(),
-                )
-            else:
-                self.set_attr(
-                    value.value(self.__container),
-                    name=name,
-                    prompt=value.code_prompt(),
-                    doc=value.desc(),
-                    implements=value.implements(),
-                )
-        elif isinstance(value, AttrTypes):
-            self.set_attr(value, name=name, doc=desc)
-        elif isinstance(value, type):
-            self.add_type(value, name=name, doc=desc)
-        elif isinstance(value, Callable):
-            self.add_method(method=value, alias=name, doc=desc)
-
-    def dump_code_prompt(self) -> str:
-        pass
+                model_type = self.__local_types.get(defined.model, None)
+                if model_type is None:
+                    raise AttributeError(f"{defined.model} not found")
+                real_value = new_model_instance(model_type, defined.value)
+            r = Attr(name=name, value=real_value)
+            self.add_reflection(r, reassign_name=False)
 
     def dump_context(self) -> PyContext:
-        py_context = self.__python_context.model_copy()
-        for name in self.__python_context.defines:
-            define = self.__python_context.defines[name]
-            if hasattr(self, name):
-                value = getattr(self, name)
-                real_value = value
-                if is_model_instance(value):
-                    model = get_module_name(value)
-                    if model:
-                        define.model = model
-                    real_value = get_model_type_value(value)
-                # 重新定义 define 的 value 值.
-                define.value = real_value
-        return py_context
+        defines = []
+        for define in self.__python_context.defines:
+            name = define.name
+            if name in self.__dict__:
+                value = self.__dict__[name]
+                if define.model:
+                    value = get_model_object_meta(value)
+                define.value = value
+            defines.append(define)
+        self.__python_context.defines = defines
+        return self.__python_context.model_copy()
 
-    def set_attr(
-            self,
-            value: AttrTypes,
-            *,
-            name: Optional[str] = None,
-            implements: Optional[type] = None,
-            prompt: Optional[str] = None,
-            doc: Optional[str] = None,
-    ) -> None:
-        if not isinstance(value, AttrTypes):
-            raise ValueError(f"value {value} is not of type {AttrTypes}")
-        real_value = value
-        # 如果是 provider.
-        if isinstance(value, Provider):
-            real_value = value.factory(self.__container)
-            if not implements:
-                implements = value.contract()
-
-        if not name:
-            if implements:
-                name = implements.__name__
-            else:
-                name = real_value.__class__.__name__
-            name = camel_to_snake(name)
-
-        if implements:
-            # 添加需要描述的类.
-            self.add_type(implements)
-        self.__set_raw_property(name=name, value=real_value, implements=implements, prompt=prompt)
-
-    def add_type(
-            self,
-            typ: Type,
-            *,
-            name: Optional[str] = None,
-            prompt: Optional[str] = None,
-            doc: Optional[str] = None,
-            implements: Optional[List[type]] = None,
-    ) -> str:
-        if inspect.isclass(typ):
-            if not name:
-                name = typ.__name__
-            self.__add_raw_type(name=name, typ=typ, implements=implements, prompt=prompt)
-        elif is_typing(typ):
-            if not name:
-                raise ValueError(f'type defines from typing must has name')
-            if not prompt:
-                prompt = f"{name} = {str(typ)}"
-            self.__add_raw_type(name=name, typ=typ, implements=implements, prompt=prompt)
-        else:
-            raise TypeError(f"type must be an typing or a class, not {typ}")
-        return name
-
-    def add_method(
-            self, *,
-            method: Callable,
-            alias: Optional[str] = None,
-            doc: Optional[str] = None,
-            prompt: Optional[str] = None,
-    ) -> None:
-        """
-        添加一个方法.
-        """
-        if not is_caller(method):
-            raise TypeError(f'method value {method} is not callable')
-        name = alias
-        if not name:
-            name = method.__name__
-        self.__set_raw_property(name=name, value=method, implements=None, prompt=prompt)
-
-    def __set_raw_property(
-            self,
-            *,
-            name: str,
-            value: Any,
-            doc: Optional[str] = None,
-            implements: Optional[type] = None,
-            prompt: Optional[str] = None,
-    ) -> None:
-        if name.startswith("_"):
-            raise NameError(f"name must not start with '_'")
-        if name in self.__reserved_property_names:
-            raise NameError(f'name {name} is reserved')
-        # 允许替换掉原来的.
-        setattr(self, name, value)
-        self.__property_implements[name] = implements
-        self.__property_prompts[name] = prompt
-        self.__property_docs[name] = doc
-
-    def __add_raw_type(
-            self,
-            *,
-            name: str,
-            typ: Type,
-            implements: Optional[type] = None,
-            prompt: Optional[str] = None,
-    ) -> None:
-        if name in self.__reserved_locals_names:
-            raise NameError(f'{name} is reserved for MoOS')
-        if typ in self.__local_type_names:
-            # only register once
-            name = self.__local_type_names[typ]
-        else:
-            self.__local_type_names[typ] = name
-        self.__local_type_prompts[name] = prompt
-        self.__local_type_implements[name] = implements
-
-    def __get_typehint(self, implement: Type) -> str:
-        typehint = self.__local_type_names.get(implement, None)
+    def __get_typehint(self, typehint: Any) -> str:
         if not typehint:
-            typehint = str(implement)
+            return ""
+        typehint = self.__local_type_names.get(typehint, None)
+        if not typehint:
+            typehint = get_typehint_string(typehint)
         return typehint
+
+    def __reassign_name(self, name: str, names: Set[str]) -> str:
+        if name in names:
+            new_name = f"{name}.{self.__reassign_name_idx}"
+            self.__reassign_name_idx += 1
+            if new_name in names:
+                return self.__reassign_name(name, names)
+            return new_name
+        return name
