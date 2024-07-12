@@ -169,6 +169,7 @@ class MOSS(System, ABC):
             # 对 result_name 做初始化.
             local_values[result_name] = None
         local_values['print'] = self.print
+        local_values['os'] = self
         # 执行代码. 注意!! 暂时没有考虑任何安全性问题. 理论上应该全部封死.
         # 考虑使用 RestrictPython
         exec(code, globals(), local_values)
@@ -190,7 +191,7 @@ class BasicMOSSImpl(MOSS):
         self.__python_context: PyContext = PyContext()
         self.__buffer_print: BufferPrint = BufferPrint()
 
-        self.__reserved_locals_names: Set[str] = {'os', 'MOOS', 'print', 'imports'}
+        self.__reserved_locals_names: Set[str] = {'os', 'MOOS', 'print', 'imports', 'define'}
 
         self.__reflections: Dict[str, Reflection] = {}
         self.__reflection_names: List[str] = []

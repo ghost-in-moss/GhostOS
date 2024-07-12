@@ -21,13 +21,16 @@ __all__ = [
     'is_model_class', 'get_model_object_meta', 'is_model_instance', 'new_model_instance',
     'parse_comments',
     'parse_doc_string', 'parse_doc_string_with_quotes',
+    'strip_source_indent', 'add_source_indent', 'make_class_prompt',
     'is_callable', 'is_public_callable', 'parse_callable_to_method_def',
-    'get_typehint_string', 'get_default_typehint', 'get_import_comment', 'get_implement_comment',
+    'get_typehint_string', 'get_default_typehint', 'get_import_comment', 'get_extends_comment',
     'get_class_def_from_source',
 ]
 
 BasicTypes = Union[str, int, float, bool, list, dict]
 """scalar types"""
+
+AttrDefaultTypes = Union[int, float, bool]
 
 ModelObject = Union[BaseModel, TypedDict, EntityClass]
 
@@ -45,7 +48,7 @@ class Reflection(ABC):
             doc: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
-            typehint: Optional[str, Any] = None,
+            typehint: Optional[Union[str, Any]] = None,
             comments: Optional[str] = None,
             prompt: Optional[str] = None,
             extends: Optional[List[Any]] = None,
@@ -106,7 +109,7 @@ class Reflection(ABC):
             doc: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
-            typehint: Optional[str, Any] = None,
+            typehint: Optional[Union[str, Any]] = None,
             comments: Optional[str] = None,
             prompt: Optional[str] = None,
             extends: Optional[List[Any]] = None,
@@ -186,7 +189,7 @@ class Attr(ValueReflection):
         if typehint is None and isinstance(value, BasicTypes):
             typehint = get_default_typehint(value)
         # 如果是 typing 里的类型, 则默认打印其赋值. 比如 foo = Union[str, int]
-        self._print_val = True if is_typing(value) or isinstance(value, BasicTypes) else print_val
+        self._print_val = True if is_typing(value) or isinstance(value, AttrDefaultTypes) else print_val
         super().__init__(
             name=name,
             doc=doc,
@@ -205,7 +208,7 @@ class Attr(ValueReflection):
         comments = parse_comments(self._comments)
         name = self.name()
         import_from = get_import_comment(self._module, self._module_spec, self.name())
-        extends = get_implement_comment(self._extends)
+        extends = get_extends_comment(self._extends)
         typehint = get_typehint_string(self._typehint)
         value = ""
         if self._print_val is not None and self._print_val:
@@ -360,7 +363,7 @@ class Class(TypeReflection):
 
     def _generate_prompt(self) -> str:
         comments = parse_comments(self._comments)
-        implementation = get_implement_comment(self._extends)
+        implementation = get_extends_comment(self._extends)
         import_from = get_import_comment(self._module, self._module_spec, self.name())
         prompt = self._prompt
         if not prompt:
@@ -653,7 +656,7 @@ def get_import_comment(module: Optional[str], module_spec: Optional[str], alias:
     return None
 
 
-def get_implement_comment(extends: Optional[List[Any]]) -> Optional[str]:
+def get_extends_comment(extends: Optional[List[Any]]) -> Optional[str]:
     if not extends:
         return None
     result = []

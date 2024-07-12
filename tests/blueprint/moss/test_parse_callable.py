@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from ghostiss.blueprint.moss.reflect import *
 
 

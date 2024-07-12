@@ -27,8 +27,9 @@ class Foo1(Foo):
 def test_attr_baseline():
     a = Attr(name="a", value=123)
     expect = """
-a: int
+a: int = 123
 """
+    # 整数类型自动打印值.
     assert a.prompt() == expect.strip()
 
     a = Attr(name="a", value=123, print_val=True, doc="test")
