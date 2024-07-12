@@ -1,4 +1,7 @@
+import inspect
 from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type, TypedDict, Callable
+from RestrictedPython import safe_globals
+from types import ModuleType, FunctionType
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostiss.container import Container, CONTRACT
@@ -98,7 +101,7 @@ class MOSS(System, ABC):
     # --- 对上层系统暴露的方法 --- #
 
     @abstractmethod
-    def bootstrap(self) -> Dict[str, Any]:
+    def dump_locals(self) -> Dict[str, Any]:
         """
         返回 moos 运行时的上下文变量, 可以结合 exec 提供 locals 并且运行.
         """
@@ -168,7 +171,7 @@ class MOSS(System, ABC):
         :return: 根据 result_name 从 code 中获取返回值.
         :exception: any exception will be raised, handle them outside
         """
-        local_values = self.bootstrap()
+        local_values = self.dump_locals()
         if update_locals is not None:
             local_values.update(update_locals)
         if target and target not in local_values:
@@ -178,25 +181,32 @@ class MOSS(System, ABC):
         local_values['os'] = self
         # 执行代码. 注意!! 暂时没有考虑任何安全性问题. 理论上应该全部封死.
         # 考虑使用 RestrictPython
-        exec(code, globals(), local_values)
+        temp = ModuleType("moss")
+        for key, attr in local_values.items():
+            setattr(temp, key, attr)
+
+        compiled = compile(code, filename='<MOSS>', mode='exec')
+        # If exec gets two separate objects as globals and locals,
+        # the code will be executed as if it were embedded in a class definition.
+        exec(compiled, temp.__dict__)
+
         if (args is not None or kwargs is not None) and target is not None:
-            caller = local_values[target]
-            if not isinstance(caller, Callable):
+            caller = getattr(temp, target)
+            if not inspect.isfunction(caller):
                 raise TypeError(f"target {target} is not callable")
             real_args = []
             real_kwargs = {}
             if args:
                 for origin in args:
-                    arg_val = local_values[origin]
+                    arg_val = getattr(temp, origin)
                     real_args.append(arg_val)
             if kwargs:
                 for key, origin in kwargs.items():
-                    real_kwargs[key] = local_values[origin]
+                    real_kwargs[key] = getattr(temp, origin)
             return caller(*real_args, **real_kwargs)
 
-
         if target:
-            return local_values[target]
+            return getattr(temp, target)
         return None
 
 
@@ -231,6 +241,8 @@ class BasicMOSSImpl(MOSS):
         self.__reassign_name_idx: int = 1
 
         self.__bootstrapped = False
+        self.__local_prompter: Optional[Locals] = None
+        self.__local_values: Optional[Dict[str, Any]] = None
 
     def destroy(self) -> None:
         # 当前 container 也必须要销毁.
@@ -248,6 +260,9 @@ class BasicMOSSImpl(MOSS):
 
         del self.__local_types
         del self.__local_type_names
+
+        del self.__local_prompter
+        del self.__local_values
 
     def _default_kwargs(self) -> Dict[str, Any]:
         return {
@@ -399,34 +414,24 @@ class BasicMOSSImpl(MOSS):
         self.__buffer_print = BufferPrint()
         return buffer.buffer()
 
-    def bootstrap(self) -> Dict[str, Any]:
-        if not self.__bootstrapped:
-            self.__bootstrapped = True
-            self.__bootstrap_py_context()
+    def dump_locals(self) -> Dict[str, Any]:
+        self.__bootstrap()
+        return self.__local_values
 
+    def __bootstrap(self) -> None:
+        if self.__bootstrapped:
+            return
+        self.__bootstrapped = True
+        self.__bootstrap_py_context()
+
+        # values
         local_values: Dict[str, Any] = {}
         for imp in self.__imported:
             local_values[imp.name()] = imp.value()
         for key, reflection in self.__local_types.items():
             local_values[key] = reflection.value()
-        local_values['print'] = self.print
-        local_values['os'] = self
-        return local_values
 
-    def __get_defined_attrs_and_methods(self) -> Tuple[List[Attr], List[Method]]:
-        attrs = []
-        methods = []
-        for name in self.__reflection_names:
-            if name in self.__attrs:
-                attrs.append(self.__attrs[name])
-            elif name in self.__methods:
-                methods.append(self.__methods[name])
-        return attrs, methods
-
-    def dump_code_prompt(self) -> str:
-        if not self.__bootstrapped:
-            self.__bootstrapped = True
-            self.__bootstrap_py_context()
+        # prompt
         attrs, methods = self.__get_defined_attrs_and_methods()
         for attr in attrs:
             self.__update_typehint_and_extends(attr)
@@ -441,20 +446,39 @@ class BasicMOSSImpl(MOSS):
             if name in self.__local_types:
                 local_types.append(self.__local_types[name])
 
-        moos = ClassPrompter(
+        moss = ClassPrompter(
             cls=System,
-            alias="MOOS",
+            alias="MOSS",
             doc=MOSS.__doc__,
             attrs=attrs,
             methods=methods,
         )
-        local_types.append(moos)
+        local_types.append(moss)
         local_prompter = Locals(
             methods=[],
             types=local_types,
             imported=self.__imported,
         )
-        return local_prompter.prompt()
+
+        local_values['print'] = self.print
+        local_values['os'] = self
+        local_values['MOSS'] = moss.value()
+        self.__local_values = local_values
+        self.__local_prompter = local_prompter
+
+    def __get_defined_attrs_and_methods(self) -> Tuple[List[Attr], List[Method]]:
+        attrs = []
+        methods = []
+        for name in self.__reflection_names:
+            if name in self.__attrs:
+                attrs.append(self.__attrs[name])
+            elif name in self.__methods:
+                methods.append(self.__methods[name])
+        return attrs, methods
+
+    def dump_code_prompt(self) -> str:
+        self.__bootstrap()
+        return self.__local_prompter.prompt()
 
     def __update_typehint_and_extends(self, r: Reflection) -> Reflection:
         typehint = r.typehint()

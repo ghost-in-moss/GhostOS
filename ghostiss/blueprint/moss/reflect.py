@@ -8,7 +8,7 @@ from ghostiss.entity import EntityClass
 __all__ = [
     'BasicTypes', 'ModelType', 'ModelObject',
     'Reflection',
-    'TypeReflection', 'ValueReflection', 'CallerReflection',
+    'TypeReflection', 'ValueReflection', 'CallerReflection', 'Imported',
 
     'Attr', 'Method',
     'Class', 'Model',
