@@ -1,3 +1,4 @@
+import inspect
 from abc import ABC, abstractmethod
 from ghostiss.blueprint.moss.reflect import *
 from typing import Dict, NamedTuple, List
@@ -180,3 +181,14 @@ class Foo(ABC):
         pass
 """
     assert builder.prompt() == expect.strip()
+
+
+def test_reflect_class():
+    class Xoo:
+        def foo(self) -> str:
+            return "foo"
+
+    assert inspect.isclass(Xoo)
+
+    r = reflect(var=Xoo)
+    assert isinstance(r, TypeReflection)

@@ -1,10 +1,11 @@
-from typing import List, Set, Dict, Any, Optional, Union, Tuple
+from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type, TypedDict, Callable
 from abc import ABC, abstractmethod
-from pydantic import BaseModel
-from ghostiss.container import Container
+from pydantic import BaseModel, Field
+from ghostiss.container import Container, CONTRACT
 from ghostiss.blueprint.moss.context import PyContext, Define, Import
-from ghostiss.blueprint.moss.importer import Importer
+from ghostiss.blueprint.moss.modules import Modules
 from ghostiss.blueprint.moss.reflect import (
+    Imported,
     reflect, reflects,
     Reflection, TypeReflection,
     Model, ModelType, ModelObject,
@@ -150,14 +151,19 @@ class MOSS(System, ABC):
 
     def __call__(
             self,
+            *,
             code: str,
-            result_name: str = "",
+            target: str = "",
+            args: Optional[List[str]] = None,
+            kwargs: Optional[Dict[str, str]] = None,
             update_locals: Optional[Dict[str, Any]] = None,
     ) -> Any:
         """
         基于 moos 提供的上下文, 运行一段代码.
         :param code: 需要运行的代码.
-        :param result_name: 指定一个变量名用来获取返回值. 如果为空, 则返回 None.
+        :param target: 指定一个变量名用来获取返回值. 如果为空, 则返回 None. 如果是一个方法, 则会运行它.
+        :param args: 如果 args 不为 None, 则认为 target 是一个函数, 并从 locals 里指定参数
+        :param kwargs: 类似 args
         :param update_locals: 额外添加到上下文里的 locals 变量. 但这些变量不会生成 code prompt.
         :return: 根据 result_name 从 code 中获取返回值.
         :exception: any exception will be raised, handle them outside
@@ -165,33 +171,54 @@ class MOSS(System, ABC):
         local_values = self.bootstrap()
         if update_locals is not None:
             local_values.update(update_locals)
-        if result_name and result_name not in local_values:
+        if target and target not in local_values:
             # 对 result_name 做初始化.
-            local_values[result_name] = None
+            local_values[target] = None
         local_values['print'] = self.print
         local_values['os'] = self
         # 执行代码. 注意!! 暂时没有考虑任何安全性问题. 理论上应该全部封死.
         # 考虑使用 RestrictPython
         exec(code, globals(), local_values)
-        if result_name:
-            return local_values[result_name]
+        if (args is not None or kwargs is not None) and target is not None:
+            caller = local_values[target]
+            if not isinstance(caller, Callable):
+                raise TypeError(f"target {target} is not callable")
+            real_args = []
+            real_kwargs = {}
+            if args:
+                for origin in args:
+                    arg_val = local_values[origin]
+                    real_args.append(arg_val)
+            if kwargs:
+                for key, origin in kwargs.items():
+                    real_kwargs[key] = local_values[origin]
+            return caller(*real_args, **real_kwargs)
+
+
+        if target:
+            return local_values[target]
         return None
 
 
 class BasicMOSSImpl(MOSS):
 
-    def __init__(self, *, doc: str, container: Container):
-        self.__doc__ = doc
+    def __init__(self, *, container: Container, doc: str = ""):
+        if doc:
+            self.__doc__ = doc
+        else:
+            self.__doc__ = MOSS.__doc__
         self.__container = Container(parent=container)
         # 取代当前实例.
         self.__container.set(MOSS, self)
 
-        self.__importer: Importer = container.force_fetch(Importer)
+        self.__importer: Modules = container.force_fetch(Modules)
         """ioc container"""
         self.__python_context: PyContext = PyContext()
         self.__buffer_print: BufferPrint = BufferPrint()
 
-        self.__reserved_locals_names: Set[str] = {'os', 'MOOS', 'print', 'imports', 'define'}
+        self.__reserved_locals_names: Set[str] = {
+            'os', 'MOOS', 'print', 'imports', 'define',
+        }
 
         self.__reflections: Dict[str, Reflection] = {}
         self.__reflection_names: List[str] = []
@@ -199,6 +226,7 @@ class BasicMOSSImpl(MOSS):
         self.__methods: Dict[str, Method] = {}
         self.__local_types: Dict[str, TypeReflection] = {}
         self.__local_type_names: Dict[type, str] = {}
+        self.__imported: List[Imported] = []
 
         self.__reassign_name_idx: int = 1
 
@@ -221,9 +249,16 @@ class BasicMOSSImpl(MOSS):
         del self.__local_types
         del self.__local_type_names
 
+    def _default_kwargs(self) -> Dict[str, Any]:
+        return {
+            'BaseModel': Imported(BaseModel, module='pydantic'),
+            'Field': Imported(Field, module='pydantic'),
+            'TypedDict': Imported(TypedDict, module='typing'),
+        }
+
     def new(self, *named_vars, **variables) -> "MOSS":
         args = []
-        kwargs = {}
+        kwargs = self._default_kwargs()
         for arg in named_vars:
             if isinstance(arg, Provider):
                 self.__add_provider(arg, None)
@@ -264,7 +299,9 @@ class BasicMOSSImpl(MOSS):
         self.__reflection_names.append(name)
 
         # 正式添加.
-        if isinstance(reflection, Attr):
+        if isinstance(reflection, Imported):
+            self.__imported.append(reflection)
+        elif isinstance(reflection, Attr):
             self.__add_attr(reflection)
         elif isinstance(reflection, Method):
             self.__add_method(reflection)
@@ -368,6 +405,8 @@ class BasicMOSSImpl(MOSS):
             self.__bootstrap_py_context()
 
         local_values: Dict[str, Any] = {}
+        for imp in self.__imported:
+            local_values[imp.name()] = imp.value()
         for key, reflection in self.__local_types.items():
             local_values[key] = reflection.value()
         local_values['print'] = self.print
@@ -413,6 +452,7 @@ class BasicMOSSImpl(MOSS):
         local_prompter = Locals(
             methods=[],
             types=local_types,
+            imported=self.__imported,
         )
         return local_prompter.prompt()
 
@@ -481,3 +521,15 @@ class BasicMOSSImpl(MOSS):
                 return self.__reassign_name(name, names)
             return new_name
         return name
+
+
+class BasicMOSSProvider(Provider):
+
+    def singleton(self) -> bool:
+        return False
+
+    def contract(self) -> Type[CONTRACT]:
+        return MOSS
+
+    def factory(self, con: Container) -> Optional[CONTRACT]:
+        return BasicMOSSImpl(doc="", container=con)

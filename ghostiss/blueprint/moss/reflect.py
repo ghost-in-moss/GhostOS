@@ -1,6 +1,6 @@
 import inspect
 import re
-from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union, Type
+from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union, Type, is_typeddict
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
@@ -105,6 +105,7 @@ class Reflection(ABC):
 
     def update(
             self,
+            *,
             name: Optional[str] = None,
             doc: Optional[str] = None,
             module: Optional[str] = None,
@@ -151,6 +152,32 @@ class CallerReflection(Reflection, ABC):
     is callable
     """
     pass
+
+
+class Imported(Reflection):
+
+    def __init__(
+            self,
+            cls: Any,
+            name: Optional[str] = None,
+            module: Optional[str] = None,
+            module_spec: Optional[str] = None,
+    ):
+        self._cls = cls
+        name = name if name else cls.__name__
+        module = module if module else cls.__module__
+        module_spec = module if module_spec else cls.__name__
+        super().__init__(
+            name=name,
+            module=module,
+            module_spec=module_spec,
+        )
+
+    def value(self) -> Any:
+        return self._cls
+
+    def _generate_prompt(self) -> str:
+        return f"from {self._module} import {self._module_spec}"
 
 
 class Attr(ValueReflection):
@@ -314,7 +341,8 @@ class Model(TypeReflection):
         return self._model
 
     def _generate_prompt(self) -> str:
-        prompt = inspect.getsource(self._model)
+        source = inspect.getsource(self._model)
+        prompt = strip_source_indent(source)
         comments = parse_comments(self._comments)
         import_from = get_import_comment(self._module, self._module_spec, self.name())
         return join_prompt_lines(comments, import_from, prompt)
@@ -561,8 +589,10 @@ class Locals(ValueReflection):
             self,
             methods: Optional[Iterable[CallerReflection]] = None,
             types: Optional[Iterable[TypeReflection]] = None,
+            imported: Optional[Iterable[Imported]] = None,
             prompt: Optional[str] = None,
     ):
+        self.__imported = imported
         self.__locals: Dict[str, Reflection] = {}
         self.__local_var_orders: List[str] = []
         if methods:
@@ -573,12 +603,12 @@ class Locals(ValueReflection):
                 self.__local_var_orders.append(name)
                 self.__locals[method.name()] = method
         if types:
-            for cls in types:
-                name = cls.name()
+            for type_reflection in types:
+                name = type_reflection.name()
                 if name in self.__locals:
                     raise NameError(f"Duplicate method name: {name}")
                 self.__local_var_orders.append(name)
-                self.__locals[name] = cls
+                self.__locals[name] = type_reflection
         super().__init__(
             name="",
             prompt=prompt,
@@ -592,6 +622,28 @@ class Locals(ValueReflection):
 
     def _generate_prompt(self) -> str:
         prompts = []
+        imported: Dict[str, List[str]] = {}
+        modules = []
+        for imp in self.__imported:
+            module = imp.module()
+            spec = imp.module_spec()
+            if not module or not spec:
+                continue
+            if module not in imported:
+                imported[module] = []
+                modules.append(module)
+            specs = imported[module]
+            specs.append(spec)
+            imported[module] = specs
+
+        imported_lines = []
+        for module in modules:
+            specs = imported[module]
+            line = "from {module} import ({specs})".format(module=module, specs=",".join(specs))
+            imported_lines.append(line)
+        if len(imported_lines) > 0:
+            prompts.append("\n".join(imported_lines))
+
         for name in self.__local_var_orders:
             prompt = self.__locals[name].prompt()
             prompts.append(prompt)
@@ -617,7 +669,7 @@ def reflect(
         if not name:
             raise ValueError('Name must be a non-empty string for typing')
         return Attr(name=name, value=var)
-    elif isinstance(var, type):
+    elif inspect.isclass(var):
         if is_model_class(var):
             return Model(model=var, alias=name)
         else:
@@ -693,6 +745,7 @@ def parse_doc_string(doc: Optional[str], inline: bool = True, quote: str = '"""'
     if not doc:
         return ""
     gap = "" if inline else "\n"
+    doc = strip_source_indent(doc)
     doc = parse_doc_string_with_quotes(doc, quote=quote)
     return quote + gap + doc + gap + quote
 
@@ -717,6 +770,7 @@ def make_class_prompt(
         doc: Optional[str] = None,
         attrs: Optional[Iterable[str]] = None,
 ) -> str:
+    source = strip_source_indent(source)
     class_def = get_class_def_from_source(source)
     class_def = replace_class_def_name(class_def, name)
     if doc:
@@ -778,7 +832,7 @@ def is_builtin(value: Any) -> bool:
         return True
     if not inspect.isclass(value):
         return False
-    return value.__module__ != "__builtin__"
+    return value.__module__ == "__builtin__"
 
 
 def is_classmethod(func: Any) -> bool:
@@ -918,7 +972,9 @@ def add_name_to_set(names: set, name: str) -> set:
 
 
 def is_model_class(typ: type) -> bool:
-    return issubclass(typ, BaseModel) or issubclass(typ, TypedDict) or issubclass(typ, EntityClass)
+    if not isinstance(typ, type):
+        return False
+    return issubclass(typ, BaseModel) or is_typeddict(typ) or issubclass(typ, EntityClass)
 
 
 def is_model_instance(obj: Any) -> bool:

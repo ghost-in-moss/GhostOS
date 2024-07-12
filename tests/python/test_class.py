@@ -135,3 +135,18 @@ def test_get_members():
     assert len(list(inspect.getmembers(Foo(), inspect.ismethod))) == 1
     # 类里取不到 method
     assert len(list(inspect.getmembers(Foo, inspect.ismethod))) == 0
+
+
+def test_instance_doc():
+    class Foo:
+        """
+        test
+        """
+        pass
+
+    f = Foo()
+    assert f.__doc__.strip() == "test"
+    f.__doc__ = "hello"
+    # 不会污染父类.
+    assert f.__doc__ == "hello"
+    assert Foo.__doc__.strip() == "test"
