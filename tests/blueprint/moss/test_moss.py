@@ -28,6 +28,8 @@ class Bar(BaseModel):
 def test_moss_baseline():
     c = prepare_container()
     moss = c.force_fetch(MOSS)
+
+    # test1:
     m = moss.new(foo, Bar)
     prompt = m.dump_code_prompt()
     assert "def foo() -> str" in prompt
@@ -43,6 +45,8 @@ result_ = os.foo()
     assert r == "foo"
     m.destroy()
 
+
+    # test2
     # 尝试运行一个 code 定义的函数.
     m = moss.new(foo, Bar)
     code = """
@@ -61,6 +65,8 @@ result_ = bar.bar()
 """
     assert m(code=code, target='result_') == 3
 
+
+    # test3
     # 在函数里使用定义过的其它函数.
     m = moss.new(foo, Bar)
     code = """
@@ -72,6 +78,8 @@ def main(os: MOSS) -> str:
 """
     assert m(code=code, target='main', args=['os']) == "foobar"
 
+
+    # test4
     # 在函数定义里使用外部提供的变量.
     m = moss.new(foo, Bar)
     code = """

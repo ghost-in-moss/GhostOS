@@ -31,6 +31,7 @@ def main() -> None:
         "--case", "-c",
         help="file name of the case without .yaml suffix",
         type=str,
+        default="multi_methods_program"
     )
     parser.add_argument(
         "--think", "-t",

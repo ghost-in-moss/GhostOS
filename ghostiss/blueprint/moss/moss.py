@@ -185,10 +185,10 @@ class MOSS(System, ABC):
         for key, attr in local_values.items():
             setattr(temp, key, attr)
 
-        compiled = compile(code, filename='<MOSS>', mode='exec')
+        compiled = compile(code, filename='<MOSS>', mode='exec')  # use compile() can found some error at compile stage, and compile() provides the flexibility by pass the 'mode'
         # If exec gets two separate objects as globals and locals,
         # the code will be executed as if it were embedded in a class definition.
-        exec(compiled, temp.__dict__)
+        exec(compiled, temp.__dict__)  # the second positional arguments of exec() is global named space (it storages global variables)
 
         if (args is not None or kwargs is not None) and target is not None:
             caller = getattr(temp, target)
@@ -203,7 +203,7 @@ class MOSS(System, ABC):
             if kwargs:
                 for key, origin in kwargs.items():
                     real_kwargs[key] = getattr(temp, origin)
-            return caller(*real_args, **real_kwargs)
+            return caller(*real_args, **real_kwargs)  # execute the main method when target is 'main'
 
         if target:
             return getattr(temp, target)
