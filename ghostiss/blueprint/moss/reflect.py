@@ -688,6 +688,7 @@ def reflects(*args, **kwargs) -> Iterable[Reflection]:
         r = reflect(var=arg)
         if r is not None:
             yield r
+
     for k, v in kwargs.items():
         r = reflect(var=v, name=k)
         if r is not None:

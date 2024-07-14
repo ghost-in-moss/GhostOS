@@ -9,6 +9,10 @@ services:
     base_url: https://api.openai.com/v1
     token: $OPENAI_API_KEY
     proxy: $OPENAI_PROXY
+  - name: local
+    base_url: $LOCAL_AI_URL
+    token: $LOCALAI_API_KEY
+#    proxy: $OPENAI_PROXY
 models:
   moonshot-v1-8k:
     service: moonshot
@@ -28,4 +32,36 @@ models:
   gpt-4o:
     service: openai
     model: gpt-4o
+  qwen2-72b:
+    service: local
+    model: qwen2:72b
+    timeout: 80
+    request_timeout: 40
+    max_tokens: 8192
+  codestral-22b:
+    service: local
+    model: codestral:22b
+    timeout: 80
+    request_timeout: 80
+    max_tokens: 32768
+  llama3-70b:
+    service: local
+    model: llama3:70b
+    timeout: 80
+    request_timeout: 80
+    max_tokens: 8192
+
+##  deprecated models:
+#  gemma2-27b:
+#    service: local
+#    model: gemma2:27b
+#    timeout: 80
+#    request_timeout: 80
+#    max_tokens: 8192
+#  codegeex4-9b:
+#    service: local
+#    model: codegeex4:9b
+#    timeout: 80
+#    request_timeout: 40
+#    max_tokens: 131072
 
