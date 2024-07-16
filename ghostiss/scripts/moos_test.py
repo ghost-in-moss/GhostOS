@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 import datetime
 from typing import Callable, List
 from ghostiss.container import Container
-from ghostiss.blueprint.kernel.llms import LLMs
-from ghostiss.blueprint.moss.moss import MOSS, BasicMOSSImpl, BasicMOSSProvider
-from ghostiss.blueprint.moss.modules import BasicModulesProvider
+from ghostiss.core.runtime.llms import LLMs
+from ghostiss.core.moss.moss import MOSS, BasicMOSSImpl, BasicMOSSProvider
+from ghostiss.core.moss.modules import BasicModulesProvider
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
@@ -19,6 +19,7 @@ from rich.markdown import Markdown
 from rich.json import JSON
 from pydantic import BaseModel
 
+# todo: remove scripted test to configured test
 
 def prepare_container() -> Container:
     container = Container()

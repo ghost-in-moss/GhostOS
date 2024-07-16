@@ -8,11 +8,11 @@ from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
-from ghostiss.blueprint.errors import GhostissIOError
-from ghostiss.blueprint.messages import Message, OpenAIParser, DefaultOpenAIParser
-from ghostiss.blueprint.kernel.llms import LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME
-from ghostiss.blueprint.kernel.llms import Chat
-from ghostiss.blueprint.kernel.llms import Embedding, Embeddings
+from ghostiss.core.errors import GhostissIOError
+from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser
+from ghostiss.core.runtime.llms import LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME
+from ghostiss.core.runtime.llms import Chat
+from ghostiss.core.runtime.llms import Embedding, Embeddings
 from ghostiss.container import Bootstrapper, Container
 
 __all__ = ['OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper']

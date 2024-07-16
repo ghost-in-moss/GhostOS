@@ -3,7 +3,7 @@ import argparse
 import os
 import yaml
 from ghostiss.container import Container
-from ghostiss.blueprint.kernel.llms import LLMs
+from ghostiss.core.runtime.llms import LLMs
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider

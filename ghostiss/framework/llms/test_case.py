@@ -2,8 +2,8 @@ import threading
 import time
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-from ghostiss.blueprint.kernel.llms import LLMs, Chat, ModelConf, ServiceConf
-from ghostiss.blueprint.messages import Message, DefaultTypes
+from ghostiss.core.runtime.llms import LLMs, Chat, ModelConf, ServiceConf
+from ghostiss.core.messages import Message, DefaultTypes
 
 
 # 测试用, 不直接对外开放.
