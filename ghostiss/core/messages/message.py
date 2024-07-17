@@ -8,6 +8,7 @@ from ghostiss.helpers import uuid
 
 __all__ = [
     "Message", "Caller", "Role", "DefaultTypes",
+    "MessageClass",
     "FunctionCall", "FunctionalToken",
 ]
 
@@ -174,3 +175,7 @@ class Message(BaseModel):
         return self.model_dump(exclude_defaults=True)
 
 
+class MessageClass(ABC):
+
+    def to_messages(self) -> Iterable[Message]:
+        pass

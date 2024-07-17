@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Type, Dict
-from ghostiss.entity import Entity
+from ghostiss.entity import Entity, EntityFactory
+from ghostiss.core.shells.messenger import Messenger
 
 
 class Driver(ABC):
@@ -28,7 +29,7 @@ class App(ABC):
         pass
 
 
-class Shell(Entity, ABC):
+class Shell(ABC):
 
     @abstractmethod
     def id(self) -> str:
@@ -45,3 +46,11 @@ class Shell(Entity, ABC):
     @abstractmethod
     def get_apps(self) -> List[App]:
         pass
+
+    @abstractmethod
+    def messenger(self) -> Messenger:
+        pass
+
+
+class ShellFactory(EntityFactory[Shell], ABC):
+    pass

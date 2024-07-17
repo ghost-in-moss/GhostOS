@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from ghostiss.entity import EntityClass
 
 __all__ = [
+    'Descriptive',
+
     'BasicTypes', 'ModelType', 'ModelObject',
     'Reflection',
     'TypeReflection', 'ValueReflection', 'CallerReflection', 'Imported',
@@ -35,6 +37,13 @@ AttrDefaultTypes = Union[int, float, bool]
 ModelObject = Union[BaseModel, TypedDict, EntityClass]
 
 ModelType = Union[Type[BaseModel], Type[TypedDict], Type[EntityClass]]
+
+
+class Descriptive(ABC):
+
+    @abstractmethod
+    def description(self) -> str:
+        pass
 
 
 class Reflection(ABC):

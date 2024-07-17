@@ -64,6 +64,10 @@ class MOSS(System, ABC):
         pass
 
     @abstractmethod
+    def with_vars(self, *named_vars, **variables) -> "MOSS":
+        pass
+
+    @abstractmethod
     def update_context(self, context: PyContext) -> None:
         """
         为 MoOS 添加更多的变量, 可以覆盖掉之前的.
@@ -185,10 +189,12 @@ class MOSS(System, ABC):
         for key, attr in local_values.items():
             setattr(temp, key, attr)
 
-        compiled = compile(code, filename='<MOSS>', mode='exec')  # use compile() can found some error at compile stage, and compile() provides the flexibility by pass the 'mode'
+        compiled = compile(code, filename='<MOSS>',
+                           mode='exec')  # use compile() can found some error at compile stage, and compile() provides the flexibility by pass the 'mode'
         # If exec gets two separate objects as globals and locals,
         # the code will be executed as if it were embedded in a class definition.
-        exec(compiled, temp.__dict__)  # the second positional arguments of exec() is global named space (it storages global variables)
+        exec(compiled,
+             temp.__dict__)  # the second positional arguments of exec() is global named space (it storages global variables)
 
         if (args is not None or kwargs is not None) and target is not None:
             caller = getattr(temp, target)
@@ -272,6 +278,11 @@ class BasicMOSSImpl(MOSS):
         }
 
     def new(self, *named_vars, **variables) -> "MOSS":
+        # 复制创造一个新的实例.
+        os = BasicMOSSImpl(doc=self.__doc__, container=self.__container.parent)
+        return os.with_vars(*named_vars, **variables)
+
+    def with_vars(self, *named_vars, **variables) -> "MOSS":
         args = []
         kwargs = self._default_kwargs()
         for arg in named_vars:
@@ -284,12 +295,10 @@ class BasicMOSSImpl(MOSS):
                 self.__add_provider(arg, name)
             else:
                 kwargs[name] = arg
-        # 复制创造一个新的实例.
-        os = BasicMOSSImpl(doc=self.__doc__, container=self.__container.parent)
         reflections = reflects(*args, **kwargs)
         for r in reflections:
-            os.add_reflection(r)
-        return os
+            self.add_reflection(r)
+        return self
 
     def __add_provider(self, provider: Provider, name: Optional[str]) -> None:
         contract = provider.contract()

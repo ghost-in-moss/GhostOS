@@ -1,54 +1,122 @@
-from abc import ABC
-from typing import ClassVar, Type, List, Optional, Union
-from ghostiss.entity import EntityMeta, BaseEntityClass, EntityClassLoader
+from typing import List, Optional
+from abc import ABC, abstractmethod
+from enum import Enum
+from importlib import import_module
+from ghostiss.entity import EntityMeta, Entity, EntityFactory
+from pydantic import BaseModel, Field
+from ghostiss.core.messages.message import Message
 from ghostiss.helpers import uuid
-from pydantic import Field
 
 
-class Event(BaseEntityClass, ABC):
-    event_kind: ClassVar[str]
+class Event(BaseModel, Entity):
+    """
+    事件机制.
+    """
     id: str = Field(default_factory=uuid, description="event id")
-    task_id: str
-    from_task_id: str
+    type: str = Field(default="", description="event type")
+    task_id: str = Field(description="task id in which this event shall be handled")
+    from_task_id: Optional[str] = Field(default=None, description="task id in which this event is fired")
+    priority: float = Field(default=0, description="priority of this event", min_items=0.0, max_items=1.0)
+    messages: List[Message] = Field(default_factory=list)
 
-    def entity_id(self) -> str:
-        return self.id
+    def event_type(self) -> str:
+        return self.type
 
-    @classmethod
-    def entity_kind(cls) -> str:
-        return cls.event_kind
+    def default_handler(self) -> str:
+        return f"on_{self.event_type()}"
+
+    def to_entity_meta(self) -> EntityMeta:
+        cls = self.__class__
+        entity_type = f"{cls.__module__}:{cls.__name__}"
+        return EntityMeta(
+            id=self.id,
+            type=entity_type,
+            data=self.model_dump(exclude={'id'})
+        )
 
 
-EVENT_TYPES = Union[Event, EntityMeta]
-
-
-class OnInput(Event):
+class DefaultEventType(str, Enum):
     """
-    输入消息.
+    默认的消息类型.
     """
-    pass
+
+    INPUT = "input"
+    """外部对当前 task 的输入. """
+
+    CANCEL = "cancel"
+    """当前任务"""
+
+    FINISH_CALLBACK = "finish_callback"
+    """第三方 task 运行正常, 返回的消息. """
+
+    FAILURE_CALLBACK = "failure_callback"
+    """第三方 task 运行失败, 返回的消息. """
+
+    WAIT_CALLBACK = "wait_callback"
+    """Child task 返回消息, 期待更多的输入. """
+
+    def new(
+            self, *,
+            task_id: str,
+            from_task_id: str,
+            messages: List[Message],
+            priority: float = 0.0,
+    ) -> Event:
+        id_ = uuid()
+        type_ = str(self.value)
+        return Event(
+            id=id_, type=type_, task_id=task_id, from_task_id=from_task_id, priority=priority,
+            messages=messages,
+        )
 
 
-class OnOutput(Event):
-    """
-    输入消息.
-    """
-    pass
+class OnCreate(Event):
+
+    def event_type(self) -> str:
+        return "create"
 
 
-class OnCallback(Event):
-    """
-    回调消息.
-    """
-    pass
+class OnFinish(Event):
+
+    def event_type(self) -> str:
+        return "finish"
 
 
-class EventLoader(EntityClassLoader[Event]):
-    """
-    with event type that can generate multiple event type by self.meta_new(meta_data)
-    """
-    default_kinds: List[Type[Event]] = []
+class EventFactory(EntityFactory[Event]):
 
-    def __init__(self, kinds: Optional[List[Type[Event]]] = None):
-        kinds = kinds or self.default_kinds
-        super().__init__(kinds)
+    def new_entity(self, meta_data: EntityMeta) -> Optional[Event]:
+        parts = meta_data['type'].split(':', 2)
+        if len(parts) != 2:
+            return None
+        module, spec = parts[0], parts[1]
+        imported_module = import_module(module)
+        if imported_module is None:
+            return None
+        model = imported_module[spec]
+        if model is None or not issubclass(model, Event):
+            # todo: raise
+            return None
+        data = meta_data['data']
+        data['id'] = meta_data['id']
+        return model(**data)
+
+    def force_new_event(self, meta_data: EntityMeta) -> Event:
+        e = self.new_entity(meta_data)
+        if e is None:
+            raise ValueError(f"Could not create event for {meta_data}")
+        return e
+
+
+class EventBus(ABC):
+
+    @abstractmethod
+    def send_event(self, e: Event) -> None:
+        pass
+
+    @abstractmethod
+    def pop_task_event(self, task_id: str) -> Optional[Event]:
+        pass
+
+    @abstractmethod
+    def pop_global_event(self, task_id: str) -> Optional[Event]:
+        pass

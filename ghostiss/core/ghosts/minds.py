@@ -1,67 +1,65 @@
+from typing import List, Optional, Union, AnyStr
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, TypeVar, Optional, Union
-from ghostiss.entity import Entity, EntityMeta, EntityFactory
+from ghostiss.core.ghosts.operators import Operator
+from ghostiss.core.ghosts.thoughts import Thought
+from ghostiss.core.messages.message import Message, MessageClass
 
-if TYPE_CHECKING:
-    from ghostiss.core.agent import Agent
-    from ghostiss.core.ghosts.ghost import Ghost
-    from ghostiss.core.ghosts.operators import Operator
-    from ghostiss.core.ghosts.events import Event, EventLoader
-    from ghostiss.core.runtime._process import Task
+MessageType = Union[Message, MessageClass, AnyStr]
 
 
-class Mind(Entity, ABC):
-    """
-    与事件互动的思维状态机.
-    """
+class MultiTasks(ABC):
 
     @abstractmethod
-    def on_event(
-            self,
-            agent: "Agent",
-            e: "Event",
-    ) -> Optional["Operator"]:
+    def create_tasks(self, *thoughts: Thought) -> Operator:
         pass
 
-    def create_task(self, g: "Ghost") -> "Task":
+    @abstractmethod
+    def inform_task(self, name: str, *messages: MessageType) -> Operator:
         pass
 
-    def on_event_meta(
-            self,
-            agent: "Agent",
-            event: Union[EntityMeta, Event],
-    ) -> Optional["Operator"]:
-        """
-        from meta create event and fire it
-        """
-        if isinstance(event, Event):
-            e = event
-        else:
-            e = self.event_loader(g).new_entity(event)
-            if e is None:
-                raise NotImplemented("todo")
-        return self.on_event(agent, e)
-
-    def event_loader(self, agent: "Agent") -> EventLoader:
-        """
-        override the method to defines custom events
-        """
-        return EventLoader()
+    @abstractmethod
+    def cancel_task(self, name: str, reason: str) -> Operator:
+        pass
 
 
-MIND_TYPE = TypeVar("MIND_TYPE", bound=Mind)
+class TaskManager(ABC):
+
+    @abstractmethod
+    def fork(self, *quests: Optional[MessageType]) -> Operator:
+        pass
+
+    @abstractmethod
+    def waits(self, *messages: MessageType) -> Operator:
+        pass
+
+    @abstractmethod
+    def finish(self, *messages: MessageType) -> Operator:
+        pass
+
+    @abstractmethod
+    def fail(self, reason: List[MessageType]) -> Operator:
+        pass
+
+    # @abstractmethod
+    # def yield_to(self, thought: Thought) -> Operator:
+    #     pass
+    #
+    # @abstractmethod
+    # def sleep(self, seconds: float) -> Operator:
+    #     pass
+
+    @abstractmethod
+    def quit(self, reason: List[MessageType]) -> Operator:
+        pass
 
 
-# --- factories --- #
+class Mindflow(ABC):
 
-class Minds(EntityFactory[MIND_TYPE], ABC):
-    pass
+    @abstractmethod
+    def next_step(self, step_name: str) -> Operator:
+        pass
 
+    @abstractmethod
+    def done(self, *reason: MessageType) -> Operator:
+        pass
 
-# --- default minds --- #
-
-class Mindflow(Mind):
-    pass
-
-class MindHost(Mind):
-    pass

@@ -1,9 +1,9 @@
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Dict, Union, Optional, Any, Type, Callable
+from typing import List, Dict, Union, Optional
 from pydantic import BaseModel, Field
 
-if TYPE_CHECKING:
-    pass
+__all__ = [
+    'Import', 'Define', 'PyContext'
+]
 
 
 class Import(BaseModel):
@@ -114,30 +114,3 @@ class PyContext(BaseModel):
             append_vars(v)
 
         return PyContext(imports=imports, variables=vars_list)
-
-
-class PyLocals:
-
-    def __init__(
-            self,
-            *,
-            values: Optional[Dict[str, Any]] = None,
-            classes: Optional[List[Type[object]]] = None,
-            libraries: Optional[List[object]] = None,
-            functions: Optional[List[Callable]] = None,
-            interfaces: Optional[List[Type[object]]] = None,
-    ):
-        self.values: Optional[Dict[str, Any]] = values
-        """直接引入上下文的变量."""
-
-        self.classes: Optional[List[Type[object]]] = classes
-        """引入上下文中, 可以实例化的类. """
-
-        self.libraries: Optional[List[object]] = libraries
-        """引入上下文中的库, 会添加到 os 里被 LLM 调用. """
-
-        self.functions: Optional[List[Callable]] = functions
-        """直接引入上下文中的函数."""
-
-        self.interfaces: Optional[List[Type[object]]] = interfaces
-        """上下文中使用的抽象. """

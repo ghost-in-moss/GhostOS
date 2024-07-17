@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Iterable, Dict, Optional, Any, Union
+from typing import List, Tuple, Iterable, Dict, Optional, Any, Union, TypeVar
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
@@ -129,7 +129,19 @@ class Embeddings(BaseModel):
     # cast: Cast = Field(description="cast")
 
 
-# --- test case --- #
+# --- Quest --- #
+
+R = TypeVar("R")
+
+class Quest(Generic[R], BaseModel):
+
+    @abstractmethod
+    def to_chat(self) -> Chat:
+        pass
+
+    @abstractmethod
+    def on_result(self, msg: Message) -> R:
+        pass
 
 
 # --- interfaces --- #
