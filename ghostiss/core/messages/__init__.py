@@ -8,4 +8,4 @@ from ghostiss.core.messages.openai import (
     OpenAIParser, DefaultOpenAIParser, DefaultOpenAIParserProvider,
 )
 from ghostiss.core.messages.buffers import Buffer, Flushed, DefaultBuffer, GroupBuffers
-from ghostiss.core.messages.deliver import Deliver, DefaultDownstreamDeliver, Buffed
+from ghostiss.core.messages.messenger import Deliver, DefaultMessenger, Buffed, Messenger

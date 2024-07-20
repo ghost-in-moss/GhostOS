@@ -58,9 +58,7 @@ class DefaultBuffer(Buffer):
     def __init__(
             self,
             *,
-            attachments: Optional[List[Attachment]] = None,
-            payloads: Optional[List[Payload]] = None,
-            functional_tokens: Optional[List[FunctionalToken]] = None,
+            functional_tokens: Optional[Iterable[FunctionalToken]] = None,
     ):
         self._buffering: Optional[Message] = None
         """正在 buff 的消息体. """
@@ -69,12 +67,6 @@ class DefaultBuffer(Buffer):
         """发送出去的完整消息体. """
         self._buffed_callers: List[Caller] = []
         """过程中 buff 的 caller. """
-
-        self._attachments: Optional[List[Attachment]] = attachments
-        """追加在每条消息后的 attachment"""
-
-        self._payloads: Optional[List[Payload]] = payloads
-        """追加在每条消息上的 payload"""
 
         self._functional_tokens = {}
         """加载 functional tokens """

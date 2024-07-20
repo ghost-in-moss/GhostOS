@@ -41,6 +41,9 @@ class DefaultTypes(str, enum.Enum):
     ) -> "Message":
         return Message(content=content, memory=memory, name=name, type=self.value, role=role)
 
+    def match(self, message: "Message") -> bool:
+        return message.type == self.value
+
     @classmethod
     def final(cls):
         return Message(type=cls.FINAL.value, role=Role.ASSISTANT.value)
@@ -51,7 +54,7 @@ class DefaultTypes(str, enum.Enum):
 
     @classmethod
     def is_protocol_type(cls, message: "Message"):
-        return message.type in {cls.ERROR, cls.FINAL}
+        return not message.pack and message.type in {cls.ERROR, cls.FINAL}
 
 
 class Caller(BaseModel):

@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_function_call_option_param import ChatCom
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, FunctionalToken, Deliver
+from ghostiss.core.messages import Message, FunctionalToken, Messenger
 
 __all__ = [
     'LLMs',
@@ -195,13 +195,16 @@ class LLMApi(ABC):
         """
         pass
 
-    def deliver_chat_completion(self, chat: Chat, deliver: Deliver) -> None:
+    def deliver_chat_completion(self, chat: Chat, messenger: Messenger) -> None:
         """
         逐个发送消息的包.
         """
         items = self.chat_completion_chunks(chat)
+        downstream = messenger.downstream(functional_tokens=chat.functional_tokens)
+        # todo: payload 要计算 tokens
         for item in items:
-            deliver.deliver(item)
+            downstream.deliver(item)
+        downstream.stop()
 
 
 class LLMDriver(ABC):
