@@ -1,6 +1,6 @@
 # conf: ghostiss.framework.llms.test_case::ChatCompletionTestCase
 chat:
-  messages:
+  system:
     - role: system
       content: |+
         这是一个关于生成单个Python代码块的任务，该代码块定义一个函数 def main(t: Thought) -> None:。你需要根据以下指令来生成代码：
@@ -80,6 +80,7 @@ chat:
         ```
 
         请确保你的输出严格是三重反引号内的代码。这样可以确保外部系统处理和分析你的代码时不会出错。
+  inputs:
     - role: user
       content: 告诉我北京明天的天气
 apis:

@@ -77,7 +77,8 @@ class OpenAIAdapter(LLMApi):
     def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         # todo: try catch
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
-        messages = self._parser.parse_message_list(chat.messages)
+        messages = chat.get_messages()
+        messages = self._parser.parse_message_list(messages)
         return self._client.chat.completions.create(
             messages=messages,
             model=self._model.model,

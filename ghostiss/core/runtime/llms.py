@@ -10,16 +10,12 @@ from openai.types.chat.chat_completion_function_call_option_param import ChatCom
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, FunctionalToken, Messenger
+from ghostiss.core.messages import Message, FunctionalToken, Messenger, Role, DefaultTypes
 
 __all__ = [
-    'LLMs',
-    'LLMDriver',
-    'LLMApi',
-    'LLMTool',
-    'ModelConf',
-    'ServiceConf',
-    'LLMsConfig',
+    'Chat',
+    'LLMs', 'LLMDriver', 'LLMApi', 'LLMTool',
+    'ModelConf', 'ServiceConf', 'LLMsConfig',
     'Quest',
 ]
 
@@ -94,13 +90,44 @@ class LLMTool(BaseModel):
 # ---- api objects ---- #
 
 class Chat(BaseModel):
+    """
+    模拟对话的上下文.
+    """
     id: str = Field(default_factory=helpers.uuid, description="trace id")
-    messages: List[Message] = Field(default_factory=list)
+
+    system: List[Message] = Field(default_factory=list, description="system messages")
+    history: List[Message] = Field(default_factory=list)
+    inputs: List[Message] = Field(default_factory=list, description="input messages")
+    appending: List[Message] = Field(default_factory=list, description="appending messages")
+
     functions: List[LLMTool] = Field(default_factory=list)
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
 
-    # stop: Optional[List[str]] = Field(default=None)
+    def get_messages(self) -> List[Message]:
+        """
+        返回所有的消息.
+        """
+        messages = []
+        if self.system:
+            system = DefaultTypes.DEFAULT.new_system(content="")
+            for message in self.system:
+                if message.content:
+                    system.content += "\n\n" + message.content
+                if message.memory:
+                    system.memory = system.memory if system.memory else ""
+                    system.memory += "\n\n" + message.memory
+            messages.append(system)
+        if self.history:
+            for item in self.history:
+                messages.append(item)
+        if self.inputs:
+            for item in self.inputs:
+                messages.append(item)
+        if self.appending:
+            for item in self.appending:
+                messages.append(item)
+        return messages
 
     def get_openai_functions(self) -> Union[List[Function], NotGiven]:
         if not self.functions:

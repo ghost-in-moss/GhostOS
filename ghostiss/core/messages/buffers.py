@@ -2,7 +2,7 @@ import time
 from typing import Iterable, Optional, List, NamedTuple
 from abc import ABC, abstractmethod
 
-from ghostiss.core.messages.message import Message, Caller, DefaultTypes, Payload, Attachment
+from ghostiss.core.messages.message import Message, Caller, DefaultTypes
 from ghostiss.core.messages.message import FunctionalToken
 from ghostiss.helpers import uuid
 

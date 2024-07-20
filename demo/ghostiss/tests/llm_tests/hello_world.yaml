@@ -1,6 +1,6 @@
 # conf: ghostiss.framework.llms.test_case::ChatCompletionTestCase
 chat:
-  messages:
+  history:
     - role: user
       content: hello world!
 apis:

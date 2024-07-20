@@ -1,6 +1,6 @@
 # conf: ghostiss.framework.llms.test_case::ChatCompletionTestCase
 chat:
-  messages:
+  system:
     - role: system
       content: |+
         You are tasked to generate a single block of Python code that defines a function main. 
@@ -97,6 +97,7 @@ chat:
 
         ```
         Ensure that your output is strictly the code within the triple backticks. It's the def main(m: MOSS) -> TicketInfo. This ensures clarity and usability in the external system's processing and analysis of your code.
+  inputs:
     - role: user
       content: |+
         I want to watch a movie this Sunday (not today) evening at 9 PM. Find the nearest cinema and the best movie for me, then book the movie ticket directly for me.

@@ -1,6 +1,6 @@
 # conf: ghostiss.framework.llms.test_case::ChatCompletionTestCase
 chat:
-  messages:
+  system:
     - role: system
       content: |+
         你是一个使用 python 代码来思考的 ai. 你当前的 python 上下文如下 (注意: 代码的实现已经隐藏, 你不需要了解) :
@@ -76,7 +76,8 @@ chat:
 
         注意: 
 
-        1. main 函数的入参已经得到实现. 你不用实现它. 
+        1. main 函数的入参已经得到实现. 你不用实现它.
+  inputs:
     - role: user
       content: 告诉我北京明天的天气
 apis:

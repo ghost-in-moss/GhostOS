@@ -41,6 +41,24 @@ class DefaultTypes(str, enum.Enum):
     ) -> "Message":
         return Message(content=content, memory=memory, name=name, type=self.value, role=role)
 
+    def new_assistant(
+            self, *,
+            content: str,  memory: Optional[str] = None, name: Optional[str] = None,
+    ):
+        return self.new(content=content, role=Role.ASSISTANT.value, memory=memory, name=name)
+
+    def new_system(
+            self, *,
+            content: str, memory: Optional[str] = None,
+    ):
+        return self.new(content=content, role=Role.SYSTEM.value, memory=memory)
+
+    def new_user(
+            self, *,
+            content: str, memory: Optional[str] = None, name: Optional[str] = None,
+    ):
+        return self.new(content=content, role=Role.USER.value, memory=memory, name=name)
+
     def match(self, message: "Message") -> bool:
         return message.type == self.value
 

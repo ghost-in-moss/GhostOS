@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, List, Type
+from typing import Iterable, Optional, Type
 from abc import ABC, abstractmethod
 from openai.types.chat.chat_completion_chunk import ChoiceDelta, ChatCompletionChunk
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam

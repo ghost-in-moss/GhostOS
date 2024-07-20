@@ -1,6 +1,6 @@
 # conf: ghostiss.framework.llms.test_case::ChatCompletionTestCase
 chat:
-  messages:
+  system:
     - role: system
       content: |+
         You are tasked to generate a single block of Python code that defines a function `def main(t: Thought) -> None:`. 
@@ -59,7 +59,7 @@ chat:
         ```
         
         Ensure that your output is strictly the code within the triple backticks. This ensures clarity and usability in the external system's processing and analysis of your code.
-
+  inputs:
     - role: user
       content: Tell me the weather of shanghai in tomorrow
 
