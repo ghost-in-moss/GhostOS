@@ -1,8 +1,18 @@
-from typing import Optional, List
+from typing import Optional, List, Iterable, ClassVar
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostiss.core.messages import Message
+from ghostiss.core.messages import Message, Payload
 from ghostiss.core.moss.context import PyContext
+
+__all__ = [
+    'Threads', 'Thread', 'ThreadPayload',
+]
+
+
+class ThreadPayload(Payload):
+    key: ClassVar[str] = "thread"
+
+    thread_id: str = Field(description="Thread ID")
 
 
 class Thread(BaseModel):
@@ -37,7 +47,7 @@ class Thread(BaseModel):
         # todo: iterate messages and add variable message
         return self.pycontext
 
-    def update(self, messages: List[Message], pycontext: Optional[PyContext] = None) -> "Thread":
+    def update(self, messages: Iterable[Message], pycontext: Optional[PyContext] = None) -> "Thread":
         thread = self.model_copy()
         if messages:
             thread.appending.extend(messages)

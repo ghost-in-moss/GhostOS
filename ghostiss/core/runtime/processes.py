@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import List, Optional
-from enum import Enum
+from typing import Optional
 from pydantic import BaseModel, Field
 from ghostiss.entity import EntityMeta
-from ghostiss.helpers import uuid
+
+__all__ = [
+    'Process',
+    'Processes',
+]
 
 
 class Process(BaseModel):
@@ -29,12 +31,18 @@ The main task is the root task of the process task tree.
 The meta data that waken the sleeping ghost in disputed services.
 """
     )
-    shell_meta: EntityMeta = Field(
-        description="""
-The meta data that provide the transformative shell interface.
-"""
-    )
 
 
 class Processes(ABC):
-    pass
+
+    @abstractmethod
+    def get_process(self, process_id: str) -> Process:
+        pass
+
+    @abstractmethod
+    def get_ghost_process(self, ghost_id: str) -> Optional[Process]:
+        pass
+
+    @abstractmethod
+    def save_process(self, process: Process) -> None:
+        pass

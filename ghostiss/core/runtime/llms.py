@@ -3,14 +3,25 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Iterable, Dict, Optional, Any, Union, TypeVar
+from typing import List, Tuple, Iterable, Dict, Optional, Any, Union, TypeVar, Generic
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, Stream, FunctionalToken
+from ghostiss.core.messages import Message, FunctionalToken, Deliver
+
+__all__ = [
+    'LLMs',
+    'LLMDriver',
+    'LLMApi',
+    'LLMTool',
+    'ModelConf',
+    'ServiceConf',
+    'LLMsConfig',
+    'Quest',
+]
 
 """
 Dev logs: 
@@ -74,7 +85,7 @@ class LLMsConfig(BaseModel):
 
 # ---- tool and function ---- #
 
-class LLMFunc(BaseModel):
+class LLMTool(BaseModel):
     name: str = Field(description="function name")
     description: str = Field(default="", description="function description")
     parameters: Optional[Dict] = Field(default=None, description="function parameters")
@@ -85,7 +96,7 @@ class LLMFunc(BaseModel):
 class Chat(BaseModel):
     id: str = Field(default_factory=helpers.uuid, description="trace id")
     messages: List[Message] = Field(default_factory=list)
-    functions: List[LLMFunc] = Field(default_factory=list)
+    functions: List[LLMTool] = Field(default_factory=list)
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
 
@@ -132,6 +143,7 @@ class Embeddings(BaseModel):
 # --- Quest --- #
 
 R = TypeVar("R")
+
 
 class Quest(Generic[R], BaseModel):
 
@@ -183,13 +195,13 @@ class LLMApi(ABC):
         """
         pass
 
-    def deliver_chat_completion(self, chat: Chat, up_stream: Stream) -> None:
+    def deliver_chat_completion(self, chat: Chat, deliver: Deliver) -> None:
         """
         逐个发送消息的包.
         """
         items = self.chat_completion_chunks(chat)
         for item in items:
-            up_stream.deliver(item)
+            deliver.deliver(item)
 
 
 class LLMDriver(ABC):

@@ -4,6 +4,11 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from ghostiss.entity import EntityMeta
 
+__all__ = [
+    'Task', 'TaskState', 'Tasks',
+    'AwaitGroup',
+]
+
 
 class TaskState(str, Enum):
     """ runtime state of the task. """
@@ -29,8 +34,9 @@ class TaskState(str, Enum):
     FINISHED = "finished"
     """the task is finished"""
 
-    def is_dead(self, state: str) -> bool:
-        return state in {self.FINISHED, self.FAILED, self.CANCELLED}
+    @classmethod
+    def is_dead(cls, state: str) -> bool:
+        return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED}
 
 
 class AwaitGroup(BaseModel):
@@ -94,7 +100,7 @@ children task ids to wait
     )
 
     # --- thought --- #
-    mind_meta: EntityMeta = Field(
+    thought_meta: EntityMeta = Field(
         description="""
 The meta data that restore the thought to handle this task.
 """
@@ -136,7 +142,15 @@ class Tasks(ABC):
         pass
 
     @abstractmethod
-    def get_task(self, task_id: str, lock: bool = True) -> Optional[Task]:
+    def get_task(self, task_id: str) -> Optional[Task]:
+        pass
+
+    @abstractmethod
+    def has_task(self, task_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    def lock_task(self, task_id: str) -> Task:
         pass
 
     @abstractmethod
