@@ -4,9 +4,9 @@ from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Uni
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
+from ghostiss.core.abc import Descriptive
 
 __all__ = [
-    'Descriptive',
 
     'BasicTypes', 'ModelType', 'ModelObject',
     'Reflection',
@@ -37,13 +37,6 @@ AttrDefaultTypes = Union[int, float, bool]
 ModelObject = Union[BaseModel, TypedDict, EntityClass]
 
 ModelType = Union[Type[BaseModel], Type[TypedDict], Type[EntityClass]]
-
-
-class Descriptive(ABC):
-
-    @abstractmethod
-    def description(self) -> str:
-        pass
 
 
 class Reflection(ABC):
