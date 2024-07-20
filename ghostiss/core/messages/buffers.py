@@ -1,17 +1,13 @@
 import time
-from typing import Iterable, Optional, List, NamedTuple, Type
+from typing import Iterable, Optional, List, NamedTuple
 from abc import ABC, abstractmethod
 
-from ghostiss.core.messages.message import Message, Caller, DefaultTypes
-from ghostiss.core.messages.payloads import Payload, CallerPayload, FunctionCall
-from ghostiss.core.messages.payloads import read_payload_callers, add_payload
-from ghostiss.core.messages.attachments import Attachment, CallerAttachment, ToolCall
-from ghostiss.core.messages.attachments import read_attachment_callers, add_attachment
-from ghostiss.core.messages.message import FunctionalToken, FunctionCall
+from ghostiss.core.messages.message import Message, Caller, DefaultTypes, Payload, Attachment
+from ghostiss.core.messages.message import FunctionalToken
 from ghostiss.helpers import uuid
 
 __all__ = [
-    "Flushed", "MessageBuffer", "DefaultMessageBuffer", "GroupMessageBuffers",
+    "Flushed", "Buffer", "DefaultBuffer", "GroupBuffers",
 ]
 
 
@@ -26,7 +22,7 @@ class Flushed(NamedTuple):
     """消息体产生的回调方法."""
 
 
-class MessageBuffer(ABC):
+class Buffer(ABC):
     """
     在流式传输中拦截 message 的拦截器.
     """
@@ -46,7 +42,7 @@ class MessageBuffer(ABC):
         pass
 
     @abstractmethod
-    def new(self) -> "MessageBuffer":
+    def new(self) -> "Buffer":
         pass
 
     @abstractmethod
@@ -54,7 +50,7 @@ class MessageBuffer(ABC):
         pass
 
 
-class DefaultMessageBuffer(MessageBuffer):
+class DefaultBuffer(Buffer):
     """
     基于 Message 标准协议的 buffer.
     """
@@ -64,8 +60,6 @@ class DefaultMessageBuffer(MessageBuffer):
             *,
             attachments: Optional[List[Attachment]] = None,
             payloads: Optional[List[Payload]] = None,
-            caller_attachments: Optional[List[Type[CallerAttachment]]] = None,
-            caller_payloads: Optional[List[CallerPayload]] = None,
             functional_tokens: Optional[List[FunctionalToken]] = None,
     ):
         self._buffering: Optional[Message] = None
@@ -81,16 +75,6 @@ class DefaultMessageBuffer(MessageBuffer):
 
         self._payloads: Optional[List[Payload]] = payloads
         """追加在每条消息上的 payload"""
-
-        if caller_attachments is not None:
-            caller_attachments = [ToolCall]
-        self._caller_attachments = caller_attachments
-        """用来判断的 caller attachment"""
-
-        if caller_payloads is not None:
-            caller_payloads = [FunctionCall]
-        self._caller_payloads = caller_payloads
-        """用来判断的 caller payloads"""
 
         self._functional_tokens = {}
         """加载 functional tokens """
@@ -142,56 +126,31 @@ class DefaultMessageBuffer(MessageBuffer):
         buffering.pack = False
 
         buffed = buffering.get_copy()
-        buffed = self._wrap_message(buffed)
 
         # 剥离所有的 callers.
         callers = []
         # 通过 functional tokens 来获取 caller
-        read = self._read_functional_tokens(buffed)
-        for item in read:
-            callers.append(item)
-
-        # 从标准的 payload 和 attachments 里读取 caller.
-        read = self._read_callers(buffed)
-        for item in read:
-            callers.append(item)
+        buffed = self._read_functional_tokens(buffed)
 
         self._buffed.append(buffed)
+
+        # 从标准的 payload 和 attachments 里读取 caller.
+        callers.extend(buffed.callers)
         if callers:
             self._buffed_callers.append(*callers)
         return buffed
 
-    def _wrap_message(self, message: Message) -> Message:
-        message = message.get_copy()
-        # 添加 payloads
-        if self._payloads:
-            for payload in self._payloads:
-                add_payload(payload, message)
-        #  添加 attachments.
-        if self._attachments:
-            for attachment in self._attachments:
-                add_attachment(attachment, message)
-        return message
+    def new(self) -> "DefaultBuffer":
+        return DefaultBuffer()
 
-    def new(self) -> "DefaultMessageBuffer":
-        return DefaultMessageBuffer()
-
-    def _read_callers(self, message: Message) -> Iterable[Caller]:
-        iterator = read_attachment_callers(self._caller_attachments, message)
-        for item in iterator:
-            yield item
-        iterator = read_payload_callers(self._caller_payloads, message)
-        for item in iterator:
-            yield item
-
-    def _read_functional_tokens(self, tail: Message) -> Iterable[Caller]:
+    def _read_functional_tokens(self, tail: Message) -> Message:
         if tail.content is None or tail.pack:
             # 只有尾包才要处理.
-            return []
+            return tail
 
         if tail.get_type() != DefaultTypes.CHAT_COMPLETION:
             # 当前只支持 chat completion 使用 functional tokens.
-            return []
+            return tail
 
         # todo: 偷懒, 先用尾包, 未来再改流式.
         memory = tail.content
@@ -226,14 +185,12 @@ class DefaultMessageBuffer(MessageBuffer):
             # 生成 arguments 字符串.
             arguments = "\n".join(arguments_lines)
             # 添加 caller.
-            callers.append(Caller(name=ft.function.name, arguments=arguments))
-
-        if not callers:
-            return []
+            caller = Caller(name=ft.function.name, arguments=arguments)
+            caller.add(tail)
 
         tail.content = "\n".join(content_lines)
         tail.memory = memory
-        return callers
+        return tail
 
     def flush(self) -> Flushed:
         sent = self._clear_tail()
@@ -244,28 +201,28 @@ class DefaultMessageBuffer(MessageBuffer):
         return Flushed(sent=deliver, buffed=self._buffed, callers=self._buffed_callers)
 
 
-class GroupMessageBuffers(MessageBuffer):
+class GroupBuffers(Buffer):
     """
     可以根据消息类型分组的 buffers.
     """
 
     def __init__(
             self,
-            buffers: Iterable[MessageBuffer],
-            default_: Optional[MessageBuffer] = None,
+            buffers: Iterable[Buffer],
+            default_: Optional[Buffer] = None,
     ):
         self._buffers = buffers
-        self._buffering: Optional[MessageBuffer] = None
+        self._buffering: Optional[Buffer] = None
         if default_ is None:
-            default_ = DefaultMessageBuffer()
-        self._default_buffer: MessageBuffer = default_
+            default_ = DefaultBuffer()
+        self._default_buffer: Buffer = default_
         self._buffed: List[Message] = []
         self._callers: List[Caller] = []
 
     def match(self, message: Message) -> bool:
         return True
 
-    def _match_buffer(self, message: Message) -> MessageBuffer:
+    def _match_buffer(self, message: Message) -> Buffer:
         for buffer in self._buffers:
             if buffer.match(message):
                 return buffer.new()
@@ -301,8 +258,8 @@ class GroupMessageBuffers(MessageBuffer):
         sent = buffer.buff(pack)
         return sent
 
-    def new(self) -> "MessageBuffer":
-        return GroupMessageBuffers(self._buffers)
+    def new(self) -> "Buffer":
+        return GroupBuffers(self._buffers)
 
     def flush(self) -> Flushed:
         sent = []

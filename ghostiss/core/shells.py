@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Type, Dict
 from ghostiss.entity import Entity, EntityFactory
-from ghostiss.core.shells.messenger import Messenger
+from ghostiss.core.messages.deliver import Deliver
 
 
 class Driver(ABC):
@@ -48,7 +48,10 @@ class Shell(ABC):
         pass
 
     @abstractmethod
-    def messenger(self) -> Messenger:
+    def deliver(self) -> Deliver:
+        """
+        消息发送管道.
+        """
         pass
 
 

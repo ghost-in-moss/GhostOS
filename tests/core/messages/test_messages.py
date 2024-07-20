@@ -15,4 +15,4 @@ def test_message_module():
     from ghostiss.core.messages import Message as Msg
     # 不会被重命名而修改掉.
     assert Msg.__name__ == "Message"
-    assert Msg.__module__ == "ghostiss.blueprint.messages.message"
+    assert Msg.__module__ == "ghostiss.core.messages.message"

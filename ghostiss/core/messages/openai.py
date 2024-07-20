@@ -3,15 +3,13 @@ from abc import ABC, abstractmethod
 from openai.types.chat.chat_completion_chunk import ChoiceDelta, ChatCompletionChunk
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
-from openai.types.chat.chat_completion_assistant_message_param import ChatCompletionAssistantMessageParam
+from openai.types.chat.chat_completion_assistant_message_param import ChatCompletionAssistantMessageParam, FunctionCall
 from openai.types.chat.chat_completion_message_tool_call_param import ChatCompletionMessageToolCallParam
 from openai.types.chat.chat_completion_system_message_param import ChatCompletionSystemMessageParam
 from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 
-from ghostiss.core.messages.message import Message, DefaultTypes, Role
-from ghostiss.core.messages.payloads import FunctionCall, read_payload, add_payload
-from ghostiss.core.messages.attachments import ToolCall, read_attachments, add_attachment
+from ghostiss.core.messages.message import Message, DefaultTypes, Role, Caller
 from ghostiss.container import Provider, Container, CONTRACT
 
 __all__ = ["OpenAIParser", "DefaultOpenAIParser", "DefaultOpenAIParserProvider"]
@@ -89,20 +87,31 @@ class DefaultOpenAIParser(OpenAIParser):
             content = message.memory
 
         # function call
-        function_call = read_payload(FunctionCall, message)
-
+        function_call = None
         # tools call
         tool_calls = None
-        tool_call_attachments = read_attachments(ToolCall, message)
-        if tool_call_attachments:
-            tool_calls = []
-            for call in tool_call_attachments:
-                item = ChatCompletionMessageToolCallParam(
-                    id=call.id,
-                    type="function",
-                    function=call.function,
-                )
-                tool_calls.append(item)
+        if message.callers:
+            for caller in message.callers:
+                if not caller.protocol:
+                    # 如果不是协议信息, 则不做额外的封装.
+                    continue
+                if caller.id is None:
+                    function_call = FunctionCall(
+                        name=caller.name,
+                        arguments=caller.arguments,
+                    )
+                else:
+                    if tool_calls is None:
+                        tool_calls = []
+                    tool_call = ChatCompletionMessageToolCallParam(
+                        id=caller.id,
+                        function=FunctionCall(
+                            name=caller.name,
+                            arguments=caller.arguments,
+                        ),
+                        type="function",
+                    )
+                    tool_calls.append(tool_call)
 
         return [ChatCompletionAssistantMessageParam(
             content=content,
@@ -114,12 +123,21 @@ class DefaultOpenAIParser(OpenAIParser):
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
         pack = Message.new(type_=DefaultTypes.CHAT_COMPLETION, role=message.role, content=message.content)
         if message.function_call:
-            function_call = FunctionCall(**message.function_call.model_dump())
-            function_call.add(pack)
+            caller = Caller(
+                name=message.function_call.name,
+                arguments=message.function_call.arguments,
+                protocol=True
+            )
+            caller.add(pack)
         if message.tool_calls:
-            tool_calls = ToolCall()
-            tool_calls.calls = message.tool_calls
-            tool_calls.add(pack)
+            for tool_call in message.tool_calls:
+                caller = Caller(
+                    id=tool_call.id,
+                    name=tool_call.function.name,
+                    arguments=tool_call.function.arguments,
+                    protocol=True,
+                )
+                caller.add(pack)
         return pack
 
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
@@ -142,14 +160,14 @@ class DefaultOpenAIParser(OpenAIParser):
         pack = Message.new_pack(role=delta.role, content=delta.content)
         # function call
         if delta.function_call:
-            function_call = FunctionCall(**delta.function_call.model_dump())
-            add_payload(function_call, pack)
+            function_call = Caller(**delta.function_call.model_dump())
+            pack.callers.append(function_call)
 
         # tool calls
         if delta.tool_calls:
             for item in delta.tool_calls:
-                tool_call = ToolCall(**item.tool_call.model_dump())
-                add_attachment(tool_call, pack)
+                tool_call = Caller(**item.tool_call.model_dump())
+                pack.callers.append(tool_call)
         return pack
 
 
