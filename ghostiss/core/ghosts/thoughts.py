@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple
 from abc import ABC, abstractmethod
 from ghostiss.entity import Entity, EntityFactory, EntityMeta, ENTITY_TYPE
-from ghostiss.core.ghosts.ghost import Ghost
+from ghostiss.core.ghosts._ghost import Ghost
 from ghostiss.core.ghosts.events import Event
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.runtime.threads import Thread
@@ -36,6 +36,9 @@ class Thought(Entity, Descriptive, ABC):
 
 
 class Idea(ABC):
+    """
+    必须要拆分一个抽象, 方便做单元测试和复用.
+    """
 
     @abstractmethod
     def run(self, thread: Thread) -> Tuple[Thread, Optional[Operator]]:
@@ -57,10 +60,10 @@ class BasicThought(Thought, ABC):
         return None
 
     def on_input(self, g: Ghost, e: Event) -> Optional[Operator]:
-        return self._run_idea_on_event(g, e)
+        return self._run_event(g, e)
 
-    def _run_idea_on_event(self, g: Ghost, e: Event) -> Optional[Operator]:
-        session = g.session()
+    def _run_event(self, g: Ghost, e: Event) -> Optional[Operator]:
+        session = g.session
         thread = session.thread()
         # thread 更新消息体.
         thread.update(e.messages)
@@ -70,7 +73,7 @@ class BasicThought(Thought, ABC):
         return op
 
     def on_finish_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
-        session = g.session()
+        session = g.session
         task = session.task()
         awaiting = task.awaiting_tasks()
         if e.from_task_id not in awaiting:
@@ -90,13 +93,16 @@ class BasicThought(Thought, ABC):
         return op
 
     def on_failure_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
-        return self._run_idea_on_event(g, e)
+        return self._run_event(g, e)
 
     def on_wait_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
-        return self._run_idea_on_event(g, e)
+        return self._run_event(g, e)
 
 
 class Thoughts(EntityFactory[Thought], ABC):
 
     def new_entity(self, meta_data: EntityMeta) -> Optional[Thought]:
         pass
+
+    def find_thought(self, meta: EntityMeta) -> Thought:
+        return self.force_new_entity(meta)

@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_function_call_option_param import ChatCom
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, FunctionalToken, Messenger, Role, DefaultTypes
+from ghostiss.core.messages import Message, FunctionalToken, Messenger, DefaultTypes
 
 __all__ = [
     'Chat',

@@ -34,7 +34,9 @@ class Thread(BaseModel):
     messages: List[Message] = Field(
         default_factory=list,
     )
-
+    inputs: List[Message] = Field(
+        default_factory=list,
+    )
     appending: List[Message] = Field(
         default_factory=list,
     )

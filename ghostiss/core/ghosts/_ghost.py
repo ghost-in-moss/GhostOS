@@ -14,7 +14,9 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.events import EventBus
     from ghostiss.core.ghosts.session import Session
     from ghostiss.core.ghosts.thoughts import Thoughts
-    from ghostiss.core.ghosts.messenger import Messenger
+    from ghostiss.core.messages import Messenger
+
+__all__ = ['Ghost', 'Facade']
 
 
 class Ghost(Entity, Descriptive, Identifiable, ABC):

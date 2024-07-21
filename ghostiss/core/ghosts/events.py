@@ -46,6 +46,9 @@ class DefaultEventType(str, Enum):
     CANCEL = "cancel"
     """当前任务"""
 
+    THINK = "think"
+    """自我驱动的思考"""
+
     FINISH_CALLBACK = "finish_callback"
     """第三方 task 运行正常, 返回的消息. """
 
@@ -58,11 +61,12 @@ class DefaultEventType(str, Enum):
     def new(
             self, *,
             task_id: str,
-            from_task_id: str,
+            from_task_id: Optional[str] = None,
+            eid: Optional[str] = None,
             messages: List[Message],
             priority: float = 0.0,
     ) -> Event:
-        id_ = uuid()
+        id_ = eid if eid else uuid()
         type_ = str(self.value)
         return Event(
             id=id_, type=type_, task_id=task_id, from_task_id=from_task_id, priority=priority,
@@ -118,5 +122,5 @@ class EventBus(ABC):
         pass
 
     @abstractmethod
-    def pop_global_event(self, task_id: str) -> Optional[Event]:
+    def pop_global_event(self) -> Optional[Event]:
         pass
