@@ -10,8 +10,8 @@ services:
     token: $OPENAI_API_KEY
     proxy: $OPENAI_PROXY
   - name: local
-    base_url: $LOCAL_AI_URL
-    token: $LOCALAI_API_KEY
+    base_url: http://localhost:11434/v1
+    token: ollama
 #    proxy: $OPENAI_PROXY
 # 默认的 api.
 default:
@@ -55,13 +55,14 @@ models:
     request_timeout: 80
     max_tokens: 8192
 
-##  deprecated models:
+
 #  gemma2-27b:
 #    service: local
 #    model: gemma2:27b
 #    timeout: 80
 #    request_timeout: 80
 #    max_tokens: 8192
+
 #  codegeex4-9b:
 #    service: local
 #    model: codegeex4:9b
