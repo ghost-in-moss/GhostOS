@@ -13,11 +13,16 @@ from pydantic import BaseModel, Field
 
 
 class Inputs(BaseModel):
+    """
+    定义一个标准的请求协议.
+    """
+
     trace: str = Field(default="")
     ghost_meta: EntityMeta = Field()
+    process_id: Optional[str] = Field(default=None)
     task_id: Optional[str] = Field(default=None)
     thought_id: Optional[str] = Field(default=None)
-    message: List[Message]
+    messages: List[Message]
 
 
 class GhostInShellSystem(ABC):
@@ -66,6 +71,9 @@ class GhostInShellSystem(ABC):
 
     @abstractmethod
     def container(self) -> Container:
+        """
+        全局默认的 container.
+        """
         pass
 
     @abstractmethod
@@ -151,17 +159,17 @@ class GhostInShellSystem(ABC):
             return None
 
         ghost = self.make_ghost(runtime=runtime, ghost_meta=process.ghost_meta, deliver=deliver)
+        err = None
         try:
             op = fire_event(ghost, e)
             while op is not None:
                 # todo: log and try except
                 op = op.run(ghost)
+        except Exception as exp:
+            err = exp
         finally:
-            ghost.finish()
+            ghost.finish(err)
 
 
-class Ghostiss(GhostInShellSystem):
-    """
-    简写. 浪费一下性能.
-    """
-    pass
+Ghostiss = GhostInShellSystem
+"""定义一个别名"""

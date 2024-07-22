@@ -75,8 +75,17 @@ class LLMsConfig(BaseModel):
     所有的配置项.
     一种可选的方式. 
     """
-    services: List[ServiceConf] = Field(default_factory=list)
-    models: Dict[str, ModelConf] = Field(default_factory=dict)
+    services: List[ServiceConf] = Field(
+        default_factory=list,
+        description="定义各种 llm services, 比如 openai 或者 moonshot",
+    )
+    default: ModelConf = Field(
+        description="定义默认的 llm api.",
+    )
+    models: Dict[str, ModelConf] = Field(
+        default_factory=dict,
+        description="定义多个 llm api, key 就是 api name. "
+    )
 
 
 # ---- tool and function ---- #
@@ -110,13 +119,12 @@ class Chat(BaseModel):
         """
         messages = []
         if self.system:
-            system = DefaultTypes.DEFAULT.new_system(content="")
+            contents = []
             for message in self.system:
-                if message.content:
-                    system.content += "\n\n" + message.content
-                if message.memory:
-                    system.memory = system.memory if system.memory else ""
-                    system.memory += "\n\n" + message.memory
+                content = message.get_content()
+                contents.append(content)
+            content = "\n\n".join(contents)
+            system = DefaultTypes.DEFAULT.new_system(content=content)
             messages.append(system)
         if self.history:
             for item in self.history:
@@ -172,7 +180,7 @@ class Embeddings(BaseModel):
 R = TypeVar("R")
 
 
-class Quest(Generic[R], BaseModel):
+class Quest(BaseModel, Generic[R]):
 
     @abstractmethod
     def to_chat(self) -> Chat:

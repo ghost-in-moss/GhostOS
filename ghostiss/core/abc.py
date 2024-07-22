@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 class Descriptive(ABC):
 
     @abstractmethod
-    def description(self) -> str:
+    def get_description(self) -> str:
         pass
 
 
@@ -14,7 +14,7 @@ class Identifier(BaseModel, Descriptive):
     name: str
     desc: str
 
-    def description(self) -> str:
+    def get_description(self) -> str:
         return self.desc
 
 

@@ -71,8 +71,9 @@ class DefaultBuffer(Buffer):
         self._functional_tokens = {}
         """加载 functional tokens """
 
-        for ft in functional_tokens:
-            self._functional_tokens[ft.token] = ft
+        if functional_tokens:
+            for ft in functional_tokens:
+                self._functional_tokens[ft.token] = ft
 
     def match(self, message: Message) -> bool:
         return True

@@ -17,7 +17,8 @@ httpx-socks = "^0.9.1"
 restrictedpython = "^7.1"
 
 [tool.poetry.scripts]
-llm_test = "ghostiss.scripts.llm_tests:main"
+llm_test = "ghostiss.scripts.llm_test:main"
+moss_test = "ghostiss.scripts.moss_test:main"
 
 [build-system]
 requires = ["poetry-core"]

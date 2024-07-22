@@ -68,7 +68,7 @@ class MOSS(System, ABC):
         pass
 
     @abstractmethod
-    def update_context(self, context: PyContext) -> None:
+    def update_context(self, context: PyContext) -> "MOSS":
         """
         为 MoOS 添加更多的变量, 可以覆盖掉之前的.
         :param context:
@@ -502,10 +502,11 @@ class BasicMOSSImpl(MOSS):
         r = r.update(typehint=typehint, extends=new_extends)
         return r
 
-    def update_context(self, context: PyContext) -> None:
+    def update_context(self, context: PyContext) -> "MOSS":
         if self.__bootstrapped:
             raise RuntimeError("MoOS is already bootstrapped")
         self.__python_context.join(context)
+        return self
 
     def __bootstrap_py_context(self) -> None:
         for imp in self.__python_context.imports:

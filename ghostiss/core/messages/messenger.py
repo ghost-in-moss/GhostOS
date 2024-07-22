@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, NamedTuple, Optional
+from typing import Iterable, NamedTuple, Optional, Type
+from ghostiss.container import Container, Provider, CONTRACT
 from ghostiss.core.messages.message import Message, Caller, Payload, Attachment, DefaultTypes, FunctionalToken
 from ghostiss.core.messages.buffers import Buffer, DefaultBuffer
 
@@ -8,6 +9,7 @@ __all__ = [
     "Buffed",
     "Messenger",
     "DefaultMessenger",
+    "TestMessengerProvider",
 ]
 
 
@@ -211,3 +213,18 @@ class DefaultMessenger(Messenger):
 
     def stopped(self) -> bool:
         return self._stopped or (self._upstream is not None and self._upstream.stopped())
+
+
+class TestMessengerProvider(Provider[Messenger]):
+    """
+    for test only
+    """
+
+    def singleton(self) -> bool:
+        return True
+
+    def contract(self) -> Type[Messenger]:
+        return Messenger
+
+    def factory(self, con: Container) -> Messenger:
+        return DefaultMessenger()

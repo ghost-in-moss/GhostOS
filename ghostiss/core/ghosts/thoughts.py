@@ -1,48 +1,39 @@
 from typing import List, Optional, Tuple
 from abc import ABC, abstractmethod
 from ghostiss.entity import Entity, EntityFactory, EntityMeta, ENTITY_TYPE
-from ghostiss.core.ghosts._ghost import Ghost
+from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.events import Event
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.runtime.threads import Thread
-from ghostiss.core.moss.reflect import Descriptive
+from ghostiss.core.abc import Identifiable, Descriptive
 from ghostiss.helpers import uuid
 
 
-class Thought(Entity, Descriptive, ABC):
+class Thought(Entity, Identifiable, Descriptive, ABC):
+    """
+    思维状态机的驱动.
+    """
 
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @abstractmethod
-    def description(self) -> str:
-        pass
+    def get_description(self) -> str:
+        return self.identifier().get_description()
 
     @abstractmethod
     def new_task_id(self, g: Ghost) -> str:
+        """
+        创建一个唯一的 task id.
+        """
         pass
 
     def on_event(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        接受 event 并作出响应.
+        """
         name = e.type
         method = "on_" + name
         if hasattr(self, method):
             return getattr(self, method)(g, e)
         return None
 
-    @abstractmethod
-    def idea(self, g: Ghost, e: Event) -> "Idea":
-        pass
-
-
-class Idea(ABC):
-    """
-    必须要拆分一个抽象, 方便做单元测试和复用.
-    """
-
-    @abstractmethod
-    def run(self, thread: Thread) -> Tuple[Thread, Optional[Operator]]:
-        pass
 
 
 class BasicThought(Thought, ABC):

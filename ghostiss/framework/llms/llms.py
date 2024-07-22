@@ -23,6 +23,7 @@ class LLMsImpl(LLMs):
         self._llm_models: Dict[str, ModelConf] = {}
         self._default_driver = default_driver
         self._apis: Dict[str, LLMApi] = {}
+        self._default_llm_model: ModelConf = conf.default
 
         if drivers:
             for driver in drivers:
@@ -72,9 +73,11 @@ class LLMsImpl(LLMs):
         api = self._apis.get(api_name, None)
         if api is not None:
             return api
-        model_conf = self._llm_models.get(api_name, None)
-        if model_conf is None:
-            return None
+        if api_name:
+            model_conf = self._llm_models.get(api_name, None)
+        else:
+            model_conf = self._default_llm_model
+
         service_conf = self._llm_services.get(model_conf.service, None)
         if service_conf is None:
             return None

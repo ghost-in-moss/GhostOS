@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING, Optional, Callable, List, Dict
 from ghostiss.core.messages import Message, Role, DefaultTypes
 
 if TYPE_CHECKING:
-    from ghostiss.core.ghosts._ghost import Ghost
+    from ghostiss.core.ghosts.ghost import Ghost
     from ghostiss.core.ghosts.events import Event
+    from ghostiss.core.ghosts.actions import Action
     from ghostiss.core.runtime.tasks import Task
     from ghostiss.core.moss.moss import MOSS
 
@@ -43,6 +44,20 @@ def fire_event(g: "Ghost", e: "Event") -> Optional["Operator"]:
     task.thought_meta = thought.to_entity_meta()
     session.update_task(task)
     return op
+
+
+class ActionOperator(Operator):
+
+    def __init__(self, *, action: "Action", arguments: str) -> None:
+        self._action = action
+        self._arguments = arguments
+
+    def run(self, g: "Ghost") -> Optional["Operator"]:
+        return self._action.act(g, self._arguments)
+
+    def destroy(self) -> None:
+        del self._action
+        del self._arguments
 
 
 class EventOperator(Operator):

@@ -10,7 +10,6 @@ from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.llms.test_case import ChatCompletionTestCase, run_test_cases
 from rich.console import Console
 from rich.panel import Panel
-from rich.markdown import Markdown
 from rich.json import JSON
 
 
@@ -32,13 +31,6 @@ def main() -> None:
         help="file name of the case without .yaml suffix",
         type=str,
         default="multi_methods_program"
-    )
-    parser.add_argument(
-        "--think", "-t",
-        nargs="?",
-        default="",
-        help="root think name",
-        type=str,
     )
     parsed = parser.parse_args(sys.argv[1:])
     container = _prepare_container()

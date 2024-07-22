@@ -1,12 +1,12 @@
-from typing import Optional, TYPE_CHECKING, ClassVar
+from typing import Optional, ClassVar
 from abc import ABC, abstractmethod
+from ghostiss.container import Container
 from ghostiss.core.runtime.llms import LLMTool, Chat
-from ghostiss.core.messages import FunctionalToken, DefaultTypes
+from ghostiss.core.messages import FunctionalToken, DefaultTypes, Messenger
 from ghostiss.core.moss import MOSS
-
-if TYPE_CHECKING:
-    from ghostiss.core.ghosts._ghost import Ghost
-    from ghostiss.core.ghosts.operators import Operator
+from ghostiss.core.ghosts.session import Session
+from ghostiss.core.ghosts.operators import Operator
+from ghostiss.core.ghosts.ghost import Ghost
 
 
 class Action(ABC):
@@ -24,6 +24,8 @@ class Action(ABC):
 
     @abstractmethod
     def act(self, g: "Ghost", arguments: str) -> Optional["Operator"]:
+        """
+        """
         pass
 
 
@@ -81,24 +83,31 @@ Here is the context provided to you in this turn:
         return chat
 
     def act(self, g: "Ghost", arguments: str) -> Optional["Operator"]:
-        op = self._moss(code=arguments, target="main", args=["os"])
-        if op is not None and not isinstance(op, Operator):
-            # todo: 换成正规的异常.
-            raise RuntimeError("Operator is not an operator.")
+        op = None
+        pycontext = None
+        con = g.container
+        try:
+            op = self._moss(code=arguments, target="main", args=["os"])
+            if op is not None and not isinstance(op, Operator):
+                # todo: 换成正规的异常.
+                raise RuntimeError("function main's result is not an instance of the Operator")
 
-        # 运行 moss
-        pycontext = self._moss.dump_context()
-        content = self._moss.flush()
-        # 生成消息并发送.
-        message = DefaultTypes.DEFAULT.new_assistant(content=content)
+            # 运行 moss
+            pycontext = self._moss.dump_context()
+            content = self._moss.flush()
+            # 生成消息并发送.
+            message = DefaultTypes.DEFAULT.new_assistant(content=content)
+        except Exception as e:
+            # 将异常作为消息.
+            message = DefaultTypes.DEFAULT.new_system(content=str(e))
 
         # 准备发送消息.
-        messenger = g.messenger()
+        messenger = con.force_fetch(Messenger)
         messenger.deliver(message)
         delivered, _ = messenger.flush()
 
         # 更新 thread.
-        session = g.session
+        session = con.force_fetch(Session)
         # 更新消息.
         thread = session.thread()
         thread.update(delivered, pycontext)

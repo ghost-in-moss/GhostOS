@@ -1,9 +1,9 @@
+from typing import TYPE_CHECKING, Optional, Type
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 from ghostiss.entity import Entity, EntityFactory, EntityMeta
 from ghostiss.container import Container
 from ghostiss.core.abc import Descriptive, Identifiable
-from ghostiss.core.runtime._runtime import Runtime
+from ghostiss.core.runtime import Runtime
 from ghostiss.core.shells import Shell
 from ghostiss.core.moss.moss import MOSS
 from ghostiss.core.messages.message import Message, MessageType, MessageTypeParser
@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.events import EventBus
     from ghostiss.core.ghosts.session import Session
     from ghostiss.core.ghosts.thoughts import Thoughts
+    from ghostiss.core.ghosts.minds import MultiTasks, TaskManager
+    from ghostiss.core.moss.modules import Modules
     from ghostiss.core.messages import Messenger
 
 __all__ = ['Ghost', 'Facade']
@@ -21,11 +23,11 @@ __all__ = ['Ghost', 'Facade']
 
 class Ghost(Entity, Descriptive, Identifiable, ABC):
 
-    def description(self) -> str:
+    def get_description(self) -> str:
         """
         ghost 实例的描述. 用于外部系统.
         """
-        return self.identifier().description()
+        return self.identifier().get_description()
 
     @property
     @abstractmethod
@@ -67,6 +69,14 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
 
     @property
     @abstractmethod
+    def modules(self) -> "Modules":
+        """
+        基于 modules 可以动态 import 各种库.
+        """
+        pass
+
+    @property
+    @abstractmethod
     def eventbus(self) -> "EventBus":
         """
         用来管理事件通讯.
@@ -75,7 +85,7 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
 
     @property
     @abstractmethod
-    def logger(self) -> LoggerItf:
+    def logger(self) -> "LoggerItf":
         """
         返回基于当前上下文生成的 logger 实例.
         """
@@ -106,15 +116,30 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
         pass
 
     @abstractmethod
-    def finish(self) -> None:
+    def taskmanager(self) -> "TaskManager":
         pass
 
     @abstractmethod
-    def destroy(self) -> None:
+    def multitasks(self) -> "MultiTasks":
         pass
 
     @abstractmethod
     def facade(self) -> "Facade":
+        pass
+
+    @abstractmethod
+    def finish(self, err: Optional[Exception]) -> None:
+        pass
+
+    def destroy(self) -> None:
+        # 从系统设计上看, 需要执行 destroy 的几个库.
+        self.session.destroy()
+        self.modules.destroy()
+        self.container.destroy()
+        self._destroy()
+
+    @abstractmethod
+    def _destroy(self) -> None:
         pass
 
 
@@ -153,3 +178,13 @@ class Facade:
         thread = session.thread()
         thread.update(messages)
         session.update_thread(thread)
+
+
+class GhostFactory(EntityFactory[Ghost], ABC):
+
+    def register(self, ghost_meta: EntityMeta) -> None:
+        pass
+
+    def force_new_ghost(self, meta: EntityMeta) -> Ghost:
+        return self.force_new_entity(meta)
+

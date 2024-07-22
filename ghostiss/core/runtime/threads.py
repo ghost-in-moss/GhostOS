@@ -1,11 +1,14 @@
 from typing import Optional, List, Iterable, ClassVar
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostiss.core.messages import Message, Payload
+from ghostiss.core.messages import Message, Payload, copy_messages
 from ghostiss.core.moss.context import PyContext
+from ghostiss.core.runtime.llms import Chat
+from ghostiss.helpers import uuid
 
 __all__ = [
     'Threads', 'Thread', 'ThreadPayload',
+    'thread_to_chat',
 ]
 
 
@@ -20,6 +23,7 @@ class Thread(BaseModel):
     对话历史的快照.
     """
     id: str = Field(
+        default_factory=uuid,
         description="The id of the thread",
     )
     root_id: Optional[str] = Field(
@@ -42,6 +46,7 @@ class Thread(BaseModel):
     )
 
     pycontext: PyContext = Field(
+        default_factory=PyContext,
         description="The PyContext instance",
     )
 
@@ -57,6 +62,24 @@ class Thread(BaseModel):
             thread.pycontext = thread.pycontext.join(pycontext)
         # todo: 验证没有复制污染.
         return thread
+
+
+def thread_to_chat(chat_id: str, system: List[Message], thread: Thread) -> Chat:
+    """
+    将 thread 转换成基准的 chat.
+    :param chat_id:
+    :param system:
+    :param thread:
+    :return:
+    """
+    chat = Chat(
+        id=chat_id,
+        system=system,
+        history=copy_messages(thread.messages),
+        inputs=copy_messages(thread.inputs),
+        appending=copy_messages(thread.appending),
+    )
+    return chat
 
 
 class Threads(ABC):

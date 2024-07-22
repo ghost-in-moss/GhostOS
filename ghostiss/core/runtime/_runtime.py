@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Optional, Type
 from ghostiss.container import Container, Provider, CONTRACT
-
-if TYPE_CHECKING:
-    from ghostiss.core.runtime.llms import LLMs
-    from ghostiss.core.runtime.threads import Threads
-    from ghostiss.core.runtime.tasks import Tasks
-    from ghostiss.core.runtime.processes import Processes
+from ghostiss.core.runtime.llms import LLMs
+from ghostiss.core.runtime.threads import Threads
+from ghostiss.core.runtime.tasks import Tasks
+from ghostiss.core.runtime.processes import Processes
 
 __all__ = [
     'Runtime', 'BasicRuntime', 'BasicRuntimeProvider'

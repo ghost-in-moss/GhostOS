@@ -157,7 +157,7 @@ class DefaultOpenAIParser(OpenAIParser):
 
     @staticmethod
     def _new_pack_from_delta(delta: ChoiceDelta) -> Message:
-        pack = Message.new_pack(role=delta.role, content=delta.content)
+        pack = Message.new_pack(role="assistant", content=delta.content)
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())
