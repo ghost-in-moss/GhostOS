@@ -48,12 +48,18 @@ models:
     timeout: 80
     request_timeout: 80
     max_tokens: 32768
-  llama3-70b:
+  llama3-1-70b:
     service: local
-    model: llama3:70b
+    model: llama3.1:70b
     timeout: 80
     request_timeout: 80
-    max_tokens: 8192
+    max_tokens: 131072
+  llama3-1-8b:
+    service: local
+    model: llama3.1:8b
+    timeout: 80
+    request_timeout: 80
+    max_tokens: 131072
 
 
 #  gemma2-27b:
