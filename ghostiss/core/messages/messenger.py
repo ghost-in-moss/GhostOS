@@ -196,10 +196,10 @@ class DefaultMessenger(Messenger):
     def flush(self) -> "Buffed":
         buffed = self._buffer.flush()
         if self._upstream and not self._upstream.stopped():
-            for item in buffed.sent:
+            for item in buffed.unsent:
                 self._upstream.deliver(item)
         self._stop(None)
-        return Buffed(messages=buffed.buffed, callers=buffed.callers)
+        return Buffed(messages=buffed.messages, callers=buffed.callers)
 
     def stop(self) -> None:
         self._stop(None)
