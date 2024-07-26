@@ -17,7 +17,7 @@ class Flushed(NamedTuple):
     messages: List[Message]
     """经过 buff, 生成的包"""
 
-    callers: Iterable[Caller]
+    callers: List[Caller]
     """消息体产生的回调方法."""
 
 
@@ -119,7 +119,8 @@ class DefaultBuffer(Buffer):
         for item in items:
             # 如果是尾包, 对尾包进行必要的处理.
             if not item.pack:
-                result.append(self._parse_tail_pack(item))
+                tail = self._parse_tail_pack(item)
+                result.append(tail)
             elif not item.is_empty():
                 # 消息不为空才发送.
                 result.append(item)
@@ -128,15 +129,19 @@ class DefaultBuffer(Buffer):
     def _buff(self, pack: "Message") -> Iterable[Message]:
         if not pack:
             yield from []
+            return
         if DefaultTypes.is_final(pack):
             # final 包不进行 buffer.
             yield from [pack]
+            return
         if not pack.pack:
             # 如果收到了一个尾包, 则走尾包逻辑.
             yield from self._receive_tail_pack(pack)
+            return
         if self._buffering_message is None:
             # 如果 buffering_message 为空, 则走首包逻辑.
             yield from self._receive_head_pack(pack)
+            return
 
         patched = self._buffering_message.patch(pack)
         # 判断新来的包能否 patch 到已经存在的包上.
@@ -191,14 +196,11 @@ class DefaultBuffer(Buffer):
             elif buffering_token in self._functional_tokens:
                 # 正在 buffer 某个 functional token 的输出. 就需要生成一次完整的 caller 了.
                 if self._current_functional_token and self._current_functional_token in self._functional_tokens:
-                    functional_token = self._functional_tokens[self._current_functional_token]
-                    caller = Caller(
-                        name=functional_token.name,
-                        arguments=self._current_functional_token_content,
-                        protocol=False,
-                    )
-                    # 把 caller 添加到当前 pack 里.
-                    caller.add(pack)
+                    caller = self._generate_current_caller()
+                    if caller:
+                        # 把 caller 添加到当前 pack 里.
+                        caller.add(pack)
+                        caller.add(self._buffering_message)
                 # 状态归零.
                 self._current_functional_token = ""
                 self._current_functional_token_content = ""
@@ -241,13 +243,11 @@ class DefaultBuffer(Buffer):
 
     def _parse_tail_pack(self, tail: Message) -> Message:
         # 剥离所有的 callers.
-        callers = []
         self._buffed_messages.append(tail)
 
         # 从标准的 payload 和 attachments 里读取 caller.
-        callers.extend(tail.callers)
-        if callers:
-            self._buffed_callers.append(*callers)
+        if tail.callers:
+            self._buffed_callers.extend(tail.callers)
         return tail
 
     def _wrap_first_pack(self, pack: Message) -> Message:
@@ -293,7 +293,14 @@ class DefaultBuffer(Buffer):
 
         if self._buffering_token:
             self._buffering_message_delivered_content += self._buffering_token
+            self._current_functional_token_content += self._buffering_token
             self._buffering_token = ""
+
+        # 添加未发送的 caller.
+        if self._current_functional_token:
+            caller = self._generate_current_caller()
+            if caller:
+                caller.add(self._buffering_message)
 
         # 如果发送的消息和 buff 的消息不一样, 则意味着...
         if self._buffering_message_delivered_content != buffering.content:
@@ -307,6 +314,17 @@ class DefaultBuffer(Buffer):
         self._current_functional_token = ""
         self._current_functional_token_content = ""
         return buffering
+
+    def _generate_current_caller(self) -> Optional[Caller]:
+        if not self._current_functional_token:
+            return None
+        functional_token = self._functional_tokens[self._current_functional_token]
+        caller = Caller(
+            name=functional_token.caller,
+            arguments=self._current_functional_token_content,
+            protocol=False,
+        )
+        return caller
 
     def new(self) -> "DefaultBuffer":
         return DefaultBuffer(

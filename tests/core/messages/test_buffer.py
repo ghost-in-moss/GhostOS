@@ -1,5 +1,5 @@
 from ghostiss.core.messages import (
-    DefaultBuffer, Message,
+    DefaultBuffer, Message, FunctionalToken,
 )
 
 
@@ -38,3 +38,29 @@ def test_default_buffer_baseline():
     buffed = buffer2.flush()
     print(buffed)
     assert len(buffed.messages) == 2
+
+
+def test_functional_token_baseline():
+
+    buffer = DefaultBuffer(
+        functional_tokens=[
+            FunctionalToken(token=":moss>", caller="moss", description="desc", deliver=False)
+        ]
+    )
+
+    content = """
+hello
+:moss>
+world
+"""
+
+    for c in content:
+        msg = Message.new_pack(content=c)
+        buffer.buff(msg)
+
+    flushed = buffer.flush()
+    assert len(flushed.messages) == 1
+    assert len(flushed.callers) == 1
+    assert flushed.callers[0].name == "moss"
+    assert flushed.callers[0].arguments == "\nworld\n"
+    assert flushed.messages[0].content == "\nhello\n"
