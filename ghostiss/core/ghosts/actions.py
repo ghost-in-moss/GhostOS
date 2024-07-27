@@ -1,29 +1,26 @@
 from typing import Optional, ClassVar
 from abc import ABC, abstractmethod
 from ghostiss.container import Container
-from ghostiss.core.runtime.llms import LLMTool, Chat
-from ghostiss.core.messages import FunctionalToken, DefaultTypes, Messenger
+from ghostiss.core.runtime.llms import Chat
+from ghostiss.core.messages import FunctionalToken, DefaultTypes
 from ghostiss.core.moss import MOSS
-from ghostiss.core.ghosts.session import Session
 from ghostiss.core.ghosts.operators import Operator
-from ghostiss.core.ghosts.ghost import Ghost
+from ghostiss.core.ghosts.messenger import Messenger
+from ghostiss.core.abc import Identifiable, Identifier
+from ghostiss.core.runtime.threads import Thread
 
 
-class Action(ABC):
+class Action(Identifiable, ABC):
     """
     ghost action that triggered by LLM output
     """
-
-    @abstractmethod
-    def name(self) -> str:
-        pass
 
     @abstractmethod
     def update_chat(self, chat: Chat) -> Chat:
         pass
 
     @abstractmethod
-    def act(self, g: "Ghost", arguments: str) -> Optional["Operator"]:
+    def act(self, container: "Container", messenger: "Messenger", arguments: str) -> Optional["Operator"]:
         """
         """
         pass
@@ -58,11 +55,14 @@ Here is the context provided to you in this turn:
 ```
 """
 
-    def __init__(self, moss: MOSS):
+    def __init__(self, moss: MOSS, thread: Thread):
         self._moss = moss  # .with_vars()
+        self._thread = thread
 
-    def name(self) -> str:
-        return "moss"
+    def identifier(self) -> Identifier:
+        return Identifier(
+            name="moss",
+        )
 
     def update_chat(self, chat: Chat) -> Chat:
         # update functional tokens
@@ -82,10 +82,8 @@ Here is the context provided to you in this turn:
         chat.system.append(moss_prompt)
         return chat
 
-    def act(self, g: "Ghost", arguments: str) -> Optional["Operator"]:
+    def act(self, c: "Container", messenger: "Messenger", arguments: str) -> Optional["Operator"]:
         op = None
-        pycontext = None
-        con = g.container
         try:
             op = self._moss(code=arguments, target="main", args=["os"])
             if op is not None and not isinstance(op, Operator):
@@ -97,20 +95,10 @@ Here is the context provided to you in this turn:
             content = self._moss.flush()
             # 生成消息并发送.
             message = DefaultTypes.DEFAULT.new_assistant(content=content)
+            self._thread.update([message], pycontext)
         except Exception as e:
-            # 将异常作为消息.
-            message = DefaultTypes.DEFAULT.new_system(content=str(e))
-
-        # 准备发送消息.
-        messenger = con.force_fetch(Messenger)
-        messenger.deliver(message)
-        delivered, _ = messenger.flush()
-
-        # 更新 thread.
-        session = con.force_fetch(Session)
-        # 更新消息.
-        thread = session.thread()
-        thread.update(delivered, pycontext)
-        session.update_thread(thread)
-        # 返回结果.
+            # 将异常作为消息. todo: 完善消息.
+            content = f"run moss failed: {e}"
+            message = DefaultTypes.DEFAULT.new_system(content=content)
+            self._thread.update([message])
         return op

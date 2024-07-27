@@ -1,11 +1,11 @@
 from typing import Tuple, Optional, Iterable
 from abc import ABC, abstractmethod
 from ghostiss.container import Container
-from ghostiss.core.ghosts.operators import Operator, ActionOperator
+from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.actions import Action
 from ghostiss.core.runtime.threads import Thread
 from ghostiss.core.runtime.llms import LLMApi, Chat
-from ghostiss.core.messages.messenger import Messenger
+from ghostiss.core.ghosts.messenger import Messenger
 
 __all__ = [
     'Runner', 'LLMRunner', 'PipelineRunner',
@@ -14,12 +14,12 @@ __all__ = [
 
 class Runner(ABC):
     """
-    必须要拆分一个抽象, 方便做单元测试和复用.
-    通常用于 Thought 的内部.
+    原本大模型思维状态机的设计就是 Thought.
+    这里必须要从 Thought 内部拆分一个抽象, 目的是方便做单元测试和复用.
     """
 
     @abstractmethod
-    def run(self, container: Container, thread: Thread) -> Tuple[Thread, Optional[Operator]]:
+    def run(self, container: Container, messenger: Messenger, thread: Thread) -> Optional[Operator]:
         """
         运行 Thread, 同时返回一个新的 Thread. 不做存储修改, 方便单元测试.
         """
@@ -28,7 +28,11 @@ class Runner(ABC):
 
 class LLMRunner(Runner, ABC):
     """
-    标准的 Runner 设计.
+    标准的 Runner 设计, 使用大模型来驱动运行逻辑.
+    是否还会有其它的 Runner 呢?
+    举两个简单的例子:
+    1. 如果多个 Runner 需要并发运行, 则可以将多个 Runner 包装到一个 ParallelRunner
+    2. 如果多个 Runner 在一次运行中要串行执行, 任何 Runner 返回 op 后中断. 可以将多个 Runner 包装到一个 PipelineRunner.
     """
 
     @abstractmethod
@@ -45,14 +49,7 @@ class LLMRunner(Runner, ABC):
         """
         pass
 
-    @abstractmethod
-    def messenger(self, container: Container) -> Messenger:
-        """
-        返回流式传输所用的 messenger.
-        """
-        pass
-
-    def run(self, container: Container, thread: Thread) -> Tuple[Thread, Optional[Operator]]:
+    def run(self, container: Container, messenger: Messenger, thread: Thread) -> Optional[Operator]:
         """
         标准的 llm runner 运行逻辑.
         """
@@ -62,36 +59,39 @@ class LLMRunner(Runner, ABC):
         # 准备好回调的 map.
         actions_name_map = {}
         for action in actions:
-            actions_name_map[action.name()] = action
+            name = action.identifier().name
+            actions_name_map[name] = action
         # 获取 llm 的 api.
         api = self.get_llmapi(container)
-        messenger = self.messenger(container)
-        api.deliver_chat_completion(chat, messenger)
-        buffed = messenger.flush()
-        thread.update(buffed.messages)
-
-        for caller in buffed.callers:
+        # todo: with payload
+        deliver = messenger.new(thread=thread)
+        api.deliver_chat_completion(chat, deliver)
+        messages, callers = deliver.flush()
+        for caller in callers:
             if caller.name not in actions_name_map:
                 continue
             action = actions_name_map[caller.name]
-            op = ActionOperator(action=action, arguments=caller.arguments)
+            # todo: with payload
+            deliver = messenger.new(thread=thread)
+            op = action.act(container, deliver, caller.arguments)
+            deliver.flush()
             if op is not None:
-                return thread, op
-        return thread, None
+                return op
+        return None
 
 
 class PipelineRunner(Runner):
     """
-    管道式的 runner.
+    管道式的 runner. 做一个示范.
     """
 
     def __init__(self, pipes: Iterable[Runner]):
         self.pipes = pipes
 
-    def run(self, container: Container, thread: Thread) -> Tuple[Thread, Optional[Operator]]:
+    def run(self, container: Container, messenger: Messenger, thread: Thread) -> Optional[Operator]:
         for pipe in self.pipes:
             # 任意一个 runner 返回 op, 会中断其它的 runner.
-            thread, op = pipe.run(container, thread)
+            thread, op = pipe.run(container, messenger, thread)
             if op is not None:
-                return thread, op
-        return thread, None
+                return op
+        return None

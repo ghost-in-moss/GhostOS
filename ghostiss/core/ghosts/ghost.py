@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.thoughts import Thoughts
     from ghostiss.core.ghosts.minds import MultiTasks, TaskManager
     from ghostiss.core.moss.modules import Modules
-    from ghostiss.core.messages import Messenger
+    from ghostiss.core.ghosts.messenger import Messenger
 
 __all__ = ['Ghost', 'Facade']
 
@@ -112,7 +112,7 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
         )
 
     @abstractmethod
-    def messenger(self, *, deliver: bool = True) -> "Messenger":
+    def messenger(self, saving: bool = True, sending: bool = True) -> "Messenger":
         pass
 
     @abstractmethod
@@ -168,14 +168,14 @@ class Facade:
         发送多条消息. 并且把消息直接加入到当前的 Thread 中间.
         """
         parser = MessageTypeParser()
-        messenger = self.ghost.messenger(deliver=True)
+        session = self.ghost.session
+        thread = session.thread()
+        messenger = self.ghost.messenger().downstream(thread)
         iterator = parser.parse(messages)
         for msg in iterator:
             messenger.deliver(msg)
 
         messages, _ = messenger.flush()
-        session = self.ghost.session
-        thread = session.thread()
         thread.update(messages)
         session.update_thread(thread)
 

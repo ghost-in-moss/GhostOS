@@ -5,12 +5,14 @@ from ghostiss.core.ghosts import (
     LLMRunner,
     Operator,
 )
+from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.core.moss import MOSS, PyContext
-from ghostiss.core.messages import Messenger, DefaultTypes
-from ghostiss.core.runtime.llms import LLMs, LLMApi, Chat
+from ghostiss.core.messages import DefaultTypes
+from ghostiss.core.runtime.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
 from ghostiss.core.runtime.threads import Thread, thread_to_chat
 from ghostiss.helpers import uuid
 from pydantic import BaseModel, Field
+from ghostiss.framework.llms.chatfilters import AssistantNameFilter
 
 
 class MossRunner(LLMRunner):
@@ -20,12 +22,14 @@ class MossRunner(LLMRunner):
 
     def __init__(
             self, *,
+            name: str,
             system_prompt: str,
             instruction: str,
             llm_api_name: str = "",
             pycontext: Optional[PyContext] = None,
             **variables,
     ):
+        self._name = name
         self._system_prompt = system_prompt
         self._instruction = instruction
         self._llm_api_name = llm_api_name
@@ -58,14 +62,17 @@ class MossRunner(LLMRunner):
         for action in actions:
             chat = action.update_chat(chat)
             result_actions.append(action)
+        # 进行一些消息级别的加工.
+        filters = self.filters()
+        chat = filter_chat(chat, filters)
         return result_actions, chat
+
+    def filters(self) -> Iterable[ChatFilter]:
+        yield AssistantNameFilter(name=self._name)
 
     def get_llmapi(self, container: Container) -> LLMApi:
         llms = container.force_fetch(LLMs)
         return llms.get_api(self._llm_api_name)
-
-    def messenger(self, container: Container) -> Messenger:
-        return container.force_fetch(Messenger)
 
 
 class MOSSRunnerTestSuite(BaseModel):
@@ -108,4 +115,3 @@ class MOSSRunnerTestSuite(BaseModel):
         runner = self.get_runner()
         thread = self.thread
         return runner.run(container, thread)
-

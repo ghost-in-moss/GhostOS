@@ -12,7 +12,7 @@ from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.moss import MOSS, BasicMOSSImpl, Interface, BasicModulesProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite
-from ghostiss.core.messages.messenger import TestMessengerProvider
+from ghostiss.core.messages.stream import TestMessengerProvider
 from rich.console import Console
 from rich.panel import Panel
 from rich.json import JSON

@@ -54,13 +54,36 @@ class Thread(BaseModel):
         # todo: iterate messages and add variable message
         return self.pycontext
 
-    def update(self, messages: Iterable[Message], pycontext: Optional[PyContext] = None) -> "Thread":
-        thread = self.model_copy()
+    def fork(self, tid: Optional[str] = None) -> "Thread":
+        tid = tid if tid else uuid()
+        root_id = self.root_id if self.root_id else self.id
+        parent_id = self.id
+        return self.model_copy(update=dict(id=tid, root_id=root_id, parent_id=parent_id))
+
+    def update(self, messages: Iterable[Message], pycontext: Optional[PyContext] = None) -> None:
+        """
+        更新当前的 Thread.
+        :param messages:
+        :param pycontext:
+        :return:
+        """
         if messages:
-            thread.appending.extend(messages)
+            self.appending.extend(messages)
         if pycontext is not None:
-            thread.pycontext = thread.pycontext.join(pycontext)
-        # todo: 验证没有复制污染.
+            self.pycontext = self.pycontext.join(pycontext)
+
+    def updated(self) -> "Thread":
+        """
+        返回一个新的 Thread, inputs 和 appending 都追加到 messages 里.
+        :return:
+        """
+        thread = self.model_copy()
+        if thread.inputs:
+            thread.messages.extend(thread.inputs)
+            thread.inputs = []
+        if thread.appending:
+            thread.messages.extend(thread.appending)
+            thread.appending = []
         return thread
 
 

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional, Union, Callable, Iterable
 from abc import ABC, abstractmethod
 from ghostiss.entity import EntityMeta
-from ghostiss.core.messages import Message, Deliver, Retriever
+from ghostiss.core.messages import Message, Stream, Retriever
 from ghostiss.core.runtime import Runtime
 from ghostiss.core.runtime.tasks import Task, TaskState
 from ghostiss.core.runtime.processes import Process
@@ -27,7 +27,7 @@ class Inputs(BaseModel):
 
 class GhostInShellSystem(ABC):
 
-    def run(self, inputs: Inputs, deliver: Deliver) -> None:
+    def run(self, inputs: Inputs, deliver: Stream) -> None:
         """
         处理同步请求. deliver 的实现应该在外部.
         :param inputs:
@@ -58,7 +58,7 @@ class GhostInShellSystem(ABC):
         self.async_run(lambda: self.run_task_event(task, event, deliver))
 
     @abstractmethod
-    def on_task_lock_failed(self, deliver: Deliver, task: Task, inputs: Inputs) -> None:
+    def on_task_lock_failed(self, deliver: Stream, task: Task, inputs: Inputs) -> None:
         pass
 
     @abstractmethod
@@ -77,7 +77,7 @@ class GhostInShellSystem(ABC):
         pass
 
     @abstractmethod
-    def make_ghost(self, runtime: Runtime, ghost_meta: EntityMeta, deliver: Optional[Deliver]) -> Ghost:
+    def make_ghost(self, runtime: Runtime, ghost_meta: EntityMeta, deliver: Optional[Stream]) -> Ghost:
         pass
 
     @abstractmethod
@@ -141,7 +141,7 @@ class GhostInShellSystem(ABC):
             # todo: log
             e = eventbus.pop_task_event(task.task_id)
 
-    def run_task_event(self, task: Task, e: Event, deliver: Optional[Deliver] = None) -> None:
+    def run_task_event(self, task: Task, e: Event, deliver: Optional[Stream] = None) -> None:
         """
         运行一个任务的事件. 这个方法应该放到某个 thread 里运行.
         :param deliver:
