@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Optional, Tuple, List, Dict
 from ghostiss.container import Container
 from ghostiss.core.ghosts import (
     Action, MOSSAction,
@@ -87,8 +87,7 @@ class MOSSRunnerTestSuite(BaseModel):
     instruction: str = Field(
         description="定义当前 Runner 的 prompt",
     )
-    llm_api_name: str = Field(
-        default="",
+    llm_apis: List = Field(
         description="定义当前 runner 运行时使用的 llm api 是哪一个. ",
     )
     pycontext: PyContext = Field(
@@ -98,7 +97,7 @@ class MOSSRunnerTestSuite(BaseModel):
         description="定义一个上下文. "
     )
 
-    def get_runner(self) -> MossRunner:
+    def get_runner(self, llm_api: str) -> MossRunner:
         """
         从配置文件里生成 runner 的实例.
         """
@@ -106,16 +105,33 @@ class MOSSRunnerTestSuite(BaseModel):
             name=self.agent_name,
             system_prompt=self.system_prompt,
             instruction=self.instruction,
-            llm_api_name=self.llm_api_name,
+            llm_api_name=llm_api,
             pycontext=self.pycontext,
         )
 
-    def run_test(self, container: Container) -> Tuple[Thread, Optional[Operator]]:
+    def run_test(self, container: Container) -> Dict[str, Tuple[Thread, Optional[Operator]]]:
         """
         基于 runner 实例运行测试. 如何渲染交给外部实现.
         """
-        runner = self.get_runner()
-        thread = self.thread
-        messenger = container.force_fetch(Messenger)
-        op = runner.run(container, messenger, thread)
-        return thread, op
+        from threading import Thread
+        parallels = []
+        outputs = {}
+
+        def run(_api, _runner, _messenger, _thread):
+            """
+            定义一个闭包.
+            """
+            _op = _runner.run(container, _messenger, _thread)
+            outputs[_api] = (_thread, _op)
+
+        for llm_api in self.llm_apis:
+            t = Thread(
+                target=run,
+                args=(llm_api, self.get_runner(llm_api), container.force_fetch(Messenger), self.thread.model_copy()),
+            )
+            t.start()
+            parallels.append(t)
+
+        for t in parallels:
+            t.join()
+        return outputs

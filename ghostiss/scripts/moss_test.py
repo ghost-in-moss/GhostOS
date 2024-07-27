@@ -89,7 +89,7 @@ def main() -> None:
     console.print(Panel(thread_json, title="thread info"))
 
     # 然后输出 chat 的讯息.
-    _, chat = suite.get_runner().prepare(container, thread)
+    _, chat = suite.get_runner("").prepare(container, thread)
     messages = chat.get_messages()
     dump = []
     for message in messages:
@@ -97,14 +97,16 @@ def main() -> None:
     thread_json = JSON(json.dumps(dump), indent=2)
     console.print(Panel(thread_json, title="thread to chat"))
 
-    thread, op = suite.run_test(container)
-    appending = thread.appending
-    for msg in appending:
-        content = f"{msg.content} \n\n----\n\n {msg.memory}"
-        panel = Panel(Markdown(content), title="appending message")
-        console.print(panel)
-
-    console.print(Panel(str(op), title="operator output"))
+    results = suite.run_test(container)
+    for api_name, _result in results.items():
+        _thread, _op = _result
+        title = api_name
+        appending = _thread.appending
+        for msg in appending:
+            content = f"{msg.content} \n\n----\n\n {msg.memory}"
+            panel = Panel(Markdown(content), title=f" {title}: appending message")
+            console.print(panel)
+        console.print(Panel(str(_op), title=f" {title}: operator output"))
 
 
 if __name__ == "__main__":
