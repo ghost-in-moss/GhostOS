@@ -27,6 +27,7 @@ def test_default_buffer_baseline():
     buffed = buffer.flush()
     assert len(buffed.messages) == 1
     assert buffed.messages[0].content == content1
+    assert buffed.messages[0].memory is None
 
     new_head = Message.new_head()
     buffer2.buff(new_head)
@@ -41,7 +42,6 @@ def test_default_buffer_baseline():
 
 
 def test_functional_token_baseline():
-
     buffer = DefaultBuffer(
         functional_tokens=[
             FunctionalToken(token=":moss>", caller="moss", description="desc", deliver=False)

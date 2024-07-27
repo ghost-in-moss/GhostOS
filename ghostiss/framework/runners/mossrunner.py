@@ -43,7 +43,7 @@ class MossRunner(LLMRunner):
         if self._pycontext:
             moss.update_context(self._pycontext)
         moss = moss.update_context(thread.pycontext)
-        yield MOSSAction(moss)
+        yield MOSSAction(moss, thread=thread)
 
     def prepare(self, container: Container, thread: Thread) -> Tuple[Iterable[Action], Chat]:
         """
@@ -79,6 +79,7 @@ class MOSSRunnerTestSuite(BaseModel):
     """
     模拟一个 MOSSRunner 的单元测试.
     """
+    agent_name: str = Field(default="")
 
     system_prompt: str = Field(
         description="定义系统 prompt. "
@@ -102,6 +103,7 @@ class MOSSRunnerTestSuite(BaseModel):
         从配置文件里生成 runner 的实例.
         """
         return MossRunner(
+            name=self.agent_name,
             system_prompt=self.system_prompt,
             instruction=self.instruction,
             llm_api_name=self.llm_api_name,
@@ -114,4 +116,6 @@ class MOSSRunnerTestSuite(BaseModel):
         """
         runner = self.get_runner()
         thread = self.thread
-        return runner.run(container, thread)
+        messenger = container.force_fetch(Messenger)
+        op = runner.run(container, messenger, thread)
+        return thread, op

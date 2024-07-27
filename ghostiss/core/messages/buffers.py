@@ -251,6 +251,7 @@ class DefaultBuffer(Buffer):
         return tail
 
     def _wrap_first_pack(self, pack: Message) -> Message:
+        pack = pack.model_copy()
         # 补齐首包的讯息
         if not pack.msg_id:
             # 补齐首包的 uuid.
