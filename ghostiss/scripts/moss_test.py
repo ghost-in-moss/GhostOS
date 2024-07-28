@@ -1,7 +1,6 @@
 import sys
 import argparse
 import os
-import json
 from typing import Optional, Type, ClassVar
 
 import yaml
@@ -15,7 +14,6 @@ from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite
 from ghostiss.core.ghosts.messenger import TestMessengerProvider
 from rich.console import Console
 from rich.panel import Panel
-from rich.json import JSON
 from rich.markdown import Markdown
 
 """
@@ -107,6 +105,15 @@ def main() -> None:
                 title=f"{title}: chat info"
             ),
         )
+        # 用 markdown 输出 chat info.
+        lines = []
+        for msg in _chat.get_messages():
+            content = f"> {msg.role}:\n\n{msg.get_content()}"
+            lines.append(content)
+        console.print(Panel(
+            Markdown("\n\n----\n\n".join(lines)),
+            title=f"{title}: chat info in markdown"
+        ))
         # 输出 appending 的消息.
         appending = _thread.appending
         for msg in appending:
@@ -114,7 +121,7 @@ def main() -> None:
             console.print(
                 Panel(
                     json_format(msg.model_dump_json(exclude_defaults=True, indent=2)),
-                    title=f"{title}: message json",
+                    title=f"{title}: appending message json",
                 ),
             )
             content = f"{msg.content} \n\n----\n\n {msg.memory}"
