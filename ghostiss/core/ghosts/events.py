@@ -21,6 +21,7 @@ class Event(BaseModel, Entity):
     task_id: str = Field(description="task id in which this event shall be handled")
     from_task_id: Optional[str] = Field(default=None, description="task id in which this event is fired")
     priority: float = Field(default=0, description="priority of this event", min_items=0.0, max_items=1.0)
+    instruction: Optional[str] = Field(default=None, description="event instruction")
     messages: List[Message] = Field(default_factory=list)
 
     def event_type(self) -> str:
