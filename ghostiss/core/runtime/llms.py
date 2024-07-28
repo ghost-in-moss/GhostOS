@@ -3,20 +3,22 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Iterable, Dict, Optional, Any, Union, TypeVar, Generic
+from typing import List, Tuple, Iterable, Dict, Optional, Any, Union, TypeVar, Generic, Callable, ClassVar
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, FunctionalToken, Messenger, DefaultTypes
+from ghostiss.core.messages import Message, FunctionalToken, Stream, DefaultTypes, DefaultBuffer, Payload
 
 __all__ = [
-    'Chat',
+    'Chat', 'ChatFilter', 'filter_chat',
     'LLMs', 'LLMDriver', 'LLMApi', 'LLMTool',
     'ModelConf', 'ServiceConf', 'LLMsConfig',
     'Quest',
+    'OPENAI_DRIVER_NAME',
+    'Embedding', 'Embeddings',
 ]
 
 """
@@ -33,10 +35,12 @@ OPENAI_DRIVER_NAME = "ghostiss.llms.openai_driver"
 # ---- config ---- #
 
 
-class ModelConf(BaseModel):
+class ModelConf(Payload):
     """
-    模型的配置.
+    模型的配置. 同时可以直接加入到消息体里.
     """
+    key: ClassVar[str] = "model_conf"
+
     model: str = Field(description="llm model name that service provided")
     service: str = Field(description="llm service name")
     temperature: float = Field(default=0.7, description="temperature")
@@ -137,6 +141,24 @@ class Chat(BaseModel):
                 messages.append(item)
         return messages
 
+    def filter_messages(self, filter_: Callable[[Message], Optional[Message]]) -> None:
+        self.system = self._filter_messages(self.system, filter_)
+        self.history = self._filter_messages(self.history, filter_)
+        self.inputs = self._filter_messages(self.inputs, filter_)
+        self.appending = self._filter_messages(self.appending, filter_)
+        return
+
+    @staticmethod
+    def _filter_messages(
+            messages: Iterable[Message], filter_: Callable[[Message], Optional[Message]]
+    ) -> List[Message]:
+        result = []
+        for item in messages:
+            item = filter_(item)
+            if item is not None:
+                result.append(item)
+        return result
+
     def get_openai_functions(self) -> Union[List[Function], NotGiven]:
         if not self.functions:
             return NOT_GIVEN
@@ -152,6 +174,25 @@ class Chat(BaseModel):
         if self.function_call is None:
             return "auto"
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
+
+
+class ChatFilter(ABC):
+    """
+    用来对 chat filter 做加工.
+    """
+
+    @abstractmethod
+    def filter(self, chat: Chat) -> Chat:
+        pass
+
+
+def filter_chat(chat: Chat, filters: Iterable[ChatFilter]) -> Chat:
+    """
+    通过多个 filter 来加工 chat.
+    """
+    for f in filters:
+        chat = f.filter(chat)
+    return chat
 
 
 # todo: 未来再做这些意义不大的.
@@ -209,6 +250,14 @@ class LLMApi(ABC):
         pass
 
     @abstractmethod
+    def parse_chat(self, chat: Chat) -> Chat:
+        """
+        parse chat by llm api default logic. Functional tokens for example.
+        this method is used to test.
+        """
+        pass
+
+    @abstractmethod
     def text_completion(self, prompt: str) -> str:
         """
         deprecated text completion
@@ -230,19 +279,24 @@ class LLMApi(ABC):
         """
         pass
 
-    def deliver_chat_completion(self, chat: Chat, messenger: Messenger) -> None:
+    def deliver_chat_completion(self, chat: Chat, deliver: Stream) -> None:
         """
         逐个发送消息的包.
         """
+        buffer = DefaultBuffer(functional_tokens=chat.functional_tokens)
         items = self.chat_completion_chunks(chat)
-        downstream = messenger.downstream(functional_tokens=chat.functional_tokens)
         # todo: payload 要计算 tokens
         for item in items:
-            downstream.deliver(item)
-        downstream.stop()
+            sent = buffer.buff(item)
+            for s in sent:
+                deliver.deliver(s)
 
 
 class LLMDriver(ABC):
+    """
+    LLM 的驱动. 比如 OpenAI 基本都使用 OpenAI 库作为驱动.
+    但是其它的一些大模型, 比如文心一言, 有独立的 API 设计.
+    """
 
     @abstractmethod
     def driver_name(self) -> str:

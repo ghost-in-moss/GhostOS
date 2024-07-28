@@ -9,13 +9,32 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostiss.core.errors import GhostissIOError
-from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser
-from ghostiss.core.runtime.llms import LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME
-from ghostiss.core.runtime.llms import Chat
-from ghostiss.core.runtime.llms import Embedding, Embeddings
+from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser, DefaultTypes
+from ghostiss.core.runtime.llms import (
+    LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
+    Chat,
+    Embedding, Embeddings,
+)
 from ghostiss.container import Bootstrapper, Container
 
 __all__ = ['OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper']
+
+FUNCTIONAL_TOKEN_PROMPT = """
+# Functional Token
+You are equipped with `functional tokens` parser when you are outputing.
+
+A functional token is a set of special tokens that corresponds to a system callback function. 
+When a functional token is present in your response, the subsequent output is treated as input parameters for this 
+callback function until another functional token is encountered. 
+
+Below is a list of the functional tokens available for your use:
+
+{tokens}
+
+**Notices**
+1. The existence of functional tokens is unknown to the user. Do not mention their existence.
+2. Use them only when necessary.
+"""
 
 
 class OpenAIAdapter(LLMApi):
@@ -28,6 +47,7 @@ class OpenAIAdapter(LLMApi):
             service_conf: ServiceConf,
             model_conf: ModelConf,
             parser: OpenAIParser,
+            functional_token_prompt: Optional[str] = None,
     ):
         self._service = service_conf
         self._model = model_conf
@@ -43,6 +63,9 @@ class OpenAIAdapter(LLMApi):
             http_client=http_client,
         )
         self._parser = parser
+        if not functional_token_prompt:
+            functional_token_prompt = FUNCTIONAL_TOKEN_PROMPT
+        self._functional_token_prompt = functional_token_prompt
 
     def get_service(self) -> ServiceConf:
         return self._service
@@ -94,12 +117,33 @@ class OpenAIAdapter(LLMApi):
         )
 
     def chat_completion(self, chat: Chat) -> Message:
+        chat = self.parse_chat(chat)
         message: ChatCompletion = self._chat_completion(chat, stream=False)
         return self._parser.from_chat_completion(message.choices[0].message)
 
     def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
+        chat = self.parse_chat(chat)
         messages: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
-        return self._parser.from_chat_completion_chunks(messages)
+        chunks = self._parser.from_chat_completion_chunks(messages)
+        first = True
+        for chunk in chunks:
+            if first:
+                self._model.set(chunk)
+                first = False
+            yield chunk
+
+    def parse_chat(self, chat: Chat) -> Chat:
+        if not chat.functional_tokens:
+            return chat
+        prompt = self._functional_token_prompt
+        lines = []
+        for token in chat.functional_tokens:
+            line = f"- `{token.token}`: {token.description}"
+            lines.append(line)
+        prompt = prompt + "\n\n" + "\n".join(lines)
+        system = DefaultTypes.DEFAULT.new_system(content=prompt)
+        chat.appending.insert(0, system)
+        return chat
 
 
 class OpenAIDriver(LLMDriver):

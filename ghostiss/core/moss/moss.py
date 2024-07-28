@@ -537,7 +537,7 @@ class BasicMOSSImpl(MOSS):
                 define.value = value
             defines.append(define)
         self.__python_context.defines = defines
-        return self.__python_context.model_copy()
+        return self.__python_context.model_copy(deep=True)
 
     def __get_typehint(self, typehint: Any) -> str:
         if not typehint:

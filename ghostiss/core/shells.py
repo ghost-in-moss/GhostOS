@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Type
 from ghostiss.entity import EntityMeta, EntityClass
-from ghostiss.entity import Entity, EntityFactory
-from ghostiss.core.messages.messenger import Deliver
+from ghostiss.entity import EntityFactory
+from ghostiss.core.messages.stream import Stream
 
 __all__ = ['Shell', 'ShellFactory', 'Driver', 'App', 'Envs']
 
@@ -82,7 +82,7 @@ class Shell(ABC):
         pass
 
     @abstractmethod
-    def deliver(self) -> Deliver:
+    def deliver(self) -> Stream:
         """
         消息发送管道.
         """

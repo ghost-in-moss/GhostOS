@@ -53,4 +53,7 @@ class Session(ABC):
 
     @abstractmethod
     def destroy(self) -> None:
+        """
+        手动清理数据, 方便垃圾回收.
+        """
         pass

@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field
 from ghostiss.core.messages.message import Message
 from ghostiss.helpers import uuid
 
+__all__ = [
+    'Event', 'EventFactory', 'EventBus', 'DefaultEventType',
+]
+
 
 class Event(BaseModel, Entity):
     """
@@ -48,6 +52,9 @@ class DefaultEventType(str, Enum):
 
     THINK = "think"
     """自我驱动的思考"""
+
+    FINISHED = "finished"
+    """任务结束时"""
 
     FINISH_CALLBACK = "finish_callback"
     """第三方 task 运行正常, 返回的消息. """

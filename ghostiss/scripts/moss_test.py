@@ -12,10 +12,11 @@ from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.moss import MOSS, BasicMOSSImpl, Interface, BasicModulesProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite
-from ghostiss.core.messages.messenger import TestMessengerProvider
+from ghostiss.core.ghosts.messenger import TestMessengerProvider
 from rich.console import Console
 from rich.panel import Panel
 from rich.json import JSON
+from rich.markdown import Markdown
 
 """
 基于 MOSS Runner 来实现 MOSS 的测试脚本. 
@@ -23,7 +24,6 @@ from rich.json import JSON
 
 
 class MOSSTestProvider(Provider):
-
     moss_doc: ClassVar[str] = """
 Model-oriented Operating System Simulation (MOSS).
 You can use the api that MOSS provided to implement your plan.
@@ -57,6 +57,14 @@ def _prepare_container() -> Container:
     return container
 
 
+def json_format(data: str) -> Markdown:
+    return Markdown(f"""
+```json
+{data}
+```
+""")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="run ghostiss runner test cases which located at demo/ghostiss/tests/moss_tests",
@@ -68,12 +76,7 @@ def main() -> None:
         type=str,
         default="hello_world"
     )
-    parser.add_argument(
-        "--chat", "-a",
-        default=False,
-        action="store_true",
-        help="show chat messages only",
-    )
+
     container = _prepare_container()
     parsed = parser.parse_args(sys.argv[1:])
     storage = container.force_fetch(Storage)
@@ -87,23 +90,38 @@ def main() -> None:
     suite = MOSSRunnerTestSuite(**data)
     # 输出环节.
     console = Console()
-    # 只输出 chat.
-    if parsed.chat:
-        thread = suite.thread
-        _, chat = suite.get_runner().prepare(container, thread)
-        messages = chat.get_messages()
-        dump = []
-        for message in messages:
-            dump.append(message.model_dump(exclude_defaults=True))
-        thread_json = JSON(json.dumps(dump), indent=2)
-        console.print(thread_json)
-        return
 
-    # 执行 test.
-    thread, op = suite.run_test(container)
-    thread_json = JSON(thread.model_dump_json(indent=2, exclude_defaults=True))
-    console.print(Panel(thread_json, title="thread output"))
-    console.print(Panel(str(op), title="operator output"))
+    thread = suite.thread
+    # 先输出 thread 完整信息
+    thread_json = json_format(thread.model_dump_json(indent=2, exclude_defaults=True))
+    console.print(Panel(thread_json, title="thread info"))
+
+    results = suite.run_test(container)
+    for api_name, _result in results.items():
+        _thread, _chat, _op = _result
+        title = api_name
+        # 输出 chat 信息.
+        console.print(
+            Panel(
+                json_format(_chat.model_dump_json(exclude_defaults=True, indent=2)),
+                title=f"{title}: chat info"
+            ),
+        )
+        # 输出 appending 的消息.
+        appending = _thread.appending
+        for msg in appending:
+            # 输出 appending 消息体.
+            console.print(
+                Panel(
+                    json_format(msg.model_dump_json(exclude_defaults=True, indent=2)),
+                    title=f"{title}: message json",
+                ),
+            )
+            content = f"{msg.content} \n\n----\n\n {msg.memory}"
+            # 用 markdown 输出消息的 content 和 memory.
+            panel = Panel(Markdown(content), title=f" {title}: appending message")
+            console.print(panel)
+        console.print(Panel(str(_op), title=f" {title}: operator output"))
 
 
 if __name__ == "__main__":
