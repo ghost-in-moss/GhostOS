@@ -17,6 +17,8 @@ __all__ = [
     'LLMs', 'LLMDriver', 'LLMApi', 'LLMTool',
     'ModelConf', 'ServiceConf', 'LLMsConfig',
     'Quest',
+    'OPENAI_DRIVER_NAME',
+    'Embedding', 'Embeddings',
 ]
 
 """
@@ -244,6 +246,14 @@ class LLMApi(ABC):
     def get_model(self) -> ModelConf:
         """
         get new api with the given api_conf and return new LLMAPI
+        """
+        pass
+
+    @abstractmethod
+    def parse_chat(self, chat: Chat) -> Chat:
+        """
+        parse chat by llm api default logic. Functional tokens for example.
+        this method is used to test.
         """
         pass
 

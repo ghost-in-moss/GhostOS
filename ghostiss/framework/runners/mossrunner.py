@@ -109,7 +109,7 @@ class MOSSRunnerTestSuite(BaseModel):
             pycontext=self.pycontext,
         )
 
-    def run_test(self, container: Container) -> Dict[str, Tuple[Thread, Optional[Operator]]]:
+    def run_test(self, container: Container) -> Dict[str, Tuple[Thread, Chat, Optional[Operator]]]:
         """
         基于 runner 实例运行测试. 如何渲染交给外部实现.
         """
@@ -121,8 +121,11 @@ class MOSSRunnerTestSuite(BaseModel):
             """
             定义一个闭包.
             """
+            _, _chat = _runner.prepare(container, _thread)
+            _llm_api = _runner.get_llmapi(container)
+            _chat = _llm_api.parse_chat(_chat)
             _op = _runner.run(container, _messenger, _thread)
-            outputs[_api] = (_thread, _op)
+            outputs[_api] = (_thread, _chat, _op)
 
         for llm_api in self.llm_apis:
             t = Thread(

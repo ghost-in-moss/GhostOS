@@ -26,6 +26,14 @@ class Action(Identifiable, ABC):
         pass
 
 
+DEFAULT_MOSS_FUNCTIONAL_TOKEN = FunctionalToken(
+    token=":moss>",
+    caller="moss",
+    description="""You can output the complete Python code that MOSS is supposed to run after this token. 
+The system will automatically execute them.""",
+    deliver=False,
+)
+
 class MOSSAction(Action):
     """
     系统内置的 MOSS Action.
@@ -55,9 +63,12 @@ Here is the context provided to you in this turn:
 ```
 """
 
-    def __init__(self, moss: MOSS, thread: Thread):
+    def __init__(self, moss: MOSS, thread: Thread, functional_token: Optional[FunctionalToken] = None):
         self._moss = moss  # .with_vars()
         self._thread = thread
+        if functional_token is None:
+            functional_token = DEFAULT_MOSS_FUNCTIONAL_TOKEN.model_copy(deep=True)
+        self._functional_token = functional_token
 
     def identifier(self) -> Identifier:
         return Identifier(
@@ -66,12 +77,7 @@ Here is the context provided to you in this turn:
 
     def update_chat(self, chat: Chat) -> Chat:
         # update functional tokens
-        function_token = FunctionalToken(
-            token=":moss>",
-            caller="moss",
-            description="",
-            deliver=False,
-        )
+        function_token = self._functional_token
         chat.functional_tokens.append(function_token)
 
         # update code prompt as system message
