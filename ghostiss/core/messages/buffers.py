@@ -216,6 +216,8 @@ class DefaultBuffer(Buffer):
         self._buffering_message_delivered_content += deliver_content
         # 结算环节, 变更 pack 可以输出的 content.
         pack.content = deliver_content
+        if pack.is_empty():
+            return []
         yield pack
 
     def _receive_tail_pack(self, pack: Message) -> Iterable[Message]:
@@ -251,7 +253,8 @@ class DefaultBuffer(Buffer):
         return tail
 
     def _wrap_first_pack(self, pack: Message) -> Message:
-        pack = pack.model_copy()
+        # 首包强拷贝, 用来做一个 buffer.
+        pack = pack.model_copy(deep=True)
         # 补齐首包的讯息
         if not pack.msg_id:
             # 补齐首包的 uuid.

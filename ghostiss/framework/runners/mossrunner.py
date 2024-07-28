@@ -117,7 +117,7 @@ class MOSSRunnerTestSuite(BaseModel):
         parallels = []
         outputs = {}
 
-        def run(_api, _runner, _messenger, _thread):
+        def run(_api: str, _runner: MossRunner, _messenger: Messenger, _thread: Thread):
             """
             定义一个闭包.
             """
@@ -127,7 +127,9 @@ class MOSSRunnerTestSuite(BaseModel):
         for llm_api in self.llm_apis:
             t = Thread(
                 target=run,
-                args=(llm_api, self.get_runner(llm_api), container.force_fetch(Messenger), self.thread.model_copy()),
+                args=(
+                    llm_api, self.get_runner(llm_api), container.force_fetch(Messenger), self.thread.thread_copy()
+                ),
             )
             t.start()
             parallels.append(t)

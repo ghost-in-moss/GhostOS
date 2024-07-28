@@ -99,7 +99,13 @@ class OpenAIAdapter(LLMApi):
 
     def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
         messages: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
-        return self._parser.from_chat_completion_chunks(messages)
+        chunks = self._parser.from_chat_completion_chunks(messages)
+        first = True
+        for chunk in chunks:
+            if first:
+                self._model.set(chunk)
+                first = False
+            yield chunk
 
 
 class OpenAIDriver(LLMDriver):

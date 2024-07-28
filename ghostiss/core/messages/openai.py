@@ -142,13 +142,7 @@ class DefaultOpenAIParser(OpenAIParser):
 
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         # 创建首包, 并发送.
-        first_pack = Message.new_tail(typ=DefaultTypes.CHAT_COMPLETION, role=Role.ASSISTANT)
         for item in messages:
-            # 发送首包.
-            if first_pack is not None:
-                yield first_pack
-                first_pack = None
-
             if len(item.choices) == 0:
                 continue
             choice = item.choices[0]

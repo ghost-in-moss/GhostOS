@@ -1,7 +1,7 @@
 import enum
 import time
 from typing import Optional, Dict, Set, Iterable, Union, List, ClassVar
-from abc import ABC
+from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostiss.helpers import uuid
 
@@ -126,6 +126,27 @@ class Payload(BaseModel, ABC):
 
     def exists(self, message: "Message") -> bool:
         return self.key in message.payloads
+
+
+class PayloadItem(Payload, ABC):
+    """
+    自身可以粘包的特殊 payload.
+    比如 tokens 的计数.
+    """
+
+    @abstractmethod
+    def join(self, payload: "PayloadItem") -> "PayloadItem":
+        pass
+
+    def set(self, message: "Message") -> None:
+        exists = message.payloads.get(self.key, None)
+        if exists is not None:
+            join = self.__class__(**exists)
+            payload = self.join(join)
+            payload.set(message)
+            return
+        super().set(message)
+
 
 
 class Attachment(BaseModel, ABC):
@@ -263,7 +284,7 @@ class Message(BaseModel):
         return self
 
     def get_copy(self) -> "Message":
-        return self.model_copy()
+        return self.model_copy(deep=True)
 
     def update(self, pack: "Message") -> None:
         """

@@ -67,7 +67,29 @@ def test_recursive_exclude_defaults() -> None:
 def test_more_input():
     class Foo(BaseModel):
         foo: str
+
     # allow undefined input
     f = Foo(foo="test", bar="bar")
     assert f.foo == "test"
     assert not hasattr(Foo, "bar")
+
+
+def test_deep_copy() -> None:
+    class Bar(BaseModel):
+        bar: str = "bar"
+
+    class Foo(BaseModel):
+        bars: List[Bar]
+
+    f = Foo(bars=[Bar()])
+    # without deep
+    copied = f.model_copy()
+    f.bars[0].bar = "baz"
+    assert copied.bars[0].bar == "baz"
+
+    # with deep
+    copied = f.model_copy(deep=True)
+    f.bars[0].bar = "fool"
+    assert copied.bars[0].bar == "baz"
+
+

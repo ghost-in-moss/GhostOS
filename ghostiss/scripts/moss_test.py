@@ -103,6 +103,7 @@ def main() -> None:
         title = api_name
         appending = _thread.appending
         for msg in appending:
+            console.print(Panel(JSON(msg.model_dump_json(), indent=2), title=f"{title}: message json"))
             content = f"{msg.content} \n\n----\n\n {msg.memory}"
             panel = Panel(Markdown(content), title=f" {title}: appending message")
             console.print(panel)

@@ -64,3 +64,33 @@ world
     assert flushed.callers[0].name == "moss"
     assert flushed.callers[0].arguments == "\nworld\n"
     assert flushed.messages[0].content == "\nhello\n"
+
+
+def test_buffer_sent():
+    buffer = DefaultBuffer()
+    content = "hello world"
+    count = 0
+    for c in content:
+        msg = Message.new_pack(content=c)
+        sent = buffer.buff(msg)
+        for i in sent:
+            assert not i.is_empty()
+            count += 1
+    assert count == len(content)
+
+
+def test_buffer_sent_one_tail():
+    buffer = DefaultBuffer()
+    content = "hello world"
+    tails = 0
+    for c in content:
+        msg = Message.new_pack(content=c)
+        sent = buffer.buff(msg)
+        for i in sent:
+            if not i.pack:
+                tails += 1
+    buffed = buffer.flush()
+    for i in buffed.unsent:
+        if not i.pack:
+            tails += 1
+    assert tails == 1

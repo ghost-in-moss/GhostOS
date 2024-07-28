@@ -3,14 +3,14 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from typing import List, Tuple, Iterable, Dict, Optional, Any, Union, TypeVar, Generic, Callable
+from typing import List, Tuple, Iterable, Dict, Optional, Any, Union, TypeVar, Generic, Callable, ClassVar
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, FunctionalToken, Stream, DefaultTypes, DefaultBuffer
+from ghostiss.core.messages import Message, FunctionalToken, Stream, DefaultTypes, DefaultBuffer, Payload
 
 __all__ = [
     'Chat', 'ChatFilter', 'filter_chat',
@@ -33,10 +33,12 @@ OPENAI_DRIVER_NAME = "ghostiss.llms.openai_driver"
 # ---- config ---- #
 
 
-class ModelConf(BaseModel):
+class ModelConf(Payload):
     """
-    模型的配置.
+    模型的配置. 同时可以直接加入到消息体里.
     """
+    key: ClassVar[str] = "model_conf"
+
     model: str = Field(description="llm model name that service provided")
     service: str = Field(description="llm service name")
     temperature: float = Field(default=0.7, description="temperature")

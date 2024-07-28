@@ -13,7 +13,7 @@ class AssistantNameFilter(ChatFilter):
     def filter(self, chat: Chat) -> Chat:
         def filter_fn(message: Message) -> Optional[Message]:
             if Role.ASSISTANT.value == message.role and message.name == self._name:
-                message = message.model_copy(update=dict(name=None))
+                message = message.get_copy()
             return message
 
         chat.filter_messages(filter_fn)

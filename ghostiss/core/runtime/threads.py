@@ -58,7 +58,7 @@ class Thread(BaseModel):
         tid = tid if tid else uuid()
         root_id = self.root_id if self.root_id else self.id
         parent_id = self.id
-        return self.model_copy(update=dict(id=tid, root_id=root_id, parent_id=parent_id))
+        return self.model_copy(update=dict(id=tid, root_id=root_id, parent_id=parent_id), deep=True)
 
     def update(self, messages: Iterable[Message], pycontext: Optional[PyContext] = None) -> None:
         """
@@ -72,12 +72,15 @@ class Thread(BaseModel):
         if pycontext is not None:
             self.pycontext = self.pycontext.join(pycontext)
 
+    def thread_copy(self, update: Optional[dict] = None) -> "Thread":
+        return self.model_copy(update=update, deep=True)
+
     def updated(self) -> "Thread":
         """
         返回一个新的 Thread, inputs 和 appending 都追加到 messages 里.
         :return:
         """
-        thread = self.model_copy()
+        thread = self.model_copy(deep=True)
         if thread.inputs:
             thread.messages.extend(thread.inputs)
             thread.inputs = []

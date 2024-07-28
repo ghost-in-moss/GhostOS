@@ -9,5 +9,5 @@ __all__ = [
 def copy_messages(messages: Iterable[Message]) -> List[Message]:
     result = []
     for message in messages:
-        result.append(message.model_copy())
+        result.append(message.model_copy(deep=True))
     return result
