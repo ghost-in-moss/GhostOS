@@ -172,9 +172,9 @@ class DefaultBuffer(Buffer):
         content = pack.content
         pack.content = None
         # 逐个字符进行遍历.
-        buffed_idx = len(self._buffering_token) if self._buffering_message else 0
         deliver_content = ""
         for c in content:
+            buffed_idx = len(self._buffering_token) if self._buffering_message else 0
             # 加上当前的字符, 生成的 buffering token.
             buffering_token = self._buffering_token + c
             buffering_token_length = len(buffering_token)

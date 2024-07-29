@@ -150,8 +150,10 @@ class OpenAIAdapter(LLMApi):
             return chat
         prompt = FunctionalTokenPrompt(self._functional_token_prompt)
         content = prompt.format_tokens(chat.functional_tokens)
-        system = DefaultTypes.DEFAULT.new_system(content=content)
-        chat.appending.append(system)
+        if len(chat.system) == 0:
+            chat.system = [DefaultTypes.DEFAULT.new_system(content=content)]
+        else:
+            chat.system[-1].content += "\n\n" + content
         return chat
 
 

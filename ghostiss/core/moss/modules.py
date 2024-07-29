@@ -49,7 +49,7 @@ class BasicModules(Modules):
             spec_value = module_ins.__dict__[spec]
             if spec_value is None:
                 raise ModuleNotFoundError(f"{spec} is not defined in module {module}")
-            ref = reflect(var=spec_value)
+            ref = reflect(var=spec_value, name=spec)
             if ref:
                 ref.update(module=module, module_spec=spec)
             return ref

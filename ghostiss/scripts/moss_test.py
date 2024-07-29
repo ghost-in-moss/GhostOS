@@ -97,6 +97,7 @@ def main() -> None:
     console.print(Panel(thread_json, title="thread info"))
 
     results = suite.run_test(container)
+    # 输出不同模型生成的 chatinfo.
     for api_name, _result in results.items():
         _thread, _chat, _op = _result
         title = api_name
@@ -116,6 +117,11 @@ def main() -> None:
             Markdown("\n\n----\n\n".join(lines)),
             title=f"{title}: chat info in markdown"
         ))
+
+    # 输出 appending 信息.
+    for api_name, _result in results.items():
+        _thread, _chat, _op = _result
+        title = api_name
         # 输出 appending 的消息.
         appending = _thread.appending
         for msg in appending:
@@ -134,7 +140,7 @@ def main() -> None:
                 if caller.name == "moss":
                     console.print(
                         Panel(
-                            Markdown(caller.arguments),
+                            Markdown("```python\n\n" + caller.arguments + "\n```"),
                             title=f"{title}: generated moss code"
                         )
                     )

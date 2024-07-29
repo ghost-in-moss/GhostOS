@@ -283,13 +283,10 @@ class LLMApi(ABC):
         """
         逐个发送消息的包.
         """
-        buffer = DefaultBuffer(functional_tokens=chat.functional_tokens)
         items = self.chat_completion_chunks(chat)
         # todo: payload 要计算 tokens
         for item in items:
-            sent = buffer.buff(item)
-            for s in sent:
-                deliver.deliver(s)
+            deliver.deliver(item)
 
 
 class LLMDriver(ABC):

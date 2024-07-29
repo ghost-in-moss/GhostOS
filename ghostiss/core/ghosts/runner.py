@@ -64,7 +64,7 @@ class LLMRunner(Runner, ABC):
         # 获取 llm 的 api.
         api = self.get_llmapi(container)
         # todo: with payload
-        deliver = messenger.new(thread=thread)
+        deliver = messenger.new(thread=thread, functional_tokens=chat.functional_tokens)
         api.deliver_chat_completion(chat, deliver)
         messages, callers = deliver.flush()
         for caller in callers:

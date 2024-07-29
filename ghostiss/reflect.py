@@ -712,11 +712,9 @@ def reflect(
             return Library(cls=var, alias=name)
     elif isinstance(var, Callable):
         return Method(caller=var, alias=name)
-    else:
-        name = getattr(var, '__name__', None)
-        if not name:
-            raise AttributeError("reflect attr value without name")
-        return Attr(name=name, value=var)
+    elif not name:
+        raise AttributeError("reflect attr value without name")
+    return Attr(name=name, value=var)
 
 
 def reflects(*args, **kwargs) -> Iterable[Reflection]:

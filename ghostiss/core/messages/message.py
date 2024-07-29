@@ -97,7 +97,7 @@ class FunctionalToken(BaseModel):
     token: str = Field(description="流式输出中标志 caller 的特殊 token. 比如 :moss>\n ")
     caller: str = Field(description="caller 的名字. ")
     description: str = Field(description="functional token 的描述")
-    deliver: bool = Field(description="functional token 后续的信息是否要发送. 可以设置不发送. ")
+    deliver: bool = Field(default=False, description="functional token 后续的信息是否要发送. 可以设置不发送. ")
 
     def new_caller(self, arguments: str) -> "Caller":
         return Caller(

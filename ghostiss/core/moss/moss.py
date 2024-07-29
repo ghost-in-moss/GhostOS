@@ -280,11 +280,16 @@ class BasicMOSSImpl(MOSS):
         self.__context_values: Optional[Dict[str, Any]] = None
         """ 持有上下文中所有的变量. 只有在 bootstrap 之后才会加载. """
 
+        self.__destroyed = False
+
     def destroy(self) -> None:
         """
         防止互相持有, 需要提供一个 destroy 方法.
         """
         # 当前 container 也必须要销毁.
+        if self.__destroyed:
+            return
+        self.__destroyed = True
         self.__container.destroy()
 
         del self.__buffer_print

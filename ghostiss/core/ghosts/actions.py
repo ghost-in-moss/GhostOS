@@ -39,6 +39,7 @@ Notice:
 - The content after this token shall be pure Python code only. 
 - You can send anything directly before this token, not after it.
 - **Never** use ``` to embrace your code.
+- Need not to mention the code you generated to user.
 """.strip(),
     deliver=False,
 )
@@ -74,8 +75,6 @@ the MOSS will automatically execute them.
   (implemented all abstract methods and interface), execution the main method and wait to fetch the result.
 - **Result Handling**: The external system will process the results and manage user interactions. 
   Std output will be buffed by MOSS, you can generate operator to observe them.
-- **Return Operator**: The Operator that main func returns will execute the next step of your thought. 
-  Once it is None, the MOSS will wait for the user's input.
 
 
 Here is the context provided to you in this turn:
@@ -86,8 +85,9 @@ Here is the context provided to you in this turn:
 
 **Notices**
 1. MOSS is a private system only serve for you, never mention it existence.
-2. MOSS code shall be generated in functional token.
+2. MOSS code shall be generated within functional token.
 3. MOSS will automatic execute the main function so you never execute it again.
+4. **Return Operator**: You shall always use method that MOSS provide you to return an Operator from function main. 
 """
 
     def __init__(self, moss: MOSS, thread: Thread, functional_token: Optional[FunctionalToken] = None):
@@ -127,10 +127,14 @@ Here is the context provided to you in this turn:
             # 运行 moss
             pycontext = self._moss.dump_context()
             printed = self._moss.flush()
-            content = f"run moss result: \n {printed}"
+            content = ""
+            if printed:
+                content = f"run moss result: \n {printed}"
             # 生成消息并发送.
-            message = DefaultTypes.DEFAULT.new_assistant(content=content)
-            self._thread.update([message], pycontext)
+            if content:
+                message = DefaultTypes.DEFAULT.new_assistant(content=content)
+                # todo: 这个消息理论上应该发送, 则 message 需要有 debug 模式.
+                self._thread.update([message], pycontext)
         except Exception as e:
             # 将异常作为消息. todo: 完善消息.
             content = f"run moss failed: {e}"

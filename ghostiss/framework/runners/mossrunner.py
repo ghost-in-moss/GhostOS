@@ -141,6 +141,7 @@ class MOSSRunnerTestSuite(BaseModel):
             定义一个闭包.
             """
             _, _chat = _runner.prepare(container, _thread)
+            _messenger = _messenger.new()
             _llm_api = _runner.get_llmapi(container)
             _chat = _llm_api.parse_chat(_chat)
             _op = _runner.run(container, _messenger, _thread)
