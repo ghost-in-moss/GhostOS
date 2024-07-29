@@ -8,7 +8,7 @@ import datetime
 from typing import Callable, List
 from ghostiss.container import Container
 from ghostiss.core.runtime.llms import LLMs
-from ghostiss.core.moss.moss import MOSS, BasicMOSSImpl, BasicMOSSProvider
+from ghostiss.core.moss.moss import MOSS, BasicMOSSImpl, TestMOSSProvider
 from ghostiss.core.moss.modules import BasicModulesProvider
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
@@ -30,7 +30,7 @@ def prepare_container() -> Container:
     container.register(ConfigsByStorageProvider("configs"))
     container.register(ConfigBasedLLMsProvider("llms/llms_conf.yaml"))
 
-    container.register(BasicMOSSProvider())
+    container.register(TestMOSSProvider())
     container.register(BasicModulesProvider())
 
     return container

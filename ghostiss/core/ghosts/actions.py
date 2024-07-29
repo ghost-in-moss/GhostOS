@@ -114,4 +114,7 @@ Here is the context provided to you in this turn:
             content = f"run moss failed: {e}"
             message = DefaultTypes.DEFAULT.new_system(content=content)
             self._thread.update([message])
+        finally:
+            # 将 moss 清空掉.
+            self._moss.destroy()
         return op
