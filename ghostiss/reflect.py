@@ -4,7 +4,6 @@ from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Uni
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
-from ghostiss.core.abc import Descriptive
 
 __all__ = [
 

@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
-from ghostiss.core.moss.reflect import *
+from abc import abstractmethod
+from ghostiss.reflect import *
 
 
 def test_get_callable_definition():

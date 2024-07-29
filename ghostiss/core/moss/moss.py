@@ -1,13 +1,12 @@
 import inspect
-from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type, TypedDict, Callable
-from RestrictedPython import safe_globals
-from types import ModuleType, FunctionType
+from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type, TypedDict
+from types import ModuleType
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostiss.container import Container, CONTRACT
-from ghostiss.core.moss.context import PyContext, Define, Import
+from ghostiss.core.moss.context import PyContext, Variable, Imported
 from ghostiss.core.moss.modules import Modules
-from ghostiss.core.moss.reflect import (
+from ghostiss.reflect import (
     Imported,
     reflect, reflects,
     Reflection, TypeReflection,
@@ -374,7 +373,7 @@ class BasicMOSSImpl(MOSS):
                 self.add_reflection(Model(model=typehint), reassign_name=True)
                 model_name = self.__local_type_names.get(typehint, typehint.__name__)
 
-        d = Define(
+        d = Variable(
             name=name,
             value=defined_value,
             desc=desc,
@@ -385,14 +384,14 @@ class BasicMOSSImpl(MOSS):
         return value
 
     def imports(self, module: str, *specs: str, **aliases: str) -> Dict[str, Any]:
-        imports: List[Import] = []
+        imports: List[Imported] = []
         for spec in specs:
-            imports.append(Import(
+            imports.append(Imported(
                 module=module,
                 spec=spec,
             ))
         for alias, spec in aliases.items():
-            imports.append(Import(
+            imports.append(Imported(
                 module=module,
                 spec=spec,
                 alias=alias,
@@ -517,7 +516,7 @@ class BasicMOSSImpl(MOSS):
             r = reflect(var=value, name=name)
             self.add_reflection(r, reassign_name=False)
 
-        for defined in self.__python_context.defines:
+        for defined in self.__python_context.variables:
             name = defined.name
             real_value = defined.value
             if defined.model:
@@ -530,7 +529,7 @@ class BasicMOSSImpl(MOSS):
 
     def dump_context(self) -> PyContext:
         defines = []
-        for define in self.__python_context.defines:
+        for define in self.__python_context.variables:
             name = define.name
             if name in self.__dict__:
                 value = self.__dict__[name]
@@ -538,7 +537,7 @@ class BasicMOSSImpl(MOSS):
                     value = get_model_object_meta(value)
                 define.value = value
             defines.append(define)
-        self.__python_context.defines = defines
+        self.__python_context.variables = defines
         return self.__python_context.model_copy(deep=True)
 
     def __get_typehint(self, typehint: Any) -> str:

@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-from ghostiss.core.moss.reflect import (
+from ghostiss.reflect import (
     Reflection, reflects,
     Library,
 )
