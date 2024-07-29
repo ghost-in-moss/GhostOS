@@ -27,12 +27,13 @@ class Action(Identifiable, ABC):
 
 
 DEFAULT_MOSS_FUNCTIONAL_TOKEN = FunctionalToken(
-    token=":moss>",
+    token=">moss:",
     caller="moss",
     description="""You can output the complete Python code that MOSS is supposed to run after this token. 
-The system will automatically execute them.""",
+The system will automatically execute them. MOSS-related output is not visible to user.""",
     deliver=False,
 )
+
 
 class MOSSAction(Action):
     """

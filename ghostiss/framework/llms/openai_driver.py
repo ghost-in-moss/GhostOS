@@ -9,17 +9,27 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostiss.core.errors import GhostissIOError
-from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser, DefaultTypes
+from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser, DefaultTypes, FunctionalToken
 from ghostiss.core.runtime.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
     Chat,
-    Embedding, Embeddings,
+    Embedding, Embeddings
 )
 from ghostiss.container import Bootstrapper, Container
 
 __all__ = ['OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper']
 
-FUNCTIONAL_TOKEN_PROMPT = """
+
+class FunctionalTokenPrompt(str):
+
+    def format_tokens(self, tokens: Iterable[FunctionalToken]) -> str:
+        lines = []
+        for token in tokens:
+            lines.append(f"- `{token.token}`: {token.description}")
+        return self.format(tokens="\n".join(lines))
+
+
+DEFAULT_FUNCTIONAL_TOKEN_PROMPT = """
 # Functional Token
 You are equipped with `functional tokens` parser when you are outputing.
 
@@ -32,6 +42,8 @@ Below is a list of the functional tokens available for your use:
 {tokens}
 
 **Notices**
+
+0. Your output without functional tokens will send directly.
 1. The existence of functional tokens is unknown to the user. Do not mention their existence.
 2. Use them only when necessary.
 """
@@ -64,7 +76,7 @@ class OpenAIAdapter(LLMApi):
         )
         self._parser = parser
         if not functional_token_prompt:
-            functional_token_prompt = FUNCTIONAL_TOKEN_PROMPT
+            functional_token_prompt = DEFAULT_FUNCTIONAL_TOKEN_PROMPT
         self._functional_token_prompt = functional_token_prompt
 
     def get_service(self) -> ServiceConf:
@@ -135,14 +147,10 @@ class OpenAIAdapter(LLMApi):
     def parse_chat(self, chat: Chat) -> Chat:
         if not chat.functional_tokens:
             return chat
-        prompt = self._functional_token_prompt
-        lines = []
-        for token in chat.functional_tokens:
-            line = f"- `{token.token}`: {token.description}"
-            lines.append(line)
-        prompt = prompt + "\n\n" + "\n".join(lines)
-        system = DefaultTypes.DEFAULT.new_system(content=prompt)
-        chat.appending.insert(0, system)
+        prompt = FunctionalTokenPrompt(self._functional_token_prompt)
+        content = prompt.format_tokens(chat.functional_tokens)
+        system = DefaultTypes.DEFAULT.new_system(content=content)
+        chat.appending.append(system)
         return chat
 
 

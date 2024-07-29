@@ -275,6 +275,8 @@ class BasicMOSSImpl(MOSS):
             'BaseModel': Imported(BaseModel, module='pydantic'),
             'Field': Imported(Field, module='pydantic'),
             'TypedDict': Imported(TypedDict, module='typing'),
+            'ABC': Imported(ABC),
+            'abstractmethod': Imported(abstractmethod),
         }
 
     def new(self, *named_vars, **variables) -> "MOSS":
