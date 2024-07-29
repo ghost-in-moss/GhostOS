@@ -25,7 +25,7 @@ class FunctionalTokenPrompt(str):
     def format_tokens(self, tokens: Iterable[FunctionalToken]) -> str:
         lines = []
         for token in tokens:
-            lines.append(f"- `{token.token}`: {token.description}")
+            lines.append(f"`{token.token}`: \n\n {token.description}")
         return self.format(tokens="\n".join(lines))
 
 

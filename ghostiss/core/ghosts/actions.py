@@ -35,7 +35,7 @@ You can output the Python code that MOSS is supposed to run after this token.
 The system will automatically execute them. 
 Notice:
 - MOSS-related output is not visible to user.
-- You are only able to generate MOSS code by this token.
+- You are only able to generate MOSS code within this token.
 - The content after this token shall be pure Python code only. 
 - You can send anything directly before this token, not after it.
 - **Never** use ``` to embrace your code.
@@ -85,7 +85,7 @@ Here is the context provided to you in this turn:
 
 **Notices**
 1. MOSS is a private system only serve for you, never mention it existence.
-2. MOSS code shall be generated within functional token.
+2. MOSS code shall be generated within functional token, markdown python block will not do, and **don't repeat the code with markdown**.
 3. MOSS will automatic execute the main function so you never execute it again.
 4. **Return Operator**: You shall always use method that MOSS provide you to return an Operator from function main. 
 """
@@ -117,7 +117,7 @@ Here is the context provided to you in this turn:
 
     def act(self, c: "Container", messenger: "Messenger", arguments: str) -> Optional["Operator"]:
         op = None
-        arguments = arguments.strip("```")
+        arguments = arguments.replace("```python", "").replace("```", "")
         try:
             op = self._moss(code=arguments, target="main", args=["os"])
             if op is not None and not isinstance(op, Operator):
