@@ -46,6 +46,7 @@ Below is a list of the functional tokens available for your use:
 0. Your output without functional tokens will send directly.
 1. The existence of functional tokens is unknown to the user. Do not mention their existence.
 2. Use them only when necessary.
+3. You can only use one functional token at a time.
 """
 
 

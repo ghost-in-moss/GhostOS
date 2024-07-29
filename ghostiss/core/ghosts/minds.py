@@ -45,40 +45,49 @@ class MultiTasks(ABC):
         pass
 
 
-class TaskManager(ABC):
+class Mindflow(ABC):
     """
-
+    这个 library 可以直接管理当前多轮对话里的任务, 通过method 返回的 Operator 会操作系统变更当前任务的状态.
     """
 
     @abstractmethod
-    def fork(self, *quests: Optional[MessageType]) -> Operator:
+    def send(self, *messages: MessageType) -> None:
         """
-        fork 当前的会话, 运行子任务.
-        :param quests:
+        直接发送一条或多条消息.
         """
         pass
 
     @abstractmethod
-    def ask(self, *messages: MessageType) -> Operator:
+    def awaits(self, *questions: MessageType) -> Operator:
         """
-        向上一层提出问题.
-        :param messages:
-        :return:
+        当前任务挂起, 等待下一轮用户输入后重新开始思考.
+        如果使用了 MOSS, awaits 是默认的调度方法.
+        **当你需要等待用户进一步输入时, 请总是调用这个方法.**
+        :param questions: 可以主动向用户提出问题.
         """
         pass
 
     @abstractmethod
-    def finish(self, *messages: MessageType) -> Operator:
+    def observe(self, *args, **kwargs) -> Operator:
         """
-        结束当前任务, 对当前任务进行总结.
-        :param messages:
-        :return:
+        系统会打印这些变量的值, 作为一条新的输入消息让你观察, 开启你的下一轮思考.
+        是实现 Chain of thought 的基本方法.
+        """
+        pass
+
+    @abstractmethod
+    def finish(self, *results: MessageType) -> Operator:
+        """
+        结束当前的任务, 返回任务结果.
+        如果当前任务是持续的, 还要等待更多用户输入, 请使用 awaits.
+        :param results: 发送一条或多条消息作为任务的结论发送给用户.
         """
         pass
 
     @abstractmethod
     def fail(self, *reasons: MessageType) -> Operator:
         """
-        标记当前任务失败, 和失败的原因.
+        标记当前任务失败
+        :param reasons: 发送一条或多条消息告知用户失败的原因.
         """
         pass

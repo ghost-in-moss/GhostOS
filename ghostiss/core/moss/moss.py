@@ -1,4 +1,6 @@
+from __future__ import annotations
 import inspect
+import typing
 from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type, TypedDict
 from types import ModuleType
 from abc import ABC, abstractmethod
@@ -18,6 +20,7 @@ from ghostiss.reflect import (
 from ghostiss.helpers import camel_to_snake
 from ghostiss.container import Provider
 from ghostiss.helpers import BufferPrint
+from ghostiss.core.messages.message import MessageType
 
 AttrTypes = Union[int, float, str, bool, list, dict, None, Provider, ModelType]
 
@@ -42,7 +45,7 @@ class System(ABC):
     @abstractmethod
     def print(self, *args, **kwargs) -> None:
         """
-        replace builtin print
+        replace builtin print, output will add to next message.
         """
         pass
 
@@ -53,7 +56,7 @@ class MOSS(System, ABC):
     full python code interface for large language models
     """
 
-    # --- 创建 MoOS 的方法 --- #
+    # --- 创建 MOSS 的方法 --- #
 
     @abstractmethod
     def new(self, *named_vars, **variables) -> "MOSS":
@@ -69,13 +72,13 @@ class MOSS(System, ABC):
     @abstractmethod
     def update_context(self, context: PyContext) -> "MOSS":
         """
-        为 MoOS 添加更多的变量, 可以覆盖掉之前的.
+        为 MOSS 添加更多的变量, 可以覆盖掉之前的.
         :param context:
         :return:
         """
         pass
 
-    # --- MoOS 默认暴露的基础方法 --- #
+    # --- MOSS 默认暴露的基础方法 --- #
 
     @abstractmethod
     def flush(self) -> str:
@@ -132,7 +135,7 @@ class MOSS(System, ABC):
         def caller1():
            ...
 
-        class MoOS(ABC):
+        class MOSS(ABC):
            '''
            注解
            '''
@@ -220,7 +223,7 @@ class BasicMOSSImpl(MOSS):
     MOSS 的基础实现.
     """
 
-    def __init__(self, *, container: Container, doc: str = ""):
+    def __init__(self, *, container: Container, doc: str = "", pycontext: Optional[PyContext] = None):
         # 重定义自身的 doc.
         if doc:
             self.__doc__ = doc
@@ -234,7 +237,7 @@ class BasicMOSSImpl(MOSS):
         self.__modules: Modules = container.force_fetch(Modules)
         """MOSS 默认使用的 modules, 用来代理 import 相关的逻辑."""
 
-        self.__python_context: PyContext = PyContext()
+        self.__python_context: PyContext = pycontext if pycontext else PyContext()
         """实例话一个 pycontext 容器. 存储可持久化的引用和变量."""
 
         self.__buffer_print: BufferPrint = BufferPrint()
@@ -300,17 +303,21 @@ class BasicMOSSImpl(MOSS):
         del self.__context_prompter
         del self.__context_values
 
-    def _default_kwargs(self) -> Dict[str, Any]:
+    @staticmethod
+    def _default_kwargs() -> Dict[str, Any]:
         """
         MOSS 默认要引用的上下文变量.
         """
         # 目前将最通用的一些类型直接引入.
         return {
+            'typing': Importing(value=typing, module='typing'),
             'BaseModel': Importing(value=BaseModel, module='pydantic'),
             'Field': Importing(value=Field, module='pydantic'),
             'TypedDict': Importing(value=TypedDict, module='typing'),
             'ABC': Importing(value=ABC),
             'abstractmethod': Importing(value=abstractmethod),
+            # reflect 方法会自动将它变成 Typing 类型反射.
+            'MessageType': MessageType,
         }
 
     def new(self, *named_vars, **variables) -> "MOSS":
@@ -459,7 +466,7 @@ class BasicMOSSImpl(MOSS):
             model_name=model_name,
         )
         self.__python_context.add_define(d)
-        self.print(f"> defined attr {name} to MoOS")
+        self.print(f"> defined attr {name} to MOSS")
         return value
 
     def imports(self, module: str, *specs: str, **aliases: str) -> Dict[str, Any]:
@@ -490,7 +497,7 @@ class BasicMOSSImpl(MOSS):
             # 关键: 所有的 import 动作会将引用添加到 pycontext 里, 下轮时默认携带.
             self.__python_context.add_import(imp)
             result[name] = v
-        log += ") # attach to MoOS"
+        log += ") # attach to MOSS"
         self.print(log)
         return result
 
@@ -588,8 +595,8 @@ class BasicMOSSImpl(MOSS):
 
     def update_context(self, context: PyContext) -> "MOSS":
         if self.__bootstrapped:
-            raise RuntimeError("MoOS is already bootstrapped")
-        self.__python_context.join(context)
+            raise RuntimeError("MOSS is already bootstrapped")
+        self.__python_context = self.__python_context.join(context)
         return self
 
     def __bootstrap_py_context(self) -> None:
@@ -597,7 +604,7 @@ class BasicMOSSImpl(MOSS):
         初始化 MOSS 的 py context, 将里面的引用和变量添加到上下文.
         """
         # 解决引用.
-        for imp in self.__python_context.imports:
+        for imp in self.__python_context.imported:
             name = imp.get_name()
             value = self.__modules.imports(imp.module, imp.spec)
             r = reflect(var=value, name=name)
@@ -668,4 +675,7 @@ class TestMOSSProvider(Provider):
         return MOSS
 
     def factory(self, con: Container) -> Optional[CONTRACT]:
-        return BasicMOSSImpl(doc="", container=con)
+        return BasicMOSSImpl(
+            doc="",
+            container=con,
+        )

@@ -11,6 +11,7 @@ __all__ = [
     'Reflection',
     'TypeReflection', 'ValueReflection', 'CallerReflection', 'Importing',
 
+    'Typing',
     'Attr', 'Method',
     'Class', 'Model',
     'ClassPrompter', 'Library', 'Interface',
@@ -40,7 +41,7 @@ ModelType = Union[Type[BaseModel], Type[TypedDict], Type[EntityClass]]
 
 class Reflection(ABC):
     """
-    对任意值的封装, 提供面向 Model 的 Prompt, 并且支持 import Reflection 并且添加到 MoOS
+    对任意值的封装, 提供面向 LLM 的 Prompt, 并且支持 import Reflection 并且添加到 MOSS
     """
 
     def __init__(
@@ -136,41 +137,49 @@ class Reflection(ABC):
 
 class ValueReflection(Reflection, ABC):
     """
-    is value
+    值的反射, 是一个具体的 object 或某个类型的实例.
     """
     pass
 
 
 class TypeReflection(Reflection, ABC):
     """
-    is type
+    类型的反射.
     """
     pass
 
 
 class CallerReflection(Reflection, ABC):
     """
-    is callable
+    callable 对象的反射.
     """
     pass
 
 
 class Importing(Reflection):
+    """
+    特殊的反射类型, 在上下文中没有独立的 prompt, 只有 from xxx import xxx.
+    当类库知识对于 LLM 是先验的情况下, 应该生成这种.
+    """
 
     def __init__(
             self,
             *,
             value: Any,
-            name: Optional[str] = None,
+            alias: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
     ):
         self._cls = value
-        name = name if name else value.__name__
-        module = module if module else value.__module__
-        module_spec = module if module_spec else value.__name__
+        if not module:
+            if inspect.ismodule(value):
+                module = value.__name__
+            else:
+                inspect.getmodulename(value)
+        if not module_spec and not inspect.ismodule(value):
+            module_spec = getattr(value, '__name__', None)
         super().__init__(
-            name=name,
+            name=alias,
             module=module,
             module_spec=module_spec,
         )
@@ -179,7 +188,13 @@ class Importing(Reflection):
         return self._cls
 
     def generate_prompt(self) -> str:
-        return f"from {self._module} import {self._module_spec}"
+        if self._module_spec:
+            prompt = f"from {self._module} import {self._module_spec}"
+        else:
+            prompt = f"import {self._module}"
+        if self._name:
+            prompt += " as " + self._name
+        return prompt
 
 
 class Attr(ValueReflection):
@@ -255,9 +270,28 @@ class Attr(ValueReflection):
         )
 
 
+class Typing(TypeReflection):
+
+    def __init__(
+            self, *,
+            typing: Any,
+            name: Optional[str] = None,
+    ):
+        if not is_typing(typing):
+            raise TypeError(f"'{typing}' is not a typing variable")
+        self._typing = typing
+        super().__init__(name=name)
+
+    def generate_prompt(self) -> str:
+        return f"{self._name} = {self._typing}"
+
+    def value(self) -> Any:
+        return self._typing
+
+
 class Method(CallerReflection):
     """
-    将一个 Callable 对象封装成 Method, 可以添加到 MoOS 上.
+    将一个 Callable 对象封装成 Method, 可以添加到 MOSS 上.
     """
 
     def __init__(
@@ -665,21 +699,24 @@ def reflect(
         return var
 
     elif is_builtin(var):
-        return None
+        return Importing(value=var)
 
     elif is_typing(var):
         if not name:
             raise ValueError('Name must be a non-empty string for typing')
-        return Attr(name=name, value=var)
+        return Typing(name=name, typing=var)
     elif inspect.isclass(var):
         if is_model_class(var):
             return Model(model=var, alias=name)
         else:
-            return Class(cls=var, alias=name)
+            return Library(cls=var, alias=name)
     elif isinstance(var, Callable):
         return Method(caller=var, alias=name)
     else:
-        return None
+        name = getattr(var, '__name__', None)
+        if not name:
+            raise AttributeError("reflect attr value without name")
+        return Attr(name=name, value=var)
 
 
 def reflects(*args, **kwargs) -> Iterable[Reflection]:

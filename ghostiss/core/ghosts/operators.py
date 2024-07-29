@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class Operator(ABC):
-    """系统运行时产生的算子, 会在外层运行. 只允许系统预先创建, 不允许临时实现."""
+    """系统运行时产生的算子, 会在外层运行. 只允许通过已有的系统函数生成, 不允许临时实现."""
 
     @abstractmethod
     def run(self, g: "Ghost") -> Optional["Operator"]:

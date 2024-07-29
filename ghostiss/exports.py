@@ -1,7 +1,8 @@
-from typing import Dict, Optional, Iterable, List
+from typing import Dict, Optional, Iterable, List, Any
 from copy import deepcopy
 from ghostiss.reflect import (
     Reflection, reflects,
+    Attr,
     Interface, Model,
     Library,
 )
@@ -31,6 +32,10 @@ class Exporter:
         self.__deep_copy = deep_copy
         self.__reflections: Dict[str, Reflection] = {}
         self.__reflection_orders: List[str] = []
+
+    def with_attr(self, name: str, value: Any, typehint: Optional[Any] = None) -> "Exporter":
+        attr = Attr(name=name, value=value, typehint=typehint)
+        return self.with_reflection(attr)
 
     def with_reflection(self, reflection: Reflection) -> "Exporter":
         if self.module:

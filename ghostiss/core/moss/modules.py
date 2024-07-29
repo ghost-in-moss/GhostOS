@@ -39,16 +39,19 @@ class BasicModules(Modules):
 
     def imports(self, module: str, spec: str) -> Reflection:
         module_ins = self._imports(module)
-        if EXPORTS_KEY in module_ins:
+        if EXPORTS_KEY in module_ins.__dict__:
             # use EXPORTS instead of the module
-            exports = module_ins[EXPORTS_KEY]
+            exports = module_ins.__dict__[EXPORTS_KEY]
             if isinstance(exports, Exporter):
                 return exports.get(spec)
 
-        if spec in module_ins:
-            spec_value = module_ins[spec]
+        if spec in module_ins.__dict__:
+            spec_value = module_ins.__dict__[spec]
+            if spec_value is None:
+                raise ModuleNotFoundError(f"{spec} is not defined in module {module}")
             ref = reflect(var=spec_value)
-            ref.update(module=module, module_spec=spec)
+            if ref:
+                ref.update(module=module, module_spec=spec)
             return ref
         raise ModuleNotFoundError(f"spec {spec} not found in {module}")
 

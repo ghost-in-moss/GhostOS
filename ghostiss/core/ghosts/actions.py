@@ -30,8 +30,16 @@ class Action(Identifiable, ABC):
 DEFAULT_MOSS_FUNCTIONAL_TOKEN = FunctionalToken(
     token=">moss:",
     caller="moss",
-    description="""You can output the complete Python code that MOSS is supposed to run after this token. 
-The system will automatically execute them. MOSS-related output is not visible to user.""",
+    description="""
+You can output the Python code that MOSS is supposed to run after this token. 
+The system will automatically execute them. 
+Notice:
+- MOSS-related output is not visible to user.
+- You are only able to generate MOSS code by this token.
+- The content after this token shall be pure Python code only. 
+- You can send anything directly before this token, not after it.
+- **Never** use ``` to embrace your code.
+""".strip(),
     deliver=False,
 )
 
@@ -48,18 +56,26 @@ class MOSSAction(Action):
     template: ClassVar[str] = """
 # MOSS 
 
-You are in a Model-oriented Operating System (MOSS) mode. 
-With moss you can use python code to 
+You are equipped with the MOSS (Model-oriented Operating System) that provides tools and thought directions in python interface.
+With MOSS you shall generate a single block of Python code in which defines a function `def main(os: MOSS) -> Operator:`, 
+the MOSS will automatically execute them. 
 
-You are tasked to generate a single block of Python code that defines a function `def main(os: MOSS) -> Operator:`. 
-
-**Directives for Your Task**:
-- **Code Generation Only**: Produce a block of Python code for the `main` function. The interface, class and abstract methods in context are ALREADY implemented in external system, and passed into main as arguments, DON'T implement them or instantiate them again, just invoke them directly on you need.
-- **Format Requirement**: Your output must be a single block of Python code enclosed within triple backticks. Do not include any additional text, comments, or explanations outside this code block. Do not invoke main method by yourself.
+**Directives for MOSS**:
+- **Code Generation Only**: Produce a block of Python code for the `main` function. 
+  The interface, class and abstract methods in context are ALREADY implemented in external system, 
+  and passed into main as arguments, DON'T implement them or instantiate them again, 
+  just invoke them directly on you need.
+- **Format Requirement**: Your output must be a single block of Python code enclosed within triple backticks. 
+  Do not include any additional text, comments, or explanations outside this code block. 
+  Do not invoke main method by yourself.
 
 **External System Responsibilities**:
-- **Execution and Data Fetching**: The external system will concatenate your code with the true context (implemented all abstract methods and interface), execution the main method and wait to fetch the result.
-- **Result Handling**: The external system will process the results and manage user interactions.
+- **Execution and Data Fetching**: The external system will concatenate your code with the true context 
+  (implemented all abstract methods and interface), execution the main method and wait to fetch the result.
+- **Result Handling**: The external system will process the results and manage user interactions. 
+  Std output will be buffed by MOSS, you can generate operator to observe them.
+- **Return Operator**: The Operator that main func returns will execute the next step of your thought. 
+  Once it is None, the MOSS will wait for the user's input.
 
 
 Here is the context provided to you in this turn:
@@ -67,6 +83,11 @@ Here is the context provided to you in this turn:
 ```python
 {code}
 ```
+
+**Notices**
+1. MOSS is a private system only serve for you, never mention it existence.
+2. MOSS code shall be generated in functional token.
+3. MOSS will automatic execute the main function so you never execute it again.
 """
 
     def __init__(self, moss: MOSS, thread: Thread, functional_token: Optional[FunctionalToken] = None):
@@ -96,6 +117,7 @@ Here is the context provided to you in this turn:
 
     def act(self, c: "Container", messenger: "Messenger", arguments: str) -> Optional["Operator"]:
         op = None
+        arguments = arguments.strip("```")
         try:
             op = self._moss(code=arguments, target="main", args=["os"])
             if op is not None and not isinstance(op, Operator):

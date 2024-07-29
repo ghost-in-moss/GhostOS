@@ -17,7 +17,7 @@ class Container:
 
     # dev logs:
     - python 没有好用的 container (或者我没发现), 所以自己先简单封装一个.
-    - 对于 MoOS 而言, Container 也是必要的. 这样可以只把 interface 暴露给 LLM, 但又可以让它使用实例.
+    - 对于 MOSS 而言, Container 也是必要的. 这样可以只把 interface 暴露给 LLM, 但又可以让它使用实例.
     - 仍然需要考虑加入 RAG Memories 来支持. 获取做到 OS 层.
     """
 
