@@ -1,5 +1,4 @@
 from typing import Iterable, Optional, Tuple, List, Dict
-import time
 from ghostiss.container import Container
 from ghostiss.core.ghosts import (
     Action, MOSSAction,
@@ -44,7 +43,7 @@ class MossRunner(LLMRunner):
         if self._variables:
             moss = moss.with_vars(**self._variables)
         if self._pycontext:
-            moss.update_context(self._pycontext)
+            moss = moss.update_context(self._pycontext)
         moss = moss.update_context(thread.pycontext)
         yield MOSSAction(moss, thread=thread)
         # 也遍历上层传入的 actions.
@@ -142,6 +141,7 @@ class MOSSRunnerTestSuite(BaseModel):
             定义一个闭包.
             """
             _, _chat = _runner.prepare(container, _thread)
+            _messenger = _messenger.new()
             _llm_api = _runner.get_llmapi(container)
             _chat = _llm_api.parse_chat(_chat)
             _op = _runner.run(container, _messenger, _thread)

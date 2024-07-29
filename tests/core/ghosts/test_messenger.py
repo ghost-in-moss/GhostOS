@@ -1,6 +1,6 @@
 from ghostiss.core.ghosts.messenger import DefaultMessenger
 from ghostiss.core.runtime.threads import Thread
-from ghostiss.core.messages import Message
+from ghostiss.core.messages import Message, FunctionalToken
 
 
 def test_default_messenger_baseline():
@@ -14,3 +14,32 @@ def test_default_messenger_baseline():
     messenger.flush()
     assert len(thread.appending) == 1
     assert thread.appending[0].content == content
+
+
+def test_messenger_with_moss():
+    functional_tokens = [FunctionalToken(
+        token=">moss:",
+        caller="moss",
+        description="desc",
+        deliver=False,
+    )]
+
+    thread = Thread()
+    messenger = DefaultMessenger(thread=thread, functional_tokens=functional_tokens)
+
+    contents = ["he", "llo >mo", "ss: w", "orld"]
+    content = "".join(contents)
+    for c in contents:
+        msg = Message.new_pack(content=c)
+        messenger.deliver(msg)
+    flushed = messenger.flush()
+    assert len(list(flushed.callers)) > 0
+    message = flushed.messages[0]
+    assert message.content != content
+    assert message.memory == content
+    caller = flushed.callers[0]
+    assert caller.name == "moss"
+    assert caller.arguments == " world"
+
+    assert len(thread.appending) == 1
+    assert len(thread.appending[0].callers) == 1

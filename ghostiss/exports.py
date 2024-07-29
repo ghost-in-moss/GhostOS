@@ -1,18 +1,22 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Iterable, List, Any
+from copy import deepcopy
 from ghostiss.reflect import (
     Reflection, reflects,
+    Attr,
+    Interface, Model,
     Library,
 )
+from ghostiss.helpers import get_calling_module
 
 __all__ = [
-    'EXPORTS_KEY', 'Exports'
+    'EXPORTS_KEY', 'Exporter'
 ]
 
 EXPORTS_KEY = "EXPORTS"
 """如果一个 module 里包含 EXPORTS 变量, 同时是一个 Exports 对象, 则 modules 模块会优先从中获取"""
 
 
-class Exports:
+class Exporter:
     """
     提供一套语法糖方便做链式的 Exports 构建.
     这是一种对类库的封装做法.
@@ -21,16 +25,50 @@ class Exports:
     2. 可以快速生成基本抽象.
     """
 
-    def __init__(self, *args, **kwargs):
-        reflections = reflects(*args, **kwargs)
+    def __init__(self, with_module: bool = True, deep_copy: bool = True):
+        self.module: Optional[str] = None
+        if with_module:
+            self.module = get_calling_module(2)
+        self.__deep_copy = deep_copy
         self.__reflections: Dict[str, Reflection] = {}
-        for reflection in reflections:
-            self.__reflections[reflection.name()] = reflection
+        self.__reflection_orders: List[str] = []
 
-    def with_lib(self, cls: type, alias: str = None) -> "Exports":
-        lib = Library(cls=cls, alias=alias)
-        self.__reflections[lib.name()] = lib
+    def with_attr(self, name: str, value: Any, typehint: Optional[Any] = None) -> "Exporter":
+        attr = Attr(name=name, value=value, typehint=typehint)
+        return self.with_reflection(attr)
+
+    def with_reflection(self, reflection: Reflection) -> "Exporter":
+        if self.module:
+            # 先深拷贝, 避免污染.
+            reflection = deepcopy(reflection)
+            reflection = reflection.update(module=self.module)
+
+        name = reflection.name()
+        self.__reflection_orders.append(name)
+        self.__reflections[name] = reflection
         return self
 
+    def with_model(self, model: type, alias: Optional[str] = None) -> "Exporter":
+        m = Model(model=model, alias=alias)
+        return self.with_reflection(reflection=m)
+
+    def with_lib(self, cls: type, alias: str = None) -> "Exporter":
+        lib = Library(cls=cls, alias=alias)
+        return self.with_reflection(lib)
+
+    def with_itf(self, cls: type, alias: str = None) -> "Exporter":
+        itf = Interface(cls=cls, alias=alias)
+        return self.with_reflection(itf)
+
     def get(self, name: str) -> Optional[Reflection]:
-        return self.__reflections.get(name, None)
+        reflection = self.__reflections.get(name, None)
+        # 每次调用都深拷贝一下, 是不是必要的?
+        if self.__deep_copy and reflection is not None:
+            return deepcopy(reflection)
+        return reflection
+
+    def all(self) -> Iterable[Reflection]:
+        for name in self.__reflection_orders:
+            re = self.get(name)
+            if re:
+                yield re

@@ -5,11 +5,11 @@ from typing import Optional, Type, ClassVar
 
 import yaml
 from ghostiss.container import Container, Provider, CONTRACT
-from ghostiss.core.ghosts import Operator
+from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.moss import MOSS, BasicMOSSImpl, BasicModulesProvider
-from ghostiss.reflect import Interface
+from ghostiss.reflect import Interface, Library
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite
 from ghostiss.core.ghosts.messenger import TestMessengerProvider
@@ -37,6 +37,7 @@ You can use the api that MOSS provided to implement your plan.
     def factory(self, con: Container) -> Optional[CONTRACT]:
         return BasicMOSSImpl(container=con, doc=self.moss_doc).with_vars(
             Interface(cls=Operator),
+            Library(cls=Mindflow),
         )
 
 
@@ -96,6 +97,7 @@ def main() -> None:
     console.print(Panel(thread_json, title="thread info"))
 
     results = suite.run_test(container)
+    # 输出不同模型生成的 chatinfo.
     for api_name, _result in results.items():
         _thread, _chat, _op = _result
         title = api_name
@@ -115,6 +117,11 @@ def main() -> None:
             Markdown("\n\n----\n\n".join(lines)),
             title=f"{title}: chat info in markdown"
         ))
+
+    # 输出 appending 信息.
+    for api_name, _result in results.items():
+        _thread, _chat, _op = _result
+        title = api_name
         # 输出 appending 的消息.
         appending = _thread.appending
         for msg in appending:
@@ -129,6 +136,14 @@ def main() -> None:
             # 用 markdown 输出消息的 content 和 memory.
             panel = Panel(Markdown(content), title=f" {title}: appending message")
             console.print(panel)
+            for caller in msg.callers:
+                if caller.name == "moss":
+                    console.print(
+                        Panel(
+                            Markdown("```python\n\n" + caller.arguments + "\n```"),
+                            title=f"{title}: generated moss code"
+                        )
+                    )
         console.print(Panel(str(_op), title=f" {title}: operator output"))
 
 

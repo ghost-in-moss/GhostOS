@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.events import EventBus
     from ghostiss.core.ghosts.session import Session
     from ghostiss.core.ghosts.thoughts import Thoughts
-    from ghostiss.core.ghosts.minds import MultiTasks, TaskManager
+    from ghostiss.core.ghosts.minds import MultiTasks, Mindflow
     from ghostiss.core.moss.modules import Modules
     from ghostiss.core.ghosts.messenger import Messenger
 
@@ -116,7 +116,7 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
         pass
 
     @abstractmethod
-    def taskmanager(self) -> "TaskManager":
+    def taskmanager(self) -> "Mindflow":
         pass
 
     @abstractmethod

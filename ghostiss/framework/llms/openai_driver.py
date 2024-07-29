@@ -46,6 +46,7 @@ Below is a list of the functional tokens available for your use:
 0. Your output without functional tokens will send directly.
 1. The existence of functional tokens is unknown to the user. Do not mention their existence.
 2. Use them only when necessary.
+3. You can only use one functional token at a time.
 """
 
 
@@ -149,8 +150,10 @@ class OpenAIAdapter(LLMApi):
             return chat
         prompt = FunctionalTokenPrompt(self._functional_token_prompt)
         content = prompt.format_tokens(chat.functional_tokens)
-        system = DefaultTypes.DEFAULT.new_system(content=content)
-        chat.appending.append(system)
+        if len(chat.system) == 0:
+            chat.system = [DefaultTypes.DEFAULT.new_system(content=content)]
+        else:
+            chat.system[-1].content += "\n\n" + content
         return chat
 
 

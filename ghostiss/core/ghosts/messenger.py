@@ -1,7 +1,7 @@
 from typing import Optional, Iterable, NamedTuple, List, Tuple, TYPE_CHECKING, Type
 from abc import ABC, abstractmethod
 from ghostiss.container import Container, Provider
-from ghostiss.core.messages.message import Message, Payload, Attachment, Role, Caller, DefaultTypes
+from ghostiss.core.messages.message import Message, Payload, Attachment, Role, Caller, DefaultTypes, FunctionalToken
 from ghostiss.core.messages.buffers import Buffer, DefaultBuffer
 from ghostiss.core.messages.stream import Stream
 from ghostiss.core.runtime.threads import Thread
@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 
 
 class Buffed(NamedTuple):
-    messages: Iterable["Message"]
+    messages: List["Message"]
     """已经向上游发送的消息"""
 
-    callers: Iterable["Caller"]
+    callers: List["Caller"]
     """过滤出来的 caller. """
 
 
@@ -34,6 +34,7 @@ class Messenger(Stream, ABC):
             buffer: Optional[Buffer] = None,
             payloads: Optional[Iterable[Payload]] = None,
             attachments: Optional[Iterable[Attachment]] = None,
+            functional_tokens: Optional[Iterable[FunctionalToken]] = None
     ) -> "Messenger":
         """
         生成一个新的 Messenger 供发送消息使用. 发送完应该调用 flush 方法.
@@ -43,6 +44,7 @@ class Messenger(Stream, ABC):
         :param buffer: 自定义 buffer, 也可以用于过滤消息.
         :param payloads: 消息默认添加的 payloads.
         :param attachments: 消息默认添加的 attachments.
+        :param functional_tokens: 是否添加 functional tokens.
         :return: 返回一个新的 messenger.
         """
         pass
@@ -71,6 +73,7 @@ class DefaultMessenger(Messenger, Stream):
             buffer: Optional[Buffer] = None,
             payloads: Optional[Iterable[Payload]] = None,
             attachments: Optional[Iterable[Attachment]] = None,
+            functional_tokens: Optional[Iterable[FunctionalToken]] = None,
             logger: Optional["LoggerItf"] = None,
     ):
         self._thread = thread
@@ -85,13 +88,14 @@ class DefaultMessenger(Messenger, Stream):
         self._attachments: Optional[Iterable[Attachment]] = attachments
         """消息体默认的附件. """
         self._downstream_messenger: Optional["Messenger"] = None
+        self._functional_tokens = functional_tokens
         if buffer is None:
             buffer = DefaultBuffer(
                 name=self._name,
                 role=self._role,
                 payloads=self._payloads,
                 attachments=self._attachments,
-
+                functional_tokens=self._functional_tokens,
             )
         self._buffer: Buffer = buffer
 
@@ -103,6 +107,7 @@ class DefaultMessenger(Messenger, Stream):
             buffer: Optional[Buffer] = None,
             payloads: Optional[Iterable[Payload]] = None,
             attachments: Optional[Iterable[Attachment]] = None,
+            functional_tokens: Optional[Iterable[FunctionalToken]] = None,
     ) -> "Messenger":
         # payloads 完成初始化.
         _payloads = None
@@ -128,6 +133,7 @@ class DefaultMessenger(Messenger, Stream):
         # 如果能传输数据, 则传递上游的 upstream.
         upstream = self._upstream if sending else None
         thread = thread if thread else self._thread
+        functional_tokens = functional_tokens if functional_tokens else self._functional_tokens
         messenger = DefaultMessenger(
             upstream=upstream,
             thread=thread,
@@ -136,6 +142,7 @@ class DefaultMessenger(Messenger, Stream):
             buffer=buffer,
             payloads=_payloads,
             attachments=_attachments,
+            functional_tokens=functional_tokens,
         )
         return messenger
 

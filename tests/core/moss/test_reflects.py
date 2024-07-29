@@ -102,7 +102,7 @@ class Foo1(Foo):
         Library(
             cls=Foo1,
             doc="test",
-            methods=[],
+            include_methods=[],
         ),
         """
 class Foo1(Foo):
@@ -134,7 +134,7 @@ class Foo(ABC):
         Library(
             cls=Foo,
             doc="",
-            methods=[],
+            include_methods=[],
         ),
         """
 class Foo(ABC):

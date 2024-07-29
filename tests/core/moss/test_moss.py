@@ -1,6 +1,6 @@
 import inspect
 
-from ghostiss.core.moss.moss import MOSS, BasicMOSSImpl, BasicMOSSProvider
+from ghostiss.core.moss.moss import MOSS, BasicMOSSImpl, TestMOSSProvider
 from ghostiss.core.moss.modules import BasicModulesProvider
 from ghostiss.container import Container
 from pydantic import BaseModel
@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 def prepare_container() -> Container:
     container = Container()
-    container.register(BasicMOSSProvider())
+    container.register(TestMOSSProvider())
     container.register(BasicModulesProvider())
     return container
 

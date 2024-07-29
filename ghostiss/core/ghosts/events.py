@@ -6,6 +6,7 @@ from ghostiss.entity import EntityMeta, Entity, EntityFactory
 from pydantic import BaseModel, Field
 from ghostiss.core.messages.message import Message
 from ghostiss.helpers import uuid
+from ghostiss.exports import Exporter
 
 __all__ = [
     'Event', 'EventFactory', 'EventBus', 'DefaultEventType',
@@ -132,3 +133,10 @@ class EventBus(ABC):
     @abstractmethod
     def pop_global_event(self) -> Optional[Event]:
         pass
+
+
+EXPORTS = Exporter().\
+    with_model(Event).\
+    with_lib(EventBus).\
+    with_lib(EventFactory)
+
