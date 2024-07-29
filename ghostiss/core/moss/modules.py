@@ -4,7 +4,7 @@ from types import ModuleType
 from typing import Optional, Type
 
 from ghostiss.reflect import reflect, Reflection
-from ghostiss.exports import EXPORTS_KEY, Exports
+from ghostiss.exports import EXPORTS_KEY, Exporter
 from ghostiss.container import Provider, Container, CONTRACT
 
 
@@ -42,7 +42,7 @@ class BasicModules(Modules):
         if EXPORTS_KEY in module_ins:
             # use EXPORTS instead of the module
             exports = module_ins[EXPORTS_KEY]
-            if isinstance(exports, Exports):
+            if isinstance(exports, Exporter):
                 return exports.get(spec)
 
         if spec in module_ins:

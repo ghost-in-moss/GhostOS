@@ -8,6 +8,7 @@ from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.abc import Identifiable, Identifier
 from ghostiss.core.runtime.threads import Thread
+from pydantic import BaseModel, Field
 
 
 class Action(Identifiable, ABC):
@@ -33,6 +34,10 @@ DEFAULT_MOSS_FUNCTIONAL_TOKEN = FunctionalToken(
 The system will automatically execute them. MOSS-related output is not visible to user.""",
     deliver=False,
 )
+
+
+class MOSSArgument(BaseModel):
+    code: str = Field(description="generated moss code that include `def main(os: MOSS) -> Operator`")
 
 
 class MOSSAction(Action):
@@ -99,7 +104,8 @@ Here is the context provided to you in this turn:
 
             # 运行 moss
             pycontext = self._moss.dump_context()
-            content = self._moss.flush()
+            printed = self._moss.flush()
+            content = f"run moss result: \n {printed}"
             # 生成消息并发送.
             message = DefaultTypes.DEFAULT.new_assistant(content=content)
             self._thread.update([message], pycontext)

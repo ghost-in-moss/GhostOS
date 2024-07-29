@@ -9,7 +9,7 @@ __all__ = [
 
     'BasicTypes', 'ModelType', 'ModelObject',
     'Reflection',
-    'TypeReflection', 'ValueReflection', 'CallerReflection', 'Imported',
+    'TypeReflection', 'ValueReflection', 'CallerReflection', 'Importing',
 
     'Attr', 'Method',
     'Class', 'Model',
@@ -84,12 +84,12 @@ class Reflection(ABC):
         """
         get the prompt of the reflection
         """
-        if self._prompt:
-            return self._prompt
-        return self._generate_prompt()
+        if not self._prompt:
+            self._prompt = self.generate_prompt()
+        return self._prompt
 
     @abstractmethod
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         pass
 
     def module(self) -> Optional[str]:
@@ -155,19 +155,20 @@ class CallerReflection(Reflection, ABC):
     pass
 
 
-class Imported(Reflection):
+class Importing(Reflection):
 
     def __init__(
             self,
-            cls: Any,
+            *,
+            value: Any,
             name: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
     ):
-        self._cls = cls
-        name = name if name else cls.__name__
-        module = module if module else cls.__module__
-        module_spec = module if module_spec else cls.__name__
+        self._cls = value
+        name = name if name else value.__name__
+        module = module if module else value.__module__
+        module_spec = module if module_spec else value.__name__
         super().__init__(
             name=name,
             module=module,
@@ -177,7 +178,7 @@ class Imported(Reflection):
     def value(self) -> Any:
         return self._cls
 
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         return f"from {self._module} import {self._module_spec}"
 
 
@@ -232,7 +233,7 @@ class Attr(ValueReflection):
     def value(self) -> Any:
         return self._value
 
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         comments = parse_comments(self._comments)
         name = self.name()
         import_from = get_import_comment(self._module, self._module_spec, self.name())
@@ -298,7 +299,7 @@ class Method(CallerReflection):
     def value(self) -> Callable:
         return self._caller
 
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         caller = self._typehint if self._typehint else self._caller
         prompt = parse_callable_to_method_def(caller=caller, alias=self.name(), doc=self._doc)
         comments = parse_comments(self._comments)
@@ -341,7 +342,7 @@ class Model(TypeReflection):
     def value(self) -> Any:
         return self._model
 
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         source = inspect.getsource(self._model)
         prompt = strip_source_indent(source)
         comments = parse_comments(self._comments)
@@ -390,7 +391,7 @@ class Class(TypeReflection):
     def value(self) -> type:
         return self._cls
 
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         comments = parse_comments(self._comments)
         implementation = get_extends_comment(self._extends)
         import_from = get_import_comment(self._module, self._module_spec, self.name())
@@ -443,7 +444,7 @@ class ClassPrompter(Class):
             extends=extends,
         )
 
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         cls = self._typehint if self._typehint else self._cls
         source = inspect.getsource(cls)
         doc = self._doc
@@ -519,7 +520,7 @@ class Library(ClassPrompter):
             self, *,
             cls: type,
             alias: Optional[str] = None,
-            methods: Optional[Iterable[str]] = None,
+            include_methods: Optional[Iterable[str]] = None,
             doc: Optional[str] = None,
             comments: Optional[str] = None,
             module: Optional[str] = None,
@@ -527,8 +528,8 @@ class Library(ClassPrompter):
             extends: Optional[List[Any]] = None,
     ):
         allows = None
-        if methods is not None:
-            allows = set(methods)
+        if include_methods is not None:
+            allows = set(include_methods)
         target = cls
         members = inspect.getmembers(target, predicate=is_public_callable)
         members = [] if members is None else members
@@ -572,7 +573,7 @@ class Interface(Library):
         super().__init__(
             cls=cls,
             alias=alias,
-            methods=[],
+            include_methods=[],
             doc=doc,
             comments=comments,
             module=module,
@@ -590,7 +591,7 @@ class Locals(ValueReflection):
             self,
             methods: Optional[Iterable[CallerReflection]] = None,
             types: Optional[Iterable[TypeReflection]] = None,
-            imported: Optional[Iterable[Imported]] = None,
+            imported: Optional[Iterable[Importing]] = None,
             prompt: Optional[str] = None,
     ):
         self.__imported = imported
@@ -621,7 +622,7 @@ class Locals(ValueReflection):
             result[name] = reflection.value()
         return result
 
-    def _generate_prompt(self) -> str:
+    def generate_prompt(self) -> str:
         prompts = []
         imported: Dict[str, List[str]] = {}
         modules = []

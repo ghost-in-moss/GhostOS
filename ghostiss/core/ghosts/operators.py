@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
+from ghostiss.exports import Exporter
 
 if TYPE_CHECKING:
     from ghostiss.core.ghosts.ghost import Ghost
@@ -7,9 +8,7 @@ if TYPE_CHECKING:
 
 
 class Operator(ABC):
-    """
-    变更上下文.
-    """
+    """系统运行时产生的算子, 会在外层运行. 只允许系统预先创建, 不允许临时实现."""
 
     @abstractmethod
     def run(self, g: "Ghost") -> Optional["Operator"]:
@@ -73,3 +72,7 @@ class FinishOperator(Operator):
 
 class WaitOperator(Operator):
     pass
+
+
+EXPORTS = Exporter(). \
+    with_itf(Operator)

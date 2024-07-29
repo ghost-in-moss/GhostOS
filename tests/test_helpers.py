@@ -16,3 +16,10 @@ def test_camel_to_snake():
     for origin, expect in cases:
         assert helpers.camel_to_snake(origin) == expect
 
+
+def test_get_calling_module():
+    module = helpers.get_calling_module(1)
+    assert module == "test_helpers"
+
+    module = helpers.get_calling_module_test()
+    assert module == "ghostiss.helpers"

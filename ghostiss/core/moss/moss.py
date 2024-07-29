@@ -7,7 +7,7 @@ from ghostiss.container import Container, CONTRACT
 from ghostiss.core.moss.context import PyContext, Variable, Imported
 from ghostiss.core.moss.modules import Modules
 from ghostiss.reflect import (
-    Imported,
+    Importing,
     reflect, reflects,
     Reflection, TypeReflection,
     Model, ModelType, ModelObject,
@@ -188,12 +188,12 @@ class MOSS(System, ABC):
         for key, attr in local_values.items():
             setattr(temp, key, attr)
 
-        compiled = compile(code, filename='<MOSS>',
-                           mode='exec')  # use compile() can found some error at compile stage, and compile() provides the flexibility by pass the 'mode'
+        compiled = compile(code, filename='<MOSS>', mode='exec')
+        # use compile() can found some error at compile stage, and compile() provides the flexibility by pass the 'mode'
         # If exec gets two separate objects as globals and locals,
         # the code will be executed as if it were embedded in a class definition.
-        exec(compiled,
-             temp.__dict__)  # the second positional arguments of exec() is global named space (it storages global variables)
+        exec(compiled, temp.__dict__)
+        # the second positional arguments of exec() is global named space (it storages global variables)
 
         if (args is not None or kwargs is not None) and target is not None:
             caller = getattr(temp, target)
@@ -241,7 +241,7 @@ class BasicMOSSImpl(MOSS):
         self.__methods: Dict[str, Method] = {}
         self.__local_types: Dict[str, TypeReflection] = {}
         self.__local_type_names: Dict[type, str] = {}
-        self.__imported: List[Imported] = []
+        self.__imported: List[Importing] = []
 
         self.__reassign_name_idx: int = 1
 
@@ -271,11 +271,11 @@ class BasicMOSSImpl(MOSS):
 
     def _default_kwargs(self) -> Dict[str, Any]:
         return {
-            'BaseModel': Imported(BaseModel, module='pydantic'),
-            'Field': Imported(Field, module='pydantic'),
-            'TypedDict': Imported(TypedDict, module='typing'),
-            'ABC': Imported(ABC),
-            'abstractmethod': Imported(abstractmethod),
+            'BaseModel': Importing(value=BaseModel, module='pydantic'),
+            'Field': Importing(value=Field, module='pydantic'),
+            'TypedDict': Importing(value=TypedDict, module='typing'),
+            'ABC': Importing(value=ABC),
+            'abstractmethod': Importing(value=abstractmethod),
         }
 
     def new(self, *named_vars, **variables) -> "MOSS":
@@ -324,7 +324,7 @@ class BasicMOSSImpl(MOSS):
         self.__reflection_names.append(name)
 
         # 正式添加.
-        if isinstance(reflection, Imported):
+        if isinstance(reflection, Importing):
             self.__imported.append(reflection)
         elif isinstance(reflection, Attr):
             self.__add_attr(reflection)
@@ -398,7 +398,7 @@ class BasicMOSSImpl(MOSS):
             ))
 
         log = f"> from {module} import ("
-        result = {}
+        result: Dict[str, Any] = {}
         for imp in imports:
             v = self.__importer.imports(imp.module, imp.spec)
             alias = imp.alias
