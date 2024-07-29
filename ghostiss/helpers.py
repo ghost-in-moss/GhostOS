@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Callable
+
+import sys
+from typing import Callable, Any
 from uuid import uuid4
 from contextlib import redirect_stdout
 import io
@@ -76,3 +78,16 @@ class BufferPrint:
 
     def buffer(self) -> str:
         return self._buffer.getvalue()
+
+
+def import_from_str(module_spec: str) -> Any:
+    parts = module_spec.split(':', 2)
+    module = parts[0]
+    spec = parts[1] if len(parts) > 1 else None
+    from importlib import import_module
+    imported_module = import_module(module)
+    if spec:
+        if spec in imported_module:
+            return getattr(imported_module, spec)
+        raise ModuleNotFoundError(f"No spec named {spec} in module {module}")
+    return imported_module

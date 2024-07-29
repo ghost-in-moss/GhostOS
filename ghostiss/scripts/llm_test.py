@@ -30,7 +30,7 @@ def main() -> None:
         "--case", "-c",
         help="file name of the case without .yaml suffix",
         type=str,
-        default="multi_methods_program"
+        default="hello_world"
     )
     parsed = parser.parse_args(sys.argv[1:])
     container = _prepare_container()

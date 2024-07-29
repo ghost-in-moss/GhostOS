@@ -10,7 +10,7 @@ __all__ = [
     "MessageClass",
     "MessageType", "MessageTypeParser",
     "FunctionalToken",
-    "Payload", "Attachment", "Caller",
+    "Payload", "PayloadItem", "Attachment", "Caller",
 ]
 
 
@@ -148,7 +148,6 @@ class PayloadItem(Payload, ABC):
         super().set(message)
 
 
-
 class Attachment(BaseModel, ABC):
     """
     消息上可以追加的附件.
@@ -188,7 +187,7 @@ class Message(BaseModel):
 
     msg_id: str = Field(default="", description="消息的全局唯一 id. ")
     type: str = Field(default="", description="消息类型是对 payload 的约定. 默认的 type就是 text.")
-    created: int = Field(default=0, description="Message creation time")
+    created: float = Field(default=0.0, description="Message creation time")
     pack: bool = Field(default=True, description="Message reset time")
 
     role: str = Field(default=Role.ASSISTANT.value, description="Message role", enum=Role.all())
@@ -204,6 +203,9 @@ class Message(BaseModel):
 
     callers: List[Caller] = Field(default_factory=list, description="将 callers 作为一种单独的类型. ")
 
+    pack_count: int = Field(default=0, description="pack count")
+    time_cast: float = Field(default=0.0, description="from first pack to last pack")
+
     @classmethod
     def new_head(
             cls, *,
@@ -218,7 +220,7 @@ class Message(BaseModel):
         if msg_id is None:
             msg_id = uuid()
         if created <= 0:
-            created = int(time.time())
+            created = round(time.time(), 4)
         return cls(
             role=role, name=name, content=content, memory=memory, pack=True,
             type=typ,
@@ -236,7 +238,6 @@ class Message(BaseModel):
             msg_id: Optional[str] = None,
             created: int = 0,
     ):
-
         msg = cls.new_head(
             role=role, name=name, content=content, memory=memory,
             typ=typ,
@@ -318,6 +319,10 @@ class Message(BaseModel):
                 self.attachments[key] = saved
         if pack.callers:
             self.callers.extend(pack.callers)
+        self.pack_count += 1
+        if self.created:
+            now = round(time.time(), 4)
+            self.time_cast = round(now - self.created, 4)
 
     def get_type(self) -> str:
         """

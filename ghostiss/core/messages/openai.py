@@ -1,6 +1,8 @@
-from typing import Iterable, Optional, Type
+import time
+from typing import Iterable, Optional, Type, ClassVar
 from abc import ABC, abstractmethod
 from openai.types.chat.chat_completion_chunk import ChoiceDelta, ChatCompletionChunk
+from openai.types.completion_usage import CompletionUsage
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
 from openai.types.chat.chat_completion_assistant_message_param import ChatCompletionAssistantMessageParam, FunctionCall
@@ -9,8 +11,9 @@ from openai.types.chat.chat_completion_system_message_param import ChatCompletio
 from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 
-from ghostiss.core.messages.message import Message, DefaultTypes, Role, Caller
+from ghostiss.core.messages.message import Message, DefaultTypes, Role, Caller, PayloadItem
 from ghostiss.container import Provider, Container, CONTRACT
+from pydantic import BaseModel, Field
 
 __all__ = ["OpenAIParser", "DefaultOpenAIParser", "DefaultOpenAIParserProvider"]
 
@@ -49,6 +52,24 @@ class OpenAIParser(ABC):
         将 openai 的 delta 转换过来.
         """
         pass
+
+
+class CompletionUsagePayload(CompletionUsage, PayloadItem):
+    """
+    将每个包的开销记录下来.
+    """
+    key: ClassVar[str] = "completion_usage"
+
+    @classmethod
+    def from_chunk(cls, message: ChatCompletionChunk) -> Optional["CompletionUsagePayload"]:
+        if message.usage is not None:
+            return cls(**message.usage.model_dump(exclude_defaults=True))
+        return None
+
+    def join(self, payload: "CompletionUsagePayload") -> "CompletionUsagePayload":
+        self.completion_tokens += payload.completion_tokens
+        self.total_tokens = self.completion_tokens + self.prompt_tokens
+        return self
 
 
 class DefaultOpenAIParser(OpenAIParser):
@@ -142,16 +163,27 @@ class DefaultOpenAIParser(OpenAIParser):
 
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         # 创建首包, 并发送.
+        first = True
         for item in messages:
             if len(item.choices) == 0:
-                continue
-            choice = item.choices[0]
-            delta = choice.delta
-            yield self._new_pack_from_delta(delta)
+                # 接受到了 openai 协议尾包.
+                usage = CompletionUsagePayload.from_chunk(item)
+                pack = Message.new_pack(role=Role.ASSISTANT.value, typ=DefaultTypes.CHAT_COMPLETION)
+                usage.set(pack)
+                yield pack
+            else:
+                choice = item.choices[0]
+                delta = choice.delta
+                pack = self._new_pack_from_delta(delta, first)
+                yield pack
+            first = False
 
     @staticmethod
-    def _new_pack_from_delta(delta: ChoiceDelta) -> Message:
-        pack = Message.new_pack(role="assistant", content=delta.content)
+    def _new_pack_from_delta(delta: ChoiceDelta, first: bool) -> Message:
+        if first:
+            pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content, typ=DefaultTypes.CHAT_COMPLETION)
+        else:
+            pack = Message.new_pack(role=Role.ASSISTANT.value, content=delta.content, typ=DefaultTypes.CHAT_COMPLETION)
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())

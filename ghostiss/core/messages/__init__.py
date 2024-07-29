@@ -1,6 +1,6 @@
 from ghostiss.core.messages.message import (
     Message, Role, DefaultTypes,
-    Caller, Payload, Attachment,
+    Caller, Payload, PayloadItem, Attachment,
     FunctionalToken,
     MessageClass, MessageType, MessageTypeParser,
 )
