@@ -6,7 +6,7 @@ from ghostiss.core.messages import FunctionalToken, DefaultTypes
 from ghostiss.core.moss import MOSS
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.messenger import Messenger
-from ghostiss.core.abc import Identifiable, Identifier
+from ghostiss.abc import Identifiable, Identifier
 from ghostiss.core.runtime.threads import Thread
 
 

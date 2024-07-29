@@ -24,6 +24,8 @@ class LLMsImpl(LLMs):
         self._default_driver = default_driver
         self._apis: Dict[str, LLMApi] = {}
         self._default_llm_model: ModelConf = conf.default
+        if self._default_llm_model is None:
+            raise AttributeError("llms conf must contains default model conf")
 
         if drivers:
             for driver in drivers:
@@ -77,6 +79,8 @@ class LLMsImpl(LLMs):
             model_conf = self._llm_models.get(api_name, None)
         else:
             model_conf = self._default_llm_model
+        if model_conf is None:
+            raise AttributeError(f"model conf {api_name} not found in llms conf")
 
         service_conf = self._llm_services.get(model_conf.service, None)
         if service_conf is None:

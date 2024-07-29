@@ -8,7 +8,8 @@ from ghostiss.container import Container, Provider, CONTRACT
 from ghostiss.core.ghosts import Operator
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
-from ghostiss.core.moss import MOSS, BasicMOSSImpl, Interface, BasicModulesProvider
+from ghostiss.core.moss import MOSS, BasicMOSSImpl, BasicModulesProvider
+from ghostiss.reflect import Interface
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite
 from ghostiss.core.ghosts.messenger import TestMessengerProvider

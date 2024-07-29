@@ -1,4 +1,5 @@
 from typing import Iterable, Optional, Tuple, List, Dict
+import time
 from ghostiss.container import Container
 from ghostiss.core.ghosts import (
     Action, MOSSAction,
@@ -10,7 +11,7 @@ from ghostiss.core.moss import MOSS, PyContext
 from ghostiss.core.messages import DefaultTypes
 from ghostiss.core.runtime.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
 from ghostiss.core.runtime.threads import Thread, thread_to_chat
-from ghostiss.helpers import uuid
+from ghostiss.helpers import uuid, import_from_str
 from pydantic import BaseModel, Field
 from ghostiss.framework.llms.chatfilters import AssistantNameFilter
 
@@ -27,6 +28,7 @@ class MossRunner(LLMRunner):
             instruction: str,
             llm_api_name: str = "",
             pycontext: Optional[PyContext] = None,
+            actions: Optional[List[Action]] = None,
             **variables,
     ):
         self._name = name
@@ -35,6 +37,7 @@ class MossRunner(LLMRunner):
         self._llm_api_name = llm_api_name
         self._pycontext = pycontext
         self._variables = variables
+        self._actions = actions
 
     def actions(self, container: Container, thread: Thread) -> Iterable[Action]:
         moss = container.force_fetch(MOSS)
@@ -44,6 +47,10 @@ class MossRunner(LLMRunner):
             moss.update_context(self._pycontext)
         moss = moss.update_context(thread.pycontext)
         yield MOSSAction(moss, thread=thread)
+        # 也遍历上层传入的 actions.
+        if self._actions:
+            for action in self._actions:
+                yield action
 
     def prepare(self, container: Container, thread: Thread) -> Tuple[Iterable[Action], Chat]:
         """
@@ -96,16 +103,29 @@ class MOSSRunnerTestSuite(BaseModel):
     thread: Thread = Field(
         description="定义一个上下文. "
     )
+    actions: List[str] = Field(
+        default_factory=list,
+        description="use module:spec pattern to import action instances. such as foo.bar:zoo",
+    )
 
     def get_runner(self, llm_api: str) -> MossRunner:
         """
         从配置文件里生成 runner 的实例.
         """
+        actions = []
+        if self.actions:
+            for action in self.actions:
+                imported = import_from_str(action)
+                if not isinstance(imported, Action):
+                    raise AttributeError(f"{imported} imported from {action} is not an action")
+                actions.append(imported)
+
         return MossRunner(
             name=self.agent_name,
             system_prompt=self.system_prompt,
             instruction=self.instruction,
             llm_api_name=llm_api,
+            actions=actions,
             pycontext=self.pycontext,
         )
 

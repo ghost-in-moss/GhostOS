@@ -1,8 +1,8 @@
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional
 from abc import ABC, abstractmethod
 from ghostiss.entity import Entity, EntityFactory, EntityMeta
 from ghostiss.container import Container
-from ghostiss.core.abc import Descriptive, Identifiable
+from ghostiss.abc import Descriptive, Identifiable
 from ghostiss.core.runtime import Runtime
 from ghostiss.core.shells import Shell
 from ghostiss.core.moss.moss import MOSS

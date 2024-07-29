@@ -1,6 +1,6 @@
 import inspect
 from abc import ABC, abstractmethod
-from ghostiss.core.moss.reflect import *
+from ghostiss.reflect import *
 from typing import Dict, NamedTuple, List
 
 

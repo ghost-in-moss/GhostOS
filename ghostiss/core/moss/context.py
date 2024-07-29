@@ -2,11 +2,11 @@ from typing import List, Dict, Union, Optional
 from pydantic import BaseModel, Field
 
 __all__ = [
-    'Import', 'Define', 'PyContext'
+    'Imported', 'Variable', 'PyContext'
 ]
 
 
-class Import(BaseModel):
+class Imported(BaseModel):
     """
     import 各种库.
     """
@@ -26,7 +26,7 @@ class Import(BaseModel):
 VARIABLE_TYPES = Union[str, int, float, bool, None, List, Dict]
 
 
-class Define(BaseModel):
+class Variable(BaseModel):
     """
     可以在上下文中声明的变量.
     """
@@ -47,10 +47,10 @@ class PyContext(BaseModel):
     不需要全部用 pickle 之类的库做序列化, 方便管理 bot 的思维空间.
     """
 
-    imports: List[Import] = Field(default_factory=list, description="通过 python 引入的包, 类, 方法 等.")
-    defines: List[Define] = Field(default_factory=list, description="在上下文中定义的变量.")
+    imports: List[Imported] = Field(default_factory=list, description="通过 python 引入的包, 类, 方法 等.")
+    variables: List[Variable] = Field(default_factory=list, description="在上下文中定义的变量.")
 
-    def add_import(self, imp: Import) -> None:
+    def add_import(self, imp: Imported) -> None:
         imports = []
         done = False
         for _imp in self.imports:
@@ -63,10 +63,10 @@ class PyContext(BaseModel):
             imports.append(imp)
         self.imports = imports
 
-    def add_define(self, d: Define) -> None:
+    def add_define(self, d: Variable) -> None:
         defines = []
         done = False
-        for d_ in self.defines:
+        for d_ in self.variables:
             if d_.name == d.name:
                 defines.append(d)
                 done = True
@@ -74,7 +74,7 @@ class PyContext(BaseModel):
                 defines.append(d_)
         if not done:
             defines.append(d)
-        self.defines = defines
+        self.variables = defines
 
     def join(self, ctx: "PyContext") -> "PyContext":
         """
@@ -83,7 +83,7 @@ class PyContext(BaseModel):
         imported = {}
         imports = []
 
-        def append_imports(importing: Import):
+        def append_imports(importing: Imported):
             path = importing.get_import_path()
             if path not in imported:
                 imported[path] = importing
@@ -102,15 +102,15 @@ class PyContext(BaseModel):
         defined_vars = {}
         vars_list = []
 
-        def append_vars(var: Define):
+        def append_vars(var: Variable):
             if var.name not in defined_vars:
                 defined_vars[var.name] = var
                 vars_list.append(var)
 
-        for v in ctx.defines:
+        for v in ctx.variables:
             append_vars(v)
 
-        for v in self.defines:
+        for v in self.variables:
             append_vars(v)
 
         return PyContext(imports=imports, variables=vars_list)

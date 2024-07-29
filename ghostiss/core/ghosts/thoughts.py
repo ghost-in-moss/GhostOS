@@ -5,7 +5,7 @@ from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.events import Event
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.runner import Runner
-from ghostiss.core.abc import Identifiable, Descriptive
+from ghostiss.abc import Identifiable, Descriptive
 from ghostiss.helpers import uuid
 
 
