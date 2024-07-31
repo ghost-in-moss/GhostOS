@@ -3,7 +3,7 @@ import sys
 import argparse
 import os
 import yaml
-from ghostiss.reflect import Interface, Library
+from ghostiss.core.moss.reflect import Interface, Library
 from ghostiss.container import Container, Provider, CONTRACT
 from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider

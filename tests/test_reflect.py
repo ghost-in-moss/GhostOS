@@ -1,7 +1,6 @@
 from typing import Union
-from ghostiss.reflect import (
-    reflect, Typing,
-)
+from ghostiss.core.moss.reflect import (
+    reflect, )
 
 
 def test_reflect_typing():

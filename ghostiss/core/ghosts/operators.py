@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
-from ghostiss.exports import Exporter
+from ghostiss.core.moss.exports import Exporter
 
 if TYPE_CHECKING:
     from ghostiss.core.ghosts.ghost import Ghost

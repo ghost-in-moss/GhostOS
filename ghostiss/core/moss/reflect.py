@@ -27,6 +27,8 @@ __all__ = [
     'is_callable', 'is_public_callable', 'parse_callable_to_method_def',
     'get_typehint_string', 'get_default_typehint', 'get_import_comment', 'get_extends_comment',
     'get_class_def_from_source',
+    'count_source_indent',
+    'replace_class_def_name',
 ]
 
 BasicTypes = Union[str, int, float, bool, list, dict]
@@ -174,8 +176,10 @@ class Importing(Reflection):
         if not module:
             if inspect.ismodule(value):
                 module = value.__name__
+            elif hasattr(value, '__module__'):
+                module = getattr(value, '__module__')
             else:
-                inspect.getmodulename(value)
+                module = inspect.getmodulename(value)
         if not module_spec and not inspect.ismodule(value):
             module_spec = getattr(value, '__name__', None)
         super().__init__(
@@ -909,9 +913,11 @@ def parse_callable_to_method_def(
         doc = doc.strip()
     if not inspect.isfunction(caller) and not inspect.ismethod(caller):
         if not inspect.isclass(caller) and isinstance(caller, Callable) and hasattr(caller, '__call__'):
-            caller = getattr(caller, '__call__')
             if not alias:
                 alias = type(caller).__name__
+            if not doc:
+                doc = inspect.getdoc(caller)
+            caller = getattr(caller, '__call__')
         else:
             raise TypeError(f'"{caller}" is not function or method')
 
@@ -997,8 +1003,8 @@ def parse_doc_string_with_quotes(doc: str, quote='"""') -> str:
     if doc.startswith(quote) and doc.endswith(quote):
         return doc
     doc = doc.strip(quote)
-    doc.replace('\\' + quote, quote)
-    doc.replace(quote, '\\' + quote)
+    doc = doc.replace('\\' + quote, quote)
+    doc = doc.replace(quote, '\\' + quote)
     return doc.strip()
 
 

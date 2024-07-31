@@ -1,7 +1,8 @@
 from typing import NamedTuple, List
-from ghostiss.reflect import (
+from ghostiss.core.moss.reflect import (
     get_class_def_from_source, replace_class_def_name, strip_source_indent, count_source_indent,
     parse_doc_string,
+    parse_doc_string_with_quotes,
 )
 
 
@@ -180,6 +181,11 @@ class Foo: # some
 
     for c in cases:
         assert get_class_def_from_source(c.source) == c.expect.strip()
+
+
+def test_parse_doc_string_with_quotes():
+    r = parse_doc_string_with_quotes('hello """ \\""" world')
+    assert r == 'hello \\""" \\""" world'
 
 
 def test_parse_doc_string():

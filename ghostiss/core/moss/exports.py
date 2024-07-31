@@ -1,8 +1,7 @@
 from typing import Dict, Optional, Iterable, List, Any
 from copy import deepcopy
-from ghostiss.reflect import (
-    Reflection, reflects,
-    Attr,
+from ghostiss.core.moss.reflect import (
+    Reflection, Attr,
     Interface, Model,
     Library,
 )

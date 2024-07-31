@@ -6,7 +6,7 @@ from ghostiss.entity import EntityMeta, Entity, EntityFactory
 from pydantic import BaseModel, Field
 from ghostiss.core.messages.message import Message
 from ghostiss.helpers import uuid
-from ghostiss.exports import Exporter
+from ghostiss.core.moss.exports import Exporter
 
 __all__ = [
     'Event', 'EventFactory', 'EventBus', 'DefaultEventType',

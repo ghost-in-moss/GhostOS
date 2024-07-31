@@ -1,5 +1,6 @@
 from abc import abstractmethod
-from ghostiss.reflect import *
+import inspect
+from ghostiss.core.moss.reflect import *
 
 
 def test_get_callable_definition():
@@ -71,6 +72,7 @@ class Foo:
 
 
 def test_count_source_indent():
+    import inspect
     source = inspect.getsource(Foo.foo)
     f = Foo()
     assert count_source_indent(source) == 4

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from ghostiss.container import Container, CONTRACT
 from ghostiss.core.moss.context import PyContext, Variable, Imported
 from ghostiss.core.moss.modules import Modules
-from ghostiss.reflect import (
+from ghostiss.core.moss.reflect import (
     Importing,
     reflect, reflects,
     Reflection, TypeReflection,
@@ -221,6 +221,7 @@ class MOSS(System, ABC):
 class BasicMOSSImpl(MOSS):
     """
     MOSS 的基础实现.
+    todo: 调整目录结构, 让依赖不再耦合.
     """
 
     def __init__(self, *, container: Container, doc: str = "", pycontext: Optional[PyContext] = None):

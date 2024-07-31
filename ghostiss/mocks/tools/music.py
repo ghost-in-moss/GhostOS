@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List
-from ghostiss.exports import Exporter
+from ghostiss.core.moss.exports import Exporter
 
 
 # fake a music player
