@@ -136,7 +136,7 @@ class EventBus(ABC):
 
 
 EXPORTS = Exporter().\
-    with_model(Event).\
-    with_lib(EventBus).\
-    with_lib(EventFactory)
+    model(Event).\
+    library(EventBus).\
+    library(EventFactory)
 

@@ -27,4 +27,4 @@ class MusicPlayer:
         return True
 
 
-EXPORTS = Exporter().with_attr("player", MusicPlayer(), MusicPlayer)
+EXPORTS = Exporter().attr("player", MusicPlayer(), MusicPlayer)

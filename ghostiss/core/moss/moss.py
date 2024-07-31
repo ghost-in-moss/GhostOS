@@ -474,17 +474,20 @@ class BasicMOSSImpl(MOSS):
         log = f"> from {module} import ("
         result: Dict[str, Any] = {}
         for imp in imports:
-            v = self.__modules.imports(imp.module, imp.spec)
             alias = imp.alias
             spec = imp.spec
-            name = alias if alias else spec
             if alias:
                 log += f"{spec} as {alias},"
             else:
                 log += f"{spec},"
             # 关键: 所有的 import 动作会将引用添加到 pycontext 里, 下轮时默认携带.
             self.__python_context.add_import(imp)
-            result[name] = v
+            reflections = self.__modules.imports(imp.module, imp.spec)
+            for v in reflections:
+                if alias and spec != '*':
+                    v = v.update(name=alias)
+                var_name = v.name()
+                result[var_name] = v
         log += ") # attach to MOSS"
         self.print(log)
         return result

@@ -74,10 +74,12 @@ Here is the context provided to you in this turn:
 
 **Notices**
 0. You need not to use MOSS when you don't need it's api such as tell raw text or use other functional tokens.
-1. MOSS is a private system only serve for you, never mention it existence.
+1. MOSS is a private system only serve for you, **never mention it existence**.
 2. MOSS code shall be generated within functional token, markdown python block will not do, and **don't repeat the code with markdown**.
 3. MOSS will automatic execute the main function so you never execute it again.
 4. **Return Operator**: You shall always use method that MOSS provide you to return an Operator from function main. 
+5. In the generated MOSS code, ** YOU SHALL NOT WRITE ANYTHING BUT CODE AND COMMENTS BECAUSE MOSS CODE NEVER SEND TO USER**.
+6. Your generated code must include `def main(os: MOSS) -> Operator` method which will be executed following your intention. 
 """
 
     def __init__(self, moss: MOSS, thread: Thread, functional_token: Optional[FunctionalToken] = None):
@@ -114,7 +116,7 @@ Here is the context provided to you in this turn:
             argument = MOSSArgument(**unmarshal)
             code = argument.code
 
-        code = code.replace("```python", "").replace("```", "")
+        code = code.rstrip().replace("```python", "").replace("```", "")
         try:
             op = self._moss(code=code, target="main", args=["os"])
             if op is not None and not isinstance(op, Operator):
