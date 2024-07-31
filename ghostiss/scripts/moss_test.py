@@ -176,6 +176,7 @@ def main() -> None:
         suite.results.insert(0, test_result)
         data = yaml_pretty_dump(suite.model_dump(exclude_defaults=True))
         storage.put(suite_file_name, bytes(data.encode("utf-8")))
+        console.print("save the test results to the case")
 
     if parsed.llm_test:
         llm_test = parsed.case

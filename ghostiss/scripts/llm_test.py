@@ -7,7 +7,8 @@ from ghostiss.core.runtime.llms import LLMs
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
-from ghostiss.framework.llms.test_case import ChatCompletionTestCase, run_test_cases
+from ghostiss.framework.llms.test_case import ChatCompletionTestCase, run_test_cases, ChatCompletionTestResult
+from ghostiss.helpers import yaml_pretty_dump
 from rich.console import Console
 from rich.panel import Panel
 from rich.json import JSON
@@ -33,6 +34,13 @@ def main() -> None:
         type=str,
         default="hello_world"
     )
+    parser.add_argument(
+        "--save", "-s",
+        help="save the test results to the case",
+        action="store_true",
+        default=False,
+    )
+
     parsed = parser.parse_args(sys.argv[1:])
     container = _prepare_container()
     storage = container.force_fetch(Storage)
@@ -47,6 +55,9 @@ def main() -> None:
     llms = container.force_fetch(LLMs)
 
     output = run_test_cases(test_case, llms)
+    test_result = ChatCompletionTestResult()
+    test_result.results = output
+
     console = Console()
     for name, message in output.items():
         body = JSON(message.model_dump_json(indent=2, exclude_defaults=True))
@@ -54,6 +65,12 @@ def main() -> None:
         panel2 = Panel(Markdown(message.get_content()))
         console.print(panel)
         console.print(panel2)
+
+    if parsed.save:
+        test_case.results.insert(0, test_result)
+        data = yaml_pretty_dump(test_case.model_dump(exclude_defaults=True))
+        storage.put(file_name, data.encode("utf-8"))
+        console.print("save the test results to the case")
 
 
 if __name__ == "__main__":
