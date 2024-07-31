@@ -192,3 +192,20 @@ def test_reflect_class():
 
     r = reflect(var=Xoo)
     assert isinstance(r, TypeReflection)
+
+
+def test_reflect_typing():
+    from typing import Union
+    test = Union[str, int, float]
+    r = reflect(var=test, name="test")
+    assert r.prompt() == "test = typing.Union[str, int, float]"
+    # 验证真的可以用.
+    assert isinstance(123, r.value())
+
+
+def test_reflect_importing():
+    import inspect
+    i = Importing(value=inspect)
+    assert i.module() == "inspect"
+    assert i.module_spec() is None
+    assert i.name() == "inspect"

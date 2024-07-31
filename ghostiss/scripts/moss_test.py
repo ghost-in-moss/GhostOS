@@ -9,9 +9,9 @@ from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.moss import MOSS, BasicMOSSImpl, BasicModulesProvider
-from ghostiss.core.ghosts.messenger import TestMessengerProvider
+from ghostiss.framework.messengers import TestMessengerProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
-from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite, MOSSRunnerTestResult
+from ghostiss.framework.moss.runner import MOSSRunnerTestSuite, MOSSRunnerTestResult
 from ghostiss.framework.llms.test_case import ChatCompletionTestCase, APIInfo
 from ghostiss.helpers import yaml_pretty_dump
 from rich.console import Console
@@ -36,9 +36,31 @@ You can use the api that MOSS provided to implement your plan.
         return MOSS
 
     def factory(self, con: Container) -> Optional[CONTRACT]:
-        return BasicMOSSImpl(container=con, doc=self.moss_doc).with_vars(
+        from ghostiss.core.moss import Importing, Typing
+        from abc import ABC, abstractmethod
+        import typing
+        from pydantic import BaseModel, Field
+        from typing import TypedDict
+        from ghostiss.core.messages import Message, MessageType, MessageClass
+        args = []
+        args.extend([
+            Interface(cls=Message),
+            Typing(typing=MessageType, name="MessageType"),
+            Interface(cls=MessageClass),
+        ])
+        args.extend(Importing.iterate(values=[ABC, abstractmethod], module='abc'))
+        args.extend(Importing.iterate(values=[BaseModel, Field], module='pydantic'))
+        args.extend([
             Interface(cls=Operator),
             Library(cls=Mindflow),
+        ])
+        kwargs = {
+            'typing': Importing(value=typing, module='typing'),
+            'TypedDict': Importing(value=TypedDict, module='typing'),
+        }
+        return BasicMOSSImpl(container=con, doc=self.moss_doc).new(
+            *args,
+            **kwargs,
         )
 
 

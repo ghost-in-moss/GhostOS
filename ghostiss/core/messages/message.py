@@ -9,7 +9,6 @@ __all__ = [
     "Message", "Role", "DefaultTypes",
     "MessageClass",
     "MessageType", "MessageTypeParser",
-    "FunctionalToken",
     "Payload", "PayloadItem", "Attachment", "Caller",
 ]
 
@@ -82,30 +81,10 @@ class Caller(BaseModel):
     id: Optional[str] = Field(default=None, description="caller 的 id, 用来 match openai 的 tool call 协议. ")
     name: str = Field(description="方法的名字.")
     arguments: str = Field(description="方法的参数. ")
-    protocol: bool = Field(default=True, description="caller 是否是基于协议生成的?")
+    functional_token: bool = Field(default=False, description="caller 是否是基于协议生成的?")
 
     def add(self, message: "Message") -> None:
         message.callers.append(self)
-
-
-class FunctionalToken(BaseModel):
-    """
-    定义特殊的 token, 用来在流式输出中生成 caller.
-    """
-
-    id: Optional[str] = Field(default=None, description="用来生成 caller 的 id.")
-    token: str = Field(description="流式输出中标志 caller 的特殊 token. 比如 :moss>\n ")
-    caller: str = Field(description="caller 的名字. ")
-    description: str = Field(description="functional token 的描述")
-    deliver: bool = Field(default=False, description="functional token 后续的信息是否要发送. 可以设置不发送. ")
-
-    def new_caller(self, arguments: str) -> "Caller":
-        return Caller(
-            id=self.id,
-            name=self.caller,
-            arguments=arguments,
-            protocol=False,
-        )
 
 
 class Payload(BaseModel, ABC):

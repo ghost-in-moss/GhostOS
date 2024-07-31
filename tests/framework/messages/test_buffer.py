@@ -1,6 +1,8 @@
 from ghostiss.core.messages import (
-    DefaultBuffer, Message, FunctionalToken,
+    Message
 )
+from ghostiss.core.runtime.llms import FunctionalToken
+from ghostiss.framework.messages import DefaultBuffer
 
 
 def test_default_buffer_baseline():
@@ -124,7 +126,7 @@ def test_buffer_with_moss_token():
 def test_buffer_with_sep_content():
     functional_tokens = [FunctionalToken(
         token=">moss:",
-        caller="moss",
+        name="moss",
         description="desc",
         deliver=False,
     )]

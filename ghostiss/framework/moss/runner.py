@@ -1,12 +1,11 @@
 from typing import Iterable, Optional, Tuple, List, Dict
 from ghostiss.container import Container
 from ghostiss.core.ghosts import (
-    Action, MOSSAction,
+    Action,
     LLMRunner,
     Operator,
 )
 import datetime
-from ghostiss.helpers import import_from_str
 from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.core.moss import MOSS, PyContext
 from ghostiss.core.messages import DefaultTypes, Message
@@ -15,6 +14,7 @@ from ghostiss.core.runtime.threads import Thread, thread_to_chat
 from ghostiss.helpers import uuid, import_from_str
 from pydantic import BaseModel, Field
 from ghostiss.framework.llms.chatfilters import AssistantNameFilter
+from ghostiss.framework.moss.action import MOSSAction
 
 __all__ = [
     'MossRunner',

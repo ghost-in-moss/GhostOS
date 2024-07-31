@@ -260,6 +260,7 @@ class BasicMOSSImpl(MOSS):
 
         self.__methods: Dict[str, Method] = {}
         """方法类的变量, 也会挂载到 moss 上."""
+
         self.__imported: List[Importing] = []
         """通过 from ... import ... 展示的变量. 它们没有特殊的 prompt, 预计是 llm 已经掌握的公共库. """
 
@@ -280,8 +281,8 @@ class BasicMOSSImpl(MOSS):
 
         self.__context_values: Optional[Dict[str, Any]] = None
         """ 持有上下文中所有的变量. 只有在 bootstrap 之后才会加载. """
-
         self.__destroyed = False
+        """是否已经清空过了."""
 
     def destroy(self) -> None:
         """
@@ -309,23 +310,6 @@ class BasicMOSSImpl(MOSS):
         del self.__context_prompter
         del self.__context_values
 
-    @staticmethod
-    def _default_kwargs() -> Dict[str, Any]:
-        """
-        MOSS 默认要引用的上下文变量.
-        """
-        # 目前将最通用的一些类型直接引入.
-        return {
-            'typing': Importing(value=typing, module='typing'),
-            'BaseModel': Importing(value=BaseModel, module='pydantic'),
-            'Field': Importing(value=Field, module='pydantic'),
-            'TypedDict': Importing(value=TypedDict, module='typing'),
-            'ABC': Importing(value=ABC),
-            'abstractmethod': Importing(value=abstractmethod),
-            # reflect 方法会自动将它变成 Typing 类型反射.
-            'MessageType': MessageType,
-        }
-
     def new(self, *named_vars, **variables) -> "MOSS":
         """
         初始化一个 MOSS.
@@ -334,9 +318,7 @@ class BasicMOSSImpl(MOSS):
         """
         # 复制创造一个新的实例.
         os = BasicMOSSImpl(doc=self.__doc__, container=self.__container.parent)
-        kwargs = self._default_kwargs()
-        kwargs.update(variables)
-        return os.with_vars(*named_vars, **kwargs)
+        return os.with_vars(*named_vars, **variables)
 
     def with_vars(self, *named_vars, **variables) -> "MOSS":
         """
@@ -372,7 +354,7 @@ class BasicMOSSImpl(MOSS):
         contract = provider.contract()
         impl = provider.factory(self.__container)
 
-        contract_reflect = Library(cls=contract, alias=name)
+        contract_reflect = Library(cls=contract, name=name)
         attr = Attr(value=impl, name=camel_to_snake(contract_reflect.name()))
         self.__add_type(contract_reflect)
         self.__add_attr(attr)
@@ -551,7 +533,7 @@ class BasicMOSSImpl(MOSS):
 
         moss = ClassPrompter(
             cls=System,
-            alias="MOSS",
+            name="MOSS",
             doc=MOSS.__doc__,
             attrs=attrs,
             methods=methods,

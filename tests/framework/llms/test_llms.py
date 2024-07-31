@@ -28,10 +28,10 @@ def test_load_llms_conf():
 
     moonshot = conf.services[0]
     assert moonshot.name == "moonshot"
-    assert moonshot.token == ""
+    assert moonshot.token.startswith('$')
 
-    os.environ.setdefault(moonshot.token_key, "test")
-    moonshot.load()
+    data = {moonshot.token[1:]: "test"}
+    moonshot.load(environ=data)
     assert moonshot.token == "test"
 
 

@@ -3,13 +3,13 @@ from abc import ABC, abstractmethod
 from ghostiss.entity import Entity, EntityFactory, EntityMeta
 from ghostiss.container import Container
 from ghostiss.abc import Descriptive, Identifiable
-from ghostiss.core.runtime import Runtime
 from ghostiss.core.shells import Shell
 from ghostiss.core.moss.moss import MOSS
 from ghostiss.core.messages.message import Message, MessageType, MessageTypeParser
 from ghostiss.core.ghosts.operators import Operator
 
 if TYPE_CHECKING:
+    from ghostiss.core.runtime import Runtime
     from ghostiss.contracts.logger import LoggerItf
     from ghostiss.core.ghosts.events import EventBus
     from ghostiss.core.ghosts.session import Session
@@ -38,7 +38,7 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
         pass
 
     @property
-    def runtime(self) -> Runtime:
+    def runtime(self) -> "Runtime":
         """
         提供 runtime 的基建调用, 本质上是 unsafe 的.
         """
@@ -166,17 +166,17 @@ class Facade:
     def send(self, *messages: MessageType) -> None:
         """
         发送多条消息. 并且把消息直接加入到当前的 Thread 中间.
+        todo: move to session
         """
         parser = MessageTypeParser()
         session = self.ghost.session
         thread = session.thread()
-        messenger = self.ghost.messenger().downstream(thread)
+        messenger = self.ghost.messenger().new(thread=thread)
         iterator = parser.parse(messages)
         for msg in iterator:
             messenger.deliver(msg)
 
         messages, _ = messenger.flush()
-        thread.update(messages)
         session.update_thread(thread)
 
 
@@ -187,4 +187,3 @@ class GhostFactory(EntityFactory[Ghost], ABC):
 
     def force_new_ghost(self, meta: EntityMeta) -> Ghost:
         return self.force_new_entity(meta)
-

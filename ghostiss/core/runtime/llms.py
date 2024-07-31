@@ -10,11 +10,11 @@ from openai.types.chat.chat_completion_function_call_option_param import ChatCom
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, FunctionalToken, Stream, DefaultTypes, DefaultBuffer, Payload
+from ghostiss.core.messages import Message, Stream, DefaultTypes, Payload, Caller
 
 __all__ = [
     'Chat', 'ChatFilter', 'filter_chat',
-    'LLMs', 'LLMDriver', 'LLMApi', 'LLMTool',
+    'LLMs', 'LLMDriver', 'LLMApi', 'LLMTool', 'FunctionalToken',
     'ModelConf', 'ServiceConf', 'LLMsConfig',
     'Quest',
     'OPENAI_DRIVER_NAME',
@@ -61,16 +61,18 @@ class ServiceConf(BaseModel):
     token: str = Field(default="", description="token")
     proxy: Optional[str] = Field(default=None, description="proxy")
 
-    def load(self) -> None:
-        self.token = self._load_env(self.token)
+    def load(self, environ: Optional[Dict] = None) -> None:
+        self.token = self._load_env(self.token, environ=environ)
         if self.proxy is not None:
-            self.proxy = self._load_env(self.proxy)
+            self.proxy = self._load_env(self.proxy, environ=environ)
 
     @staticmethod
-    def _load_env(value: str) -> str:
+    def _load_env(value: str, environ: Optional[Dict] = None) -> str:
         if value.startswith("$"):
             value_key = value[1:]
-            value = os.environ.get(value_key, "")
+            if environ is None:
+                environ = os.environ
+            value = environ.get(value_key, "")
         return value
 
 
@@ -98,6 +100,44 @@ class LLMTool(BaseModel):
     name: str = Field(description="function name")
     description: str = Field(default="", description="function description")
     parameters: Optional[Dict] = Field(default=None, description="function parameters")
+
+    @classmethod
+    def new(cls, name: str, desc: Optional[str] = None, parameters: Optional[Dict] = None):
+        if parameters is None:
+            parameters = {"type": "object", "properties": {}}
+        properties = parameters.get("properties", {})
+        params_properties = {}
+        for key in properties:
+            _property = properties[key]
+            if "title" in _property:
+                del _property["title"]
+            params_properties[key] = _property
+        parameters["properties"] = params_properties
+        if "title" in parameters:
+            del parameters["title"]
+        return cls(name=name, description=desc, parameters=parameters)
+
+
+class FunctionalToken(BaseModel):
+    """
+    定义特殊的 token, 用来在流式输出中生成 caller.
+    """
+
+    token: str = Field(description="流式输出中标志 caller 的特殊 token. 比如 :moss>\n ")
+    name: str = Field(description="caller 的名字. ")
+    description: str = Field(description="functional token 的描述")
+    deliver: bool = Field(default=False, description="functional token 后续的信息是否要发送. 可以设置不发送. ")
+    parameters: Optional[Dict] = Field(default=None, description="functional token parameters")
+
+    def new_caller(self, arguments: str) -> "Caller":
+        return Caller(
+            name=self.name,
+            arguments=arguments,
+            functional_token=True,
+        )
+
+    def as_tool(self) -> LLMTool:
+        return LLMTool.new(name=self.name, desc=self.description, parameters=self.parameters)
 
 
 # ---- api objects ---- #

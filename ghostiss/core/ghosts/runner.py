@@ -73,7 +73,7 @@ class LLMRunner(Runner, ABC):
             action = actions_name_map[caller.name]
             # todo: with payload
             deliver = messenger.new(thread=thread)
-            op = action.act(container, deliver, caller.arguments)
+            op = action.act(container, deliver, caller)
             deliver.flush()
             if op is not None:
                 return op

@@ -3,7 +3,7 @@ import importlib
 from types import ModuleType
 from typing import Optional, Type
 
-from ghostiss.core.moss.reflect import reflect, Reflection
+from ghostiss.core.moss.reflect import reflect, Reflection, Importing
 from ghostiss.core.moss.exports import EXPORTS_KEY, Exporter
 from ghostiss.container import Provider, Container, CONTRACT
 
@@ -23,7 +23,7 @@ class Modules(ABC):
     #     pass
 
     @abstractmethod
-    def imports(self, module: str, spec: str) -> Reflection:
+    def imports(self, module: str, spec: Optional[str] = None) -> Reflection:
         """
         引入一个库.
         todo: 实现 storage based modules. 进行前缀匹配, 可以将agent 的 workspace 目录变成临时的 import 路径.
@@ -37,14 +37,20 @@ class Modules(ABC):
 
 class BasicModules(Modules):
 
-    def imports(self, module: str, spec: str) -> Reflection:
+    def imports(self, module: str, spec: Optional[str] = None) -> Reflection:
         module_ins = self._imports(module)
+        exports = None
         if EXPORTS_KEY in module_ins.__dict__:
             # use EXPORTS instead of the module
             exports = module_ins.__dict__[EXPORTS_KEY]
-            if isinstance(exports, Exporter):
-                return exports.get(spec)
+        if spec is None:
+            if exports:
+                return exports
+            else:
+                return Importing(value=module_ins, module=module, module_spec=spec)
 
+        if isinstance(exports, Exporter):
+            return exports.get(spec)
         if spec in module_ins.__dict__:
             spec_value = module_ins.__dict__[spec]
             if spec_value is None:

@@ -1,6 +1,6 @@
 import inspect
 import re
-from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union, Type, is_typeddict
+from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union, Type, is_typeddict, Tuple
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
@@ -137,6 +137,16 @@ class Reflection(ABC):
         return self
 
 
+class IterableReflection(Reflection, ABC):
+
+    @abstractmethod
+    def value(self) -> Iterable[Reflection]:
+        pass
+
+    def generate_prompt(self) -> str:
+        return ""
+
+
 class ValueReflection(Reflection, ABC):
     """
     值的反射, 是一个具体的 object 或某个类型的实例.
@@ -164,26 +174,40 @@ class Importing(Reflection):
     当类库知识对于 LLM 是先验的情况下, 应该生成这种.
     """
 
+    @classmethod
+    def iterate(cls, values: Iterable[Union[Any, Tuple[str, Any]]], module: Optional[str] = None) -> List["Importing"]:
+        result = []
+        for value in values:
+            if isinstance(value, Tuple):
+                name, value = value
+                result.append(cls(value=value, module=module, name=name))
+            else:
+                result.append(cls(value=value, module=module))
+        return result
+
     def __init__(
             self,
             *,
             value: Any,
-            alias: Optional[str] = None,
+            name: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
     ):
         self._cls = value
+        is_module = inspect.ismodule(value)
         if not module:
-            if inspect.ismodule(value):
+            if is_module:
                 module = value.__name__
             elif hasattr(value, '__module__'):
                 module = getattr(value, '__module__')
             else:
                 module = inspect.getmodulename(value)
-        if not module_spec and not inspect.ismodule(value):
+        if not module_spec and not is_module:
             module_spec = getattr(value, '__name__', None)
+        if not name:
+            name = module if is_module else module_spec
         super().__init__(
-            name=alias,
+            name=name,
             module=module,
             module_spec=module_spec,
         )
@@ -301,7 +325,7 @@ class Method(CallerReflection):
     def __init__(
             self, *,
             caller: Callable,
-            alias: Optional[str] = None,
+            name: Optional[str] = None,
             doc: Optional[str] = None,
             prompt: Optional[str] = None,
             module: Optional[str] = None,
@@ -311,7 +335,7 @@ class Method(CallerReflection):
     ):
         """
         :param caller: callable object, may be function, method or object that callable
-        :param alias: alias name for the method
+        :param name: alias name for the method
         :param doc: replace the origin doc string
         :param prompt:
         :param module:
@@ -319,7 +343,6 @@ class Method(CallerReflection):
         :param comments:
         """
         self._caller = caller
-        name = alias
         if not name:
             name = module_spec
         if not name:
@@ -350,14 +373,14 @@ class Model(TypeReflection):
     def __init__(
             self,
             model: Union[Type[BaseModel], Type[TypedDict]],
-            alias: Optional[str] = None,
+            name: Optional[str] = None,
             prompt: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
             comments: Optional[str] = None,
             extends: Optional[List[Any]] = None,
     ):
-        name = alias
+        name = name
         if not name:
             name = module_spec
         if not name:
@@ -398,7 +421,7 @@ class Class(TypeReflection):
             self, *,
             cls: type,
             prompt: Optional[str] = None,
-            alias: Optional[str] = None,
+            name: Optional[str] = None,
             comments: Optional[str] = None,
             doc: Optional[str] = None,
             typehint: Optional[type] = None,
@@ -410,7 +433,6 @@ class Class(TypeReflection):
             raise TypeError(f"Class must be a class, not {cls}")
 
         self._cls = cls
-        name = alias
         if not name:
             name = module_spec
         if not name:
@@ -452,7 +474,7 @@ class ClassPrompter(Class):
     def __init__(
             self, *,
             cls: type,
-            alias: Optional[str] = None,
+            name: Optional[str] = None,
             prompt: Optional[str] = None,
             doc: Optional[str] = None,
             constructor: Optional[Method] = None,
@@ -474,7 +496,7 @@ class ClassPrompter(Class):
             cls=cls,
             prompt=prompt,
             doc=doc,
-            alias=alias,
+            name=name,
             typehint=typehint,
             comments=comments,
             module=module,
@@ -557,7 +579,7 @@ class Library(ClassPrompter):
     def __init__(
             self, *,
             cls: type,
-            alias: Optional[str] = None,
+            name: Optional[str] = None,
             include_methods: Optional[Iterable[str]] = None,
             doc: Optional[str] = None,
             comments: Optional[str] = None,
@@ -572,18 +594,18 @@ class Library(ClassPrompter):
         members = inspect.getmembers(target, predicate=is_public_callable)
         members = [] if members is None else members
         methods_reflections = []
-        for name, member in members:
-            allowed = (allows is None and not name.startswith("_")) or (allows is not None and name in allows)
+        for mem_name, member in members:
+            allowed = (allows is None and not mem_name.startswith("_")) or (allows is not None and mem_name in allows)
             if not allowed:
                 continue
             _method_reflect = Method(
                 caller=member,
-                alias=name,
+                name=mem_name,
             )
             methods_reflections.append(_method_reflect)
         super().__init__(
             cls=cls,
-            alias=alias,
+            name=name,
             methods=methods_reflections,
             doc=doc,
             comments=comments,
@@ -601,7 +623,7 @@ class Interface(Library):
     def __init__(
             self, *,
             cls: type,
-            alias: Optional[str] = None,
+            name: Optional[str] = None,
             doc: Optional[str] = None,
             comments: Optional[str] = None,
             module: Optional[str] = None,
@@ -610,7 +632,7 @@ class Interface(Library):
     ):
         super().__init__(
             cls=cls,
-            alias=alias,
+            name=name,
             include_methods=[],
             doc=doc,
             comments=comments,
@@ -667,19 +689,23 @@ class Locals(ValueReflection):
         for imp in self.__imported:
             module = imp.module()
             spec = imp.module_spec()
-            if not module or not spec:
+            if not module and not spec:
                 continue
             if module not in imported:
                 imported[module] = []
                 modules.append(module)
-            specs = imported[module]
-            specs.append(spec)
-            imported[module] = specs
+            if spec:
+                specs = imported[module]
+                specs.append(spec)
+                imported[module] = specs
 
         imported_lines = []
         for module in modules:
             specs = imported[module]
-            line = "from {module} import ({specs})".format(module=module, specs=",".join(specs))
+            if not specs:
+                line = "import {module}".format(module=module)
+            else:
+                line = "from {module} import ({specs})".format(module=module, specs=",".join(specs))
             imported_lines.append(line)
         if len(imported_lines) > 0:
             prompts.append("\n".join(imported_lines))
@@ -711,11 +737,11 @@ def reflect(
         return Typing(name=name, typing=var)
     elif inspect.isclass(var):
         if is_model_class(var):
-            return Model(model=var, alias=name)
+            return Model(model=var, name=name)
         else:
-            return Library(cls=var, alias=name)
+            return Library(cls=var, name=name)
     elif isinstance(var, Callable):
-        return Method(caller=var, alias=name)
+        return Method(caller=var, name=name)
     elif not name:
         raise AttributeError("reflect attr value without name")
     return Attr(name=name, value=var)
@@ -726,11 +752,20 @@ def reflects(*args, **kwargs) -> Iterable[Reflection]:
     reflect any variable to Reflection
     """
     for arg in args:
+        if isinstance(arg, IterableReflection):
+            for item in arg.value():
+                yield item
+            continue
+
         r = reflect(var=arg)
         if r is not None:
             yield r
 
     for k, v in kwargs.items():
+        if isinstance(v, IterableReflection):
+            for item in v.value():
+                yield item
+            continue
         r = reflect(var=v, name=k)
         if r is not None:
             yield r
