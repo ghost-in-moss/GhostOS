@@ -46,9 +46,9 @@
 提供一些基础类库, 验证 llms 会根据 moss 提供的这些基础类库, 完成特定的需求.
 
 - modules 搜索:  可以根据需求来搜索类库, 选择类库.
-- pypi 搜索: 可以搜索 pypi, 并且根据搜索结果运行安装命令.
+- pypi (github, poetry) 搜索: 可以搜索 pypi, 并且根据搜索结果运行安装命令.
 - git: 可以运行 git 的基本指令, 并且返回结果.
-- bash: 可以在指定的 workspace 里运行 bash 命令行.
+- terminal: 可以在指定的 workspace 里运行 bash 命令行.
 - doc memory: 让 llms 自己定义 BaseModel 然后生成文档数据库, 然后自己用 base model 创建记忆, 用索引字段召回记忆. 
 - rag memory: 让 llms 定义自然语言的记忆, 生成自然语言的 index, 使用 embedding 存储和支持召回. 
 
@@ -179,9 +179,9 @@ llms 生成的代码会在一个 thread 里持续运行, 底层需要有时间�
 ```python
 def main(os: "MOSS") -> "Operator":
     # 画一个三角形. 
-    os.spero.move(angle=0, speed=90, duration=1)
-    os.spero.move(angle=0, speed=180, duration=1)
-    os.spero.move(angle=0, speed=270, duration=1)
+    os.sphero.move(angle=0, speed=90, duration=1)
+    os.sphero.move(angle=0, speed=180, duration=1)
+    os.sphero.move(angle=0, speed=270, duration=1)
     return os.observe()
 ```
 

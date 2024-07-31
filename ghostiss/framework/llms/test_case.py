@@ -1,5 +1,6 @@
 import threading
 import time
+import datetime
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 from ghostiss.core.runtime.llms import LLMs, Chat, ModelConf, ServiceConf
@@ -14,9 +15,15 @@ class APIInfo(BaseModel):
     model: Optional[ModelConf] = Field(default=None)
 
 
+class ChatCompletionTestResult(BaseModel):
+    time: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())
+    results: Dict[str, Message] = Field(default_factory=dict)
+
+
 class ChatCompletionTestCase(BaseModel):
     chat: Chat
     apis: List[APIInfo]
+    results: List[ChatCompletionTestResult] = Field(default_factory=list)
 
 
 def run_test_cases(cases: ChatCompletionTestCase, llms: LLMs) -> Dict[str, Message]:

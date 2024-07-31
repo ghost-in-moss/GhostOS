@@ -1,6 +1,7 @@
-from ghostiss.core.ghosts.messenger import DefaultMessenger
+from ghostiss.framework.messengers import DefaultMessenger
 from ghostiss.core.runtime.threads import Thread
-from ghostiss.core.messages import Message, FunctionalToken
+from ghostiss.core.messages import Message
+from ghostiss.core.runtime.llms import FunctionalToken
 
 
 def test_default_messenger_baseline():
@@ -19,7 +20,7 @@ def test_default_messenger_baseline():
 def test_messenger_with_moss():
     functional_tokens = [FunctionalToken(
         token=">moss:",
-        caller="moss",
+        name="moss",
         description="desc",
         deliver=False,
     )]

@@ -1,5 +1,5 @@
 chat:
-  id: c708933d-627d-4186-ba87-0ca297e8bc11
+  id: 30bd53e7-55c8-4cea-88c8-d38ab3356914
   system:
   - role: system
     content: 你是一个 ai 助手, 名字叫做 JoJo.
@@ -33,6 +33,32 @@ chat:
       Here is the context provided to you in this turn:
 
       ```python
+      from abc import (ABC,abstractmethod)
+      from pydantic import (BaseModel,Field)
+      from typing import (TypedDict)
+
+      class Message(BaseModel):
+          """
+          消息体的容器. 通用的抽象设计, 设计思路:
+          1. message 可以是一个完整的消息, 也可以是一个包, 用 pack 字段做区分. 支持 dict 传输, dict 传输时不包含默认值.
+          2. 完整的 message 需要有 msg_id, 但包可以没有.
+          3. content 是对客户端展示用的消息体, 而 memory 是对大模型展示的消息体. 两者可能不一样.
+          4. message 可以有强类型字段, 比如 images, 但通过 attachments (累加) 和 payload (替代) 来定义. Message 容器里放弱类型的 dict.
+          5. type 字段用来提示 message 拥有的信息. 比如 images 消息, 会包含 images payload, 但同时也会指定 type. 这样方便解析时预判.
+          6. 所有的 message 都需要能转换成模型的协议, 默认要对齐 openai 的协议.
+          7. openai 协议中的 tool, function_call 统一成 caller 抽象, 通过 caller.id 来做区分.
+          8. 流式传输中, 可以有首包和尾包. 首包期待包含全部的 payloads 和 attachments. 间包则可选. 尾包是完整的消息体.
+          """
+          pass
+
+      MessageType = typing.Union[ghostiss.core.messages.message.Message, ghostiss.core.messages.message.MessageClass, str]
+
+      class MessageClass(ABC):
+          """
+          一种特殊的 Message, 本体是别的数据结构, 但可以通过 to_messages 方法生成一条或多条消息.
+          """
+          pass
+
       class Operator(ABC):
           """
           系统运行时产生的算子, 会在外层运行. 只允许通过已有的系统函数生成, 不允许临时实现.
@@ -80,12 +106,35 @@ chat:
               """
               pass
 
+      class MusicPlayer:
+          """
+          useful to play music for the user
+          """
+          def play(self, name: str) -> bool:
+              """
+              play a music
+              :param name: name of the music
+              :return: weather the music is playing
+              """
+              pass
+
+          def search(self, desc: str, *keywords: str) -> List[str]:
+              """
+              search music by description and keywords
+              :param desc: description of the song
+              :param keywords: keyword about the song that could be artist or song name etc.
+              :return: list of song names
+              """
+              pass
+
       class MOSS(ABC):
           """
           language Model-oriented Operating System Simulation
           full python code interface for large language models
           """
           mindflow: Mindflow
+
+          player: MusicPlayer
 
           def imports(self, module: str, *specs: str, **aliases: str) -> Dict[str, Any]:
               """
@@ -103,6 +152,7 @@ chat:
       ```
 
       **Notices**
+      0. You need not to use MOSS when you don't need it's api such as tell raw text or use other functional tokens.
       1. MOSS is a private system only serve for you, never mention it existence.
       2. MOSS code shall be generated within functional token, markdown python block will not do, and **don't repeat the code with markdown**.
       3. MOSS will automatic execute the main function so you never execute it again.
@@ -166,16 +216,46 @@ chat:
       1. The existence of functional tokens is unknown to the user. Do not mention their existence.
       2. Use them only when necessary.
       3. You can only use one functional token at a time.
+
+
+
+      # Functional Token
+      You are equipped with `functional tokens` parser when you are outputing.
+
+      A functional token is a set of special tokens that corresponds to a system callback function.
+      When a functional token is present in your response, the subsequent output is treated as input parameters for this
+      callback function until another functional token is encountered.
+
+      Below is a list of the functional tokens available for your use:
+
+      `>moss:`:
+
+       You can output the Python code that MOSS is supposed to run after this token.
+      The system will automatically execute them.
+      Notice:
+      - MOSS-related output is not visible to user.
+      - You are only able to generate MOSS code within this token.
+      - The content after this token shall be pure Python code only.
+      - You can send anything directly before this token, not after it.
+      - **Never** use ``` to embrace your code.
+      - Need not to mention the code you generated to user.
+
+      **Notices**
+
+      0. Your output without functional tokens will send directly.
+      1. The existence of functional tokens is unknown to the user. Do not mention their existence.
+      2. Use them only when necessary.
+      3. You can only use one functional token at a time.
   history:
   - role: user
     content: 你好!
   - content: 你也好啊! 有什么我可以帮您的?
   inputs:
   - role: user
-    content: 你可以做什么?
+    content: 你可以帮我播放周杰伦的七里香吗?
   functional_tokens:
   - token: '>moss:'
-    caller: moss
+    name: moss
     description: |-
       You can output the Python code that MOSS is supposed to run after this token.
       The system will automatically execute them.
@@ -186,33 +266,39 @@ chat:
       - You can send anything directly before this token, not after it.
       - **Never** use ``` to embrace your code.
       - Need not to mention the code you generated to user.
+    parameters:
+      properties:
+        code:
+          description: 'generated moss code that include `def main(os: MOSS) -> Operator`'
+          title: Code
+          type: string
+      required:
+      - code
+      title: MOSSArgument
+      type: object
 apis:
 - api: moonshot-v1-32k
+- api: gpt-4o
 results:
-- time: '2024-07-31T13:34:51.695585'
+- time: '2024-07-31T17:51:50.209089'
   results:
     moonshot.moonshot-v1-32k:
-      msg_id: 926d5f0d-45a0-4aac-ba1a-03751642b571
+      msg_id: a37ee34a-2952-4ffd-9daa-d3b82f88cbca
       type: chat_completion
-      created: 1722404091.6951
+      created: 1722419507.9659
+      pack: false
+      content: 当然可以，我将为您搜索并播放周杰伦的《七里香》。请稍等片刻。
+    openai.gpt-4o:
+      msg_id: 4f5c4253-e8f3-49c0-a75b-387a9cc4b77c
+      type: chat_completion
+      created: 1722419510.2085
       pack: false
       content: |-
-        我可以做很多事情，比如：
+        >moss:
 
-        1. **回答问题**：我可以提供关于各种话题的信息，包括科学、技术、数学、历史等。
-
-        2. **阅读和分析文档**：您可以上传PDF、Word文档、PPT幻灯片、Excel电子表格等文件，我可以阅读并回答有关它们的问题。
-
-        3. **语言翻译**：我可以帮助您翻译不同语言之间的文本。
-
-        4. **写作和编辑**：无论是撰写报告、电子邮件还是编辑内容，我都能提供帮助。
-
-        5. **学习辅导**：我可以提供一些学习上的帮助，包括解释概念和解决问题。
-
-        6. **搜索信息**：如果您需要网上的信息，我可以利用搜索结果来提供更全面的回答。
-
-        7. **生成创意**：如果您需要写作、设计或其他创意项目的灵感，我可以帮助生成点子。
-
-        8. **使用MOSS**：通过MOSS，我可以执行复杂的任务，比如编程、数据分析等。
-
-        如果您有任何特定的需求或问题，请随时告诉我！
+        def main(os: MOSS) -> Operator:
+            song_name = "七里香"
+            if os.player.play(song_name):
+                return os.mindflow.finish(f"正在播放 {song_name}")
+            else:
+                return os.mindflow.fail(f"无法播放 {song_name}")

@@ -1,18 +1,25 @@
 from typing import Iterable, Optional, Tuple, List, Dict
 from ghostiss.container import Container
 from ghostiss.core.ghosts import (
-    Action, MOSSAction,
+    Action,
     LLMRunner,
     Operator,
 )
+import datetime
 from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.core.moss import MOSS, PyContext
-from ghostiss.core.messages import DefaultTypes
+from ghostiss.core.messages import DefaultTypes, Message
 from ghostiss.core.runtime.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
 from ghostiss.core.runtime.threads import Thread, thread_to_chat
 from ghostiss.helpers import uuid, import_from_str
 from pydantic import BaseModel, Field
 from ghostiss.framework.llms.chatfilters import AssistantNameFilter
+from ghostiss.framework.moss.action import MOSSAction
+
+__all__ = [
+    'MossRunner',
+    'MOSSRunnerTestResult', 'MOSSRunnerTestSuite',
+]
 
 
 class MossRunner(LLMRunner):
@@ -81,11 +88,20 @@ class MossRunner(LLMRunner):
         return llms.get_api(self._llm_api_name)
 
 
+class MOSSRunnerTestResult(BaseModel):
+    time: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())
+    results: Dict[str, List[Message]] = Field(default_factory=dict)
+
+
 class MOSSRunnerTestSuite(BaseModel):
     """
     模拟一个 MOSSRunner 的单元测试.
     """
-    agent_name: str = Field(default="")
+    import_runner: Optional[str] = Field(
+        default=None,
+        description="runner 不是用 test suite 生成, 而是从目标路径 import 一个实例. "
+    )
+    agent_name: str = Field(default="moss")
 
     system_prompt: str = Field(
         description="定义系统 prompt. "
@@ -106,11 +122,23 @@ class MOSSRunnerTestSuite(BaseModel):
         default_factory=list,
         description="use module:spec pattern to import action instances. such as foo.bar:zoo",
     )
+    results: List[MOSSRunnerTestResult] = Field(
+        default_factory=list,
+        description="用来记录历史上测试的结果",
+    )
 
     def get_runner(self, llm_api: str) -> MossRunner:
         """
         从配置文件里生成 runner 的实例.
         """
+        if self.import_runner:
+            runner: MossRunner = import_from_str(self.import_runner)
+            if not isinstance(runner, MossRunner):
+                raise AttributeError(f"import {self.import_runner} must be an instance of MossRunner")
+            runner._llm_api_name = llm_api
+            # 跳过其它配置项.
+            return runner
+
         actions = []
         if self.actions:
             for action in self.actions:

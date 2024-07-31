@@ -9,11 +9,12 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostiss.core.errors import GhostissIOError
-from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser, DefaultTypes, FunctionalToken
+from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser, DefaultTypes
 from ghostiss.core.runtime.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
     Chat,
-    Embedding, Embeddings
+    Embedding, Embeddings,
+    FunctionalToken,
 )
 from ghostiss.container import Bootstrapper, Container
 

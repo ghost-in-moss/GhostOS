@@ -4,7 +4,10 @@ services:
   - name: moonshot
     # driver: use default
     base_url: https://api.moonshot.cn/v1
-    token_key: MOONSHOT_API_KEY
+    token: $MOONSHOT_API_KEY
+default:
+  service: moonshot
+  model: "v1"
 models:
   test:
     service: moonshot

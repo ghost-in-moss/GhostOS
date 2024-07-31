@@ -113,7 +113,7 @@ class DefaultOpenAIParser(OpenAIParser):
         tool_calls = None
         if message.callers:
             for caller in message.callers:
-                if not caller.protocol:
+                if not caller.functional_token:
                     # 如果不是协议信息, 则不做额外的封装.
                     continue
                 if caller.id is None:

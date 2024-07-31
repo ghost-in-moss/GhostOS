@@ -1,7 +1,8 @@
-import inspect
-
-from ghostiss.core.moss.moss import MOSS, BasicMOSSImpl, TestMOSSProvider
+from ghostiss.core.moss.moss import MOSS, TestMOSSProvider
 from ghostiss.core.moss.modules import BasicModulesProvider
+from ghostiss.core.moss.reflect import (
+    Importing,
+)
 from ghostiss.container import Container
 from pydantic import BaseModel
 
@@ -45,7 +46,6 @@ result_ = os.foo()
     assert r == "foo"
     m.destroy()
 
-
     # test2
     # 尝试运行一个 code 定义的函数.
     m = moss.new(foo, Bar)
@@ -65,7 +65,6 @@ result_ = bar.bar()
 """
     assert m(code=code, target='result_') == 3
 
-
     # test3
     # 在函数里使用定义过的其它函数.
     m = moss.new(foo, Bar)
@@ -78,7 +77,6 @@ def main(os: MOSS) -> str:
 """
     assert m(code=code, target='main', args=['os']) == "foobar"
 
-
     # test4
     # 在函数定义里使用外部提供的变量.
     m = moss.new(foo, Bar)
@@ -88,3 +86,12 @@ def main(os: MOSS) -> int:
     return bar.bar()
 """
     assert m(code=code, target='main', args=['os']) == 3
+
+
+def test_moss_with_importing():
+    c = prepare_container()
+    moss = c.force_fetch(MOSS)
+    import inspect
+    moss.with_vars(Importing(value=inspect))
+    prompt = moss.dump_code_prompt()
+    assert "import inspect" in prompt

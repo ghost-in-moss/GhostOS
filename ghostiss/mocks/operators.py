@@ -1,5 +1,4 @@
 from typing import Optional
-from ghostiss.exports import Exporter
 
 from ghostiss.core.ghosts import Operator, Ghost
 

@@ -1,10 +1,10 @@
 from typing import Dict, Optional, Iterable, List, Any
 from copy import deepcopy
-from ghostiss.reflect import (
-    Reflection, reflects,
-    Attr,
+from ghostiss.core.moss.reflect import (
+    Reflection, Attr,
     Interface, Model,
     Library,
+    IterableReflection
 )
 from ghostiss.helpers import get_calling_module
 
@@ -16,7 +16,7 @@ EXPORTS_KEY = "EXPORTS"
 """如果一个 module 里包含 EXPORTS 变量, 同时是一个 Exports 对象, 则 modules 模块会优先从中获取"""
 
 
-class Exporter:
+class Exporter(IterableReflection):
     """
     提供一套语法糖方便做链式的 Exports 构建.
     这是一种对类库的封装做法.
@@ -32,6 +32,16 @@ class Exporter:
         self.__deep_copy = deep_copy
         self.__reflections: Dict[str, Reflection] = {}
         self.__reflection_orders: List[str] = []
+        super().__init__(name="")
+
+    def value(self) -> Iterable[Reflection]:
+        return self.all()
+
+    def prompt(self) -> str:
+        lines = []
+        for reflection in self.value():
+            lines.append(reflection.prompt())
+        return "\n\n".join(lines)
 
     def with_attr(self, name: str, value: Any, typehint: Optional[Any] = None) -> "Exporter":
         attr = Attr(name=name, value=value, typehint=typehint)
@@ -49,15 +59,15 @@ class Exporter:
         return self
 
     def with_model(self, model: type, alias: Optional[str] = None) -> "Exporter":
-        m = Model(model=model, alias=alias)
+        m = Model(model=model, name=alias)
         return self.with_reflection(reflection=m)
 
     def with_lib(self, cls: type, alias: str = None) -> "Exporter":
-        lib = Library(cls=cls, alias=alias)
+        lib = Library(cls=cls, name=alias)
         return self.with_reflection(lib)
 
     def with_itf(self, cls: type, alias: str = None) -> "Exporter":
-        itf = Interface(cls=cls, alias=alias)
+        itf = Interface(cls=cls, name=alias)
         return self.with_reflection(itf)
 
     def get(self, name: str) -> Optional[Reflection]:
