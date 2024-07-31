@@ -1,18 +1,19 @@
+from typing import Optional, Type, ClassVar
 import sys
 import argparse
 import os
-from typing import Optional, Type, ClassVar
-
 import yaml
+from ghostiss.reflect import Interface, Library
 from ghostiss.container import Container, Provider, CONTRACT
 from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.moss import MOSS, BasicMOSSImpl, BasicModulesProvider
-from ghostiss.reflect import Interface, Library
-from ghostiss.framework.llms import ConfigBasedLLMsProvider
-from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite
 from ghostiss.core.ghosts.messenger import TestMessengerProvider
+from ghostiss.framework.llms import ConfigBasedLLMsProvider
+from ghostiss.framework.runners.mossrunner import MOSSRunnerTestSuite, MOSSRunnerTestResult
+from ghostiss.framework.llms.test_case import ChatCompletionTestCase, APIInfo
+from ghostiss.helpers import yaml_pretty_dump
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
@@ -76,15 +77,27 @@ def main() -> None:
         type=str,
         default="hello_world"
     )
+    parser.add_argument(
+        "--llm_test", "-l",
+        help="save the chat case to the same file name in the llm test cases",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--save", "-s",
+        help="save the test results to the case",
+        action="store_true",
+        default=False,
+    )
 
     container = _prepare_container()
     parsed = parser.parse_args(sys.argv[1:])
     storage = container.force_fetch(Storage)
     prefix = "tests/moss_tests/"
-    file_name = os.path.join(prefix, parsed.case + ".yaml")
-    content = storage.get(file_name)
+    suite_file_name = os.path.join(prefix, parsed.case + ".yaml")
+    content = storage.get(suite_file_name)
     if content is None:
-        raise FileNotFoundError(f"file {file_name} not found")
+        raise FileNotFoundError(f"file {suite_file_name} not found")
 
     data = yaml.safe_load(content)
     suite = MOSSRunnerTestSuite(**data)
@@ -97,6 +110,8 @@ def main() -> None:
     console.print(Panel(thread_json, title="thread info"))
 
     results = suite.run_test(container)
+
+    chat_completion_test_case: Optional[ChatCompletionTestCase] = None
     # 输出不同模型生成的 chatinfo.
     for api_name, _result in results.items():
         _thread, _chat, _op = _result
@@ -118,9 +133,20 @@ def main() -> None:
             title=f"{title}: chat info in markdown"
         ))
 
+        # 用来丰富 chat completion test.
+        if chat_completion_test_case is None:
+            chat_completion_test_case = ChatCompletionTestCase(
+                chat=_chat,
+                apis=[APIInfo(api=api_name)],
+            )
+        else:
+            chat_completion_test_case.apis.append(APIInfo(api=api_name))
+
+    test_result = MOSSRunnerTestResult()
     # 输出 appending 信息.
     for api_name, _result in results.items():
         _thread, _chat, _op = _result
+        test_result.results[api_name] = _thread.appending
         title = api_name
         # 输出 appending 的消息.
         appending = _thread.appending
@@ -145,6 +171,18 @@ def main() -> None:
                         )
                     )
         console.print(Panel(str(_op), title=f" {title}: operator output"))
+
+    if parsed.save:
+        suite.results.insert(0, test_result)
+        data = yaml_pretty_dump(suite.model_dump(exclude_defaults=True))
+        storage.put(suite_file_name, bytes(data.encode("utf-8")))
+
+    if parsed.llm_test:
+        llm_test = parsed.case
+        llm_test_file_path = os.path.join("tests/llm_tests", llm_test + ".yaml")
+        data = yaml_pretty_dump(chat_completion_test_case.model_dump(exclude_defaults=True))
+        storage.put(llm_test_file_path, bytes(data.encode("utf-8")))
+        console.print(f"save chat test case to {llm_test_file_path}")
 
 
 if __name__ == "__main__":

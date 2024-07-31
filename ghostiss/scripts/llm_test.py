@@ -11,6 +11,7 @@ from ghostiss.framework.llms.test_case import ChatCompletionTestCase, run_test_c
 from rich.console import Console
 from rich.panel import Panel
 from rich.json import JSON
+from rich.markdown import Markdown
 
 
 def _prepare_container() -> Container:
@@ -50,7 +51,7 @@ def main() -> None:
     for name, message in output.items():
         body = JSON(message.model_dump_json(indent=2, exclude_defaults=True))
         panel = Panel(body, title=name)
-        panel2 = Panel(message.content)
+        panel2 = Panel(Markdown(message.get_content()))
         console.print(panel)
         console.print(panel2)
 

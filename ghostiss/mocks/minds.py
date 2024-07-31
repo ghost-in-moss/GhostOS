@@ -21,4 +21,5 @@ class FakeMindflow(Mindflow):
         return FakeOperator("FakeMindflow:fail", reasons=reasons)
 
 
-EXPORTS = Exporter().with_attr("mindflow", FakeMindflow(), Mindflow)
+EXPORTS = Exporter().\
+    with_attr("mindflow", FakeMindflow(), Mindflow)
