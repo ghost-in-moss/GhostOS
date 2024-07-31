@@ -1,8 +1,9 @@
-from typing import List, Optional, Union, AnyStr
+from typing import Union, AnyStr
 from abc import ABC, abstractmethod
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.thoughts import Thought
 from ghostiss.core.messages.message import Message, MessageClass
+from ghostiss.core.moss.exports import Exporter
 
 MessageType = Union[Message, MessageClass, AnyStr]
 
@@ -91,3 +92,9 @@ class Mindflow(ABC):
         :param reasons: 发送一条或多条消息告知用户失败的原因.
         """
         pass
+
+
+EXPORTS = Exporter(). \
+    library(Mindflow). \
+    library(MultiTasks). \
+    typing(MessageType, "MessageType")

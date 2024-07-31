@@ -30,6 +30,9 @@ models:
   gpt-3.5-turbo:
     service: openai
     model: gpt-3.5-turbo
+  gpt-4:
+    service: openai
+    model: gpt-4
   gpt-4-turbo:
     service: openai
     model: gpt-4-turbo

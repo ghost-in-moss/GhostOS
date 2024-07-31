@@ -34,6 +34,9 @@ class FileStorage(Storage):
 
     def put(self, file_name: str, content: bytes) -> None:
         file_path = os.path.join(self._dir, file_name)
+        file_dir = os.path.dirname(file_path)
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
         with open(file_path, 'wb') as f:
             f.write(content)
 

@@ -75,4 +75,4 @@ class WaitOperator(Operator):
 
 
 EXPORTS = Exporter(). \
-    with_itf(Operator)
+    interface(Operator)

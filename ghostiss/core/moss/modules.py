@@ -3,7 +3,7 @@ import importlib
 from types import ModuleType
 from typing import Optional, Type
 
-from ghostiss.core.moss.reflect import reflect, Reflection, Importing
+from ghostiss.core.moss.reflect import reflect, reflects, Reflection, Importing
 from ghostiss.core.moss.exports import EXPORTS_KEY, Exporter
 from ghostiss.container import Provider, Container, CONTRACT
 
@@ -43,11 +43,20 @@ class BasicModules(Modules):
         if EXPORTS_KEY in module_ins.__dict__:
             # use EXPORTS instead of the module
             exports = module_ins.__dict__[EXPORTS_KEY]
-        if spec is None:
+        if spec == '*':
             if exports:
                 return exports
             else:
-                return Importing(value=module_ins, module=module, module_spec=spec)
+                __all__ = {}
+                if '__all__' in module_ins.__dict__:
+                    for key in module_ins.__dict__['__all__']:
+                        __all__[key] = module_ins.__dict__[key]
+                else:
+                    __all__ = module_ins.__dict__
+                return Exporter(with_module=False, deep_copy=False).reflects(**__all__)
+        if spec is None:
+            # 将整个 module 返回.
+            return Importing(value=module_ins, module=module, module_spec=spec)
 
         if isinstance(exports, Exporter):
             return exports.get(spec)

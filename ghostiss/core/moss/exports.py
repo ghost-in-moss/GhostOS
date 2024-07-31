@@ -1,10 +1,10 @@
 from typing import Dict, Optional, Iterable, List, Any
 from copy import deepcopy
 from ghostiss.core.moss.reflect import (
-    Reflection, Attr,
+    Reflection, Attr, reflects,
     Interface, Model,
-    Library,
-    IterableReflection
+    Library, Typing,
+    IterableReflection,
 )
 from ghostiss.helpers import get_calling_module
 
@@ -25,14 +25,25 @@ class Exporter(IterableReflection):
     2. 可以快速生成基本抽象.
     """
 
-    def __init__(self, with_module: bool = True, deep_copy: bool = True):
-        self.module: Optional[str] = None
-        if with_module:
+    def __init__(
+            self, *,
+            modulename: Optional[str] = None,
+            with_module: bool = True,
+            deep_copy: bool = True,
+    ):
+        self.module: Optional[str] = modulename
+        if modulename is None and with_module:
             self.module = get_calling_module(2)
         self.__deep_copy = deep_copy
         self.__reflections: Dict[str, Reflection] = {}
         self.__reflection_orders: List[str] = []
         super().__init__(name="")
+
+    def reflects(self, *args, **kwargs) -> "Exporter":
+        items = []
+        for item in reflects(*args, **kwargs):
+            items.append(item)
+        return self.with_reflection(*items)
 
     def value(self) -> Iterable[Reflection]:
         return self.all()
@@ -43,30 +54,35 @@ class Exporter(IterableReflection):
             lines.append(reflection.prompt())
         return "\n\n".join(lines)
 
-    def with_attr(self, name: str, value: Any, typehint: Optional[Any] = None) -> "Exporter":
+    def attr(self, name: str, value: Any, typehint: Optional[Any] = None) -> "Exporter":
         attr = Attr(name=name, value=value, typehint=typehint)
         return self.with_reflection(attr)
 
-    def with_reflection(self, reflection: Reflection) -> "Exporter":
-        if self.module:
-            # 先深拷贝, 避免污染.
-            reflection = deepcopy(reflection)
-            reflection = reflection.update(module=self.module)
+    def with_reflection(self, *reflections: Reflection) -> "Exporter":
+        for reflection in reflections:
+            if self.module:
+                # 先深拷贝, 避免污染.
+                reflection = deepcopy(reflection)
+                reflection = reflection.update(module=self.module)
 
-        name = reflection.name()
-        self.__reflection_orders.append(name)
-        self.__reflections[name] = reflection
+            name = reflection.name()
+            self.__reflection_orders.append(name)
+            self.__reflections[name] = reflection
         return self
 
-    def with_model(self, model: type, alias: Optional[str] = None) -> "Exporter":
+    def model(self, model: type, alias: Optional[str] = None) -> "Exporter":
         m = Model(model=model, name=alias)
-        return self.with_reflection(reflection=m)
+        return self.with_reflection(m)
 
-    def with_lib(self, cls: type, alias: str = None) -> "Exporter":
+    def library(self, cls: type, alias: str = None) -> "Exporter":
         lib = Library(cls=cls, name=alias)
         return self.with_reflection(lib)
 
-    def with_itf(self, cls: type, alias: str = None) -> "Exporter":
+    def typing(self, typing: Any, alias: str) -> "Exporter":
+        r = Typing(typing=typing, name=alias)
+        return self.with_reflection(r)
+
+    def interface(self, cls: type, alias: str = None) -> "Exporter":
         itf = Interface(cls=cls, name=alias)
         return self.with_reflection(itf)
 
