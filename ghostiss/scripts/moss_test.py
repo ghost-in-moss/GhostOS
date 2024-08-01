@@ -24,6 +24,9 @@ from rich.markdown import Markdown
 基于 MOSS Runner 来实现 MOSS 的测试脚本. 
 """
 
+# 输出环节.
+console = Console()
+
 
 class MOSSTestProvider(Provider):
     moss_doc: ClassVar[str] = """
@@ -90,21 +93,16 @@ def json_format(data: str) -> Markdown:
 """)
 
 
-def get_thread(storage: Storage, origin_suite_path: str, suite: MOSSRunnerTestSuite) -> MsgThread:
+def get_thread(storage: Storage, root_path: str, suite: MOSSRunnerTestSuite) -> MsgThread:
     """
-
-    :param storage:
-    :param origin_suite_path:
-    :param suite:
-    :return:
     """
-    if not suite.round:
+    if not suite.last_round:
         return suite.thread
-    last_round = suite.round - 1
+    last_round = suite.last_round
     current_thread = suite.thread
-    last_suite_path = get_suite_round_filename(origin_suite_path, last_round)
+    last_suite_path = os.path.join(root_path, last_round)
     last_suite = get_suite(storage, last_suite_path)
-    history_thread = get_thread(storage, origin_suite_path, last_suite)
+    history_thread = get_thread(storage, root_path, last_suite)
     history_messages = history_thread.updated().messages + current_thread.messages
     return current_thread.model_copy(update=dict(messages=history_messages))
 
@@ -124,6 +122,12 @@ def get_suite_round_filename(origin_file_name: str, r: int) -> str:
         return origin_file_name
     file_basename = origin_file_name.rstrip('.yaml')
     return file_basename + "-" + str(r) + ".yaml"
+
+
+def save_suite(storage: Storage, suite: MOSSRunnerTestSuite, filename: str) -> None:
+    data = yaml_pretty_dump(suite.model_dump(exclude_defaults=True))
+    storage.put(filename, bytes(data.encode("utf-8")))
+    console.print(f"save the suite case {filename}")
 
 
 def main() -> None:
@@ -166,11 +170,9 @@ def main() -> None:
     container = _prepare_container()
     parsed = parser.parse_args(sys.argv[1:])
     storage = container.force_fetch(Storage)
-    prefix = "tests/moss_tests/"
-    origin_suite_file_name = os.path.join(prefix, parsed.case + ".yaml")
+    root_path = "tests/moss_tests/"
+    origin_suite_file_name = os.path.join(root_path, parsed.case + ".yaml")
     suite_file_name = origin_suite_file_name
-    # 输出环节.
-    console = Console()
 
     if parsed.round:
         suite_file_name = get_suite_round_filename(origin_suite_file_name, parsed.round)
@@ -178,15 +180,23 @@ def main() -> None:
 
     # 获取 suite.
     suite = get_suite(storage, suite_file_name)
-    if parsed.round and suite.round_api and len(suite.llm_apis) > 0:
-        suite.llm_apis = [suite.round_api]
-        console.print(f"suite.llm_apis replaced to {suite.llm_apis}")
 
     # 递归生成 thread 信息.
-    thread = get_thread(storage, origin_suite_file_name, suite)
+    thread = get_thread(storage, root_path, suite)
     if parsed.input:
         input_msg = DefaultTypes.DEFAULT.new_user(content=parsed.input)
         thread.inputs = [input_msg]
+        if not suite.thread.inputs:
+            suite.thread.inputs = thread.inputs
+            save_suite(storage, suite, suite_file_name)
+            console.print(f"update the suite inputs to {thread.inputs}")
+
+    if not suite.thread.inputs:
+        raise AttributeError(f"thread inputs is empty. You can use --input to add one, or modify test case directly.")
+
+    if parsed.round and suite.round_api and len(suite.llm_apis) > 0:
+        suite.llm_apis = [suite.round_api]
+        console.print(f"suite.llm_apis replaced to {suite.llm_apis}")
 
     # 先输出 thread 完整信息
     thread_json = json_format(thread.model_dump_json(indent=2, exclude_defaults=True))
@@ -258,8 +268,7 @@ def main() -> None:
 
     if parsed.save:
         suite.results.insert(0, test_result)
-        data = yaml_pretty_dump(suite.model_dump(exclude_defaults=True))
-        storage.put(suite_file_name, bytes(data.encode("utf-8")))
+        save_suite(storage, suite, suite_file_name)
         console.print("save the test results to the case")
 
     if parsed.round is not None:
@@ -267,7 +276,7 @@ def main() -> None:
         new_round_file_name = get_suite_round_filename(origin_suite_file_name, new_round)
         new_suite = suite.model_copy(deep=True)
         new_suite.results = []
-        new_suite.round = new_round
+        new_suite.last_round = suite_file_name.lstrip(root_path)
         new_round_api = suite.round_api if suite.round_api else suite.llm_apis[0]
         new_suite.round_api = new_round_api
         # 获取新的 message.
@@ -275,9 +284,7 @@ def main() -> None:
         new_thread = MsgThread(messages=messages)
         new_suite.thread = new_thread
         new_suite.round_api = new_round_api
-        data = yaml_pretty_dump(new_suite.model_dump(exclude_defaults=True))
-        storage.put(new_round_file_name, bytes(data.encode("utf-8")))
-        console.print("save the test results to a new round")
+        save_suite(storage, new_suite, new_round_file_name)
 
     if parsed.llm_test:
         llm_test = parsed.case

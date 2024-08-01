@@ -102,7 +102,10 @@ class MOSSRunnerTestSuite(BaseModel):
         description="runner 不是用 test suite 生成, 而是从目标路径 import 一个实例. "
     )
 
-    round: Optional[int] = Field(default=None, description="if given, will join last round thread to current thread")
+    last_round: Optional[str] = Field(
+        default=None,
+        description="relative file path of last round. if given, will join last round thread to current thread",
+    )
     round_api: Optional[str] = Field(
         default=None,
         description="certain llm api name that used to generate new round messages. "
