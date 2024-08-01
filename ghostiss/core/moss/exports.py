@@ -2,8 +2,8 @@ from typing import Dict, Optional, Iterable, List, Any
 from copy import deepcopy
 from ghostiss.core.moss.reflect import (
     Reflection, Attr, reflects,
-    Interface, Model,
-    Library, Typing,
+    ClassSign, Model,
+    Interface, Typing,
     IterableReflection,
 )
 from ghostiss.helpers import get_calling_module
@@ -45,12 +45,15 @@ class Exporter(IterableReflection):
             items.append(item)
         return self.with_reflection(*items)
 
-    def value(self) -> Iterable[Reflection]:
+    def iterate(self) -> Iterable[Reflection]:
         return self.all()
+
+    def value(self) -> Dict[str, Any]:
+        return self.__reflections
 
     def prompt(self) -> str:
         lines = []
-        for reflection in self.value():
+        for reflection in self.iterate():
             lines.append(reflection.prompt())
         return "\n\n".join(lines)
 
@@ -74,16 +77,16 @@ class Exporter(IterableReflection):
         m = Model(model=model, name=alias)
         return self.with_reflection(m)
 
-    def library(self, cls: type, alias: str = None) -> "Exporter":
-        lib = Library(cls=cls, name=alias)
+    def interface(self, cls: type, alias: str = None) -> "Exporter":
+        lib = Interface(cls=cls, name=alias)
         return self.with_reflection(lib)
 
     def typing(self, typing: Any, alias: str) -> "Exporter":
         r = Typing(typing=typing, name=alias)
         return self.with_reflection(r)
 
-    def interface(self, cls: type, alias: str = None) -> "Exporter":
-        itf = Interface(cls=cls, name=alias)
+    def class_sign(self, cls: type, alias: str = None) -> "Exporter":
+        itf = ClassSign(cls=cls, name=alias)
         return self.with_reflection(itf)
 
     def get(self, name: str) -> Optional[Reflection]:

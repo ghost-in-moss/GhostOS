@@ -8,13 +8,13 @@ from ghostiss.entity import EntityClass
 __all__ = [
 
     'BasicTypes', 'ModelType', 'ModelObject',
-    'Reflection',
+    'Reflection', 'IterableReflection',
     'TypeReflection', 'ValueReflection', 'CallerReflection', 'Importing',
 
     'Typing',
     'Attr', 'Method',
     'Class', 'Model',
-    'ClassPrompter', 'Library', 'Interface',
+    'ClassPrompter', 'Interface', 'ClassSign',
     'Locals', 'BuildObject',
 
     'reflect', 'reflects',
@@ -140,7 +140,7 @@ class Reflection(ABC):
 class IterableReflection(Reflection, ABC):
 
     @abstractmethod
-    def value(self) -> Iterable[Reflection]:
+    def iterate(self) -> Iterable[Reflection]:
         pass
 
     def generate_prompt(self) -> str:
@@ -571,7 +571,7 @@ class BuildObject(Attr):
         )
 
 
-class Library(ClassPrompter):
+class Interface(ClassPrompter):
     """
     只暴露指定 public 方法的类.
     """
@@ -615,7 +615,7 @@ class Library(ClassPrompter):
         )
 
 
-class Interface(Library):
+class ClassSign(Interface):
     """
     只暴露 class + doc 的类.
     """
@@ -739,7 +739,7 @@ def reflect(
         if is_model_class(var):
             return Model(model=var, name=name)
         else:
-            return Library(cls=var, name=name)
+            return Interface(cls=var, name=name)
     elif isinstance(var, Callable):
         return Method(caller=var, name=name)
     elif not name:
@@ -753,7 +753,7 @@ def reflects(*args, **kwargs) -> Iterable[Reflection]:
     """
     for arg in args:
         if isinstance(arg, IterableReflection):
-            for item in arg.value():
+            for item in arg.iterate():
                 yield item
             continue
 
@@ -763,7 +763,7 @@ def reflects(*args, **kwargs) -> Iterable[Reflection]:
 
     for k, v in kwargs.items():
         if isinstance(v, IterableReflection):
-            for item in v.value():
+            for item in v.iterate():
                 yield item
             continue
         r = reflect(var=v, name=k)

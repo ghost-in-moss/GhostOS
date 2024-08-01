@@ -28,7 +28,7 @@ def fire_event(g: "Ghost", e: "Event") -> Optional["Operator"]:
     if task.task_id != e.task_id:
         g.eventbus.send_event(e)
         return None
-    thought = g.thoughts.new_thought(task.thought_meta)
+    thought = g.thoughts.new_entity(task.thought_meta)
     op = thought.on_event(g, e)
     task.thought_meta = thought.to_entity_meta()
     session.update_task(task)
@@ -75,4 +75,4 @@ class WaitOperator(Operator):
 
 
 EXPORTS = Exporter(). \
-    interface(Operator)
+    class_sign(Operator)

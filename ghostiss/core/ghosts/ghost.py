@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from ghostiss.contracts.logger import LoggerItf
     from ghostiss.core.ghosts.events import EventBus
     from ghostiss.core.ghosts.session import Session
-    from ghostiss.core.ghosts.thoughts import Thoughts
+    from ghostiss.core.ghosts.thoughts import Mindset
     from ghostiss.core.ghosts.minds import MultiTasks, Mindflow
     from ghostiss.core.moss.modules import Modules
     from ghostiss.core.ghosts.messenger import Messenger
@@ -61,7 +61,7 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
 
     @property
     @abstractmethod
-    def thoughts(self) -> "Thoughts":
+    def thoughts(self) -> "Mindset":
         """
         ghost 可以管理的所有 Thoughts.
         """

@@ -3,7 +3,7 @@ import sys
 import argparse
 import os
 import yaml
-from ghostiss.core.moss.reflect import Interface, Library
+from ghostiss.core.moss.reflect import ClassSign, Interface
 from ghostiss.container import Container, Provider, CONTRACT
 from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
@@ -44,15 +44,15 @@ You can use the api that MOSS provided to implement your plan.
         from ghostiss.core.messages import Message, MessageType, MessageClass
         args = []
         args.extend([
-            Interface(cls=Message),
+            ClassSign(cls=Message),
             Typing(typing=MessageType, name="MessageType"),
-            Interface(cls=MessageClass),
+            ClassSign(cls=MessageClass),
         ])
         args.extend(Importing.iterate(values=[ABC, abstractmethod], module='abc'))
         args.extend(Importing.iterate(values=[BaseModel, Field], module='pydantic'))
         args.extend([
-            Interface(cls=Operator),
-            Library(cls=Mindflow),
+            ClassSign(cls=Operator),
+            Interface(cls=Mindflow),
         ])
         kwargs = {
             'typing': Importing(value=typing, module='typing'),

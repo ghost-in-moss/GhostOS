@@ -1,10 +1,9 @@
 from __future__ import annotations
 import inspect
-import typing
-from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type, TypedDict
+from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type
 from types import ModuleType
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from ghostiss.container import Container, CONTRACT
 from ghostiss.core.moss.context import PyContext, Variable, Imported
 from ghostiss.core.moss.modules import Modules
@@ -13,14 +12,13 @@ from ghostiss.core.moss.reflect import (
     reflect, reflects,
     Reflection, TypeReflection,
     Model, ModelType, ModelObject,
-    Attr, Method, ClassPrompter, Locals, Library,
+    Attr, Method, ClassPrompter, Locals, Interface,
     get_typehint_string,
     get_model_object_meta, new_model_instance
 )
 from ghostiss.helpers import camel_to_snake
 from ghostiss.container import Provider
 from ghostiss.helpers import BufferPrint
-from ghostiss.core.messages.message import MessageType
 
 AttrTypes = Union[int, float, str, bool, list, dict, None, Provider, ModelType]
 
@@ -354,7 +352,7 @@ class BasicMOSSImpl(MOSS):
         contract = provider.contract()
         impl = provider.factory(self.__container)
 
-        contract_reflect = Library(cls=contract, name=name)
+        contract_reflect = Interface(cls=contract, name=name)
         attr = Attr(value=impl, name=camel_to_snake(contract_reflect.name()))
         self.__add_type(contract_reflect)
         self.__add_attr(attr)

@@ -95,6 +95,6 @@ class Mindflow(ABC):
 
 
 EXPORTS = Exporter(). \
-    library(Mindflow). \
-    library(MultiTasks). \
+    interface(Mindflow). \
+    interface(MultiTasks). \
     typing(MessageType, "MessageType")
