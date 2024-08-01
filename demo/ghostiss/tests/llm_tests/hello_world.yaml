@@ -166,6 +166,64 @@ chat:
       1. The existence of functional tokens is unknown to the user. Do not mention their existence.
       2. Use them only when necessary.
       3. You can only use one functional token at a time.
+
+
+      # Functional Token
+      You are equipped with `functional tokens` parser when you are outputing.
+
+      A functional token is a set of special tokens that corresponds to a system callback function.
+      When a functional token is present in your response, the subsequent output is treated as input parameters for this
+      callback function until another functional token is encountered.
+
+      Below is a list of the functional tokens available for your use:
+
+      `>moss:`:
+
+       You can output the Python code that MOSS is supposed to run after this token.
+      The system will automatically execute them.
+      Notice:
+      - MOSS-related output is not visible to user.
+      - You are only able to generate MOSS code within this token.
+      - The content after this token shall be pure Python code only.
+      - You can send anything directly before this token, not after it.
+      - **Never** use ``` to embrace your code.
+      - Need not to mention the code you generated to user.
+
+      **Notices**
+
+      0. Your output without functional tokens will send directly.
+      1. The existence of functional tokens is unknown to the user. Do not mention their existence.
+      2. Use them only when necessary.
+      3. You can only use one functional token at a time.
+
+
+      # Functional Token
+      You are equipped with `functional tokens` parser when you are outputing.
+
+      A functional token is a set of special tokens that corresponds to a system callback function.
+      When a functional token is present in your response, the subsequent output is treated as input parameters for this
+      callback function until another functional token is encountered.
+
+      Below is a list of the functional tokens available for your use:
+
+      `>moss:`:
+
+       You can output the Python code that MOSS is supposed to run after this token.
+      The system will automatically execute them.
+      Notice:
+      - MOSS-related output is not visible to user.
+      - You are only able to generate MOSS code within this token.
+      - The content after this token shall be pure Python code only.
+      - You can send anything directly before this token, not after it.
+      - **Never** use ``` to embrace your code.
+      - Need not to mention the code you generated to user.
+
+      **Notices**
+
+      0. Your output without functional tokens will send directly.
+      1. The existence of functional tokens is unknown to the user. Do not mention their existence.
+      2. Use them only when necessary.
+      3. You can only use one functional token at a time.
   history:
   - role: user
     content: 你好!
@@ -175,7 +233,7 @@ chat:
     content: 你可以做什么?
   functional_tokens:
   - token: '>moss:'
-    caller: moss
+    name: moss
     description: |-
       You can output the Python code that MOSS is supposed to run after this token.
       The system will automatically execute them.
@@ -188,31 +246,3 @@ chat:
       - Need not to mention the code you generated to user.
 apis:
 - api: moonshot-v1-32k
-results:
-- time: '2024-07-31T13:34:51.695585'
-  results:
-    moonshot.moonshot-v1-32k:
-      msg_id: 926d5f0d-45a0-4aac-ba1a-03751642b571
-      type: chat_completion
-      created: 1722404091.6951
-      pack: false
-      content: |-
-        我可以做很多事情，比如：
-
-        1. **回答问题**：我可以提供关于各种话题的信息，包括科学、技术、数学、历史等。
-
-        2. **阅读和分析文档**：您可以上传PDF、Word文档、PPT幻灯片、Excel电子表格等文件，我可以阅读并回答有关它们的问题。
-
-        3. **语言翻译**：我可以帮助您翻译不同语言之间的文本。
-
-        4. **写作和编辑**：无论是撰写报告、电子邮件还是编辑内容，我都能提供帮助。
-
-        5. **学习辅导**：我可以提供一些学习上的帮助，包括解释概念和解决问题。
-
-        6. **搜索信息**：如果您需要网上的信息，我可以利用搜索结果来提供更全面的回答。
-
-        7. **生成创意**：如果您需要写作、设计或其他创意项目的灵感，我可以帮助生成点子。
-
-        8. **使用MOSS**：通过MOSS，我可以执行复杂的任务，比如编程、数据分析等。
-
-        如果您有任何特定的需求或问题，请随时告诉我！

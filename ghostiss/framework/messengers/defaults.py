@@ -5,7 +5,7 @@ from ghostiss.core.messages import (
     Message, Payload, Attachment, Role, DefaultTypes,
     Buffer, Stream,
 )
-from ghostiss.core.runtime.threads import Thread
+from ghostiss.core.runtime.threads import MsgThread
 from ghostiss.core.runtime.llms import FunctionalToken
 from ghostiss.framework.messages.buffers import DefaultBuffer
 
@@ -24,7 +24,7 @@ class DefaultMessenger(Messenger, Stream):
 
     def __init__(
             self, *,
-            thread: "Thread",
+            thread: "MsgThread",
             upstream: Optional[Stream] = None,
             saving: bool = True,
             name: Optional[str] = None,
@@ -61,7 +61,7 @@ class DefaultMessenger(Messenger, Stream):
     def new(
             self, *,
             sending: bool = True,
-            thread: Optional[Thread] = None,
+            thread: Optional[MsgThread] = None,
             name: Optional[str] = None,
             buffer: Optional[Buffer] = None,
             payloads: Optional[Iterable[Payload]] = None,
@@ -179,4 +179,4 @@ class TestMessengerProvider(Provider[Messenger]):
         return Messenger
 
     def factory(self, con: Container) -> Messenger:
-        return DefaultMessenger(thread=Thread())
+        return DefaultMessenger(thread=MsgThread())

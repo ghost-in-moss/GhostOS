@@ -71,29 +71,28 @@ class DefaultBuffer(Buffer):
         # 默认可以匹配任何一种 message 消息体.
         return True
 
-    def buff(self, pack: "Message") -> Iterable[Message]:
+    def buff(self, pack: "Message") -> List[Message]:
         # 获取buff 后需要发送的包.
         items = self._buff(pack)
         result = []
         for item in items:
             # 如果是尾包, 对尾包进行必要的处理.
-            if not item.pack:
-                tail = self._parse_tail_pack(item)
-                result.append(tail)
-            elif not item.is_empty():
-                # 消息不为空才发送.
-                result.append(item)
+            is_tail = item.is_tail()
+            if is_tail:
+                self._buff_tail_pack(item)
+            result.append(item)
         return result
 
     def _buff(self, pack: "Message") -> Iterable[Message]:
         if not pack:
-            yield from []
-            return
-        if DefaultTypes.is_final(pack):
+            return []
+        # 不深拷贝的话, 加工逻辑就会交叉污染?
+        # pack = origin.model_copy(deep=True)
+        if DefaultTypes.is_protocol_type(pack):
             # final 包不进行 buffer.
-            yield from [pack]
+            yield pack
             return
-        if not pack.pack:
+        if pack.is_tail():
             # 如果收到了一个尾包, 则走尾包逻辑.
             yield from self._receive_tail_pack(pack)
             return
@@ -175,34 +174,32 @@ class DefaultBuffer(Buffer):
         self._buffering_message_delivered_content += deliver_content
         # 结算环节, 变更 pack 可以输出的 content.
         pack.content = deliver_content
-        if pack.is_empty():
-            return []
         yield pack
 
     def _receive_tail_pack(self, pack: Message) -> Iterable[Message]:
         """
         接收到了一个尾包
         """
+        # 当成首包来加工一下.
+        pack = self._wrap_first_pack(pack)
         if self._buffering_message:
+            # 先判断是不是同一个包.
             patched = self._buffering_message.patch(pack)
             # 尾包不属于同一条消息.
-            if not patched:
-                # 发送上一条消息的尾包. 只有这个方法会将消息入队.
-                tail = self._clear_tail_pack()
-                if tail is not None:
-                    yield tail
+            if patched:
+                # 不做二次加工.
+                self._reset_buffering()
+                yield patched
+                return
             else:
-                # 包装好首包的讯息.
-                pack = self._wrap_first_pack(pack)
+                # 发送上一条消息的尾包. 只有这个方法会将消息入队.
+                last_tail = self._clear_tail_pack()
+                if last_tail is not None:
+                    yield last_tail
+        # 然后发送当前包.
+        yield pack
 
-        _ = self._clear_tail_pack()
-        # 变更 buffering_message.
-        self._buffering_message = pack
-        # 对尾包进行额外的处理, 并且发送.
-        # 预期尾包不会发送超过一次.
-        yield from self._parse_content_by_functional_token(pack)
-
-    def _parse_tail_pack(self, tail: Message) -> Message:
+    def _buff_tail_pack(self, tail: Message) -> None:
         # 剥离所有的 callers.
         self._buffed_messages.append(tail)
 
@@ -210,7 +207,6 @@ class DefaultBuffer(Buffer):
         if tail.callers:
             for caller in tail.callers:
                 self._buffed_callers.append(caller)
-        return tail
 
     def _wrap_first_pack(self, pack: Message) -> Message:
         # 首包强拷贝, 用来做一个 buffer.
@@ -250,6 +246,7 @@ class DefaultBuffer(Buffer):
 
     def _clear_tail_pack(self) -> Optional[Message]:
         if self._buffering_message is None:
+            self._reset_buffering()
             return None
 
         buffering = self._buffering_message
@@ -271,13 +268,16 @@ class DefaultBuffer(Buffer):
             buffering.memory = buffering.content
             buffering.content = self._buffering_message_delivered_content
 
+        self._reset_buffering()
+        return buffering
+
+    def _reset_buffering(self) -> None:
         # 状态归零.
         self._buffering_message = None
         self._buffering_message_delivered_content = ""
         self._buffering_token = ""
         self._current_functional_token = ""
         self._current_functional_token_content = ""
-        return buffering
 
     def _generate_current_caller(self) -> Optional[Caller]:
         if not self._current_functional_token:
@@ -298,7 +298,7 @@ class DefaultBuffer(Buffer):
         unsent = self._clear_tail_pack()
         deliver: List[Message] = []
         if unsent is not None:
-            unsent = self._parse_tail_pack(unsent)
+            self._buff_tail_pack(unsent)
             deliver.append(unsent)
 
         flushed = Flushed(unsent=deliver, messages=self._buffed_messages, callers=self._buffed_callers)

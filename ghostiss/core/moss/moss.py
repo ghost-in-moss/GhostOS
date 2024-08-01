@@ -383,16 +383,16 @@ class BasicMOSSImpl(MOSS):
             self.__add_method(reflection)
         elif isinstance(reflection, TypeReflection):
             # 如果是 type reflection 类型, 上下文中它可能已经存在了.
-            typ = reflection.value()
-            if typ in self.__context_type_names:
+            typ_ = reflection.value()
+            if typ_ in self.__context_type_names:
                 # 不重复添加类型. 所有类型使用第一个定义的.
                 return
             self.__add_type(reflection)
 
             # 默认判断是否要添加 lib.
-            impl = self.__container.get(typ)
+            impl = self.__container.get(typ_)
             if impl:
-                lib = Attr(value=impl, typehint=typ, name=camel_to_snake(reflection.name()))
+                lib = Attr(value=impl, typehint=typ_, name=camel_to_snake(reflection.name()))
                 self.add_reflection(lib, reassign_name=True)
         else:
             raise AttributeError(f"{reflection} not supported yet")

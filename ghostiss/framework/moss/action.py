@@ -9,7 +9,7 @@ from ghostiss.core.moss import MOSS
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.abc import Identifier
-from ghostiss.core.runtime.threads import Thread
+from ghostiss.core.runtime.threads import MsgThread
 from pydantic import BaseModel, Field
 
 __all__ = ['MOSSAction', 'MOSSArgument', 'DEFAULT_MOSS_FUNCTIONAL_TOKEN']
@@ -82,7 +82,7 @@ Here is the context provided to you in this turn:
 6. Your generated code must include `def main(os: MOSS) -> Operator` method which will be executed following your intention. 
 """
 
-    def __init__(self, moss: MOSS, thread: Thread, functional_token: Optional[FunctionalToken] = None):
+    def __init__(self, moss: MOSS, thread: MsgThread, functional_token: Optional[FunctionalToken] = None):
         self._moss = moss  # .with_vars()
         self._thread = thread
         if functional_token is None:

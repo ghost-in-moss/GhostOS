@@ -1,0 +1,48 @@
+round: 1
+round_api: moonshot-v1-32k
+system_prompt: 你是一个 ai 助手, 名字叫做 JoJo.
+instruction: 你需要使用自己的工具, 帮助用户解决各种问题.
+llm_apis:
+- moonshot-v1-32k
+pycontext:
+  imported:
+  - module: ghostiss.mocks.minds
+    spec: mindflow
+thread:
+  id: 2031399d-aea3-421f-8b60-47cac61be798
+  messages:
+  - msg_id: ecc68525-e03c-454e-9915-38b28f9762a3
+    type: chat_completion
+    created: 1722526598.5439
+    pack: false
+    content: ''
+    payloads:
+      model_conf:
+        model: moonshot-v1-32k
+        service: moonshot
+        temperature: 0.7
+        n: 1
+        max_tokens: 2000
+        timeout: 20
+        request_timeout: 40
+        kwargs: {}
+  - msg_id: 7e4a5429-5953-4995-9b3b-4a65e81df761
+    created: 1722526598
+    pack: false
+    content: |-
+      我能够帮助您：
+
+      1. 回答问题，包括但不限于数学问题、语言学习、历史事实等。
+      2. 编写和解释代码，尤其是使用Python语言。
+      3. 提供建议和信息，比如旅行计划、书籍推荐等。
+      4. 协助处理文本、PDF、Word、PPT、Excel等文件中的内容。
+      5. 使用互联网搜索信息来增强我的回答。
+
+      如果您有任何特定的问题或需要帮助，请随时告诉我。
+    payloads:
+      completion_usage:
+        completion_tokens: 93
+        prompt_tokens: 1656
+        total_tokens: 1749
+    pack_count: 94
+    time_cast: 2.5876

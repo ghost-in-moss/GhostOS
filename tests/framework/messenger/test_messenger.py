@@ -1,11 +1,11 @@
 from ghostiss.framework.messengers import DefaultMessenger
-from ghostiss.core.runtime.threads import Thread
+from ghostiss.core.runtime.threads import MsgThread
 from ghostiss.core.messages import Message
 from ghostiss.core.runtime.llms import FunctionalToken
 
 
 def test_default_messenger_baseline():
-    thread = Thread()
+    thread = MsgThread()
     messenger = DefaultMessenger(thread=thread)
     content = "hello world"
     for c in content:
@@ -25,7 +25,7 @@ def test_messenger_with_moss():
         deliver=False,
     )]
 
-    thread = Thread()
+    thread = MsgThread()
     messenger = DefaultMessenger(thread=thread, functional_tokens=functional_tokens)
 
     contents = ["he", "llo >mo", "ss: w", "orld"]

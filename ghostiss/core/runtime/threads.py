@@ -7,7 +7,7 @@ from ghostiss.core.runtime.llms import Chat
 from ghostiss.helpers import uuid
 
 __all__ = [
-    'Threads', 'Thread', 'ThreadPayload',
+    'Threads', 'MsgThread', 'ThreadPayload',
     'thread_to_chat',
 ]
 
@@ -18,7 +18,7 @@ class ThreadPayload(Payload):
     thread_id: str = Field(description="Thread ID")
 
 
-class Thread(BaseModel):
+class MsgThread(BaseModel):
     """
     对话历史的快照.
     """
@@ -54,7 +54,7 @@ class Thread(BaseModel):
         # todo: iterate messages and add variable message
         return self.pycontext
 
-    def fork(self, tid: Optional[str] = None) -> "Thread":
+    def fork(self, tid: Optional[str] = None) -> "MsgThread":
         tid = tid if tid else uuid()
         root_id = self.root_id if self.root_id else self.id
         parent_id = self.id
@@ -72,10 +72,10 @@ class Thread(BaseModel):
         if pycontext is not None:
             self.pycontext = self.pycontext.join(pycontext)
 
-    def thread_copy(self, update: Optional[dict] = None) -> "Thread":
+    def thread_copy(self, update: Optional[dict] = None) -> "MsgThread":
         return self.model_copy(update=update, deep=True)
 
-    def updated(self) -> "Thread":
+    def updated(self) -> "MsgThread":
         """
         返回一个新的 Thread, inputs 和 appending 都追加到 messages 里.
         :return:
@@ -90,7 +90,7 @@ class Thread(BaseModel):
         return thread
 
 
-def thread_to_chat(chat_id: str, system: List[Message], thread: Thread) -> Chat:
+def thread_to_chat(chat_id: str, system: List[Message], thread: MsgThread) -> Chat:
     """
     将 thread 转换成基准的 chat.
     :param chat_id:
@@ -111,17 +111,17 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: Thread) -> Chat:
 class Threads(ABC):
 
     @abstractmethod
-    def get_thread(self, thread_id: str, create: bool = False) -> Optional[Thread]:
+    def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:
         pass
 
     @abstractmethod
-    def create_thread(self, messages: List[Message], pycontext: PyContext, thread_id: Optional[str] = None) -> Thread:
+    def create_thread(self, messages: List[Message], pycontext: PyContext, thread_id: Optional[str] = None) -> MsgThread:
         pass
 
     @abstractmethod
-    def update_thread(self, thread: Thread) -> Thread:
+    def update_thread(self, thread: MsgThread) -> MsgThread:
         pass
 
     @abstractmethod
-    def fork_thread(self, thread: Thread) -> Thread:
+    def fork_thread(self, thread: MsgThread) -> MsgThread:
         pass

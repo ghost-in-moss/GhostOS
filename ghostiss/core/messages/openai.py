@@ -15,10 +15,10 @@ from ghostiss.core.messages.message import Message, DefaultTypes, Role, Caller, 
 from ghostiss.container import Provider, Container, CONTRACT
 from pydantic import BaseModel, Field
 
-__all__ = ["OpenAIParser", "DefaultOpenAIParser", "DefaultOpenAIParserProvider"]
+__all__ = ["OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider"]
 
 
-class OpenAIParser(ABC):
+class OpenAIMessageParser(ABC):
     """
     用来对齐 openai 的协议.
     """
@@ -72,7 +72,7 @@ class CompletionUsagePayload(CompletionUsage, PayloadItem):
         return self
 
 
-class DefaultOpenAIParser(OpenAIParser):
+class DefaultOpenAIMessageParser(OpenAIMessageParser):
     """
     默认的 parser, 只做了极简的实现.
     """
@@ -103,10 +103,10 @@ class DefaultOpenAIParser(OpenAIParser):
 
     @staticmethod
     def _parse_assistant_chat_completion(message: Message) -> Iterable[ChatCompletionAssistantMessageParam]:
-        content = message.content
-        if message.memory is not None:
-            content = message.memory
-
+        if message.is_empty():
+            # todo: log warning
+            return []
+        content = message.get_content()
         # function call
         function_call = None
         # tools call
@@ -133,6 +133,8 @@ class DefaultOpenAIParser(OpenAIParser):
                         type="function",
                     )
                     tool_calls.append(tool_call)
+        if not content and not function_call and not tool_calls:
+            return []
 
         return [ChatCompletionAssistantMessageParam(
             content=content,
@@ -142,7 +144,7 @@ class DefaultOpenAIParser(OpenAIParser):
         )]
 
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
-        pack = Message.new_tail(typ=DefaultTypes.CHAT_COMPLETION, role=message.role, content=message.content)
+        pack = Message.new_tail(typ_=DefaultTypes.CHAT_COMPLETION, role=message.role, content=message.content)
         if message.function_call:
             caller = Caller(
                 name=message.function_call.name,
@@ -166,9 +168,9 @@ class DefaultOpenAIParser(OpenAIParser):
         first = True
         for item in messages:
             if len(item.choices) == 0:
-                # 接受到了 openai 协议尾包.
+                # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
-                pack = Message.new_pack(role=Role.ASSISTANT.value, typ=DefaultTypes.CHAT_COMPLETION)
+                pack = Message.new_pack(role=Role.ASSISTANT.value, typ_=DefaultTypes.CHAT_COMPLETION)
                 usage.set(pack)
                 yield pack
             else:
@@ -181,9 +183,9 @@ class DefaultOpenAIParser(OpenAIParser):
     @staticmethod
     def _new_pack_from_delta(delta: ChoiceDelta, first: bool) -> Message:
         if first:
-            pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content, typ=DefaultTypes.CHAT_COMPLETION)
+            pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content, typ_=DefaultTypes.CHAT_COMPLETION)
         else:
-            pack = Message.new_pack(role=Role.ASSISTANT.value, content=delta.content, typ=DefaultTypes.CHAT_COMPLETION)
+            pack = Message.new_pack(role=Role.ASSISTANT.value, content=delta.content, typ_=DefaultTypes.CHAT_COMPLETION)
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())
@@ -206,7 +208,7 @@ class DefaultOpenAIParserProvider(Provider):
         return True
 
     def contract(self) -> Type[CONTRACT]:
-        return OpenAIParser
+        return OpenAIMessageParser
 
     def factory(self, con: Container) -> Optional[CONTRACT]:
-        return DefaultOpenAIParser()
+        return DefaultOpenAIMessageParser()

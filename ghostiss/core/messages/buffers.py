@@ -32,9 +32,10 @@ class Buffer(ABC):
         pass
 
     @abstractmethod
-    def buff(self, pack: "Message") -> Iterable[Message]:
+    def buff(self, pack: "Message") -> List[Message]:
         """
         buff 一个消息体, 然后决定是否对外发送.
+        不能用 Iterable 返回, 如果上层不处理, 就会导致没有 buff.
         """
         pass
 

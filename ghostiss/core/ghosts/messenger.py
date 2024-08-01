@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from ghostiss.core.messages.message import Message, Payload, Attachment, Caller
 from ghostiss.core.messages.buffers import Buffer
 from ghostiss.core.messages.stream import Stream
-from ghostiss.core.runtime.threads import Thread
+from ghostiss.core.runtime.threads import MsgThread
 from ghostiss.core.runtime.llms import FunctionalToken
 
 
@@ -26,7 +26,7 @@ class Messenger(Stream, ABC):
     def new(
             self, *,
             sending: bool = True,
-            thread: Optional[Thread] = None,
+            thread: Optional[MsgThread] = None,
             name: Optional[str] = None,
             buffer: Optional[Buffer] = None,
             payloads: Optional[Iterable[Payload]] = None,
