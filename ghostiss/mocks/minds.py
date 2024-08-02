@@ -1,5 +1,6 @@
 from ghostiss.core.ghosts import Operator
-from ghostiss.core.ghosts.minds import Mindflow, MessageType
+from ghostiss.core.ghosts.minds import Mindflow, MessageType, MultiTasks
+from ghostiss.core.ghosts.thoughts import Thought
 from ghostiss.mocks.operators import FakeOperator
 from ghostiss.core.moss.exports import Exporter
 
@@ -21,6 +22,22 @@ class FakeMindflow(Mindflow):
         return FakeOperator("FakeMindflow:fail", reasons=reasons)
 
 
+class FakeMultiTasks(MultiTasks):
 
-EXPORTS = Exporter().\
-    attr("mindflow", FakeMindflow(), Mindflow)
+    def wait_on_tasks(self, *thoughts: Thought) -> Operator:
+        pass
+
+    def run_tasks(self, *thoughts: Thought) -> None:
+        pass
+
+    def send_task(self, task_name: str, *messages: MessageType) -> None:
+        pass
+
+    def cancel_task(self, name: str, reason: str) -> None:
+        pass
+
+
+EXPORTS = Exporter(). \
+    attr("mindflow", FakeMindflow(), Mindflow).\
+    attr("multi_tasks", FakeMultiTasks(), MultiTasks)
+

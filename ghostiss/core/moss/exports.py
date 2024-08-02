@@ -1,8 +1,8 @@
-from typing import Dict, Optional, Iterable, List, Any, Callable
+from typing import Dict, Optional, Iterable, List, Any, Callable, Type
 from copy import deepcopy
 from ghostiss.core.moss.reflect import (
     Reflection, Attr, reflects,
-    ClassSign, Model,
+    ClassSign, SourceCode,
     Interface, Typing,
     IterableReflection,
     get_calling_modulename, is_typing,
@@ -92,10 +92,11 @@ class Exporter(IterableReflection):
         添加一个或多个已经完成加工处理的 Reflection.
         """
         for reflection in reflections:
+            module_spec = reflection.name()
             if self.module:
                 # 先深拷贝, 避免污染.
                 reflection = deepcopy(reflection)
-                reflection = reflection.update(module=self.module)
+                reflection = reflection.update(module=self.module, module_spec=module_spec)
 
             name = reflection.name()
             self.__reflection_orders.append(name)
@@ -131,14 +132,14 @@ class Exporter(IterableReflection):
             attr = mod(attr)
         return self.with_reflection(attr)
 
-    def model(self, model: type, alias: Optional[str] = None, typehint: Optional[Any] = None) -> "Exporter":
+    def source_code(self, cls: Type, typehint: Optional[Type] = None, alias: Optional[str] = None) -> "Exporter":
         """
-        :param model:
-        :param alias:
-        :param typehint:
-        :return:
+        Export source code of a class.
+        :param cls: a class type
+        :param typehint: if given, the prompt will show source code of the typehint but rename it with cls
+        :param alias: if given, the prompt will rename to alias
         """
-        m = Model(model=model, name=alias, typehint=typehint)
+        m = SourceCode(cls=cls, name=alias, typehint=typehint)
         return self.with_reflection(m)
 
     def interface(self, cls: type, alias: str = None) -> "Exporter":

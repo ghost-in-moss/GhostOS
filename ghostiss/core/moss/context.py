@@ -1,5 +1,6 @@
-from typing import List, Dict, Union, Optional, Any
+from typing import List, Dict, Union, Optional, Any, Tuple
 from pydantic import BaseModel, Field
+from ghostiss.helpers import parse_import_module_and_spec
 import inspect
 
 __all__ = [
@@ -31,11 +32,18 @@ class Imported(BaseModel):
     def get_name(self) -> str:
         if self.alias:
             return self.alias
-        return self.spec
+        _, spec = self.get_module_and_spec()
+        return spec
+
+    def get_module_and_spec(self) -> Tuple[str, Optional[str]]:
+        if self.spec:
+            return self.module, self.spec
+        return parse_import_module_and_spec(self.module)
 
     def get_import_path(self) -> str:
-        spec = ":" + self.spec if self.spec else ""
-        return self.module + spec
+        module, spec = self.get_module_and_spec()
+        spec = ":" + spec if spec else ""
+        return module + spec
 
 
 VARIABLE_TYPES = Union[str, int, float, bool, None, List, Dict]

@@ -209,3 +209,36 @@ def test_reflect_importing():
     assert i.module() == "inspect"
     assert i.module_spec() is None
     assert i.name() == "inspect"
+
+
+def test_source_code_with_parent():
+    class Parent:
+        foo = 123
+
+    class Child(Parent):
+        bar = 456
+
+    s = SourceCode(cls=Child)
+    assert "foo" not in s.generate_prompt()
+
+
+def test_source_code_without_pydantic():
+    from pydantic import BaseModel
+    class Child(BaseModel):
+        bar: int = 123
+
+    source = inspect.getsource(Child)
+    assert len(source.split("\n")) == 3
+
+
+def test_source_code_with_typehint():
+    class Parent:
+        foo = 123
+
+    class Child(Parent):
+        bar = 456
+
+    s = SourceCode(cls=Child, typehint=Parent, name="Good")
+    prompt = s.generate_prompt()
+    assert "class Good:" in prompt
+    assert "bar" not in prompt

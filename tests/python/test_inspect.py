@@ -125,10 +125,27 @@ def test_get_method_source():
     assert not inspect.ismethod(f.static)
 
 
-def test_is_class_panic():
+def test_is_class():
     assert not inspect.isclass(123)
     assert not inspect.isclass("123")
     assert not inspect.isclass({})
     assert not inspect.isclass(())
     assert not inspect.isclass(set())
     # 不用这么麻烦, 看看方法的实现就知道了....
+
+    from abc import ABC
+    class Cool(ABC):
+        bar: int = 123
+
+    assert inspect.isclass(Cool)
+
+
+def test_getsource():
+    class Parent:
+        foo: int = 123
+
+    class Child(Parent):
+        bar: int = 456
+
+    source = inspect.getsource(Child)
+    assert "foo" not in source

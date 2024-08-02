@@ -1,8 +1,15 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Optional, List, Dict, Type, ClassVar, Union, TypedDict
+from typing import Generic, TypeVar, Optional, TypedDict
 from typing_extensions import Required
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from ghostiss.container import Container
+
+__all__ = [
+    'Entity', 'EntityMeta',
+    'ENTITY_TYPE', 'EntityModel',
+    'EntityClass', 'EntityFactory',
+]
 
 
 class EntityMeta(TypedDict, total=False):
@@ -39,8 +46,12 @@ class EntityClass(Entity, ABC):
 
     @classmethod
     @abstractmethod
-    def new_entity(cls, meta: EntityMeta) -> Optional["EntityClass"]:
+    def new_entity(cls, con: Container, meta: EntityMeta) -> Optional["EntityClass"]:
         pass
+
+
+class EntityModel(BaseModel, EntityClass, ABC):
+    pass
 
 
 ENTITY_TYPE = TypeVar("ENTITY_TYPE", bound=Entity)

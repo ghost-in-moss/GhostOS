@@ -14,7 +14,7 @@ __all__ = [
 
     'Typing',
     'Attr', 'Method',
-    'Class', 'Model',
+    'Class', 'SourceCode',
     'ClassPrompter', 'Interface', 'ClassSign',
     'Locals', 'BuildObject',
 
@@ -428,12 +428,12 @@ class Method(CallerReflection):
         return prompt
 
 
-class Model(TypeReflection):
+class SourceCode(TypeReflection):
 
     def __init__(
-            self,
-            model: Union[Type[BaseModel], Type[TypedDict]],
-            typehint: Optional[Union[Type[BaseModel], Type[TypedDict]]] = None,
+            self, *,
+            cls: Type,
+            typehint: Optional[Type] = None,
             name: Optional[str] = None,
             prompt: Optional[str] = None,
             module: Optional[str] = None,
@@ -441,17 +441,21 @@ class Model(TypeReflection):
             comments: Optional[str] = None,
             extends: Optional[List[Any]] = None,
     ):
+        if not inspect.isclass(cls):
+            raise TypeError(f"type '{cls}' is not a class type")
+        if typehint and not inspect.isclass(typehint):
+            raise TypeError(f"'typehint {typehint}' is not a class type")
         name = name
         if not name:
             name = module_spec
         if not name:
-            name = model.__name__
-        self._model = model
+            name = cls.__name__
+        self._cls = cls
+        self._typehint_type = typehint
         if module is None:
-            module = model.__module__
+            module = cls.__module__
         if module_spec is None:
-            module_spec = model.__name__
-        self._typehint = typehint
+            module_spec = cls.__name__
 
         super().__init__(
             name=name,
@@ -460,15 +464,18 @@ class Model(TypeReflection):
             module_spec=module_spec,
             comments=comments,
             extends=extends,
+            typehint=typehint,
         )
 
     def value(self) -> Any:
-        return self._model
+        return self._cls
 
     def generate_prompt(self) -> str:
-        type_ = self._model
-        if self._typehint:
-            type_ = self._typehint
+        if self._typehint_type:
+            type_ = self._typehint_type
+        else:
+            type_ = self._cls
+
         source = inspect.getsource(type_)
         source = strip_source_indent(source)
         source = replace_class_def_name(source, self.name())
@@ -541,7 +548,7 @@ class ClassPrompter(Class):
             constructor: Optional[Method] = None,
             attrs: Optional[Iterable[Attr]] = None,
             methods: Optional[Iterable[Method]] = None,
-            typehint: Optional[Callable] = None,
+            typehint: Optional[Any] = None,
             comments: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
@@ -656,6 +663,13 @@ class Interface(ClassPrompter):
         if include_methods is not None:
             allows = set(include_methods)
         target = cls
+        if module is None:
+            module = get_modulename(cls)
+        if module_spec is None:
+            module_spec = cls.__name__
+        if name is None:
+            name = cls.__name__
+
         members = inspect.getmembers(target, predicate=is_public_callable)
         members = [] if members is None else members
         methods_reflections = []
@@ -797,7 +811,8 @@ def reflect(
     reflect any variable to Reflection
     """
     if isinstance(var, Reflection):
-        var = var.update(name=name)
+        if name:
+            var = var.update(name=name)
         return var
 
     elif is_builtin(var):
@@ -808,14 +823,12 @@ def reflect(
             raise ValueError('Name must be a non-empty string for typing')
         return Typing(name=name, typing=var)
     elif inspect.isclass(var):
-        if is_model_class(var):
-            return Model(model=var, name=name)
-        else:
-            return Interface(cls=var, name=name)
+        return SourceCode(cls=var, name=name)
     elif isinstance(var, Callable):
         return Method(caller=var, name=name)
     elif not name:
-        raise AttributeError("reflect attr value without name")
+        raise ValueError(f'Name must be a non-empty string for Attr type {type(var)}, value {var}')
+
     return Attr(name=name, value=var)
 
 
@@ -883,6 +896,8 @@ def get_typehint_string(typehint: Optional[Any]) -> str:
     if not typehint:
         return ""
     if isinstance(typehint, str):
+        if typehint.lstrip().startswith(":"):
+            return typehint
         return ": " + typehint
     if is_typing(typehint):
         return ": " + str(typehint)
@@ -1123,7 +1138,7 @@ def add_name_to_set(names: set, name: str) -> set:
 
 
 def is_model_class(typ: type) -> bool:
-    if not isinstance(typ, type):
+    if not isinstance(typ, type) or inspect.isabstract(typ):
         return False
     return issubclass(typ, BaseModel) or is_typeddict(typ) or issubclass(typ, EntityClass)
 
@@ -1225,4 +1240,11 @@ def get_obj_desc(obj: Any) -> Optional[str]:
             return get_str_from_func_or_attr(attr)
     if isinstance(obj, AttrDefaultTypes):
         return str(obj)
+    return None
+
+
+def get_modulename(val: Any) -> Optional[str]:
+    module = inspect.getmodule(val)
+    if module and hasattr(module, '__name__'):
+        return getattr(module, '__name__', None)
     return None

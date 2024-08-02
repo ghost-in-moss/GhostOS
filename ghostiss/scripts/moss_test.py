@@ -10,7 +10,7 @@ from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.runtime.threads import MsgThread
-from ghostiss.core.moss import MOSS, BasicMOSSImpl, BasicModulesProvider
+from ghostiss.core.moss import MOSS, BasicPythonMOSSImpl, BasicModulesProvider
 from ghostiss.framework.messengers import TestMessengerProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.moss.runner import MOSSRunnerTestSuite, MOSSRunnerTestResult
@@ -63,7 +63,7 @@ You can use the api that MOSS provided to implement your plan.
             'typing': Importing(value=typing, module='typing'),
             'TypedDict': Importing(value=TypedDict, module='typing'),
         }
-        return BasicMOSSImpl(container=con, doc=self.moss_doc).new(
+        return BasicPythonMOSSImpl(container=con, doc=self.moss_doc).new(
             *args,
             **kwargs,
         )
