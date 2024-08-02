@@ -11,6 +11,7 @@ from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.abc import Identifier
 from ghostiss.core.runtime.threads import MsgThread
 from pydantic import BaseModel, Field
+from traceback import format_exc
 
 __all__ = ['MOSSAction', 'MOSSArgument', 'DEFAULT_MOSS_FUNCTIONAL_TOKEN']
 
@@ -136,7 +137,7 @@ Here is the context provided to you in this turn:
                 self._thread.update([message], pycontext)
         except Exception as e:
             # 将异常作为消息. todo: 完善消息.
-            content = f"run moss failed: {e}"
+            content = f"run moss failed: \n{e} \n\n{format_exc()}"
             message = DefaultTypes.DEFAULT.new_system(content=content)
             self._thread.update([message])
         finally:

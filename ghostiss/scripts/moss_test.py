@@ -10,7 +10,7 @@ from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.runtime.threads import MsgThread
-from ghostiss.core.moss import MOSS, BasicMOSSImpl, BasicModulesProvider
+from ghostiss.core.moss import MOSS, BasicPythonMOSSImpl, BasicModulesProvider
 from ghostiss.framework.messengers import TestMessengerProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.moss.runner import MOSSRunnerTestSuite, MOSSRunnerTestResult
@@ -63,7 +63,7 @@ You can use the api that MOSS provided to implement your plan.
             'typing': Importing(value=typing, module='typing'),
             'TypedDict': Importing(value=TypedDict, module='typing'),
         }
-        return BasicMOSSImpl(container=con, doc=self.moss_doc).new(
+        return BasicPythonMOSSImpl(container=con, doc=self.moss_doc).new(
             *args,
             **kwargs,
         )
@@ -117,7 +117,7 @@ def get_suite(storage: Storage, suite_file_name: str) -> MOSSRunnerTestSuite:
     return suite
 
 
-def get_suite_round_filename(origin_file_name: str, r: int) -> str:
+def get_round_filename(origin_file_name: str, r: int) -> str:
     if r == 0:
         return origin_file_name
     file_basename = origin_file_name.rstrip('.yaml')
@@ -158,7 +158,7 @@ def main() -> None:
         help="round number. if given, will recursively join each 0 ~ current round to a new thread run test, "
              "and save a new round for next run.",
         type=int,
-        default=0,
+        default=None,
     )
     parser.add_argument(
         "--input", "-i",
@@ -175,7 +175,7 @@ def main() -> None:
     suite_file_name = origin_suite_file_name
 
     if parsed.round:
-        suite_file_name = get_suite_round_filename(origin_suite_file_name, parsed.round)
+        suite_file_name = get_round_filename(origin_suite_file_name, parsed.round)
         console.print(f"real loaded file is {suite_file_name}")
 
     # 获取 suite.
@@ -273,7 +273,7 @@ def main() -> None:
 
     if parsed.round is not None:
         new_round = parsed.round + 1
-        new_round_file_name = get_suite_round_filename(origin_suite_file_name, new_round)
+        new_round_file_name = get_round_filename(origin_suite_file_name, new_round)
         new_suite = suite.model_copy(deep=True)
         new_suite.results = []
         new_suite.last_round = suite_file_name.lstrip(root_path)
@@ -289,6 +289,8 @@ def main() -> None:
     if parsed.llm_test:
         llm_test = parsed.case
         llm_test_file_path = os.path.join("tests/llm_tests", llm_test + ".yaml")
+        if parsed.round:
+            llm_test_file_path = get_round_filename(llm_test_file_path, parsed.round)
         data = yaml_pretty_dump(chat_completion_test_case.model_dump(exclude_defaults=True))
         storage.put(llm_test_file_path, bytes(data.encode("utf-8")))
         console.print(f"save chat test case to {llm_test_file_path}")

@@ -1,24 +1,38 @@
-from typing import List
+from __future__ import annotations
+from typing import List, Optional
+from abc import ABC
 
 from ghostiss.abc import Identifier
+from ghostiss.container import Container
 from ghostiss.core.ghosts import Ghost
 from ghostiss.core.ghosts.thoughts import Thought
 from pydantic import BaseModel, Field
 
 from ghostiss.entity import EntityMeta
-from ghostiss.core.ghosts.minds import MultiTasks
 from ghostiss.core.moss.exports import Exporter
 
 
 class FlowThoughtNode(BaseModel):
     """
+    useful to define a flowchart node with edges.
+    thought in the node will determine which edge shall go next.
+    if no edges given, thought shall choose to finish or fail the task
     """
     name: str = Field(description="name of the node, useful to specific a node")
-    thought: Thought = Field(description="the thought that responsible for the node")
     instruction: str = Field(description="specific instruction for the node, including what should do and what next")
-    forwards: List[str] = Field(
+    edges: List[str] = Field(
         description="list of node names for current node to choose as next step, when current node is done",
     )
+    thought: Thought = Field(description="the thought that responsible for the node")
+
+
+class FileThought(Thought, BaseModel):
+    """
+    a thought that create a task about the file.
+    can read a file and does many things such as summary, modify etc.
+    """
+    filename: str = Field(description="path of the file")
+    quest: str = Field(description="the initial quest to the thought")
 
 
 class ToolThought(Thought, BaseModel):
@@ -31,20 +45,11 @@ class ToolThought(Thought, BaseModel):
     tools: List[str] = Field()
 
 
-class TestSuiteThought(Thought, BaseModel):
-    task: str
-    test_thoughts: List[Thought]
-
-
-class DAGThought(Thought, BaseModel):
+class DAGThought(Thought, BaseModel, ABC):
     pass
 
 
-class ParallelThought(Thought, BaseModel):
-    pass
-
-
-class FlowThought(Thought, BaseModel):
+class FlowThought(Thought, BaseModel, ABC):
     """
     Flow thought is a planner which defines a flowchart like plan, using multiple thoughts as node of it.
     Each node play a part of the plan, and determine what should go next.
@@ -80,6 +85,14 @@ class FakeToolThought(ToolThought):
     def identifier(self) -> Identifier:
         pass
 
+    @classmethod
+    def entity_type(cls) -> str:
+        pass
+
+    @classmethod
+    def new_entity(cls, con: Container, meta: EntityMeta) -> Optional["EntityClass"]:
+        pass
+
 
 class FakeFlowThought(FlowThought):
     def get_description(self) -> str:
@@ -93,3 +106,37 @@ class FakeFlowThought(FlowThought):
 
     def identifier(self) -> Identifier:
         pass
+
+    @classmethod
+    def entity_type(cls) -> str:
+        pass
+
+    @classmethod
+    def new_entity(cls, con: Container, meta: EntityMeta) -> Optional["EntityClass"]:
+        pass
+
+
+class FakeFileThought(FileThought):
+
+    @classmethod
+    def entity_type(cls) -> str:
+        pass
+
+    @classmethod
+    def new_entity(cls, con: Container, meta: EntityMeta) -> Optional["EntityClass"]:
+        pass
+
+    def get_description(self) -> str:
+        pass
+
+    def new_task_id(self, g: Ghost) -> str:
+        pass
+
+    def to_entity_meta(self) -> EntityMeta:
+        pass
+
+    def identifier(self) -> Identifier:
+        pass
+
+
+EXPORTS = Exporter().source_code(FakeFileThought, FileThought, 'FileThought')

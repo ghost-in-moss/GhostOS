@@ -1,4 +1,4 @@
-from typing import Union, AnyStr
+from typing import Union, AnyStr, Dict
 from abc import ABC, abstractmethod
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.thoughts import Thought
@@ -9,29 +9,34 @@ MessageType = Union[Message, MessageClass, AnyStr]
 
 
 class MultiTasks(ABC):
+    """
+    You are equipped with this MultiTasks Library that can execute thought in an asynchronous task.
+    A thought is a mind-machine usually driven by LLM, can resolve certain type of task in multi-turns chain of thought.
+    During the process, the thought may send messages to you, finish/fail the task or await for more information.
+    You shall use MultiTasks library to help you resolve your task, interactively and asynchronous.
+    """
 
     @abstractmethod
-    def depend_on_tasks(self, *thoughts: Thought) -> Operator:
+    def wait_on_tasks(self, *thoughts: Thought) -> Operator:
         """
-        使用 Thought 创建多个任务. 然后等待这些任务返回结果, 触发下一轮运行.
+        使用 Thought 创建多个任务, 同时等待这些任务返回结果, 触发下一轮思考.
         :param thoughts: 每个 Thought 会创建出一个子任务.
-        :return:
         """
         pass
 
     @abstractmethod
-    def create_tasks(self, *thoughts: Thought) -> None:
+    def run_tasks(self, *thoughts: Thought) -> Dict[str, str]:
         """
-        使用 thoughts 动态创建多个 task.
-        :param thoughts:
+        使用 thoughts 动态创建多个 task 异步运行. 不影响你当前状态.
+        :return: dict of created task name to description
         """
         pass
 
     @abstractmethod
-    def inform_task(self, name: str, *messages: MessageType) -> None:
+    def send_task(self, task_name: str, *messages: MessageType) -> None:
         """
         主动向一个指定的 task 进行通讯.
-        :param name: task 的名称
+        :param task_name: task 的名称
         :param messages: 消息会发送给目标 task
         """
         pass

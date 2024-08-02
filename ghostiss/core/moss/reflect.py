@@ -4,6 +4,7 @@ from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Uni
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
+from ghostiss.abc import Identifiable, Descriptive
 
 __all__ = [
 
@@ -13,7 +14,7 @@ __all__ = [
 
     'Typing',
     'Attr', 'Method',
-    'Class', 'Model',
+    'Class', 'SourceCode',
     'ClassPrompter', 'Interface', 'ClassSign',
     'Locals', 'BuildObject',
 
@@ -29,6 +30,7 @@ __all__ = [
     'get_class_def_from_source',
     'count_source_indent',
     'replace_class_def_name',
+    'get_calling_modulename',
 ]
 
 BasicTypes = Union[str, int, float, bool, list, dict]
@@ -104,6 +106,9 @@ class Reflection(ABC):
     def extends(self) -> Optional[List[Any]]:
         return self._extends
 
+    def comments(self) -> Optional[str]:
+        return self._comments
+
     def typehint(self) -> Optional[Union[str, Any]]:
         return self._typehint
 
@@ -123,9 +128,10 @@ class Reflection(ABC):
             self._name = name
         if doc is not None:
             self._doc = doc
-        if module and module_spec:
-            self._module_spec = module_spec
+        if module:
             self._module = module
+        if module_spec:
+            self._module_spec = module_spec
         if typehint is not None:
             self._typehint = typehint
         if comments is not None:
@@ -201,7 +207,7 @@ class Importing(Reflection):
             elif hasattr(value, '__module__'):
                 module = getattr(value, '__module__')
             else:
-                module = inspect.getmodulename(value)
+                module = None
         if not module_spec and not is_module:
             module_spec = getattr(value, '__name__', None)
         if not name:
@@ -298,6 +304,62 @@ class Attr(ValueReflection):
         )
 
 
+class DictAttr(Attr):
+    """
+    实现一个 dict 型的属性.
+    会尝试将 key 和 value 的描述用 doc 写出来. 类似:
+
+    foo: value of foo
+    bar: 123
+    """
+
+    def __init__(
+            self, *,
+            name: str,
+            values: Dict[str, Any],
+            item_type: Optional[Type] = None,
+            typehint: Optional[Any] = None,
+            doc: Optional[str] = None,
+            descriptions: Optional[Dict[str, str]] = None,
+            prompt: Optional[str] = None,
+            module: Optional[str] = None,
+            module_spec: Optional[str] = None,
+            extends: Optional[List[Any]] = None,
+            comments: Optional[str] = None,
+    ):
+        if typehint is None and item_type:
+            typehint = Dict[str, item_type]
+        if descriptions is None:
+            descriptions = {}
+            for key, val in values.items():
+                if isinstance(val, Descriptive):
+                    descriptions[key] = val.get_description()
+                elif isinstance(val, Identifiable):
+                    descriptions[key] = val.identifier().description
+                else:
+                    desc = get_obj_desc(val)
+                    if desc is not None:
+                        descriptions[key] = desc
+
+        if descriptions:
+            lines = [doc, "The descriptions of the items:"]
+            for name, desc in descriptions.items():
+                lines.append(f"`{name}`: {desc}")
+            doc = join_prompt_lines(*lines)
+
+        super().__init__(
+            name=name,
+            value=values,
+            typehint=typehint,
+            prompt=prompt,
+            module=module,
+            module_spec=module_spec,
+            extends=extends,
+            comments=comments,
+            doc=doc,
+        )
+
+
 class Typing(TypeReflection):
 
     def __init__(
@@ -363,16 +425,15 @@ class Method(CallerReflection):
     def generate_prompt(self) -> str:
         caller = self._typehint if self._typehint else self._caller
         prompt = parse_callable_to_method_def(caller=caller, alias=self.name(), doc=self._doc)
-        comments = parse_comments(self._comments)
-        import_from = get_import_comment(self._module, self._module_spec, self.name())
-        return join_prompt_lines(comments, import_from, prompt)
+        return prompt
 
 
-class Model(TypeReflection):
+class SourceCode(TypeReflection):
 
     def __init__(
-            self,
-            model: Union[Type[BaseModel], Type[TypedDict]],
+            self, *,
+            cls: Type,
+            typehint: Optional[Type] = None,
             name: Optional[str] = None,
             prompt: Optional[str] = None,
             module: Optional[str] = None,
@@ -380,16 +441,21 @@ class Model(TypeReflection):
             comments: Optional[str] = None,
             extends: Optional[List[Any]] = None,
     ):
+        if not inspect.isclass(cls):
+            raise TypeError(f"type '{cls}' is not a class type")
+        if typehint and not inspect.isclass(typehint):
+            raise TypeError(f"'typehint {typehint}' is not a class type")
         name = name
         if not name:
             name = module_spec
         if not name:
-            name = model.__name__
-        self._model = model
+            name = cls.__name__
+        self._cls = cls
+        self._typehint_type = typehint
         if module is None:
-            module = model.__module__
+            module = cls.__module__
         if module_spec is None:
-            module_spec = model.__name__
+            module_spec = cls.__name__
 
         super().__init__(
             name=name,
@@ -398,17 +464,22 @@ class Model(TypeReflection):
             module_spec=module_spec,
             comments=comments,
             extends=extends,
+            typehint=typehint,
         )
 
     def value(self) -> Any:
-        return self._model
+        return self._cls
 
     def generate_prompt(self) -> str:
-        source = inspect.getsource(self._model)
-        prompt = strip_source_indent(source)
-        comments = parse_comments(self._comments)
-        import_from = get_import_comment(self._module, self._module_spec, self.name())
-        return join_prompt_lines(comments, import_from, prompt)
+        if self._typehint_type:
+            type_ = self._typehint_type
+        else:
+            type_ = self._cls
+
+        source = inspect.getsource(type_)
+        source = strip_source_indent(source)
+        source = replace_class_def_name(source, self.name())
+        return source
 
 
 class Class(TypeReflection):
@@ -452,15 +523,12 @@ class Class(TypeReflection):
         return self._cls
 
     def generate_prompt(self) -> str:
-        comments = parse_comments(self._comments)
-        implementation = get_extends_comment(self._extends)
-        import_from = get_import_comment(self._module, self._module_spec, self.name())
         prompt = self._prompt
         if not prompt:
             cls = self._typehint if self._typehint else self._cls
             source = inspect.getsource(cls)
             prompt = make_class_prompt(source=source, name=self._name, doc=self._doc, attrs=None)
-        return join_prompt_lines(comments, import_from, implementation, prompt)
+        return prompt
 
 
 class ClassPrompter(Class):
@@ -480,7 +548,7 @@ class ClassPrompter(Class):
             constructor: Optional[Method] = None,
             attrs: Optional[Iterable[Attr]] = None,
             methods: Optional[Iterable[Method]] = None,
-            typehint: Optional[Callable] = None,
+            typehint: Optional[Any] = None,
             comments: Optional[str] = None,
             module: Optional[str] = None,
             module_spec: Optional[str] = None,
@@ -491,6 +559,10 @@ class ClassPrompter(Class):
         self._attrs = attrs
         self._constructor: Optional[Method] = constructor
         self._methods = methods
+        if module is None:
+            module = inspect.getmodule(cls).__name__
+        if module_spec is None:
+            module_spec = cls.__name__
 
         super().__init__(
             cls=cls,
@@ -591,6 +663,13 @@ class Interface(ClassPrompter):
         if include_methods is not None:
             allows = set(include_methods)
         target = cls
+        if module is None:
+            module = get_modulename(cls)
+        if module_spec is None:
+            module_spec = cls.__name__
+        if name is None:
+            name = cls.__name__
+
         members = inspect.getmembers(target, predicate=is_public_callable)
         members = [] if members is None else members
         methods_reflections = []
@@ -630,6 +709,11 @@ class ClassSign(Interface):
             module_spec: Optional[str] = None,
             extends: Optional[List[Any]] = None,
     ):
+        if module is None:
+            module = inspect.getmodule(cls).__name__
+        if module_spec is None:
+            module_spec = cls.__name__
+
         super().__init__(
             cls=cls,
             name=name,
@@ -711,8 +795,10 @@ class Locals(ValueReflection):
             prompts.append("\n".join(imported_lines))
 
         for name in self.__local_var_orders:
-            prompt = self.__locals[name].prompt()
-            prompts.append(prompt)
+            reflection = self.__locals[name]
+            prompt = reflection.prompt()
+            type_prompt = get_reflection_prompt(reflection, prompt=prompt)
+            prompts.append(type_prompt)
         return "\n\n".join(prompts)
 
 
@@ -725,7 +811,8 @@ def reflect(
     reflect any variable to Reflection
     """
     if isinstance(var, Reflection):
-        var = var.update(name=name)
+        if name:
+            var = var.update(name=name)
         return var
 
     elif is_builtin(var):
@@ -736,14 +823,12 @@ def reflect(
             raise ValueError('Name must be a non-empty string for typing')
         return Typing(name=name, typing=var)
     elif inspect.isclass(var):
-        if is_model_class(var):
-            return Model(model=var, name=name)
-        else:
-            return Interface(cls=var, name=name)
+        return SourceCode(cls=var, name=name)
     elif isinstance(var, Callable):
         return Method(caller=var, name=name)
     elif not name:
-        raise AttributeError("reflect attr value without name")
+        raise ValueError(f'Name must be a non-empty string for Attr type {type(var)}, value {var}')
+
     return Attr(name=name, value=var)
 
 
@@ -811,6 +896,8 @@ def get_typehint_string(typehint: Optional[Any]) -> str:
     if not typehint:
         return ""
     if isinstance(typehint, str):
+        if typehint.lstrip().startswith(":"):
+            return typehint
         return ": " + typehint
     if is_typing(typehint):
         return ": " + str(typehint)
@@ -1051,7 +1138,7 @@ def add_name_to_set(names: set, name: str) -> set:
 
 
 def is_model_class(typ: type) -> bool:
-    if not isinstance(typ, type):
+    if not isinstance(typ, type) or inspect.isabstract(typ):
         return False
     return issubclass(typ, BaseModel) or is_typeddict(typ) or issubclass(typ, EntityClass)
 
@@ -1103,3 +1190,61 @@ def is_callable(obj: Any) -> bool:
 
 def is_public_callable(attr: Any) -> bool:
     return isinstance(attr, Callable) and not inspect.isclass(attr) and not attr.__name__.startswith('_')
+
+
+def get_reflection_prompt(
+        r: Reflection,
+        prompt: str,
+        imports: bool = True,
+        extends: bool = True,
+        comments: bool = True,
+) -> str:
+    lines = []
+    if imports:
+        lines.append(get_import_comment(r.module(), r.module_spec(), r.name()))
+    if extends:
+        lines.append(get_extends_comment(r.extends()))
+    if comments:
+        lines.append(parse_comments(r.comments()))
+    lines.append(prompt)
+    return join_prompt_lines(*lines)
+
+
+def get_calling_modulename(skip: int = 0) -> Optional[str]:
+    stack = inspect.stack()
+    start = 0 + skip
+    if len(stack) < start + 1:
+        return None
+    frame = stack[start][0]
+
+    # module and packagename.
+    module_info = inspect.getmodule(frame)
+    if module_info:
+        mod = module_info.__name__
+        return mod
+    return None
+
+
+def get_obj_desc(obj: Any) -> Optional[str]:
+    if isinstance(obj, Descriptive):
+        return obj.get_description()
+    if isinstance(obj, Identifiable):
+        return obj.identifier().description
+    if hasattr(obj, 'desc'):
+        return getattr(obj, 'desc', None)
+    if hasattr(obj, "description"):
+        return getattr(obj, 'description', None)
+    if hasattr(obj, "__desc__"):
+        attr = getattr(obj, "__desc__", None)
+        if attr:
+            return get_str_from_func_or_attr(attr)
+    if isinstance(obj, AttrDefaultTypes):
+        return str(obj)
+    return None
+
+
+def get_modulename(val: Any) -> Optional[str]:
+    module = inspect.getmodule(val)
+    if module and hasattr(module, '__name__'):
+        return getattr(module, '__name__', None)
+    return None

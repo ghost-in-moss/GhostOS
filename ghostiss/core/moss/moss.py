@@ -1,6 +1,7 @@
 from __future__ import annotations
 import inspect
 from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type
+from RestrictedPython import safe_globals
 from types import ModuleType
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
@@ -10,8 +11,9 @@ from ghostiss.core.moss.modules import Modules
 from ghostiss.core.moss.reflect import (
     Importing,
     reflect, reflects,
+    IterableReflection,
     Reflection, TypeReflection,
-    Model, ModelType, ModelObject,
+    SourceCode, ModelType, ModelObject,
     Attr, Method, ClassPrompter, Locals, Interface,
     get_typehint_string,
     get_model_object_meta, new_model_instance
@@ -19,6 +21,8 @@ from ghostiss.core.moss.reflect import (
 from ghostiss.helpers import camel_to_snake
 from ghostiss.container import Provider
 from ghostiss.helpers import BufferPrint
+
+__all__ = ['MOSS', 'System', 'AttrTypes', 'BasicPythonMOSSImpl', 'TestMOSSProvider']
 
 AttrTypes = Union[int, float, str, bool, list, dict, None, Provider, ModelType]
 
@@ -28,7 +32,8 @@ class System(ABC):
     @abstractmethod
     def imports(self, module: str, *specs: str, **aliases: str) -> Dict[str, Any]:
         """
-        replace from ... import ... as ...
+        You are not allowed to use `from ... import ...` grammar, but use this method instead.
+        Replace from ... import ... as ...
         :param module: module name
         :param specs: module spec
         :param aliases: alias=module spec
@@ -156,6 +161,9 @@ class MOSS(System, ABC):
 
     # --- 运行逻辑 --- #
 
+    def __import__(self, *args, **kwargs):
+        raise NotImplementedError("you are not allowed to use __import__, use MOSS imports instead")
+
     def __call__(
             self,
             *,
@@ -183,6 +191,7 @@ class MOSS(System, ABC):
             local_values[target] = None
         local_values['print'] = self.print
         local_values['os'] = self
+        local_values['__import__'] = self.__import__
         # 执行代码. 注意!! 暂时没有考虑任何安全性问题. 理论上应该全部封死.
         # 考虑使用 RestrictPython
         temp = ModuleType("moss")
@@ -216,7 +225,7 @@ class MOSS(System, ABC):
         return None
 
 
-class BasicMOSSImpl(MOSS):
+class BasicPythonMOSSImpl(MOSS):
     """
     MOSS 的基础实现.
     todo: 调整目录结构, 让依赖不再耦合.
@@ -315,7 +324,7 @@ class BasicMOSSImpl(MOSS):
         :param variables: name => value 的方式传入.
         """
         # 复制创造一个新的实例.
-        os = BasicMOSSImpl(doc=self.__doc__, container=self.__container.parent)
+        os = BasicPythonMOSSImpl(doc=self.__doc__, container=self.__container.parent)
         return os.with_vars(*named_vars, **variables)
 
     def with_vars(self, *named_vars, **variables) -> "MOSS":
@@ -363,6 +372,18 @@ class BasicMOSSImpl(MOSS):
         :param reflection: 反射.
         :param reassign_name: 如果重名的话, 是否要对这个反射重命名.
         """
+        if reflection is None:
+            return
+        if isinstance(reflection, IterableReflection):
+            # 递归拆解.
+            for r in reflection.iterate():
+                self.add_reflection(r)
+            return
+        value = reflection.value()
+        if value in self.__context_type_names:
+            # 不重复添加类型.
+            return
+
         name = reflection.name()
         # 引用的变量名不能是保留字里的.
         if name in self.__reserved_locals_names or name in self.__reflections:
@@ -396,12 +417,6 @@ class BasicMOSSImpl(MOSS):
                 self.add_reflection(lib, reassign_name=True)
         else:
             raise AttributeError(f"{reflection} not supported yet")
-
-        # 递归地添加 typehint 到上下文里.
-        typehint = reflection.typehint()
-        if typehint is not None:
-            reflection = reflect(var=typehint)
-            self.add_reflection(reflection)
 
     def __add_type(self, reflection: TypeReflection) -> None:
         """
@@ -442,7 +457,7 @@ class BasicMOSSImpl(MOSS):
             typehint = type(value)
             model_name = self.__context_type_names.get(typehint)
             if not typehint:
-                self.add_reflection(Model(model=typehint), reassign_name=True)
+                self.add_reflection(SourceCode(cls=typehint), reassign_name=True)
                 model_name = self.__context_type_names.get(typehint, typehint.__name__)
 
         d = Variable(
@@ -473,15 +488,20 @@ class BasicMOSSImpl(MOSS):
         result: Dict[str, Any] = {}
         for imp in imports:
             alias = imp.alias
-            spec = imp.spec
+            module, spec = imp.get_module_and_spec()
             if alias:
                 log += f"{spec} as {alias},"
             else:
                 log += f"{spec},"
             # 关键: 所有的 import 动作会将引用添加到 pycontext 里, 下轮时默认携带.
             self.__python_context.add_import(imp)
-            reflections = self.__modules.imports(imp.module, imp.spec)
-            for v in reflections:
+            reflection = self.__modules.imports(module, spec)
+            if isinstance(reflection, IterableReflection):
+                for v in reflection.iterate():
+                    var_name = v.name()
+                    result[var_name] = v
+            else:
+                v = reflection
                 if alias and spec != '*':
                     v = v.update(name=alias)
                 var_name = v.name()
@@ -538,6 +558,8 @@ class BasicMOSSImpl(MOSS):
             doc=MOSS.__doc__,
             attrs=attrs,
             methods=methods,
+            module="",
+            module_spec="",
         )
         local_types.append(moss)
         local_prompter = Locals(
@@ -595,7 +617,8 @@ class BasicMOSSImpl(MOSS):
         # 解决引用.
         for imp in self.__python_context.imported:
             name = imp.get_name()
-            value = self.__modules.imports(imp.module, imp.spec)
+            modulename, spec = imp.get_module_and_spec()
+            value = self.__modules.imports(modulename, spec)
             r = reflect(var=value, name=name)
             self.add_reflection(r, reassign_name=False)
 
@@ -633,17 +656,17 @@ class BasicMOSSImpl(MOSS):
         """
         if not typehint:
             return ""
-        typehint = self.__context_type_names.get(typehint, None)
-        if not typehint:
-            typehint = get_typehint_string(typehint)
-        return typehint
+        typehint_var_name = self.__context_type_names.get(typehint, None)
+        if typehint_var_name:
+            return get_typehint_string(typehint_var_name)
+        return get_typehint_string(typehint)
 
     def __reassign_name(self, name: str, names: Set[str]) -> str:
         """
         对重名的变量进行粗暴地重命名.
         """
         if name in names:
-            new_name = f"{name}.{self.__reassign_name_idx}"
+            new_name = f"{name}_{self.__reassign_name_idx}"
             self.__reassign_name_idx += 1
             if new_name in names:
                 return self.__reassign_name(name, names)
@@ -664,7 +687,7 @@ class TestMOSSProvider(Provider):
         return MOSS
 
     def factory(self, con: Container) -> Optional[CONTRACT]:
-        return BasicMOSSImpl(
+        return BasicPythonMOSSImpl(
             doc="",
             container=con,
         )

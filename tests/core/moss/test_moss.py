@@ -1,7 +1,7 @@
 from ghostiss.core.moss.moss import MOSS, TestMOSSProvider
 from ghostiss.core.moss.modules import BasicModulesProvider
 from ghostiss.core.moss.reflect import (
-    Importing,
+    Importing, Attr,
 )
 from ghostiss.container import Container
 from pydantic import BaseModel
@@ -103,3 +103,42 @@ def test_moss_with_func():
     moss.with_vars(test_moss_with_importing)
     prompt = moss.dump_code_prompt()
     assert "def test_moss_with_importing" in prompt
+
+
+def test_moss_has_moss():
+    c = prepare_container()
+    moss = c.force_fetch(MOSS)
+    local_values = moss.dump_locals()
+    assert 'MOSS' in local_values
+    assert 'os' in local_values
+
+    code = """
+def main(os: MOSS) -> str:
+    return "hello"
+"""
+    value = moss(code=code, target='main', args=['os'])
+    assert value == "hello"
+
+
+def test_moss_with_attrs():
+    c = prepare_container()
+    moss = c.force_fetch(MOSS).new(foo=123)
+    code = """
+def main(os: MOSS) -> int:
+    return os.foo
+"""
+    value = moss(code=code, target='main', args=['os'])
+    assert value == 123
+
+
+def test_moss_with_attr_reflection():
+    c = prepare_container()
+    attr = Attr(value=123, name='foo')
+    moss = c.force_fetch(MOSS).new(attr)
+    code = """
+def main(os: MOSS) -> int:
+    return os.foo
+"""
+    value = moss(code=code, target='main', args=['os'])
+    assert value == 123
+

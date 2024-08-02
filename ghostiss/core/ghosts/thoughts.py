@@ -1,6 +1,6 @@
 from typing import Optional, List
 from abc import ABC, abstractmethod
-from ghostiss.entity import Entity, EntityFactory
+from ghostiss.entity import EntityModel, EntityFactory
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.events import Event
 from ghostiss.core.ghosts.operators import Operator
@@ -10,7 +10,7 @@ from ghostiss.helpers import uuid
 from ghostiss.core.moss.exports import Exporter
 
 
-class Thought(Entity, Identifiable, Descriptive, ABC):
+class Thought(EntityModel, Identifiable, ABC):
     """
     用代码的方式实现的思维链描述, 是 Llm-based Agent 的思维单元.
     可以用来创建并且驱动一个任务.
@@ -23,10 +23,6 @@ class Thought(Entity, Identifiable, Descriptive, ABC):
     2. name: thought 可以描述的名称.
     3. description: thought 实例的用途, 能力, 使用思路的简单描述.
     """
-
-    @abstractmethod
-    def get_description(self) -> str:
-        pass
 
     @abstractmethod
     def new_task_id(self, g: Ghost) -> str:
@@ -158,4 +154,4 @@ class Mindset(EntityFactory[Thought], ABC):
         pass
 
 
-EXPORTS = Exporter().class_sign(Thought).interface(Mindset).model(Identifier)
+EXPORTS = Exporter().class_sign(Thought).interface(Mindset).source_code(Identifier)
