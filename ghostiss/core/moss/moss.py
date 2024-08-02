@@ -487,8 +487,13 @@ class BasicMOSSImpl(MOSS):
                 log += f"{spec},"
             # 关键: 所有的 import 动作会将引用添加到 pycontext 里, 下轮时默认携带.
             self.__python_context.add_import(imp)
-            reflections = self.__modules.imports(imp.module, imp.spec)
-            for v in reflections:
+            reflection = self.__modules.imports(imp.module, imp.spec)
+            if isinstance(reflection, IterableReflection):
+                for v in reflection.iterate():
+                    var_name = v.name()
+                    result[var_name] = v
+            else:
+                v = reflection
                 if alias and spec != '*':
                     v = v.update(name=alias)
                 var_name = v.name()
@@ -545,6 +550,8 @@ class BasicMOSSImpl(MOSS):
             doc=MOSS.__doc__,
             attrs=attrs,
             methods=methods,
+            module="",
+            module_spec="",
         )
         local_types.append(moss)
         local_prompter = Locals(

@@ -368,7 +368,7 @@ class Method(CallerReflection):
     def generate_prompt(self) -> str:
         caller = self._typehint if self._typehint else self._caller
         prompt = parse_callable_to_method_def(caller=caller, alias=self.name(), doc=self._doc)
-        return get_reflection_prompt(self, prompt=prompt, imports=True)
+        return prompt
 
 
 class Model(TypeReflection):
@@ -415,7 +415,7 @@ class Model(TypeReflection):
         source = inspect.getsource(type_)
         source = strip_source_indent(source)
         source = replace_class_def_name(source, self.name())
-        return get_reflection_prompt(self, prompt=source)
+        return source
 
 
 class Class(TypeReflection):
@@ -464,7 +464,7 @@ class Class(TypeReflection):
             cls = self._typehint if self._typehint else self._cls
             source = inspect.getsource(cls)
             prompt = make_class_prompt(source=source, name=self._name, doc=self._doc, attrs=None)
-        return get_reflection_prompt(self, prompt=prompt)
+        return prompt
 
 
 class ClassPrompter(Class):
@@ -495,6 +495,10 @@ class ClassPrompter(Class):
         self._attrs = attrs
         self._constructor: Optional[Method] = constructor
         self._methods = methods
+        if module is None:
+            module = inspect.getmodule(cls).__name__
+        if module_spec is None:
+            module_spec = cls.__name__
 
         super().__init__(
             cls=cls,
@@ -533,7 +537,7 @@ class ClassPrompter(Class):
                 __names = add_name_to_set(__names, method.name())
                 __attr_prompts.append(method.prompt())
         prompt = make_class_prompt(source=source, name=__name, doc=doc, attrs=__attr_prompts)
-        return get_reflection_prompt(self, prompt=prompt)
+        return prompt
 
 
 class BuildObject(Attr):
@@ -634,6 +638,11 @@ class ClassSign(Interface):
             module_spec: Optional[str] = None,
             extends: Optional[List[Any]] = None,
     ):
+        if module is None:
+            module = inspect.getmodule(cls).__name__
+        if module_spec is None:
+            module_spec = cls.__name__
+
         super().__init__(
             cls=cls,
             name=name,
@@ -715,8 +724,10 @@ class Locals(ValueReflection):
             prompts.append("\n".join(imported_lines))
 
         for name in self.__local_var_orders:
-            prompt = self.__locals[name].prompt()
-            prompts.append(prompt)
+            reflection = self.__locals[name]
+            prompt = reflection.prompt()
+            type_prompt = get_reflection_prompt(reflection, prompt=prompt)
+            prompts.append(type_prompt)
         return "\n\n".join(prompts)
 
 
