@@ -151,18 +151,17 @@ class Attachment(BaseModel, ABC):
         message.attachments[self.key] = values
 
 
+# 消息体的容器. 通用的抽象设计, 设计思路:
+# 1. message 可以是一个完整的消息, 也可以是一个包, 用 pack 字段做区分. 支持 dict 传输, dict 传输时不包含默认值.
+# 2. 完整的 message 需要有 msg_id, 但包可以没有.
+# 3. content 是对客户端展示用的消息体, 而 memory 是对大模型展示的消息体. 两者可能不一样.
+# 4. message 可以有强类型字段, 比如 images, 但通过 attachments (累加) 和 payload (替代) 来定义. Message 容器里放弱类型的 dict.
+# 5. type 字段用来提示 message 拥有的信息. 比如 images 消息, 会包含 images payload, 但同时也会指定 type. 这样方便解析时预判.
+# 6. 所有的 message 都需要能转换成模型的协议, 默认要对齐 openai 的协议.
+# 7. openai 协议中的 tool, function_call 统一成 caller 抽象, 通过 caller.id 来做区分.
+# 8. 流式传输中, 可以有首包和尾包. 首包期待包含全部的 payloads 和 attachments. 间包则可选. 尾包是完整的消息体.
 class Message(BaseModel):
-    """
-    消息体的容器. 通用的抽象设计, 设计思路:
-    1. message 可以是一个完整的消息, 也可以是一个包, 用 pack 字段做区分. 支持 dict 传输, dict 传输时不包含默认值.
-    2. 完整的 message 需要有 msg_id, 但包可以没有.
-    3. content 是对客户端展示用的消息体, 而 memory 是对大模型展示的消息体. 两者可能不一样.
-    4. message 可以有强类型字段, 比如 images, 但通过 attachments (累加) 和 payload (替代) 来定义. Message 容器里放弱类型的 dict.
-    5. type 字段用来提示 message 拥有的信息. 比如 images 消息, 会包含 images payload, 但同时也会指定 type. 这样方便解析时预判.
-    6. 所有的 message 都需要能转换成模型的协议, 默认要对齐 openai 的协议.
-    7. openai 协议中的 tool, function_call 统一成 caller 抽象, 通过 caller.id 来做区分.
-    8. 流式传输中, 可以有首包和尾包. 首包期待包含全部的 payloads 和 attachments. 间包则可选. 尾包是完整的消息体.
-    """
+    """标准的消息体."""
 
     msg_id: str = Field(default="", description="消息的全局唯一 id. ")
     type: str = Field(default="", description="消息类型是对 payload 的约定. 默认的 type就是 text.")
