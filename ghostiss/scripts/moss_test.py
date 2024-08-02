@@ -158,7 +158,7 @@ def main() -> None:
         help="round number. if given, will recursively join each 0 ~ current round to a new thread run test, "
              "and save a new round for next run.",
         type=int,
-        default=0,
+        default=None,
     )
     parser.add_argument(
         "--input", "-i",

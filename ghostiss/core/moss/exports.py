@@ -5,8 +5,8 @@ from ghostiss.core.moss.reflect import (
     ClassSign, Model,
     Interface, Typing,
     IterableReflection,
+    get_calling_modulename,
 )
-from ghostiss.helpers import get_calling_module
 
 __all__ = [
     'EXPORTS_KEY', 'Exporter'
@@ -33,7 +33,7 @@ class Exporter(IterableReflection):
     ):
         self.module: Optional[str] = modulename
         if modulename is None and with_module:
-            self.module = get_calling_module(2)
+            self.module = get_calling_modulename(2)
         self.__deep_copy = deep_copy
         self.__reflections: Dict[str, Reflection] = {}
         self.__reflection_orders: List[str] = []

@@ -29,6 +29,7 @@ __all__ = [
     'get_class_def_from_source',
     'count_source_indent',
     'replace_class_def_name',
+    'get_calling_modulename',
 ]
 
 BasicTypes = Union[str, int, float, bool, list, dict]
@@ -104,6 +105,9 @@ class Reflection(ABC):
     def extends(self) -> Optional[List[Any]]:
         return self._extends
 
+    def comments(self) -> Optional[str]:
+        return self._comments
+
     def typehint(self) -> Optional[Union[str, Any]]:
         return self._typehint
 
@@ -123,9 +127,10 @@ class Reflection(ABC):
             self._name = name
         if doc is not None:
             self._doc = doc
-        if module and module_spec:
-            self._module_spec = module_spec
+        if module:
             self._module = module
+        if module_spec:
+            self._module_spec = module_spec
         if typehint is not None:
             self._typehint = typehint
         if comments is not None:
@@ -201,7 +206,7 @@ class Importing(Reflection):
             elif hasattr(value, '__module__'):
                 module = getattr(value, '__module__')
             else:
-                module = inspect.getmodulename(value)
+                module = None
         if not module_spec and not is_module:
             module_spec = getattr(value, '__name__', None)
         if not name:
@@ -363,9 +368,7 @@ class Method(CallerReflection):
     def generate_prompt(self) -> str:
         caller = self._typehint if self._typehint else self._caller
         prompt = parse_callable_to_method_def(caller=caller, alias=self.name(), doc=self._doc)
-        comments = parse_comments(self._comments)
-        import_from = get_import_comment(self._module, self._module_spec, self.name())
-        return join_prompt_lines(comments, import_from, prompt)
+        return get_reflection_prompt(self, prompt=prompt, imports=True)
 
 
 class Model(TypeReflection):
@@ -373,6 +376,7 @@ class Model(TypeReflection):
     def __init__(
             self,
             model: Union[Type[BaseModel], Type[TypedDict]],
+            typehint: Optional[Union[Type[BaseModel], Type[TypedDict]]] = None,
             name: Optional[str] = None,
             prompt: Optional[str] = None,
             module: Optional[str] = None,
@@ -390,6 +394,7 @@ class Model(TypeReflection):
             module = model.__module__
         if module_spec is None:
             module_spec = model.__name__
+        self._typehint = typehint
 
         super().__init__(
             name=name,
@@ -404,11 +409,13 @@ class Model(TypeReflection):
         return self._model
 
     def generate_prompt(self) -> str:
-        source = inspect.getsource(self._model)
-        prompt = strip_source_indent(source)
-        comments = parse_comments(self._comments)
-        import_from = get_import_comment(self._module, self._module_spec, self.name())
-        return join_prompt_lines(comments, import_from, prompt)
+        type_ = self._model
+        if self._typehint:
+            type_ = self._typehint
+        source = inspect.getsource(type_)
+        source = strip_source_indent(source)
+        source = replace_class_def_name(source, self.name())
+        return get_reflection_prompt(self, prompt=source)
 
 
 class Class(TypeReflection):
@@ -452,15 +459,12 @@ class Class(TypeReflection):
         return self._cls
 
     def generate_prompt(self) -> str:
-        comments = parse_comments(self._comments)
-        implementation = get_extends_comment(self._extends)
-        import_from = get_import_comment(self._module, self._module_spec, self.name())
         prompt = self._prompt
         if not prompt:
             cls = self._typehint if self._typehint else self._cls
             source = inspect.getsource(cls)
             prompt = make_class_prompt(source=source, name=self._name, doc=self._doc, attrs=None)
-        return join_prompt_lines(comments, import_from, implementation, prompt)
+        return get_reflection_prompt(self, prompt=prompt)
 
 
 class ClassPrompter(Class):
@@ -529,7 +533,7 @@ class ClassPrompter(Class):
                 __names = add_name_to_set(__names, method.name())
                 __attr_prompts.append(method.prompt())
         prompt = make_class_prompt(source=source, name=__name, doc=doc, attrs=__attr_prompts)
-        return prompt
+        return get_reflection_prompt(self, prompt=prompt)
 
 
 class BuildObject(Attr):
@@ -1103,3 +1107,36 @@ def is_callable(obj: Any) -> bool:
 
 def is_public_callable(attr: Any) -> bool:
     return isinstance(attr, Callable) and not inspect.isclass(attr) and not attr.__name__.startswith('_')
+
+
+def get_reflection_prompt(
+        r: Reflection,
+        prompt: str,
+        imports: bool = True,
+        extends: bool = True,
+        comments: bool = True,
+) -> str:
+    lines = []
+    if imports:
+        lines.append(get_import_comment(r.module(), r.module_spec(), r.name()))
+    if extends:
+        lines.append(get_extends_comment(r.extends()))
+    if comments:
+        lines.append(parse_comments(r.comments()))
+    lines.append(prompt)
+    return join_prompt_lines(*lines)
+
+
+def get_calling_modulename(skip: int = 0) -> Optional[str]:
+    stack = inspect.stack()
+    start = 0 + skip
+    if len(stack) < start + 1:
+        return None
+    frame = stack[start][0]
+
+    # module and packagename.
+    module_info = inspect.getmodule(frame)
+    if module_info:
+        mod = module_info.__name__
+        return mod
+    return None

@@ -31,11 +31,6 @@ class ToolThought(Thought, BaseModel):
     tools: List[str] = Field()
 
 
-class TestSuiteThought(Thought, BaseModel):
-    task: str
-    test_thoughts: List[Thought]
-
-
 class DAGThought(Thought, BaseModel):
     pass
 

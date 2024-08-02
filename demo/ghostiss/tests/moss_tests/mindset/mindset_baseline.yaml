@@ -8,12 +8,12 @@ instruction: |-
 
 llm_apis:
 - moonshot-v1-32k
-- gpt-4o
-- gpt-4
+#- gpt-4o
+#- gpt-4
 pycontext:
   imported:
   - module: ghostiss.core.ghosts.thoughts
-    spec: *
+    spec: '*'
   - module: ghostiss.mocks.ghosts.thoughts
     spec: mindset
 thread:

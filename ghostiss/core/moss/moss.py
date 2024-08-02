@@ -10,6 +10,7 @@ from ghostiss.core.moss.modules import Modules
 from ghostiss.core.moss.reflect import (
     Importing,
     reflect, reflects,
+    IterableReflection,
     Reflection, TypeReflection,
     Model, ModelType, ModelObject,
     Attr, Method, ClassPrompter, Locals, Interface,
@@ -363,6 +364,12 @@ class BasicMOSSImpl(MOSS):
         :param reflection: 反射.
         :param reassign_name: 如果重名的话, 是否要对这个反射重命名.
         """
+        if isinstance(reflection, IterableReflection):
+            # 递归拆解.
+            for r in reflection.iterate():
+                self.add_reflection(r)
+            return
+
         name = reflection.name()
         # 引用的变量名不能是保留字里的.
         if name in self.__reserved_locals_names or name in self.__reflections:
