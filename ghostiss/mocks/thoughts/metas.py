@@ -12,11 +12,14 @@ from ghostiss.core.moss.exports import Exporter
 
 class FlowThoughtNode(BaseModel):
     """
+    useful to define a flowchart node with edges.
+    thought in the node will determine which edge shall go next.
+    if no edges given, thought shall choose to finish or fail the task
     """
     name: str = Field(description="name of the node, useful to specific a node")
     thought: Thought = Field(description="the thought that responsible for the node")
     instruction: str = Field(description="specific instruction for the node, including what should do and what next")
-    forwards: List[str] = Field(
+    edges: List[str] = Field(
         description="list of node names for current node to choose as next step, when current node is done",
     )
 

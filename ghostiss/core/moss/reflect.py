@@ -4,6 +4,7 @@ from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Uni
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
+from ghostiss.abc import Identifiable, Descriptive
 
 __all__ = [
 
@@ -300,6 +301,62 @@ class Attr(ValueReflection):
             comments,
             name + typehint + value,
             doc,
+        )
+
+
+class DictAttr(Attr):
+    """
+    实现一个 dict 型的属性.
+    会尝试将 key 和 value 的描述用 doc 写出来. 类似:
+
+    foo: value of foo
+    bar: 123
+    """
+
+    def __init__(
+            self, *,
+            name: str,
+            values: Dict[str, Any],
+            item_type: Optional[Type] = None,
+            typehint: Optional[Any] = None,
+            doc: Optional[str] = None,
+            descriptions: Optional[Dict[str, str]] = None,
+            prompt: Optional[str] = None,
+            module: Optional[str] = None,
+            module_spec: Optional[str] = None,
+            extends: Optional[List[Any]] = None,
+            comments: Optional[str] = None,
+    ):
+        if typehint is None and item_type:
+            typehint = Dict[str, item_type]
+        if descriptions is None:
+            descriptions = {}
+            for key, val in values.items():
+                if isinstance(val, Descriptive):
+                    descriptions[key] = val.get_description()
+                elif isinstance(val, Identifiable):
+                    descriptions[key] = val.identifier().description
+                else:
+                    desc = get_obj_desc(val)
+                    if desc is not None:
+                        descriptions[key] = desc
+
+        if descriptions:
+            lines = [doc, "The descriptions of the items:"]
+            for name, desc in descriptions.items():
+                lines.append(f"`{name}`: {desc}")
+            doc = join_prompt_lines(*lines)
+
+        super().__init__(
+            name=name,
+            value=values,
+            typehint=typehint,
+            prompt=prompt,
+            module=module,
+            module_spec=module_spec,
+            extends=extends,
+            comments=comments,
+            doc=doc,
         )
 
 
@@ -1150,4 +1207,22 @@ def get_calling_modulename(skip: int = 0) -> Optional[str]:
     if module_info:
         mod = module_info.__name__
         return mod
+    return None
+
+
+def get_obj_desc(obj: Any) -> Optional[str]:
+    if isinstance(obj, Descriptive):
+        return obj.get_description()
+    if isinstance(obj, Identifiable):
+        return obj.identifier().description
+    if hasattr(obj, 'desc'):
+        return getattr(obj, 'desc', None)
+    if hasattr(obj, "description"):
+        return getattr(obj, 'description', None)
+    if hasattr(obj, "__desc__"):
+        attr = getattr(obj, "__desc__", None)
+        if attr:
+            return get_str_from_func_or_attr(attr)
+    if isinstance(obj, AttrDefaultTypes):
+        return str(obj)
     return None
