@@ -45,7 +45,7 @@ class ModelConf(Payload):
     service: str = Field(description="llm service name")
     temperature: float = Field(default=0.7, description="temperature")
     n: int = Field(default=1, description="number of iterations")
-    max_tokens: int = Field(default=512, description="max tokens")
+    max_tokens: int = Field(default=2000, description="max tokens")
     timeout: float = Field(default=20, description="timeout")
     request_timeout: float = Field(default=40, description="request timeout")
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="kwargs")

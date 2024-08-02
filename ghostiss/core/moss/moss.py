@@ -1,10 +1,9 @@
 from __future__ import annotations
 import inspect
-import typing
-from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type, TypedDict
+from typing import List, Set, Dict, Any, Optional, Union, Tuple, Type
 from types import ModuleType
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from ghostiss.container import Container, CONTRACT
 from ghostiss.core.moss.context import PyContext, Variable, Imported
 from ghostiss.core.moss.modules import Modules
@@ -13,14 +12,13 @@ from ghostiss.core.moss.reflect import (
     reflect, reflects,
     Reflection, TypeReflection,
     Model, ModelType, ModelObject,
-    Attr, Method, ClassPrompter, Locals, Library,
+    Attr, Method, ClassPrompter, Locals, Interface,
     get_typehint_string,
     get_model_object_meta, new_model_instance
 )
 from ghostiss.helpers import camel_to_snake
 from ghostiss.container import Provider
 from ghostiss.helpers import BufferPrint
-from ghostiss.core.messages.message import MessageType
 
 AttrTypes = Union[int, float, str, bool, list, dict, None, Provider, ModelType]
 
@@ -354,7 +352,7 @@ class BasicMOSSImpl(MOSS):
         contract = provider.contract()
         impl = provider.factory(self.__container)
 
-        contract_reflect = Library(cls=contract, name=name)
+        contract_reflect = Interface(cls=contract, name=name)
         attr = Attr(value=impl, name=camel_to_snake(contract_reflect.name()))
         self.__add_type(contract_reflect)
         self.__add_attr(attr)
@@ -385,16 +383,16 @@ class BasicMOSSImpl(MOSS):
             self.__add_method(reflection)
         elif isinstance(reflection, TypeReflection):
             # 如果是 type reflection 类型, 上下文中它可能已经存在了.
-            typ = reflection.value()
-            if typ in self.__context_type_names:
+            typ_ = reflection.value()
+            if typ_ in self.__context_type_names:
                 # 不重复添加类型. 所有类型使用第一个定义的.
                 return
             self.__add_type(reflection)
 
             # 默认判断是否要添加 lib.
-            impl = self.__container.get(typ)
+            impl = self.__container.get(typ_)
             if impl:
-                lib = Attr(value=impl, typehint=typ, name=camel_to_snake(reflection.name()))
+                lib = Attr(value=impl, typehint=typ_, name=camel_to_snake(reflection.name()))
                 self.add_reflection(lib, reassign_name=True)
         else:
             raise AttributeError(f"{reflection} not supported yet")

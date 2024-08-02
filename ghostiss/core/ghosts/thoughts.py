@@ -1,21 +1,32 @@
-from typing import Optional
+from typing import Optional, List
 from abc import ABC, abstractmethod
-from ghostiss.entity import Entity, EntityFactory, EntityMeta
+from ghostiss.entity import Entity, EntityFactory
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.events import Event
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.runner import Runner
-from ghostiss.abc import Identifiable, Descriptive
+from ghostiss.abc import Identifiable, Descriptive, Identifier
 from ghostiss.helpers import uuid
+from ghostiss.core.moss.exports import Exporter
 
 
 class Thought(Entity, Identifiable, Descriptive, ABC):
     """
-    思维状态机的驱动.
+    用代码的方式实现的思维链描述, 是 Llm-based Agent 的思维单元.
+    可以用来创建并且驱动一个任务.
+    Thought 有着各种实现, 包括聊天, 使用工具, 决策, 规划等等.
+    因此 Thought 的实例可以视作将成熟的知识和经验封装为可复用的记忆碎片.
+    只要继承自 Thought 类, 就可以驱动思维.
+
+    每个 Thought 都要实现 Identifier, 因此有三个关键信息:
+    1. id: 用 python 的 module.module:spec 风格描述的一个全局唯一的 thought 路径.
+    2. name: thought 可以描述的名称.
+    3. description: thought 实例的用途, 能力, 使用思路的简单描述.
     """
 
+    @abstractmethod
     def get_description(self) -> str:
-        return self.identifier().get_description()
+        pass
 
     @abstractmethod
     def new_task_id(self, g: Ghost) -> str:
@@ -35,7 +46,7 @@ class Thought(Entity, Identifiable, Descriptive, ABC):
         return None
 
 
-class BasicThought(Thought, ABC):
+class BasicThought(Thought, Identifiable, Descriptive, ABC):
 
     def new_task_id(self, g: Ghost) -> str:
         # 如果生成的 task id 是不变的, 则在同一个 process 里是一个单例. 但要考虑互相污染的问题.
@@ -106,29 +117,45 @@ class BasicThought(Thought, ABC):
         return self._run_event(g, e)
 
 
-class Thoughts(EntityFactory[Thought], ABC):
+class Mindset(EntityFactory[Thought], ABC):
     """
-    管理所有的 Thoughts.
+    思维集合, 用来管理所有可以使用的 Thought 实例.
+    是一个可持续学习, 召回的记忆空间.
     """
 
     @abstractmethod
-    def new_entity(self, meta_data: EntityMeta) -> Optional[Thought]:
+    def recall(self, description: str, limit: int = 10, offset: int = 0) -> List[Identifier]:
+        """
+        尝试使用描述, 从 mindset 中召回一个 Thought 实例.
+        :param description: 用自然语言描述想要回忆的对象. 可以是: 你当前的需求|你对某个工具或能力的期望|这个 thought 实例可能的 desc 等.
+        :param limit: 召回的最大数量. 会根据接近程度进行排序, 越前面的越高.
+        :param offset: 如果召回的数据量非常大, 可以通过 offset + limit 来遍历数据.
+        :return: 返回搜索到的 Thought 的 Identifier. 只保留 id, name, description. 未来可以用 id 召回某个精确的 thought 实例.
+        """
         pass
 
     @abstractmethod
-    def register(self, thought: Thought) -> None:
+    def remember(self, thought: Thought) -> None:
         """
-        注册一个 Thought 实例到当前的 Thoughts.
+        记住一个思维实例, 可以在未来召回.
+        通过这个方法, 可以把 thought 作为 记忆|工具|能力 等保存在思维里.
         """
         pass
 
     @abstractmethod
     def get_thought(self, thought_id: str) -> Optional[Thought]:
+        """
+        使用 id 来查找一个 Thought 实例. 前提是已经知道它的 id.
+        :param thought_id: Thought 实例通常会有一个可识别的 identifier, 提供唯一 id.
+        """
         pass
 
     @abstractmethod
-    def force_get_thoughts(self, thought_id: str) -> Optional[Thought]:
+    def force_get_thought(self, thought_id: str) -> Thought:
+        """
+        对 get_thought 的封装, 如果目标 thought 不存在会抛出 NotFoundError
+        """
         pass
 
-    def new_thought(self, meta: EntityMeta) -> Thought:
-        return self.force_new_entity(meta)
+
+EXPORTS = Exporter().class_sign(Thought).interface(Mindset).model(Identifier)

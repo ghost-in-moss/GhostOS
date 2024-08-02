@@ -189,7 +189,7 @@ class Message(BaseModel):
     def new_head(
             cls, *,
             role: str = Role.ASSISTANT.value,
-            typ: str = "",
+            typ_: str = "",
             content: Optional[str] = None,
             memory: Optional[str] = None,
             name: Optional[str] = None,
@@ -202,15 +202,15 @@ class Message(BaseModel):
             created = round(time.time(), 4)
         return cls(
             role=role, name=name, content=content, memory=memory, pack=True,
-            type=typ,
+            type=typ_,
             msg_id=msg_id, created=created,
         )
 
     @classmethod
     def new_tail(
             cls, *,
+            typ_: str = "",
             role: str = Role.ASSISTANT.value,
-            typ: str = "",
             content: Optional[str] = None,
             memory: Optional[str] = None,
             name: Optional[str] = None,
@@ -219,8 +219,9 @@ class Message(BaseModel):
     ):
         msg = cls.new_head(
             role=role, name=name, content=content, memory=memory,
-            typ=typ,
-            msg_id=msg_id, created=created,
+            typ_=typ_,
+            msg_id=msg_id,
+            created=created,
         )
         msg.pack = False
         return msg
@@ -228,7 +229,7 @@ class Message(BaseModel):
     @classmethod
     def new_pack(
             cls, *,
-            typ: str = "",
+            typ_: str = "",
             role: str = Role.ASSISTANT.value,
             content: Optional[str] = None,
             memory: Optional[str] = None,
@@ -236,12 +237,12 @@ class Message(BaseModel):
     ):
         return cls(
             role=role, name=name, content=content, memory=memory, pack=True,
-            typ=typ,
+            type=typ_,
         )
 
-    def get_content(self) -> Optional[str]:
+    def get_content(self) -> str:
         if self.memory is None:
-            return self.content
+            return self.content if self.content else ""
         return self.memory
 
     def patch(self, pack: "Message") -> Optional["Message"]:
@@ -251,7 +252,8 @@ class Message(BaseModel):
         :return: 如果粘包成功, 返回粘包后的消息. 粘包失败, 则返回 None.
         """
         #  type 不相同的话, 则认为是不同消息.
-        if pack.get_type() != self.get_type():
+        pack_type = pack.get_type()
+        if pack_type and pack_type != self.get_type():
             return None
         # 如果两个消息的 msg id 都存在, 又不相同, 则认为是不同的消息.
         if pack.msg_id and self.msg_id and pack.msg_id != self.msg_id:
@@ -315,8 +317,10 @@ class Message(BaseModel):
         """
         no_content = not self.content and not self.memory
         no_payloads = not self.payloads and not self.attachments and not self.callers
-        no_id = not self.msg_id
-        return no_id and no_content and no_payloads
+        return no_content and no_payloads
+
+    def is_tail(self) -> bool:
+        return not self.pack
 
     def dump(self) -> Dict:
         """

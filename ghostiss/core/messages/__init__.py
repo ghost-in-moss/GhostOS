@@ -4,7 +4,7 @@ from ghostiss.core.messages.message import (
     MessageClass, MessageType, MessageTypeParser,
 )
 from ghostiss.core.messages.openai import (
-    OpenAIParser, DefaultOpenAIParser, DefaultOpenAIParserProvider,
+    OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultOpenAIParserProvider,
 )
 from ghostiss.core.messages.buffers import Buffer, Flushed
 from ghostiss.core.messages.helpers import copy_messages

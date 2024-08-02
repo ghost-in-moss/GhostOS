@@ -18,7 +18,8 @@ def test_default_buffer_baseline():
     for item in sent:
         buffer2.buff(item)
         i += 1
-    assert i > 0
+    # 空首包也发送, 对齐 moonshot 协议.
+    assert i == 1
 
     for c in content1:
         pack = Message.new_pack(content=c)
@@ -46,7 +47,7 @@ def test_default_buffer_baseline():
 def test_functional_token_baseline():
     buffer = DefaultBuffer(
         functional_tokens=[
-            FunctionalToken(token=":moss>", caller="moss", description="desc", deliver=False)
+            FunctionalToken(token=":moss>", name="moss", description="desc", deliver=False)
         ]
     )
 
@@ -72,13 +73,19 @@ def test_buffer_sent():
     buffer = DefaultBuffer()
     content = "hello world"
     count = 0
+    count_has_message_id = 0
+
     for c in content:
         msg = Message.new_pack(content=c)
         sent = buffer.buff(msg)
         for i in sent:
             assert not i.is_empty()
+            if i.msg_id:
+                count_has_message_id += 1
             count += 1
     assert count == len(content)
+    assert count_has_message_id == 1
+    assert len(buffer.flush().messages) == 1
 
 
 def test_buffer_sent_one_tail():
@@ -111,7 +118,7 @@ def test_buffer_with_moss_token():
     assert message.content is not None
 
     buffer = DefaultBuffer(
-        functional_tokens=[FunctionalToken(token=">moss:", caller="moss", description="desc", deliver=False)]
+        functional_tokens=[FunctionalToken(token=">moss:", name="moss", description="desc", deliver=False)]
     )
 
     content = "好的，我会帮你播放这首歌。\n\n>moss:\ndef main(os: MOSS) -> Operator:\n    # Search for the song \"七里香\" by 周杰伦\n    song_list = os.player.search(\"\", \"周杰伦\", \"七里香\")\n    \n    # Check if the song is found\n    if \"七里香\" in song_list:\n        # Play the song\n        playing = os.player.play(\"七里香\")\n        \n        # Check if the song is playing\n        if playing:\n            return\n      os.mindflow.finish(\"正在播放周杰伦的《七里香》。\")\n        else:\n            return os.mindflow.fail(\"无法播放周杰伦的《七里香》。\")\n    else:\n        return os.mindflow.fail(\"未找到周杰伦的《七里香》。\")"
@@ -153,3 +160,33 @@ def test_buffer_with_sep_content():
     assert unsent[0].content == "hello "
     assert unsent[0].memory == content
     assert len(unsent[0].callers) == 1
+
+
+def test_buffer_with_tail_item():
+    buffer = DefaultBuffer()
+    header = Message.new_head(content="")
+    buffer.buff(header)
+    content = "hello"
+    for c in content:
+        msg = Message.new_pack(content=c)
+        buffer.buff(msg)
+    tail = Message.new_tail(content="hello world", msg_id=header.msg_id)
+    buffer.buff(tail)
+    flushed = buffer.flush()
+    assert len(flushed.messages) == 1
+    assert flushed.messages[0].content == "hello world"
+
+
+def test_buffer_header_with_payload():
+    buffer = DefaultBuffer()
+    header = Message.new_head(content="")
+    header.payloads["foo"] = {}
+    buffer.buff(header)
+    content = "hello"
+    buffer.buff(Message.new_pack(content=""))
+    for c in content:
+        msg = Message.new_pack(content=c)
+        buffer.buff(msg)
+    flushed = buffer.flush()
+    assert len(flushed.messages) == 1
+    assert flushed.messages[0].content == "hello"

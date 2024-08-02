@@ -11,7 +11,7 @@ class Descriptive(ABC):
 
 class Identifier(BaseModel, Descriptive):
     id: str = Field(default="", description="Unique identifier")
-    name: str = Field(description="Name of the object")
+    name: str = Field(default="", description="Name of the object")
     description: str = Field(default="", description="Description of the object")
 
     def get_description(self) -> str:

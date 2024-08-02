@@ -9,7 +9,7 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostiss.core.errors import GhostissIOError
-from ghostiss.core.messages import Message, OpenAIParser, DefaultOpenAIParser, DefaultTypes
+from ghostiss.core.messages import Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultTypes
 from ghostiss.core.runtime.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
     Chat,
@@ -60,7 +60,7 @@ class OpenAIAdapter(LLMApi):
             self,
             service_conf: ServiceConf,
             model_conf: ModelConf,
-            parser: OpenAIParser,
+            parser: OpenAIMessageParser,
             functional_token_prompt: Optional[str] = None,
     ):
         self._service = service_conf
@@ -137,10 +137,10 @@ class OpenAIAdapter(LLMApi):
 
     def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
         chat = self.parse_chat(chat)
-        messages: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
-        chunks = self._parser.from_chat_completion_chunks(messages)
+        chunks: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
+        messages = self._parser.from_chat_completion_chunks(chunks)
         first = True
-        for chunk in chunks:
+        for chunk in messages:
             if first:
                 self._model.set(chunk)
                 first = False
@@ -163,9 +163,9 @@ class OpenAIDriver(LLMDriver):
     adapter
     """
 
-    def __init__(self, parser: Optional[OpenAIParser] = None):
+    def __init__(self, parser: Optional[OpenAIMessageParser] = None):
         if parser is None:
-            parser = DefaultOpenAIParser()
+            parser = DefaultOpenAIMessageParser()
         self._parser = parser
 
     def driver_name(self) -> str:

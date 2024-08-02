@@ -80,7 +80,7 @@ foo: Foo
 def test_class_prompter():
     Case = NamedTuple('Case', [('a', Class), ('expect', str)])
     c = Case(
-        Library(
+        Interface(
             cls=Foo1,
             doc="test",
         ),
@@ -99,7 +99,7 @@ class Foo1(Foo):
     assert c.a.prompt() == c.expect.strip()
 
     c = Case(
-        Library(
+        Interface(
             cls=Foo1,
             doc="test",
             include_methods=[],
@@ -115,7 +115,7 @@ class Foo1(Foo):
     assert c.a.prompt() == c.expect.strip()
 
     c = Case(
-        Library(
+        Interface(
             cls=Foo,
             doc="",
         ),
@@ -131,7 +131,7 @@ class Foo(ABC):
     assert c.a.prompt() == c.expect.strip()
 
     c = Case(
-        Library(
+        Interface(
             cls=Foo,
             doc="",
             include_methods=[],
@@ -144,7 +144,7 @@ class Foo(ABC):
     assert c.a.prompt() == c.expect.strip()
 
     c = Case(
-        Interface(
+        ClassSign(
             cls=Foo,
             doc="test",
         ),

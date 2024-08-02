@@ -41,4 +41,44 @@ def test_message_with_full_type():
 
 def test_head_is_not_empty():
     msg = Message.new_head()
-    assert not msg.is_empty()
+    assert msg.is_empty()
+
+
+def test_head_pack_patch():
+    msg = Message.new_head(content="a")
+    patch = msg.patch(Message.new_pack(content="b"))
+    assert patch is not None
+    assert patch.content == "ab"
+
+
+def test_tail_patch():
+    msg = Message.new_head(content="")
+    for c in "hello":
+        pack = Message.new_pack(content=c)
+        patch = msg.patch(pack)
+        assert patch is not None
+    tail = Message.new_tail(content=" world")
+    patch = msg.patch(tail)
+    assert patch is None
+
+    tail = Message.new_tail(content=" world", msg_id=msg.msg_id)
+    patch = msg.patch(tail)
+    assert patch is not None
+    assert patch.content == " world"
+
+
+def test_patch_default_type_message():
+    msg = Message.new_head(typ_="kind")
+    patch = msg.patch(Message.new_pack(content="c", typ_=""))
+    assert patch is not None
+
+    patch = msg.patch(Message.new_pack(content="c", typ_="kind"))
+    assert patch is not None
+    pack = Message.new_pack(content="c", typ_="foo")
+    assert pack.type == "foo"
+    patch = msg.patch(pack)
+    assert patch is None
+
+
+
+

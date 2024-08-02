@@ -61,4 +61,4 @@ class ModuleEditor(ABC):
         pass
 
 
-EXPORTS = Exporter().library(PythonEditor).library(ModuleEditor)
+EXPORTS = Exporter().interface(PythonEditor).interface(ModuleEditor)

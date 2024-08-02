@@ -10,7 +10,7 @@ from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.core.moss import MOSS, PyContext
 from ghostiss.core.messages import DefaultTypes, Message
 from ghostiss.core.runtime.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
-from ghostiss.core.runtime.threads import Thread, thread_to_chat
+from ghostiss.core.runtime.threads import MsgThread, thread_to_chat
 from ghostiss.helpers import uuid, import_from_str
 from pydantic import BaseModel, Field
 from ghostiss.framework.llms.chatfilters import AssistantNameFilter
@@ -45,7 +45,7 @@ class MossRunner(LLMRunner):
         self._variables = variables
         self._actions = actions
 
-    def actions(self, container: Container, thread: Thread) -> Iterable[Action]:
+    def actions(self, container: Container, thread: MsgThread) -> Iterable[Action]:
         moss = container.force_fetch(MOSS)
         if self._variables:
             moss = moss.with_vars(**self._variables)
@@ -58,7 +58,7 @@ class MossRunner(LLMRunner):
             for action in self._actions:
                 yield action
 
-    def prepare(self, container: Container, thread: Thread) -> Tuple[Iterable[Action], Chat]:
+    def prepare(self, container: Container, thread: MsgThread) -> Tuple[Iterable[Action], Chat]:
         """
         生成默认的 chat.
         :param container:
@@ -101,6 +101,17 @@ class MOSSRunnerTestSuite(BaseModel):
         default=None,
         description="runner 不是用 test suite 生成, 而是从目标路径 import 一个实例. "
     )
+
+    last_round: Optional[str] = Field(
+        default=None,
+        description="relative file path of last round. if given, will join last round thread to current thread",
+    )
+    round_api: Optional[str] = Field(
+        default=None,
+        description="certain llm api name that used to generate new round messages. "
+                    "if not given, use first one of llm_apis",
+    )
+
     agent_name: str = Field(default="moss")
 
     system_prompt: str = Field(
@@ -115,7 +126,7 @@ class MOSSRunnerTestSuite(BaseModel):
     pycontext: PyContext = Field(
         description="定义 pycontext. "
     )
-    thread: Thread = Field(
+    thread: MsgThread = Field(
         description="定义一个上下文. "
     )
     actions: List[str] = Field(
@@ -156,15 +167,20 @@ class MOSSRunnerTestSuite(BaseModel):
             pycontext=self.pycontext,
         )
 
-    def run_test(self, container: Container) -> Dict[str, Tuple[Thread, Chat, Optional[Operator]]]:
+    def run_test(
+            self,
+            container: Container,
+            thread: Optional[MsgThread] = None,
+    ) -> Dict[str, Tuple[MsgThread, Chat, Optional[Operator]]]:
         """
         基于 runner 实例运行测试. 如何渲染交给外部实现.
         """
-        from threading import Thread
+        from threading import Thread as OSThread
         parallels = []
         outputs = {}
+        thread = thread if thread else self.thread
 
-        def run(_api: str, _runner: MossRunner, _messenger: Messenger, _thread: Thread):
+        def run(_api: str, _runner: MossRunner, _messenger: Messenger, _thread: MsgThread):
             """
             定义一个闭包.
             """
@@ -176,10 +192,10 @@ class MOSSRunnerTestSuite(BaseModel):
             outputs[_api] = (_thread, _chat, _op)
 
         for llm_api in self.llm_apis:
-            t = Thread(
+            t = OSThread(
                 target=run,
                 args=(
-                    llm_api, self.get_runner(llm_api), container.force_fetch(Messenger), self.thread.thread_copy()
+                    llm_api, self.get_runner(llm_api), container.force_fetch(Messenger), thread.thread_copy(),
                 ),
             )
             t.start()

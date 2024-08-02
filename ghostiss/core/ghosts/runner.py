@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from ghostiss.container import Container
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.actions import Action
-from ghostiss.core.runtime.threads import Thread
+from ghostiss.core.runtime.threads import MsgThread
 from ghostiss.core.runtime.llms import LLMApi, Chat
 from ghostiss.core.ghosts.messenger import Messenger
 
@@ -19,7 +19,7 @@ class Runner(ABC):
     """
 
     @abstractmethod
-    def run(self, container: Container, messenger: Messenger, thread: Thread) -> Optional[Operator]:
+    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Optional[Operator]:
         """
         运行 Thread, 同时返回一个新的 Thread. 不做存储修改, 方便单元测试.
         """
@@ -36,7 +36,7 @@ class LLMRunner(Runner, ABC):
     """
 
     @abstractmethod
-    def prepare(self, container: Container, thread: Thread) -> Tuple[Iterable[Action], Chat]:
+    def prepare(self, container: Container, thread: MsgThread) -> Tuple[Iterable[Action], Chat]:
         """
         基于 thread 生成一个 chat 对象.
         """
@@ -49,7 +49,7 @@ class LLMRunner(Runner, ABC):
         """
         pass
 
-    def run(self, container: Container, messenger: Messenger, thread: Thread) -> Optional[Operator]:
+    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Optional[Operator]:
         """
         标准的 llm runner 运行逻辑.
         """
@@ -88,7 +88,7 @@ class PipelineRunner(Runner):
     def __init__(self, pipes: Iterable[Runner]):
         self.pipes = pipes
 
-    def run(self, container: Container, messenger: Messenger, thread: Thread) -> Optional[Operator]:
+    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Optional[Operator]:
         for pipe in self.pipes:
             # 任意一个 runner 返回 op, 会中断其它的 runner.
             thread, op = pipe.run(container, messenger, thread)

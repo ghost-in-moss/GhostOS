@@ -95,3 +95,11 @@ def test_moss_with_importing():
     moss.with_vars(Importing(value=inspect))
     prompt = moss.dump_code_prompt()
     assert "import inspect" in prompt
+
+
+def test_moss_with_func():
+    c = prepare_container()
+    moss = c.force_fetch(MOSS)
+    moss.with_vars(test_moss_with_importing)
+    prompt = moss.dump_code_prompt()
+    assert "def test_moss_with_importing" in prompt
