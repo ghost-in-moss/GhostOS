@@ -19,6 +19,8 @@ datasets = "^2.20.0"
 anthropic = "^0.31.2"
 pillow = "^10.4.0"
 sympy = "^1.13.1"
+tree-sitter = "0.21.3"
+tree-sitter-languages = "^1.10.2"
 
 [tool.poetry.scripts]
 llm_test = "ghostiss.scripts.llm_test:main"
