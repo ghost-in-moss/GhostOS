@@ -1,21 +1,8 @@
-def plus(a: int, b: int) -> int:
-    return a + b
-
-
-# <moss>
-"""
-使用独立行 `# <moss>\n` 开头, 直到结尾或者独立行 `# </moss>` 的代码, 
-在生成 prompt 时默认对 LLM 不可见, 但仍然会执行. 
-
-所以以下代码不会在 moss 的 context prompt 里, 对 LLM 不可见. 
-"""
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    # 如果使用了 TYPE_CHECKING, 这些引用的变量只辅助做 typehint, 并不会出现在 moss 运行时的 locals 里.
     from typing import Optional, List, Dict, Any
-    from ghostiss.moss2.abc import MOSSCompiler, MOSSRuntime, MOSSResult
+    from ghostiss.moss2.abc import MOSSRuntime, MOSSResult
 
 
 def __moss_compile__(compiled: "MOSSRuntime") -> "MOSSRuntime":
@@ -88,12 +75,10 @@ def __moss_exec__(
     # 展示的 MOSS prompt 和真实的 moss 不一样.
     module.__dict__["MOSS"] = MOSS
     module.__dict__["__builtins__"] = safe_builtins
-    compiled = compile(code, filename='<MOSS>', mode='exec')
-    # use compile() can found some error at compile stage, and compile() provides the flexibility by pass the 'mode'
-    # If exec gets two separate objects as globals and locals,
-    # the code will be executed as if it were embedded in a class definition.
-    exec(compiled, module.__dict__)
-    # the second positional arguments of exec() is global named space (it storages global variables)
+    # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
+    with runtime.exec_ctx():
+        compiled = compile(code, filename='<MOSS>', mode='exec')
+        exec(compiled, module.__dict__)
 
     if target not in module.__dict__:
         raise NotImplementedError(f"target `{target}` not implemented")
@@ -117,11 +102,11 @@ def __moss_exec__(
                 if attr_name not in module.__dict__:
                     raise AttributeError(f"module has no attribute {attr_name} for `{target}`")
                 real_kwargs[argument_name] = getattr(module, attr_name, None)
-        returns = target_module_attr(*real_args, **real_kwargs)
+        # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
+        with runtime.exec_ctx():
+            returns = target_module_attr(*real_args, **real_kwargs)
     else:
         returns = target_module_attr
     std_output = runtime.dump_std_output()
     pycontext = runtime.dump_context()
     return MOSSResult(returns, std_output, pycontext)
-
-# </moss>

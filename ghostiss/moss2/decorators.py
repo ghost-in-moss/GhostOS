@@ -1,4 +1,4 @@
-from typing import Callable, Optional, List as L
+from typing import Callable, Optional, List
 
 
 def class_prompt(
@@ -6,7 +6,6 @@ def class_prompt(
         includes: Optional[List[str]] = None,
         excludes: Optional[List[str]] = None,
         doc: Optional[str] = None,
-        prompt: Optional[str] = None,
 ):
     """
     decorator for a class to define prompt to it.
