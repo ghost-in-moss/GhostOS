@@ -41,17 +41,16 @@ class EntityClass(Entity, ABC):
 
     @classmethod
     @abstractmethod
-    def entity_type(cls) -> str:
+    def new_entity(cls, meta: EntityMeta) -> Optional["EntityClass"]:
         pass
+
+
+class EntityModel(BaseModel, Entity, ABC):
 
     @classmethod
     @abstractmethod
-    def new_entity(cls, con: Container, meta: EntityMeta) -> Optional["EntityClass"]:
+    def new_entity(cls, container: Container, meta: EntityMeta) -> Optional["EntityModel"]:
         pass
-
-
-class EntityModel(BaseModel, EntityClass, ABC):
-    pass
 
 
 ENTITY_TYPE = TypeVar("ENTITY_TYPE", bound=Entity)
