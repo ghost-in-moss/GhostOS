@@ -4,7 +4,7 @@ import argparse
 import os
 import yaml
 from ghostiss.core.moss.reflect import ClassSign, Interface
-from ghostiss.container import Container, Provider, CONTRACT
+from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.messages import DefaultTypes
 from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
@@ -37,10 +37,10 @@ You can use the api that MOSS provided to implement your plan.
     def singleton(self) -> bool:
         return False
 
-    def contract(self) -> Type[CONTRACT]:
+    def contract(self) -> Type[ABSTRACT]:
         return MOSS
 
-    def factory(self, con: Container) -> Optional[CONTRACT]:
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
         from ghostiss.core.moss import Importing, Typing
         from abc import ABC, abstractmethod
         import typing

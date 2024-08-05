@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Type
-from ghostiss.container import Container, Provider, CONTRACT
+from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.runtime.llms import LLMs
 from ghostiss.core.runtime.threads import Threads
 from ghostiss.core.runtime.tasks import Tasks
@@ -61,8 +61,8 @@ class BasicRuntimeProvider(Provider):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[CONTRACT]:
+    def contract(self) -> Type[ABSTRACT]:
         return Runtime
 
-    def factory(self, con: Container) -> Optional[CONTRACT]:
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
         return BasicRuntime(con)

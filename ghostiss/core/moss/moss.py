@@ -5,7 +5,7 @@ from RestrictedPython import safe_globals
 from types import ModuleType
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from ghostiss.container import Container, CONTRACT
+from ghostiss.container import Container, ABSTRACT
 from ghostiss.core.moss.context import PyContext, Variable, Imported
 from ghostiss.core.moss.modules import Modules
 from ghostiss.core.moss.reflect import (
@@ -683,10 +683,10 @@ class TestMOSSProvider(Provider):
     def singleton(self) -> bool:
         return False
 
-    def contract(self) -> Type[CONTRACT]:
+    def contract(self) -> Type[ABSTRACT]:
         return MOSS
 
-    def factory(self, con: Container) -> Optional[CONTRACT]:
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
         return BasicPythonMOSSImpl(
             doc="",
             container=con,

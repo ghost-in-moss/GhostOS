@@ -1,7 +1,7 @@
 from typing import Dict, Type, Optional
 
 from ghostiss.contracts.configs import YamlConfig, Configs
-from ghostiss.container import Provider, Container, CONTRACT
+from ghostiss.container import Provider, Container, ABSTRACT
 from ghostiss.core.runtime.llms import LLMs, LLMsConfig
 from ghostiss.framework.llms.llms import LLMsImpl
 from ghostiss.framework.llms.openai_driver import OpenAIDriver

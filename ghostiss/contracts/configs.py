@@ -3,7 +3,7 @@ import yaml
 from abc import ABC, abstractmethod
 from typing import ClassVar, TypeVar, Type, Dict, Optional
 from pydantic import BaseModel
-from ghostiss.container import Container, Provider, CONTRACT
+from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.contracts.storage import Storage
 
 __all__ = ['Config', 'Configs', 'YamlConfig', 'StorageConfigs', 'ConfigsByStorageProvider']

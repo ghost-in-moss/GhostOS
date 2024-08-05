@@ -12,7 +12,7 @@ from openai.types.chat.chat_completion_user_message_param import ChatCompletionU
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 
 from ghostiss.core.messages.message import Message, DefaultTypes, Role, Caller, PayloadItem
-from ghostiss.container import Provider, Container, CONTRACT
+from ghostiss.container import Provider, Container, ABSTRACT
 from pydantic import BaseModel, Field
 
 __all__ = ["OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider"]
@@ -207,8 +207,8 @@ class DefaultOpenAIParserProvider(Provider):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[CONTRACT]:
+    def contract(self) -> Type[ABSTRACT]:
         return OpenAIMessageParser
 
-    def factory(self, con: Container) -> Optional[CONTRACT]:
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
         return DefaultOpenAIMessageParser()

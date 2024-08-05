@@ -1,7 +1,7 @@
 from typing import Optional, Type, Generic, Iterable
 from abc import ABC, abstractmethod
 
-from ghostiss.container import Container, Provider, CONTRACT
+from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.session import Session
 from ghostiss.core.messages import Messenger
@@ -10,18 +10,18 @@ from ghostiss.core.runtime import Runtime
 from ghostiss.core.runtime.threads import Threads
 
 
-class GhostProvider(Generic[CONTRACT], Provider[CONTRACT], ABC):
+class GhostProvider(Generic[ABSTRACT], Provider[ABSTRACT], ABC):
     is_singleton = False
 
     def singleton(self) -> bool:
         return self.is_singleton
 
-    def factory(self, con: Container) -> CONTRACT:
+    def factory(self, con: Container) -> ABSTRACT:
         ghost = con.force_fetch(Ghost)
         return self.generate(ghost)
 
     @abstractmethod
-    def generate(self, g: Ghost) -> CONTRACT:
+    def generate(self, g: Ghost) -> ABSTRACT:
         pass
 
 
@@ -58,10 +58,10 @@ class SessionProvider(GhostProvider[Session]):
 class MessengerProvider(GhostProvider[Messenger]):
     is_singleton = False
 
-    def generate(self, g: Ghost) -> CONTRACT:
+    def generate(self, g: Ghost) -> ABSTRACT:
         return g.messenger()
 
-    def contract(self) -> Type[CONTRACT]:
+    def contract(self) -> Type[ABSTRACT]:
         return Messenger
 
 

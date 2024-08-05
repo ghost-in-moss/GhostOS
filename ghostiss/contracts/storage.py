@@ -2,7 +2,7 @@ import os
 import re
 from typing import Optional, AnyStr, Dict, Type, Iterable
 from abc import ABC, abstractmethod
-from ghostiss.container import Provider, Container, CONTRACT
+from ghostiss.container import Provider, Container, ABSTRACT
 
 __all__ = ['Storage', 'FileStorage', 'FileStorageProvider']
 

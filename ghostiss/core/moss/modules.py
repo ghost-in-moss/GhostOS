@@ -5,7 +5,7 @@ from typing import Optional, Type
 
 from ghostiss.core.moss.reflect import reflect, reflects, Reflection, Importing
 from ghostiss.core.moss.exports import EXPORTS_KEY, Exporter
-from ghostiss.container import Provider, Container, CONTRACT
+from ghostiss.container import Provider, Container, ABSTRACT
 
 
 class Modules(ABC):
@@ -82,8 +82,8 @@ class BasicModulesProvider(Provider):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[CONTRACT]:
+    def contract(self) -> Type[ABSTRACT]:
         return Modules
 
-    def factory(self, con: Container) -> Optional[CONTRACT]:
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
         return BasicModules()
