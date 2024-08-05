@@ -150,3 +150,27 @@ def test_instance_doc():
     # 不会污染父类.
     assert f.__doc__ == "hello"
     assert Foo.__doc__.strip() == "test"
+
+
+def test_setattr_to_parent_class():
+    class Foo:
+        foo: int = 10
+
+    class Zoo(Foo):
+        Zoo: str = "test"
+
+    z = Zoo()
+    setattr(Foo, "bar", 20)
+    assert z.bar == 20
+    assert Zoo.bar == 20
+
+
+def test_setattr_with_func():
+    def hello() -> str:
+        return "world"
+
+    class Foo:
+        foo: int = 10
+
+    setattr(Foo, "hello", hello)
+    assert Foo.hello() == "world"
