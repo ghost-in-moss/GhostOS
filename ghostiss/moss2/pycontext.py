@@ -9,21 +9,20 @@ from ghostiss.container import Container
 
 class PyContext(BaseModel):
     """
-    可传输的 python 上下文.
-    不需要全部用 pickle 之类的库做序列化, 方便管理 bot 的思维空间.
+    MOSS 运行依赖的 python 上下文.
     """
 
     module: Optional[str] = Field(
         default=None,
-        description="the module path that from which import the moss context predefined code",
+        description="the module path from which import the moss context predefined code",
     )
     injections: Dict[str, "Injected"] = Field(
         default_factory=dict,
-        description="通过 python 引入的包, 类, 方法 等.",
+        description="通过 python 引入的包, 类, 方法 等. 会注入到 MOSS 上. ",
     )
     variables: Dict[str, "Variable"] = Field(
         default_factory=dict,
-        description="在上下文中定义的变量.",
+        description="在上下文中定义的变量. 会注入到 MOSS 上. ",
     )
 
     def inject(self, imp: "Injected") -> None:

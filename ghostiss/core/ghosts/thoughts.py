@@ -1,6 +1,6 @@
-from typing import Optional, List
+from typing import Optional, List, TypeVar, ClassVar, Generic, Type
 from abc import ABC, abstractmethod
-from ghostiss.entity import EntityModel, EntityFactory
+from ghostiss.entity import InContainerEntity, EntityFactory, EntityMeta
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.events import Event
 from ghostiss.core.ghosts.operators import Operator
@@ -8,21 +8,48 @@ from ghostiss.core.ghosts.runner import Runner
 from ghostiss.abc import Identifiable, Descriptive, Identifier
 from ghostiss.helpers import uuid
 from ghostiss.core.moss.exports import Exporter
+from pydantic import BaseModel
 
 
-class Thought(EntityModel, Identifiable, ABC):
+class Thought(BaseModel, Identifiable, ABC):
     """
     用代码的方式实现的思维链描述, 是 Llm-based Agent 的思维单元.
     可以用来创建并且驱动一个任务.
     Thought 有着各种实现, 包括聊天, 使用工具, 决策, 规划等等.
     因此 Thought 的实例可以视作将成熟的知识和经验封装为可复用的记忆碎片.
     只要继承自 Thought 类, 就可以驱动思维.
+    """
 
-    每个 Thought 都要实现 Identifier, 因此有三个关键信息:
+    thought_driver: ClassVar[Type["ThoughtDriver"]]
+    """
+    定义 Thought 类的Driver. 可以在定义 Thought 类之后, 手动添加. 例如: 
+    
+    class MyThought(Thought):
+        ...
+        
+    class MyThoughtDriver(ThoughtDriver):
+        ...
+        
+    MyThought.thought_driver = MyThoughtDriver
+    """
+
+
+T = TypeVar("T", bound=Thought)
+
+
+class ThoughtDriver(Generic[T], InContainerEntity, ABC):
+    """
+    每个 ThoughtDriver 都要实现 Identifier, 因此有三个关键信息:
     1. id: 用 python 的 module.module:spec 风格描述的一个全局唯一的 thought 路径.
     2. name: thought 可以描述的名称.
     3. description: thought 实例的用途, 能力, 使用思路的简单描述.
     """
+
+    def __init__(self, thought: T):
+        self.thought = thought
+
+    def to_entity_meta(self) -> EntityMeta:
+        pass
 
     @abstractmethod
     def new_task_id(self, g: Ghost) -> str:
@@ -42,7 +69,7 @@ class Thought(EntityModel, Identifiable, ABC):
         return None
 
 
-class BasicThought(Thought, Identifiable, Descriptive, ABC):
+class BasicThoughtDriver(Thought, Identifiable, Descriptive, ABC):
 
     def new_task_id(self, g: Ghost) -> str:
         # 如果生成的 task id 是不变的, 则在同一个 process 里是一个单例. 但要考虑互相污染的问题.

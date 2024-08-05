@@ -2,12 +2,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, Optional, TypedDict
 from typing_extensions import Required
-from pydantic import BaseModel
 from ghostiss.container import Container
 
 __all__ = [
     'Entity', 'EntityMeta',
-    'ENTITY_TYPE', 'EntityModel',
+    'ENTITY_TYPE', 'InContainerEntity',
     'EntityClass', 'EntityFactory',
 ]
 
@@ -20,8 +19,16 @@ class EntityMeta(TypedDict, total=False):
     """
 
     id: Optional[str]
+    """ if id given, the meta is able to register and fetch from repository"""
+
     type: Required[str]
+    """ different type of entity use different EntityFactory to initialize from meta"""
+
+    driver: Optional[str]
+    """ optional for EntityFactory to choose driver """
+
     data: Required[dict]
+    """ use dict to restore the serializable data"""
 
 
 class Entity(ABC):
@@ -45,11 +52,11 @@ class EntityClass(Entity, ABC):
         pass
 
 
-class EntityModel(BaseModel, Entity, ABC):
+class InContainerEntity(Entity, ABC):
 
     @classmethod
     @abstractmethod
-    def new_entity(cls, container: Container, meta: EntityMeta) -> Optional["EntityModel"]:
+    def new_entity(cls, container: Container, meta: EntityMeta) -> Optional["InContainerEntity"]:
         pass
 
 

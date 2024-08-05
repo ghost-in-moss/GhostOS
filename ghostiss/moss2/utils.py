@@ -1,7 +1,6 @@
 import inspect
 import re
-from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union, Type, is_typeddict, Tuple
-from abc import ABC, abstractmethod
+from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Type, is_typeddict
 from pydantic import BaseModel
 from ghostiss.entity import EntityClass
 from ghostiss.abc import Identifiable, Descriptive
@@ -11,9 +10,9 @@ __all__ = [
     'get_str_from_func_or_attr',
 
     'is_typing', 'is_builtin', 'is_classmethod',
-    'is_model_class', 'get_model_object_meta', 'is_model_instance', 'new_model_instance',
+    'is_model_class', 'get_model_object_meta', 'new_model_instance',
     'parse_comments',
-    'parse_doc_string', 'parse_doc_string_with_quotes',
+    'parse_doc_string', 'escape_string_quotes',
     'strip_source_indent', 'add_source_indent', 'make_class_prompt',
     'is_callable', 'is_public_callable', 'parse_callable_to_method_def',
     'get_typehint_string', 'get_default_typehint', 'get_import_comment', 'get_extends_comment',
@@ -21,61 +20,8 @@ __all__ = [
     'count_source_indent',
     'replace_class_def_name',
     'get_calling_modulename',
+    'is_code_same_as_print',
 ]
-
-
-def reflect(
-        *,
-        var: Any,
-        name: Optional[str] = None,
-) -> Optional[Reflection]:
-    """
-    reflect any variable to Reflection
-    """
-    if isinstance(var, Reflection):
-        if name:
-            var = var.update(name=name)
-        return var
-
-    elif is_builtin(var):
-        return Importing(value=var)
-
-    elif is_typing(var):
-        if not name:
-            raise ValueError('Name must be a non-empty string for typing')
-        return Typing(name=name, typing=var)
-    elif inspect.isclass(var):
-        return SourceCode(cls=var, name=name)
-    elif isinstance(var, Callable):
-        return Method(caller=var, name=name)
-    elif not name:
-        raise ValueError(f'Name must be a non-empty string for Attr type {type(var)}, value {var}')
-
-    return Attr(name=name, value=var)
-
-
-def reflects(*args, **kwargs) -> Iterable[Reflection]:
-    """
-    reflect any variable to Reflection
-    """
-    for arg in args:
-        if isinstance(arg, IterableReflection):
-            for item in arg.iterate():
-                yield item
-            continue
-
-        r = reflect(var=arg)
-        if r is not None:
-            yield r
-
-    for k, v in kwargs.items():
-        if isinstance(v, IterableReflection):
-            for item in v.iterate():
-                yield item
-            continue
-        r = reflect(var=v, name=k)
-        if r is not None:
-            yield r
 
 
 def get_import_comment(module: Optional[str], module_spec: Optional[str], alias: Optional[str]) -> Optional[str]:
@@ -106,14 +52,6 @@ def get_extends_comment(extends: Optional[List[Any]]) -> Optional[str]:
     return "# extends " + ", ".join(result)
 
 
-def join_prompt_lines(*prompts: Optional[str]) -> str:
-    result = []
-    for prompt in prompts:
-        if prompt:
-            result.append(prompt)
-    return '\n'.join(result)
-
-
 def get_typehint_string(typehint: Optional[Any]) -> str:
     if not typehint:
         return ""
@@ -132,7 +70,7 @@ def parse_doc_string(doc: Optional[str], inline: bool = True, quote: str = '"""'
         return ""
     gap = "" if inline else "\n"
     doc = strip_source_indent(doc)
-    doc = parse_doc_string_with_quotes(doc, quote=quote)
+    doc = escape_string_quotes(doc, quote=quote)
     return quote + gap + doc + gap + quote
 
 
@@ -343,13 +281,13 @@ def count_source_indent(source_code: str) -> int:
     return 0
 
 
-def parse_doc_string_with_quotes(doc: str, quote='"""') -> str:
-    if doc.startswith(quote) and doc.endswith(quote):
-        return doc
-    doc = doc.strip(quote)
-    doc = doc.replace('\\' + quote, quote)
-    doc = doc.replace(quote, '\\' + quote)
-    return doc.strip()
+def escape_string_quotes(target: str, quote='"""') -> str:
+    if target.startswith(quote) and target.endswith(quote):
+        return target
+    target = target.strip(quote)
+    target = target.replace('\\' + quote, quote)
+    target = target.replace(quote, '\\' + quote)
+    return target.strip()
 
 
 def add_name_to_set(names: set, name: str) -> set:
@@ -363,10 +301,6 @@ def is_model_class(typ: type) -> bool:
     if not isinstance(typ, type) or inspect.isabstract(typ):
         return False
     return issubclass(typ, BaseModel) or is_typeddict(typ) or issubclass(typ, EntityClass)
-
-
-def is_model_instance(obj: Any) -> bool:
-    return isinstance(obj, ModelObject)
 
 
 def get_model_object_meta(obj: Any) -> Optional[Dict]:
@@ -414,24 +348,6 @@ def is_public_callable(attr: Any) -> bool:
     return isinstance(attr, Callable) and not inspect.isclass(attr) and not attr.__name__.startswith('_')
 
 
-def get_reflection_prompt(
-        r: Reflection,
-        prompt: str,
-        imports: bool = True,
-        extends: bool = True,
-        comments: bool = True,
-) -> str:
-    lines = []
-    if imports:
-        lines.append(get_import_comment(r.from_module(), r.module_spec(), r.name()))
-    if extends:
-        lines.append(get_extends_comment(r.extends()))
-    if comments:
-        lines.append(parse_comments(r.comments()))
-    lines.append(prompt)
-    return join_prompt_lines(*lines)
-
-
 def get_calling_modulename(skip: int = 0) -> Optional[str]:
     stack = inspect.stack()
     start = 0 + skip
@@ -460,9 +376,16 @@ def get_obj_desc(obj: Any) -> Optional[str]:
         attr = getattr(obj, "__desc__", None)
         if attr:
             return get_str_from_func_or_attr(attr)
-    if isinstance(obj, AttrDefaultTypes):
-        return str(obj)
     return None
+
+
+def is_code_same_as_print(value: Any) -> bool:
+    return isinstance(value, bool) \
+        or isinstance(value, int) \
+        or isinstance(value, float) \
+        or isinstance(value, complex)
+    # or isinstance(value, list)
+    # or isinstance(value, dict)
 
 
 def get_modulename(val: Any) -> Optional[str]:

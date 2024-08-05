@@ -1,9 +1,12 @@
-from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Tuple
+import inspect
+from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Tuple, Callable, Iterable
 from types import ModuleType
 from abc import ABC, abstractmethod
-from ghostiss.container import Container
+from ghostiss.container import Container, Provider, Factory
 from ghostiss.moss2.pycontext import PyContext, SerializableType
-from ghostiss.moss2.prompts import Prompter
+from ghostiss.moss2.prompts import (
+    AttrPrompter, reflect_locals, join_prompt_lines, ATTR_PROMPT_MAGIC_ATTR, PROMPT_MAGIC_ATTR,
+)
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -17,8 +20,11 @@ MOSS 通过 PyContext 来定义一个可持久化, 可以复原的上下文.
 # 第一步, 获取 MOSSCompiler 对象. 
 compiler: MOSSCompiler = container.force_fetch(MOSSCompiler)
 
-# 第二步, compiler 可以 inject 其它类库, 或 join pycontext, 然后 compile
+# 第二步, compiler 可以预定义 Module 的一些内部方法比如 __import__, 或 join pycontext, 然后 compile
 runtime: MOSSRuntime = compiler.compile(xxx)
+
+# 这个阶段会编译 pycontext.module 到一个临时的 Module 中, 并对生成的 MOSSRuntime 进行初始化. 
+# runtime 可以用来做依赖注入的准备. 
 
 # 第三步, 生成 context 的 prompt. 
 prompt = runtime.moss_context_prompt()
@@ -39,9 +45,19 @@ pycontext = result.pycontext
 """
 
 __all__ = [
-    'MOSS', 'MetaMOSS',
-    'MOSSCompiler', 'MOSSResult', 'MOSSRuntime',
+    'MOSS',
+    'MOSSCompiler', 'MOSSResult', 'MOSSPrompter', 'MOSSExecutor',
 ]
+
+AttrPrompts = Iterable[Tuple[str, Optional[str]]]
+
+MOSS_COMPILED_EVENT = "__moss_compiled__"
+
+MOSS_PROMPT_EVENT = "__moss_prompt__"
+
+MOSS_EXEC_EVENT = "__moss_exec__"
+
+MOSS_TYPE_NAME = "MOSS"
 
 
 class MOSS(ABC):
@@ -51,7 +67,7 @@ class MOSS(ABC):
     """
 
     @abstractmethod
-    def define(
+    def var(
             self,
             name: str,
             value: SerializableType,
@@ -79,7 +95,7 @@ class MOSS(ABC):
 
         equals:
         `def inject(moss: MOSS):
-            from module.submodule import module_attr_name as var
+            from module.sub_module import module_attr_name as var
             setattr(moss, 'attr_name', var)
         inject(moss)
         assert hasattr(moss, 'attr_name')`
@@ -97,16 +113,6 @@ class MOSS(ABC):
         pass
 
 
-class MetaMOSS(MOSS):
-    """
-    可以修改当前代码的 MOSS.
-    """
-
-    @abstractmethod
-    def append_code(self, code: str) -> None:
-        pass
-
-
 class MOSSCompiler(ABC):
     """
     language Model-oriented Operating System Simulation
@@ -116,56 +122,170 @@ class MOSSCompiler(ABC):
     # --- 创建 MOSS 的方法 --- #
     @abstractmethod
     def container(self) -> Container:
+        """
+        MOSS 专用的 IoC 容器.
+        会预先注册好上下文相关的一些 Provider 之类的数据.
+        """
         pass
 
     @abstractmethod
     def pycontext(self) -> PyContext:
+        """
+        MOSS 的动态上下文, 可以序列化保存到历史消息里, 从而在分布式系统里重新还原上下文.
+        """
         pass
 
     @abstractmethod
     def join_context(self, context: PyContext) -> "MOSSCompiler":
         """
-        为 MOSS 上下文添加一个可以持久化存储的 context 变量.
+        为 MOSS 上下文添加一个可以持久化存储的 context 变量, 合并默认值.
         :param context:
         :return:
         """
         pass
 
-    def compile(self, meta_mode: bool = False) -> "MOSSRuntime":
-        runtime = self._compile(meta_mode)
-        compiled = runtime.compiled()
-        optional_runtime_prepare_fn = "__moss_compile__"
-        if optional_runtime_prepare_fn in compiled.__dict__:
-            fn = compiled.__dict__[optional_runtime_prepare_fn]
+    @abstractmethod
+    def with_locals(self, **kwargs) -> "MOSSCompiler":
+        """
+        人工添加一些 locals 变量, 到目标 module 里. 在编译之前就会加载到目标 ModuleType.
+        主要解决 __import__ 之类的方法.
+        :param kwargs: locals
+        :return: self
+        """
+        pass
+
+    def compile(
+            self,
+            modulename: str = "__main__",
+    ) -> "MOSSPrompter":
+        """
+        正式编译出一个 MOSSRuntime.
+        :param modulename: 生成的 ModuleType 所在的包名. 相关代码会在这个临时 ModuleType 里生成.
+        """
+        # 使用 locals 和 pycontext.module 对应的代码, 生成 ModuleType.
+        module = self._compile(modulename)
+        runtime = self._new_runtime(module)
+        # 在生成的 ModuleType 里查找魔术方法, 对 Runtime 进行初始化.
+        if MOSS_COMPILED_EVENT in module.__dict__:
+            # 完成编译 moss_compiled 事件.
+            # 可以在这个环节对 MOSS 做一些依赖注入的准备.
+            fn = module.__dict__[MOSS_COMPILED_EVENT]
             return fn(runtime)
         return runtime
 
     @abstractmethod
-    def _compile(self, meta_mode: bool = False) -> "MOSSRuntime":
+    def _compile(self, modulename: str) -> ModuleType:
+        """
+        运行 pycontext.module 的代码, 编译 Module.
+        """
+        pass
+
+    @abstractmethod
+    def _new_runtime(self, module: ModuleType) -> "MOSSPrompter":
+        """
+        实例化 Runtime.
+        :param module:
+        :return:
+        """
         pass
 
 
-class MOSSRuntime(ABC):
+class MOSSPrompter(ABC):
+    """
+    MOSS 的运行时, 已经完成了第一阶段的编译.
+    pycontext.module 的相关代码已经加载.
+    这个阶段应该完成 MOSS 本身的注入准备.
+    """
 
     @abstractmethod
     def container(self) -> Container:
+        """
+        MOSS 使用的依赖注入容器.
+        """
         pass
 
     @abstractmethod
-    def injects(self, **attrs: Union[Any, Prompter]) -> "MOSSCompiler":
+    def module(self) -> ModuleType:
+        """
+        当前的临时 Module.
+        """
+        pass
+
+    def register(self, provider: Provider) -> None:
+        """
+        向 MOSS 的 IoC 容器里注册 Provider.
+        :param provider:
+        :return:
+        """
+        self.container().register(provider)
+
+    def bind(self, abstract: Any, value: Union[Factory, Any]) -> None:
+        """
+        向 MOSS 的 IoC 容器里注册工厂方法或实现. 
+        :param abstract: 抽象
+        :param value: 
+        :return: 
+        """
+        self.container().set(abstract, value)
+
+    @abstractmethod
+    def injects(
+            self,
+            **attrs: Any,
+    ) -> "MOSSPrompter":
+        """
+        inject certain values to the MOSS
+        :param attrs: attr_name to attr_value (better with prompt)
+        """
         pass
 
     @abstractmethod
-    def predefined_code(self, model_visible: bool = True) -> str:
+    def pycontext_code(
+            self,
+            model_visible: bool = True,
+    ) -> str:
+        """
+        返回通过 pycontext.module 预定义的代码.
+        第一行应该是 from __future__ import annotations. 解决上下文乱续的提示问题.
+        :param model_visible: 如果为 True, 只返回大模型可以阅读的代码.
+        """
         pass
 
     @abstractmethod
-    def predefined_code_prompt(self) -> str:
-        pass
+    def local_attr_prompts(self) -> AttrPrompts:
+        module = self.module()
+        if ATTR_PROMPT_MAGIC_ATTR in module.__dict__:
+            fn = module.__dict__[ATTR_PROMPT_MAGIC_ATTR]
+            yield from fn()
+        else:
+            yield from reflect_locals(module.__name__, module.__dict__)
 
-    @abstractmethod
-    def moss(self) -> MOSS:
-        pass
+    def pycontext_code_prompt(self) -> str:
+        """
+        基于 Predefined code 生成的 Prompt.
+        :return:
+        """
+        attr_prompts = self.local_attr_prompts()
+        done = {}
+        names = []
+        for name, prompt in attr_prompts:
+            if name not in done:
+                names.append(name)
+            done[name] = prompt
+        prompts = [done[name] for name in names]
+        return join_prompt_lines(*prompts)
+
+    def moss_type(self) -> Type:
+        """
+        get defined MOSS type
+        :return: MOSS class
+        """
+        module = self.module()
+        if "MOSS" in module.__dict__:
+            t = module.__dict__["MOSS"]
+            if not inspect.isclass(t):
+                raise TypeError(f"defined MOSS type {t} is not a class")
+        return MOSS
 
     @abstractmethod
     def moss_prompt(self) -> str:
@@ -179,23 +299,55 @@ class MOSSRuntime(ABC):
         2. code_prompt: 对 predefined code 里各种引用类库的描述 prompt. 会包裹在 `\"""` 中展示.
         3. moss_prompt: moss 会注入到当前上下文里, 因此会生成 MOSS Prompt.
         """
-        compiled = self.compiled()
-        if "__moss__prompt__" in compiled.__dict__:
-            fn = compiled.__dict__["__moss__prompt__"]
+        compiled = self.module()
+        # 使用目标 module 自带的 prompt, 不做任何干预.
+        if PROMPT_MAGIC_ATTR in compiled.__dict__:
+            fn = compiled.__dict__[PROMPT_MAGIC_ATTR]
+            return fn()
+        # 基于 moss prompter 来生成.
+        if MOSS_PROMPT_EVENT in compiled.__dict__:
+            fn = compiled.__dict__[MOSS_PROMPT_EVENT]
             return fn(self)
         from ghostiss.moss2.lifecycle import __moss_prompt__
         return __moss_prompt__(self)
 
     @abstractmethod
-    def compiled(self) -> ModuleType:
+    def executor(self) -> "MOSSExecutor":
         pass
 
+
+class MOSSExecutor(ABC):
+
     @abstractmethod
-    def locals(self) -> Dict[str, Any]:
+    def module(self) -> ModuleType:
         """
-        返回 moss 运行时的上下文变量, 可以结合 exec 提供 locals 并且运行.
+        最终运行的 Module.
         """
         pass
+
+    def locals(self) -> Dict[str, Any]:
+        """
+        返回运行时的上下文变量.
+        """
+        return self.module().__dict__
+
+    @abstractmethod
+    def moss(self) -> object:
+        """
+        基于上下文生成的 MOSS. 依赖注入已经完成.
+        """
+        pass
+
+    def moss_type(self) -> Type:
+        """
+        :return: MOSS as default
+        """
+        module = self.module()
+        if "MOSS" in module.__dict__:
+            t = module.__dict__["MOSS"]
+            if not inspect.isclass(t):
+                raise TypeError(f"defined MOSS type {t} is not a class")
+        return MOSS
 
     @abstractmethod
     def dump_context(self) -> PyContext:
@@ -207,13 +359,13 @@ class MOSSRuntime(ABC):
     @abstractmethod
     def dump_std_output(self) -> str:
         """
-        std output in
-        :return: str
+        返回重定向 buff 后的 std output
+        需要结合 runtime_ctx 来开启 buffer.
         """
         pass
 
     @abstractmethod
-    def exec_ctx(self):
+    def runtime_ctx(self):
         """
         with runtime.exec_ctx():
             ...
@@ -238,13 +390,15 @@ class MOSSRuntime(ABC):
         :return: 根据 result_name 从 code 中获取返回值.
         :exception: any exception will be raised, handle them outside
         """
-        compiled = self.compiled()
-        execute_lifecycle_fn_name = "__moss_execute__"
-        if execute_lifecycle_fn_name in compiled.__dict__:
-            fn = compiled.__dict__[execute_lifecycle_fn_name]
-            return fn(self, code, target, args, kwargs)
-        from ghostiss.moss2.lifecycle import __moss_exec__
-        return __moss_exec__(self, code, target, args, kwargs)
+        compiled = self.module()
+        with self.runtime_ctx():
+            # 使用 module 自定义的 exec
+            if MOSS_EXEC_EVENT in compiled.__dict__:
+                fn = compiled.__dict__[MOSS_EXEC_EVENT]
+                return fn(self, code, target, args, kwargs)
+            # 使用系统默认的 exec
+            from ghostiss.moss2.lifecycle import __moss_exec__
+            return __moss_exec__(self, code, target, args, kwargs)
 
     def destroy(self) -> None:
         """

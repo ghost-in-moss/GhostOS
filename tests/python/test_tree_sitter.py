@@ -7,8 +7,7 @@ def foo() -> str:
     test = ModuleType('test_exec')
     exec(code, test.__dict__)
 
-    from tree_sitter_languages import get_parser, get_language
-    language = get_language('python')
+    from tree_sitter_languages import get_parser
     parser = get_parser('python')
     tree = parser.parse(code.encode('utf-8'))
 
@@ -16,5 +15,28 @@ def foo() -> str:
     assert foo is not None
     assert foo.text == code.strip().encode('utf-8')
 
-    # 我该怎么续写, 以获取 foo 方法的源码??
 
+def test_tree_sitter_baseline():
+    code = """
+from abc import ABC, abstractmethod
+from typing import (
+    Optional, Tuple, List as L,
+)
+class Bar(ABC):
+    @property
+    @abstractmethod
+    def bar(self) -> str:
+        return 'bar'
+        
+class Foo:
+    '''test'''
+    foo: int = 1
+    bar: Bar
+
+f = Foo() 
+a: Optional[int] = 123
+"""
+    from tree_sitter_languages import get_parser
+    parser = get_parser('python')
+    tree = parser.parse(code.encode('utf-8'))
+    assert tree is not None

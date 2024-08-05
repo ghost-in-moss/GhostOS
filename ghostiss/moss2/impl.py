@@ -2,8 +2,8 @@ from types import ModuleType
 from typing import Optional, Any, Dict, Set, Union
 
 from ghostiss.container import Container
-from ghostiss.moss2.abc import MOSS, MOSSRuntime, MOSSCompiler
-from ghostiss.moss2.prompts import Prompter
+from ghostiss.moss2.abc import MOSS, MOSSPrompter, MOSSCompiler
+from ghostiss.moss2.prompts import PromptFn
 from ghostiss.moss2.pycontext import SerializableType, Variable, PyContext
 from contextlib import contextmanager
 
@@ -28,7 +28,7 @@ class MOSSCompilerImpl(MOSSCompiler):
         self._pycontext = self._pycontext.join(context)
         return self
 
-    def _compile(self, meta_mode: bool = False) -> "MOSSRuntime":
+    def _compile(self, meta_mode: bool = False) -> "MOSSPrompter":
         pass
 
     def destroy(self) -> None:
@@ -38,19 +38,19 @@ class MOSSCompilerImpl(MOSSCompiler):
 
 
 class MOSSImpl(MOSS):
-    def __init__(self, runtime: MOSSRuntime):
+    def __init__(self, runtime: MOSSPrompter):
         self._runtime = runtime
         self._injected: Dict[str, Variable] = {}
         self._reserved_names: Set = set()
         self._injected_type_to_names: Dict[type, str] = {}
-        self._injected_prompter: Dict[str, Prompter] = {}
+        self._injected_prompter: Dict[str, PromptFn] = {}
 
-    def define(self, name: str, value: SerializableType, desc: Optional[str] = None, force: bool = False) -> bool:
+    def var(self, name: str, value: SerializableType, desc: Optional[str] = None, force: bool = False) -> bool:
         pycontext = self._runtime.pycontext()
         if name in pycontext.variables and not force:
             return False
         var = Variable.from_value(name, value, desc)
-        pycontext.define(var)
+        pycontext.var(var)
         self._add_attr(name, value)
         return True
 
@@ -70,7 +70,7 @@ class MOSSImpl(MOSS):
         del self._reserved_names
 
 
-class MOSSRuntimeImpl(MOSSRuntime):
+class MOSSPrompterImpl(MOSSPrompter):
 
     def __init__(self, container: Container, pycontext: PyContext, modulename: str):
         self._container = container
@@ -84,13 +84,10 @@ class MOSSRuntimeImpl(MOSSRuntime):
     def container(self) -> Container:
         return self._container
 
-    def injects(self, **attrs: Union[Any, Prompter]) -> "MOSSCompiler":
+    def injects(self, **attrs: Union[Any, PromptFn]) -> "MOSSCompiler":
         pass
 
-    def predefined_code(self, model_visible: bool = True) -> str:
-        pass
-
-    def predefined_code_prompt(self) -> str:
+    def pycontext_code(self, model_visible: bool = True) -> str:
         pass
 
     def moss(self) -> MOSS:
@@ -114,5 +111,5 @@ class MOSSRuntimeImpl(MOSSRuntime):
     def dump_std_output(self) -> str:
         pass
 
-    def exec_ctx(self):
+    def runtime_ctx(self):
         pass
