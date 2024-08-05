@@ -50,3 +50,26 @@ def test_type_add_property():
 
 def test_caller_module_and_spec():
     assert inspect.getargspec(inspect.getargspec) == 'getargspec'
+
+
+def test_attr_typehint():
+    class Foo:
+        foo: int = 123
+
+    class Bar:
+        foo: Foo
+        bar: Union[int, str]
+        car: str
+        good = 1
+        moon: float = 0.0
+
+        def loo(self):
+            return self.foo
+
+    from typing import get_type_hints
+    typehints = get_type_hints(Bar)
+    assert typehints['foo'] is Foo
+    assert typehints['bar'] == Union[int, str]
+    assert typehints['car'] is str
+    assert 'good' not in typehints
+    assert 'loo' not in typehints

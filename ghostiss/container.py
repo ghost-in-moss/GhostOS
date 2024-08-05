@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic
+from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union
 
 INSTRUCTION = """
 打算实现一个 IoC 容器用来管理大量可替换的中间库. 
@@ -65,7 +65,7 @@ class Container:
         """
         return contract in self._bound or (self.parent is not None and self.parent.bound(contract))
 
-    def get(self, contract: Type[CONTRACT]) -> CONTRACT | None:
+    def get(self, contract: Union[Type[CONTRACT], Factory, Provider]) -> CONTRACT | None:
         """
         get bound instance or initialize one of the contract
 
@@ -81,6 +81,12 @@ class Container:
         got = self._instances.get(contract, None)
         if got is not None:
             return got
+        # get by provider
+        elif isinstance(contract, Provider):
+            return contract.factory(self)
+        # make by factory
+        elif isinstance(contract, Callable):
+            return contract(self)
 
         # use provider as factory to initialize instance of the contract
         if contract in self._providers:
@@ -142,6 +148,9 @@ class Container:
         del self._bound
         del self._bootstrapper
         del self._bootstrapped
+
+
+Factory = Callable[[Container], Any]
 
 
 class Provider(Generic[CONTRACT], metaclass=ABCMeta):
