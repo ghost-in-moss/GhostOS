@@ -2,11 +2,12 @@ import inspect
 from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Tuple, Callable, Iterable
 from types import ModuleType
 from abc import ABC, abstractmethod
-from ghostiss.container import Container, Provider, Factory
-from ghostiss.moss2.pycontext import PyContext, SerializableType
-from ghostiss.moss2.prompts import (
-    AttrPrompter, reflect_locals, join_prompt_lines, ATTR_PROMPT_MAGIC_ATTR, PROMPT_MAGIC_ATTR,
+from ghostiss.container import Container, Provider, Factory, provide
+from ghostiss.core.moss2.pycontext import PyContext, SerializableType
+from ghostiss.core.moss2.prompts import (
+    AttrPrompts, prompt_module_locals, join_prompt_lines, PROMPT_MAGIC_ATTR,
 )
+from ghostiss.core.moss2.decorators import cls_source_code
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -46,12 +47,17 @@ pycontext = result.pycontext
 
 __all__ = [
     'MOSS',
-    'MOSSCompiler', 'MOSSResult', 'MOSSPrompter', 'MOSSExecutor',
+    'MOSSCompiler', 'MOSSRuntime',
+    'MOSSResult', 'MOSSPrompter',
+    'MOSS_COMPILE_EVENT', 'MOSS_PROMPT_EVENT', 'MOSS_EXEC_EVENT', 'MOSS_ATTR_PROMPTS_EVENT',
+    'MOSS_TYPE_NAME', 'MOSS_NAME',
+    'MOSS_HIDDEN_MARK', 'MOSS_HIDDEN_UNMARK',
 ]
 
-AttrPrompts = Iterable[Tuple[str, Optional[str]]]
+MOSS_COMPILE_EVENT = "__moss_compile__"
 
-MOSS_COMPILED_EVENT = "__moss_compiled__"
+MOSS_ATTR_PROMPTS_EVENT = "__moss_attr_prompts__"
+"""通过这个属性来获取一个实例 (module/instance of class) 所有属性的 prompts. """
 
 MOSS_PROMPT_EVENT = "__moss_prompt__"
 
@@ -59,58 +65,62 @@ MOSS_EXEC_EVENT = "__moss_exec__"
 
 MOSS_TYPE_NAME = "MOSS"
 
+MOSS_NAME = "moss"
 
+MOSS_HIDDEN_MARK = "# <moss>"
+MOSS_HIDDEN_UNMARK = "# </moss>"
+
+
+@cls_source_code()
 class MOSS(ABC):
     """
     Language Model-oriented Operating System Simulation.
     Full python code interface for large language models in multi-turns chat or thinking.
+    The property with SerializeType will persist during multi-turns.
+    SerializeType means: int, float, str, None, list, dict, BaseModel, TypedDict
+    You can edit them if you need.
     """
+    pass
 
-    @abstractmethod
-    def var(
-            self,
-            name: str,
-            value: SerializableType,
-            desc: Optional[str] = None,
-            force: bool = False,
-    ) -> bool:
-        """
-        You can define a serializable value and bind it to moss attributes.
-        Once defined, you can reassign it any time, the attribute value will automatically save in multi-turns.
-        :param name: the attribute name in the moss
-        :param value: the value of the attribute
-        :param desc: the description of the attribute
-        :param force: force overwrite existing attribute
-        :return: False if already defined, otherwise True
-        """
-        pass
 
-    @abstractmethod
-    def inject(self, modulename: str, **specs: str) -> None:
-        """
-        You can inject values from module or its attributes (if specs given) to the MOSS object attributes.
-        The injections of attributes will persist in multi-turns chat or thinking.
-        for example:
-        `moss.inject('module.submodule', 'attr_name'='module_attr_name')`
+#    @abstractmethod
+#    def var(
+#            self,
+#            name: str,
+#            value: SerializableType,
+#            desc: Optional[str] = None,
+#            force: bool = False,
+#    ) -> bool:
+#        """
+#        You can define a serializable value and bind it to moss attributes.
+#        Once defined, you can reassign it any time, the attribute value will automatically save in multi-turns.
+#        :param name: the attribute name in the moss
+#        :param value: the value of the attribute
+#        :param desc: the description of the attribute
+#        :param force: force overwrite existing attribute
+#        :return: False if already defined, otherwise True
+#        :exception: TypeError if value is not SerializableType
+#        """
+#        pass
 
-        equals:
-        `def inject(moss: MOSS):
-            from module.sub_module import module_attr_name as var
-            setattr(moss, 'attr_name', var)
-        inject(moss)
-        assert hasattr(moss, 'attr_name')`
-
-        :exception: NamedError if duplicated attribute name
-        """
-        pass
-
-    @abstractmethod
-    def remove(self, name: str) -> None:
-        """
-        remove an injected or defined attribute from the moss
-        :param name: attribute name
-        """
-        pass
+#    @abstractmethod
+#    def inject(self, modulename: str, **specs: str) -> None:
+#        """
+#        You can inject values from module or its attributes (if specs given) to the MOSS object attributes.
+#        The injections of attributes will persist in multi-turns chat or thinking.
+#        for example:
+#        `moss.inject('module.submodule', 'attr_name'='module_attr_name')`
+#
+#        equals:
+#        `def inject(moss: MOSS):
+#            from module.sub_module import module_attr_name as var
+#            setattr(moss, 'attr_name', var)
+#        inject(moss)
+#        assert hasattr(moss, 'attr_name')`
+#
+#        :exception: NamedError if duplicated attribute name
+#        """
+#        pass
 
 
 class MOSSCompiler(ABC):
@@ -124,7 +134,7 @@ class MOSSCompiler(ABC):
     def container(self) -> Container:
         """
         MOSS 专用的 IoC 容器.
-        会预先注册好上下文相关的一些 Provider 之类的数据.
+        用来给 moss 实例实现依赖注入.
         """
         pass
 
@@ -145,33 +155,88 @@ class MOSSCompiler(ABC):
         pass
 
     @abstractmethod
+    def pycontext_code(self) -> str:
+        """
+        返回通过 pycontext.module 预定义的代码.
+        """
+        pass
+
+    @abstractmethod
     def with_locals(self, **kwargs) -> "MOSSCompiler":
         """
         人工添加一些 locals 变量, 到目标 module 里. 在编译之前就会加载到目标 ModuleType.
-        主要解决 __import__ 之类的方法.
+        主要解决 __import__ 之类的内置方法, 如果必要的话.
         :param kwargs: locals
         :return: self
         """
         pass
 
+    def register(self, provider: Provider) -> None:
+        """
+        向生成 MOSS 的 IoC 容器里注册 Provider.
+        当 MOSS 的属性定义了
+        :param provider:
+        :return:
+        """
+        self.container().register(provider)
+
+    def bind(self, abstract: Any, value: Union[Factory, Any]) -> None:
+        """
+        向生成 MOSS 的 IoC 容器里注册工厂方法或实现.
+        :param abstract: 抽象定义, 用来获取 value.
+        :param value: 可以是一个值, 或者是一个 Factory. 如果是 Factory 的话, 取值的时候会使用它来做实例化.
+        # todo: 具体实现可以记录日志.
+        """
+        if isinstance(value, Callable):
+            provider = provide(abstract, singleton=False)(value)
+            self.container().register(provider)
+        else:
+            self.container().set(abstract, value)
+
+    @abstractmethod
+    def injects(
+            self,
+            **attrs: Any,
+    ) -> "MOSSCompiler":
+        """
+        inject certain values to the MOSS.
+        Will automatically bind certain attributes to the MOSS instance (setattr).
+        :param attrs: attr_name to attr_value (better with prompt)
+        """
+        pass
+
+    __compiling: bool = False
+    __compiled: bool = False
+
     def compile(
             self,
             modulename: str = "__main__",
-    ) -> "MOSSPrompter":
+    ) -> "MOSSRuntime":
         """
-        正式编译出一个 MOSSRuntime.
+        正式编译出一个 MOSSRuntime. 每一个 Compiler 只能编译一次.
         :param modulename: 生成的 ModuleType 所在的包名. 相关代码会在这个临时 ModuleType 里生成.
         """
-        # 使用 locals 和 pycontext.module 对应的代码, 生成 ModuleType.
-        module = self._compile(modulename)
-        runtime = self._new_runtime(module)
-        # 在生成的 ModuleType 里查找魔术方法, 对 Runtime 进行初始化.
-        if MOSS_COMPILED_EVENT in module.__dict__:
-            # 完成编译 moss_compiled 事件.
-            # 可以在这个环节对 MOSS 做一些依赖注入的准备.
-            fn = module.__dict__[MOSS_COMPILED_EVENT]
-            return fn(runtime)
-        return runtime
+        if self.__compiling:
+            raise RuntimeError('recursively calling compile method')
+        if self.__compiled:
+            raise RuntimeError('compiler already compiled')
+        self.__compiling = True
+        try:
+            # 使用 locals 和 pycontext.module 对应的代码, 生成 ModuleType.
+            module = self._compile(modulename)
+            # 在生成的 ModuleType 里查找魔术方法, 提供 provider 等, 为依赖注入做准备.
+            if MOSS_COMPILE_EVENT in module.__dict__:
+                # 完成编译 moss_compiled 事件.
+                # 可以在这个环节对 MOSS 做一些依赖注入的准备.
+                fn = module.__dict__[MOSS_COMPILE_EVENT]
+                fn(self)
+            runtime = self._new_runtime(module)
+            return runtime
+        finally:
+            self.__compiling = False
+            self.__compiled = True
+            # 手动管理一下, 避免外部解决内存泄漏的心智成本.
+            self.destroy()
 
     @abstractmethod
     def _compile(self, modulename: str) -> ModuleType:
@@ -181,11 +246,18 @@ class MOSSCompiler(ABC):
         pass
 
     @abstractmethod
-    def _new_runtime(self, module: ModuleType) -> "MOSSPrompter":
+    def _new_runtime(self, module: ModuleType) -> "MOSSRuntime":
         """
         实例化 Runtime.
         :param module:
         :return:
+        """
+        pass
+
+    @abstractmethod
+    def destroy(self) -> None:
+        """
+        主动做垃圾回收的准备, 避免 python 内存泄漏.
         """
         pass
 
@@ -211,34 +283,6 @@ class MOSSPrompter(ABC):
         """
         pass
 
-    def register(self, provider: Provider) -> None:
-        """
-        向 MOSS 的 IoC 容器里注册 Provider.
-        :param provider:
-        :return:
-        """
-        self.container().register(provider)
-
-    def bind(self, abstract: Any, value: Union[Factory, Any]) -> None:
-        """
-        向 MOSS 的 IoC 容器里注册工厂方法或实现. 
-        :param abstract: 抽象
-        :param value: 
-        :return: 
-        """
-        self.container().set(abstract, value)
-
-    @abstractmethod
-    def injects(
-            self,
-            **attrs: Any,
-    ) -> "MOSSPrompter":
-        """
-        inject certain values to the MOSS
-        :param attrs: attr_name to attr_value (better with prompt)
-        """
-        pass
-
     @abstractmethod
     def pycontext_code(
             self,
@@ -251,45 +295,44 @@ class MOSSPrompter(ABC):
         """
         pass
 
-    @abstractmethod
-    def local_attr_prompts(self) -> AttrPrompts:
+    def pycontext_attr_prompts(self, excludes: Optional[set] = None) -> AttrPrompts:
+        """
+        结合已编译的本地变量, 用系统自带的方法反射出上下文属性的 prompts.
+        """
         module = self.module()
-        if ATTR_PROMPT_MAGIC_ATTR in module.__dict__:
-            fn = module.__dict__[ATTR_PROMPT_MAGIC_ATTR]
-            yield from fn()
-        else:
-            yield from reflect_locals(module.__name__, module.__dict__)
+        name = module.__name__
+        local_values = module.__dict__
+        yield from prompt_module_locals(name, local_values, excludes=excludes)
 
-    def pycontext_code_prompt(self) -> str:
+    def pycontext_code_prompt(self, auto_generation: bool = True) -> str:
         """
-        基于 Predefined code 生成的 Prompt.
-        :return:
+        基于 pycontext code 生成的 Prompt. 用来描述当前上下文里的各种变量.
+        主要是从其它库引入的变量.
+        :return: 用 python 风格描述的上下文变量.
         """
-        attr_prompts = self.local_attr_prompts()
-        done = {}
-        names = []
-        for name, prompt in attr_prompts:
-            if name not in done:
-                names.append(name)
-            done[name] = prompt
+        done = {'MOSS': self.moss_type_prompt()}
+        names = ['MOSS']
+        # 查看是否有源码自带的魔术方法.
+        module = self.module()
+        if MOSS_ATTR_PROMPTS_EVENT in module.__dict__:
+            fn = module.__dict__[MOSS_ATTR_PROMPTS_EVENT]
+            predefined_prompts: AttrPrompts = fn()
+            for name, prompt in predefined_prompts:
+                if name and name not in done:
+                    names.append(name)
+                done[name] = prompt
+
+        # 合并系统自动生成的.
+        if auto_generation:
+            attr_prompts = self.pycontext_attr_prompts(excludes=set(names))
+            for name, prompt in attr_prompts:
+                if name not in done:
+                    names.append(name)
+                done[name] = prompt
+
+        # 保证一下顺序.
         prompts = [done[name] for name in names]
         return join_prompt_lines(*prompts)
-
-    def moss_type(self) -> Type:
-        """
-        get defined MOSS type
-        :return: MOSS class
-        """
-        module = self.module()
-        if "MOSS" in module.__dict__:
-            t = module.__dict__["MOSS"]
-            if not inspect.isclass(t):
-                raise TypeError(f"defined MOSS type {t} is not a class")
-        return MOSS
-
-    @abstractmethod
-    def moss_prompt(self) -> str:
-        pass
 
     def dump_context_prompt(self) -> str:
         """
@@ -308,15 +351,24 @@ class MOSSPrompter(ABC):
         if MOSS_PROMPT_EVENT in compiled.__dict__:
             fn = compiled.__dict__[MOSS_PROMPT_EVENT]
             return fn(self)
-        from ghostiss.moss2.lifecycle import __moss_prompt__
+        from ghostiss.core.moss2.lifecycle import __moss_prompt__
         return __moss_prompt__(self)
 
+
+class MOSSRuntime(ABC):
     @abstractmethod
-    def executor(self) -> "MOSSExecutor":
+    def container(self) -> Container:
+        """
+        MOSS 使用的依赖注入容器.
+        """
         pass
 
-
-class MOSSExecutor(ABC):
+    @abstractmethod
+    def prompter(self) -> MOSSPrompter:
+        """
+        返回一个 Prompter, 专门提供 prompt.
+        """
+        pass
 
     @abstractmethod
     def module(self) -> ModuleType:
@@ -325,11 +377,13 @@ class MOSSExecutor(ABC):
         """
         pass
 
+    @abstractmethod
     def locals(self) -> Dict[str, Any]:
         """
         返回运行时的上下文变量.
+        其中一定包含 MOSS 类和注入的 moss 实例.
         """
-        return self.module().__dict__
+        pass
 
     @abstractmethod
     def moss(self) -> object:
@@ -340,13 +394,12 @@ class MOSSExecutor(ABC):
 
     def moss_type(self) -> Type:
         """
-        :return: MOSS as default
+        get defined MOSS type
+        :return: MOSS class
         """
         module = self.module()
-        if "MOSS" in module.__dict__:
-            t = module.__dict__["MOSS"]
-            if not inspect.isclass(t):
-                raise TypeError(f"defined MOSS type {t} is not a class")
+        if MOSS_TYPE_NAME in module.__dict__:
+            return module.__dict__[MOSS_TYPE_NAME]
         return MOSS
 
     @abstractmethod
@@ -397,7 +450,7 @@ class MOSSExecutor(ABC):
                 fn = compiled.__dict__[MOSS_EXEC_EVENT]
                 return fn(self, code, target, args, kwargs)
             # 使用系统默认的 exec
-            from ghostiss.moss2.lifecycle import __moss_exec__
+            from ghostiss.core.moss2.lifecycle import __moss_exec__
             return __moss_exec__(self, code, target, args, kwargs)
 
     def destroy(self) -> None:

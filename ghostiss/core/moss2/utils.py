@@ -7,14 +7,15 @@ from ghostiss.abc import Identifiable, Descriptive
 
 __all__ = [
 
-    'get_str_from_func_or_attr',
+    'unwrap_str',
+    'get_modulename',
 
     'is_typing', 'is_builtin', 'is_classmethod',
     'is_model_class', 'get_model_object_meta', 'new_model_instance',
     'parse_comments',
     'parse_doc_string', 'escape_string_quotes',
     'strip_source_indent', 'add_source_indent', 'make_class_prompt',
-    'is_callable', 'is_public_callable', 'parse_callable_to_method_def',
+    'is_callable', 'is_public_callable', 'get_callable_definition',
     'get_typehint_string', 'get_default_typehint', 'get_import_comment', 'get_extends_comment',
     'get_class_def_from_source',
     'count_source_indent',
@@ -90,13 +91,14 @@ def parse_comments(comment: Optional[str]) -> str:
 def make_class_prompt(
         *,
         source: str,
-        name: str,
+        name: Optional[str] = None,
         doc: Optional[str] = None,
         attrs: Optional[Iterable[str]] = None,
 ) -> str:
     source = strip_source_indent(source)
     class_def = get_class_def_from_source(source)
-    class_def = replace_class_def_name(class_def, name)
+    if name:
+        class_def = replace_class_def_name(class_def, name)
     if doc:
         doc = parse_doc_string(doc, inline=False, quote='"""')
     if doc:
@@ -174,7 +176,7 @@ def is_classmethod(func: Any) -> bool:
     return self is not None and isinstance(self, type)
 
 
-def get_str_from_func_or_attr(value: Any) -> Optional[str]:
+def unwrap_str(value: Any) -> Optional[str]:
     if isinstance(value, Callable):
         return value()
     try:
@@ -183,13 +185,14 @@ def get_str_from_func_or_attr(value: Any) -> Optional[str]:
         return None
 
 
-def parse_callable_to_method_def(
+def get_callable_definition(
         caller: Callable,
         alias: Optional[str] = None,
         doc: Optional[str] = None,
 ) -> str:
     """
     将一个 callable 对象的源码剥离方法和描述.
+    # todo: 用 tree-sitter 重做.
     """
     if doc:
         doc = doc.strip()
@@ -316,30 +319,6 @@ def get_model_object_meta(obj: Any) -> Optional[Dict]:
     return None
 
 
-def new_model_instance(model: Type[ModelType], meta: Dict) -> ModelType:
-    if issubclass(model, EntityClass):
-        return model.new_entity(meta)
-    else:
-        return model(**meta)
-
-
-def get_default_typehint(val: Any) -> Optional[str]:
-    if isinstance(val, BasicTypes):
-        if isinstance(val, str):
-            return "str"
-        elif isinstance(val, bool):
-            return 'bool'
-        elif isinstance(val, int):
-            return 'int'
-        elif isinstance(val, float):
-            return 'float'
-        elif isinstance(val, list):
-            return 'list'
-        elif isinstance(val, dict):
-            return 'dict'
-    return None
-
-
 def is_callable(obj: Any) -> bool:
     return isinstance(obj, Callable)
 
@@ -375,7 +354,7 @@ def get_obj_desc(obj: Any) -> Optional[str]:
     if hasattr(obj, "__desc__"):
         attr = getattr(obj, "__desc__", None)
         if attr:
-            return get_str_from_func_or_attr(attr)
+            return unwrap_str(attr)
     return None
 
 
