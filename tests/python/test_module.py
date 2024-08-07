@@ -7,6 +7,7 @@ def test_module_attr_with_module():
     module = ModuleType('test_module')
     code = """
 import inspect
+from inspect import getsource
 class Bar:
     bar: int = 123
 class Foo:
@@ -35,4 +36,8 @@ a = 123
     i = module.__dict__['inspect']
     assert inspect.ismodule(i)
     assert i.__name__ == 'inspect'
+
+    getsource = module.__dict__['getsource']
+    assert getsource.__module__ == 'inspect'
+
 
