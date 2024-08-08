@@ -328,7 +328,7 @@ def compile_attr_prompts(attr_prompts: AttrPrompts) -> str:
         line = prompt.strip()
         if line:
             # 使用注释 + 描述的办法.
-            prompt_lines.append(line)
+            prompt_lines.append(f"# value '{name}':\n{line}")
     return join_prompt_lines(*prompt_lines)
 
 

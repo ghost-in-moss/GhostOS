@@ -1,13 +1,13 @@
-import inspect
-from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Tuple, Callable, Iterable
+from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable
 from types import ModuleType
 from abc import ABC, abstractmethod
 from ghostiss.container import Container, Provider, Factory, provide
-from ghostiss.core.moss.pycontext import PyContext, SerializableType, Property, attr
+from ghostiss.core.moss.pycontext import PyContext, attr
 from ghostiss.core.moss.prompts import (
-    AttrPrompts, reflect_module_locals, join_prompt_lines, PROMPT_MAGIC_ATTR,
+    AttrPrompts, reflect_module_locals, PROMPT_MAGIC_ATTR,
+    compile_attr_prompts,
 )
-from ghostiss.core.moss.decorators import cls_source_code, definition
+from ghostiss.core.moss.decorators import cls_source_code
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -332,8 +332,8 @@ class MossPrompter(ABC):
                 done[name] = prompt
 
         # 保证一下顺序.
-        prompts = [done[name] for name in names]
-        return join_prompt_lines(*prompts)
+        prompts = [(name, done[name]) for name in names]
+        return compile_attr_prompts(prompts)
 
     def dump_context_prompt(self) -> str:
         """
