@@ -1,15 +1,13 @@
+from typing import Callable
 from ghostiss.core.moss import test_container
-from ghostiss.core.moss.abc import MOSSCompiler, MOSS, MOSS_TYPE_NAME, MOSS_NAME
-from ghostiss.core.moss.impl import TestMOSSProvider
+from ghostiss.core.moss.abc import MossCompiler, Moss, MOSS_TYPE_NAME, MOSS_NAME
 from ghostiss.core.moss.pycontext import PyContext
-from ghostiss.core.moss.libraries import DefaultModulesProvider
-from ghostiss.container import Container
 from ghostiss.core.moss.examples import baseline
 
 
 def test_baseline_exec():
     container = test_container()
-    compiler = container.force_fetch(MOSSCompiler)
+    compiler = container.force_fetch(MossCompiler)
     assert compiler is not None
 
     # join context
@@ -38,24 +36,19 @@ def test_baseline_exec():
     exists_moss_type = module.__dict__.get(MOSS_TYPE_NAME)
     moss_type = runtime.moss_type()
     # 使用了默认的 MOSS
-    assert moss_type is MOSS
+    assert issubclass(moss_type, Moss)
     assert moss_type is exists_moss_type
 
     moss = runtime.moss()
-    assert isinstance(moss, MOSS)
+    assert isinstance(moss, Moss)
     assert isinstance(moss, moss_type)
 
-    prompter = runtime.prompter()
-    assert prompter is not None
-    prompt = prompter.dump_context_prompt()
-
-    assert 'def plus' in prompt
-    # 在 moss 标记内的不展示.
-    assert "__test__" not in prompt
-
-    result = runtime.execute(target="main", args=[MOSS_NAME])
-    assert result.returns == 3
-    assert result.std_output.startswith("hello")
+    # 直接从编译后的数据里取出 __test__ 方法.
+    test = runtime.locals()["__test__"]
+    assert isinstance(test, Callable)
+    e = test(runtime)
+    if e:
+        raise AssertionError(e)
 
     # 最后成功销毁.
     runtime.destroy()
@@ -63,7 +56,7 @@ def test_baseline_exec():
 
 def test_baseline_with_pycontext_code():
     container = test_container()
-    compiler = container.force_fetch(MOSSCompiler)
+    compiler = container.force_fetch(MossCompiler)
     assert compiler is not None
 
     # join context

@@ -1,12 +1,18 @@
 from __future__ import annotations
-from typing import Dict, Any, Union, List, Optional, Tuple, TypedDict, NamedTuple
+from typing import Dict, Any, Union, List, Optional, Tuple, TypedDict, is_typeddict, Callable
 from types import ModuleType
 import inspect
 from pydantic import BaseModel, Field
-from ghostiss.helpers import parse_import_module_and_spec, import_from_str, join_import_module_and_spec
+from ghostiss.core.moss.decorators import definition
+from ghostiss.helpers import (
+    parse_import_module_and_spec, import_from_str, join_import_module_and_spec,
+    get_module_spec,
+)
 
+__all__ = [
+    'PyContext', 'Injection', 'Property', 'attr', 'SerializableType', 'SerializableData',
+]
 
-# --- python context that transportable --- #
 
 class PyContext(BaseModel):
     """
@@ -103,16 +109,39 @@ class Property(BaseModel):
     """
     可以在 MOSS 上下文中声明的变量.
     """
-    name: str = Field(description="property name in the moss context")
+    name: str = Field(default="", description="property name in the moss context")
     desc: str = Field(default="", description="describe the property's purpose")
-    value: SerializableType = Field(default=None, description="the serializable value")
+    value: Union[str, int, float, bool, None, list, dict, BaseModel, TypedDict] = Field(
+        default=None,
+        description="the serializable value",
+    )
     model: Optional[str] = Field(
         default=None,
         description="如果是 pydantic 等类型, 可以通过类进行封装. 类应该在 imports 或者 defines 里.",
     )
 
+    def __set_name__(self, owner, name):
+        self.name = name
+        if hasattr(owner, '__pycontext__') and isinstance(owner.__pycontext__, PyContext):
+            owner.__pycontext__.define(self)
+
+    def __set__(self, instance, value):
+        if value is self:
+            return
+        if isinstance(value, Property):
+            raise ValueError('not allowed to set property with Property to Property')
+        self.set_value(value)
+
+    def __get__(self, instance, owner):
+        return self.generate_value()
+
+    def __delete__(self):
+        self.__value__ = None
+        self.value = None
+        self.model = None
+
     @classmethod
-    def from_value(cls, name: str, value: SerializableType, desc: str = "") -> Optional["Property"]:
+    def from_value(cls, *, name: str = "", value: SerializableType, desc: str = "") -> Optional["Property"]:
         p = cls(name=name, desc=desc)
         p.set_value(value)
         return p
@@ -124,30 +153,48 @@ class Property(BaseModel):
         model = None
         has_model = (
                 value is not None and isinstance(value, BaseModel)
-                or isinstance(value, TypedDict)
+                or is_typeddict(value)
         )
         if has_model:
-            model = inspect.getmodule(value).__name__ + ':' + type(value).__name__
-        if isinstance(value, BaseModel):
-            value = value.model_dump(exclude_defaults=True)
+            type_ = type(value)
+            if type_.__qualname__:
+                model = type_.__module__ + ':' + type_.__qualname__
+            else:
+                model = type_.__module__ + ':' + type_.__name__
         self.value = value
         self.model = model
 
-    def generate_value(self, module: ModuleType) -> Any:
+    def generate_value(self, module: Optional[ModuleType] = None) -> Any:
         model = self.model
         value = self.value
-        if model is None:
-            return value
-        elif isinstance(value, Dict):
-            modulename, spec = parse_import_module_and_spec(model)
-            if modulename == module.__name__:
-                cls = module.__dict__.get(modulename, None)
-            else:
-                cls = import_from_str(model)
+        if isinstance(self.value, dict) and model is not None:
+            if not isinstance(value, Dict):
+                raise AttributeError(f"'{value}' is not dict while model class is '{model}'")
+            cls = None
+            if module is not None:
+                modulename, spec = parse_import_module_and_spec(model)
+                if modulename == module.__name__:
+                    # 用这种方法解决临时模块里的变量问题.
+                    cls = get_module_spec(module.__dict__, spec)
             if cls is None:
-                # 防止错误的上下文导致阻塞死.
-                self.value = None
-                return None
-            return cls(**value)
-        else:
-            return None
+                cls = import_from_str(model)
+            if issubclass(cls, BaseModel):
+                self.value = cls(**value)
+        return self.value
+
+
+@definition()
+def attr(
+        default: SerializableType = None, *,
+        default_factory: Optional[Callable[[], Any]] = None,
+        desc: str = "",
+) -> SerializableType:
+    """
+    用于定义一个要绑定到 MOSS 上的属性, 它的值可以在多轮对话和思考过程中保存和修改.
+    :param default: 属性的默认值, 目前支持 str, int, float, bool, None, list, dict, BaseModel, TypedDict
+    :param default_factory: 可以传入一个 lambda 或闭包, 当 default 为 None 时生成值.
+    :param desc: 属性的描述.
+    """
+    if default is None and default_factory:
+        default = default_factory()
+    return Property.from_value(value=default, desc=desc)

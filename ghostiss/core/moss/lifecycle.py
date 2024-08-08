@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional, List, Dict, Any
     from ghostiss.core.moss.prompts import AttrPrompts
-    from ghostiss.core.moss.abc import MOSSPrompter, MOSSResult, MOSSRuntime, MOSSCompiler
+    from ghostiss.core.moss.abc import MossPrompter, MossResult, MossRuntime, MossCompiler
 
 """
 这个文件提供了 MOSS 生命周期的关键方法, 每一个都是可选的.
@@ -25,7 +25,7 @@ class MOSS(ABC):
     pass
 
 
-def __moss_compile__(compiler: "MOSSCompiler") -> "MOSSCompiler":
+def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
     """
     从 compile 中获取 MOSSRuntime, 并对它进行初始化.
     可选的魔术方法. 如果定义的话, MOSS 执行 compile 的阶段会默认执行它.
@@ -63,7 +63,7 @@ def __moss_attr_prompts__() -> "AttrPrompts":
     return []
 
 
-def __moss_prompt__(prompter: "MOSSPrompter") -> str:
+def __moss_prompt__(prompter: "MossPrompter") -> str:
     """
     使用 MOSS Runtime 生成 prompt 的方法.
     可选的魔术方法. 定义的话, runtime.moss_context_prompt 实际上会使用这个方法.
@@ -100,13 +100,13 @@ def __moss_prompt__(prompter: "MOSSPrompter") -> str:
 
 
 def __moss_exec__(
-        runtime: "MOSSRuntime",
+        runtime: "MossRuntime",
         *,
         target: str,
         code: "Optional[str]" = None,
         args: "Optional[List[str]]" = None,
         kwargs: "Optional[Dict[str, Any]]" = None,
-) -> "MOSSResult":
+) -> "MossResult":
     """
     基于 MOSS Runtime 执行一段代码, 并且调用目标方法或返回目标值.
     :param runtime: moss runtime
@@ -116,7 +116,7 @@ def __moss_exec__(
     :param kwargs: 为 target 准备的 **kwargs 参数, 这里需要指定 argument_name => module_attr_name
     """
     from typing import Callable
-    from ghostiss.core.moss.abc import MOSSResult
+    from ghostiss.core.moss.abc import MossResult
     local_values = runtime.locals()
     # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
     with runtime.runtime_ctx():
@@ -128,11 +128,10 @@ def __moss_exec__(
         raise NotImplementedError(f"target `{target}` not implemented")
 
     target_module_attr = local_values.get(target, None)
-    is_function = isinstance(target_module_attr, Callable)
-    if (args is not None or kwargs is not None) and not is_function:
-        raise TypeError(f"target '{target}' value '{target_module_attr}' is not callable")
 
-    if is_function:
+    # 如果定义了参数, 就必须是 callable 方法.
+    has_args = args is not None or kwargs is not None
+    if isinstance(target_module_attr, Callable):
         real_args = []
         real_kwargs = {}
         if args:
@@ -149,8 +148,10 @@ def __moss_exec__(
         # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
         with runtime.runtime_ctx():
             returns = target_module_attr(*real_args, **real_kwargs)
+    elif has_args:
+        raise TypeError(f"target '{target}' value '{target_module_attr}' is not callable")
     else:
         returns = target_module_attr
     std_output = runtime.dump_std_output()
     pycontext = runtime.dump_context()
-    return MOSSResult(returns, std_output, pycontext)
+    return MossResult(returns, std_output, pycontext)

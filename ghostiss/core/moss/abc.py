@@ -3,7 +3,7 @@ from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Tuple, Ca
 from types import ModuleType
 from abc import ABC, abstractmethod
 from ghostiss.container import Container, Provider, Factory, provide
-from ghostiss.core.moss.pycontext import PyContext, SerializableType, Property
+from ghostiss.core.moss.pycontext import PyContext, SerializableType, Property, attr
 from ghostiss.core.moss.prompts import (
     AttrPrompts, reflect_module_locals, join_prompt_lines, PROMPT_MAGIC_ATTR,
 )
@@ -46,9 +46,10 @@ pycontext = result.pycontext
 """
 
 __all__ = [
-    'MOSS',
-    'MOSSCompiler', 'MOSSRuntime',
-    'MOSSResult', 'MOSSPrompter',
+    'Moss', 'attr',
+    'MossCompiler', 'MossRuntime',
+    'MossResult', 'MossPrompter',
+    'AttrPrompts',
     'MOSS_COMPILE_EVENT', 'MOSS_PROMPT_EVENT', 'MOSS_EXEC_EVENT', 'MOSS_ATTR_PROMPTS_EVENT',
     'MOSS_TYPE_NAME', 'MOSS_NAME',
     'MOSS_HIDDEN_MARK', 'MOSS_HIDDEN_UNMARK',
@@ -63,25 +64,16 @@ MOSS_PROMPT_EVENT = "__moss_prompt__"
 
 MOSS_EXEC_EVENT = "__moss_exec__"
 
-MOSS_TYPE_NAME = "MOSS"
+MOSS_TYPE_NAME = "Moss"
 
 MOSS_NAME = "moss"
 
 MOSS_HIDDEN_MARK = "# <moss>"
 MOSS_HIDDEN_UNMARK = "# </moss>"
 
-@definition()
-def attr(default: Any = None, desc: str = "") -> Any:
-    """
-
-    :param default:
-    :param desc:
-    :return:
-    """
-    return Property()
 
 @cls_source_code()
-class MOSS(ABC):
+class Moss(ABC):
     """
     Language Model-oriented Operating System Simulation.
     Full python code interface for large language models in multi-turns chat or thinking.
@@ -89,6 +81,7 @@ class MOSS(ABC):
     SerializeType means: int, float, str, None, list, dict, BaseModel, TypedDict
     You can edit them if you need.
     """
+    pass
 
 
 #    @abstractmethod
@@ -131,7 +124,7 @@ class MOSS(ABC):
 #        pass
 
 
-class MOSSCompiler(ABC):
+class MossCompiler(ABC):
     """
     language Model-oriented Operating System Simulation
     full python code interface for large language models
@@ -154,7 +147,7 @@ class MOSSCompiler(ABC):
         pass
 
     @abstractmethod
-    def join_context(self, context: PyContext) -> "MOSSCompiler":
+    def join_context(self, context: PyContext) -> "MossCompiler":
         """
         为 MOSS 上下文添加一个可以持久化存储的 context 变量, 合并默认值.
         :param context:
@@ -170,7 +163,7 @@ class MOSSCompiler(ABC):
         pass
 
     @abstractmethod
-    def with_locals(self, **kwargs) -> "MOSSCompiler":
+    def with_locals(self, **kwargs) -> "MossCompiler":
         """
         人工添加一些 locals 变量, 到目标 module 里. 在编译之前就会加载到目标 ModuleType.
         主要解决 __import__ 之类的内置方法, 如果必要的话.
@@ -205,7 +198,7 @@ class MOSSCompiler(ABC):
     def injects(
             self,
             **attrs: Any,
-    ) -> "MOSSCompiler":
+    ) -> "MossCompiler":
         """
         inject certain values to the MOSS.
         Will automatically bind certain attributes to the MOSS instance (setattr).
@@ -213,36 +206,36 @@ class MOSSCompiler(ABC):
         """
         pass
 
-    __compiling: bool = False
-    __compiled: bool = False
+    __compiling__: bool = False
+    __compiled__: bool = False
 
     def compile(
             self,
             modulename: str = "__main__",
-    ) -> "MOSSRuntime":
+    ) -> "MossRuntime":
         """
         正式编译出一个 MOSSRuntime. 每一个 Compiler 只能编译一次.
         :param modulename: 生成的 ModuleType 所在的包名. 相关代码会在这个临时 ModuleType 里生成.
         """
-        if self.__compiling:
+        if self.__compiling__:
             raise RuntimeError('recursively calling compile method')
-        if self.__compiled:
+        if self.__compiled__:
             raise RuntimeError('compiler already compiled')
-        self.__compiling = True
+        self.__compiling__ = True
         try:
             # 使用 locals 和 pycontext.module 对应的代码, 生成 ModuleType.
             module = self._compile(modulename)
             # 在生成的 ModuleType 里查找魔术方法, 提供 provider 等, 为依赖注入做准备.
-            if MOSS_COMPILE_EVENT in module.__dict__:
+            if hasattr(module, MOSS_COMPILE_EVENT):
                 # 完成编译 moss_compiled 事件.
                 # 可以在这个环节对 MOSS 做一些依赖注入的准备.
-                fn = module.__dict__[MOSS_COMPILE_EVENT]
+                fn = getattr(module, MOSS_COMPILE_EVENT)
                 fn(self)
             runtime = self._new_runtime(module)
             return runtime
         finally:
-            self.__compiling = False
-            self.__compiled = True
+            self.__compiling__ = False
+            self.__compiled__ = True
             # 手动管理一下, 避免外部解决内存泄漏的心智成本.
             self.destroy()
 
@@ -254,7 +247,7 @@ class MOSSCompiler(ABC):
         pass
 
     @abstractmethod
-    def _new_runtime(self, module: ModuleType) -> "MOSSRuntime":
+    def _new_runtime(self, module: ModuleType) -> "MossRuntime":
         """
         实例化 Runtime.
         :param module:
@@ -270,7 +263,7 @@ class MOSSCompiler(ABC):
         pass
 
 
-class MOSSPrompter(ABC):
+class MossPrompter(ABC):
     """
     MOSS 的运行时, 已经完成了第一阶段的编译.
     pycontext.module 的相关代码已经加载.
@@ -322,8 +315,8 @@ class MOSSPrompter(ABC):
         names = []
         # 查看是否有源码自带的魔术方法.
         module = self.module()
-        if MOSS_ATTR_PROMPTS_EVENT in module.__dict__:
-            fn = module.__dict__[MOSS_ATTR_PROMPTS_EVENT]
+        if hasattr(module, MOSS_ATTR_PROMPTS_EVENT):
+            fn = getattr(module, MOSS_ATTR_PROMPTS_EVENT)
             predefined_prompts: AttrPrompts = fn()
             for name, prompt in predefined_prompts:
                 if name and name not in done:
@@ -356,14 +349,14 @@ class MOSSPrompter(ABC):
             fn = compiled.__dict__[PROMPT_MAGIC_ATTR]
             return fn()
         # 基于 moss prompter 来生成.
-        if MOSS_PROMPT_EVENT in compiled.__dict__:
-            fn = compiled.__dict__[MOSS_PROMPT_EVENT]
+        if hasattr(compiled, MOSS_PROMPT_EVENT):
+            fn = getattr(compiled, MOSS_PROMPT_EVENT)
             return fn(self)
         from ghostiss.core.moss.lifecycle import __moss_prompt__
         return __moss_prompt__(self)
 
 
-class MOSSRuntime(ABC):
+class MossRuntime(ABC):
     @abstractmethod
     def container(self) -> Container:
         """
@@ -372,7 +365,7 @@ class MOSSRuntime(ABC):
         pass
 
     @abstractmethod
-    def prompter(self) -> MOSSPrompter:
+    def prompter(self) -> MossPrompter:
         """
         返回一个 Prompter, 专门提供 prompt.
         """
@@ -408,7 +401,7 @@ class MOSSRuntime(ABC):
         module = self.module()
         if MOSS_TYPE_NAME in module.__dict__:
             return module.__dict__[MOSS_TYPE_NAME]
-        return MOSS
+        return Moss
 
     @abstractmethod
     def dump_context(self) -> PyContext:
@@ -434,6 +427,8 @@ class MOSSRuntime(ABC):
         """
         pass
 
+    __executing__: bool = False
+
     def execute(
             self,
             *,
@@ -441,7 +436,7 @@ class MOSSRuntime(ABC):
             code: Optional[str] = None,
             args: Optional[List[str]] = None,
             kwargs: Optional[Dict[str, str]] = None,
-    ) -> "MOSSResult":
+    ) -> "MossResult":
         """
         基于 moos 提供的上下文, 运行一段代码.
         :param code: 需要运行的代码.
@@ -451,17 +446,23 @@ class MOSSRuntime(ABC):
         :return: 根据 result_name 从 code 中获取返回值.
         :exception: any exception will be raised, handle them outside
         """
-        compiled = self.module()
-        fn = None
-        with self.runtime_ctx():
-            # 使用 module 自定义的 exec
-            if MOSS_EXEC_EVENT in compiled.__dict__:
-                fn = compiled.__dict__[MOSS_EXEC_EVENT]
-            if fn is None:
-                from ghostiss.core.moss.lifecycle import __moss_exec__
-                fn = __moss_exec__
-            # 使用系统默认的 exec
-            return fn(self, target=target, code=code, args=args, kwargs=kwargs)
+        if self.__executing__:
+            raise RuntimeError(f"Moss already executing")
+        try:
+            self.__executing__ = True
+            compiled = self.module()
+            fn = None
+            with self.runtime_ctx():
+                # 使用 module 自定义的 exec
+                if hasattr(compiled, MOSS_EXEC_EVENT):
+                    fn = getattr(compiled, MOSS_EXEC_EVENT)
+                if fn is None:
+                    from ghostiss.core.moss.lifecycle import __moss_exec__
+                    fn = __moss_exec__
+                # 使用系统默认的 exec
+                return fn(self, target=target, code=code, args=args, kwargs=kwargs)
+        finally:
+            self.__executing__ = False
 
     def destroy(self) -> None:
         """
@@ -470,7 +471,7 @@ class MOSSRuntime(ABC):
         pass
 
 
-class MOSSResult(NamedTuple):
+class MossResult(NamedTuple):
     """
     result of the moss runtime execution.
     """

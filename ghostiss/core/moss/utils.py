@@ -207,7 +207,12 @@ def get_callable_definition(
         else:
             raise TypeError(f'"{caller}" is not function or method')
 
-    source_code = inspect.getsource(caller)
+    try:
+        source_code = inspect.getsource(caller)
+    except OSError:
+        # 无法取到代码.
+        return ""
+
     stripped_source = strip_source_indent(source_code)
     source_lines = stripped_source.split('\n')
     definition = []

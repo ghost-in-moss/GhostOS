@@ -171,3 +171,10 @@ def Bar(self, a: int, b: int) -> int:
 """
     bar = Bar()
     assert get_callable_definition(bar) == expect.strip()
+
+
+def test_get_callable_definition_with_abstractmethod():
+    from abc import abstractmethod
+    assert not inspect.isbuiltin(abstractmethod)
+    code = get_callable_definition(abstractmethod)
+    assert code == ""

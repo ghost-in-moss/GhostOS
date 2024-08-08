@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Optional
+from typing import Any, Tuple, Optional, Dict
 
 
 def import_from_str(module_spec: str) -> Any:
@@ -8,10 +8,23 @@ def import_from_str(module_spec: str) -> Any:
     spec = parts[1] if len(parts) > 1 else None
     imported_module = import_module(module)
     if spec:
-        if spec in imported_module:
-            return getattr(imported_module, spec)
-        raise ModuleNotFoundError(f"No spec named {spec} in module {module}")
+        return get_module_spec(imported_module.__dict__, spec)
     return imported_module
+
+
+def get_module_spec(module, spec: str) -> Optional[Any]:
+    parts = spec.split('.')
+    value = module
+    for part in parts:
+        if value is None:
+            raise AttributeError(f'Module has no attribute {spec}')
+        if part == "<locals>":
+            raise AttributeError(f'local attribute {spec} is not allowed to get')
+        if isinstance(value, Dict):
+            value = value.get(part)
+        else:
+            value = getattr(value, part)
+    return value
 
 
 def parse_import_module_and_spec(import_path: str) -> Tuple[str, Optional[str]]:

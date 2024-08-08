@@ -1,3 +1,4 @@
+import typing
 from typing import Any, Optional, Union, Callable, Dict, Tuple, Iterable, Set
 from ghostiss.core.moss.utils import (
     unwrap_str,
@@ -67,7 +68,7 @@ def reflect_module_locals(
         _typing: bool = True,
         _func: bool = True,
         _module: bool = False,
-        _other: bool = True,
+        _prompter: bool = True,
 ) -> AttrPrompts:
     """
     MOSS 系统自带的反射方法, 对一个module 的本地变量做最小化的反射展示.
@@ -102,13 +103,16 @@ def reflect_module_locals(
     :param _module: 是否允许反射模块.
     :param _typing: 是否允许反射 typing
     :param _func: 是否允许反射 function.
-    :param _other: 其它类型.
+    :param _prompter: 拥有 __prompt__ 的其它类型.
     """
     for name, value in local_values.items():
-        prompt = reflect_module_attr(
-            name, value, modulename, includes, excludes, includes_module_prefixes, excludes_module_prefixes,
-            _cls, _module, _func, _other,
-        )
+        try:
+            prompt = reflect_module_attr(
+                name, value, modulename, includes, excludes, includes_module_prefixes, excludes_module_prefixes,
+                _cls, _module, _func, _prompter,
+            )
+        except Exception as e:
+            raise RuntimeError(f"failed to reflect local value {name!r}: {e}")
         if prompt is not None:
             yield name, prompt
 
@@ -125,7 +129,7 @@ def reflect_module_attr(
         _typing: bool = True,
         _func: bool = True,
         _module: bool = False,
-        _other: bool = True,
+        _prompter: bool = True,
 ) -> Optional[str]:
     """
     反射其中的一个值.
@@ -148,7 +152,7 @@ def reflect_module_attr(
         return None
     elif value_modulename == current_module:
         # 本地只有 __prompt__ 方法存在的一种情况展示.
-        return default_reflect_local_value_prompt(name, value, other=True)
+        return default_reflect_local_value_prompt(name, value, _prompter=True)
 
     if excludes_module_prefixes:
         for prefix in excludes_module_prefixes:
@@ -165,40 +169,41 @@ def reflect_module_attr(
             return None
     return default_reflect_local_value_prompt(
         name, value,
-        cls=_cls, typing=_typing, module=_module, func=_func, other=_other,
+        _cls=_cls, _typing=_typing, _module=_module, _func=_func, _prompter=_prompter,
     )
 
 
 def default_reflect_local_value_prompt(
         name: str,
         value: Any,
-        cls: bool = False,
-        module: bool = False,
-        typing: bool = False,
-        func: bool = False,
-        other: bool = False,
+        _cls: bool = True,
+        _module: bool = True,
+        _typing: bool = True,
+        _func: bool = True,
+        _prompter: bool = True,
 ) -> Optional[str]:
     """
     默认的反射方法, 用来反射当前上下文(module) 里的某个变量, 生成上下文相关的 prompt (assignment or definition).
     :param name: 变量名.
     :param value: 变量值
-    :param cls: 是否允许反射类.
-    :param module: 是否允许反射模块.
-    :param typing: 是否允许反射 typing
-    :param func: 是否允许反射 function.
-    :param other: 其它类型.
+    :param _cls: 是否允许反射类.
+    :param _module: 是否允许反射模块.
+    :param _typing: 是否允许反射 typing
+    :param _func: 是否允许反射 function.
+    :param _prompter: 其它类型.
     :return:
     """
     # 如果是 module 类型.
     if is_typing(value):
-        if not typing:
+        if not _typing:
             return None
         if value.__module__ == "typing":
-            return None
+            if value.__name__ in _typing.__dict__ and _typing.__dict__[value.__name__] is value:
+                return None
         return f"{name} = {value}"
 
     elif inspect.isclass(value):
-        if not cls:
+        if not _cls:
             return None
         # class 类型.
         prompt = get_class_magic_prompt(value)
@@ -209,7 +214,7 @@ def default_reflect_local_value_prompt(
             return source
 
     elif inspect.isfunction(value) or inspect.ismethod(value):
-        if not func:
+        if not _func:
             return None
         # 方法类型.
         prompt = get_magic_prompt(value)
@@ -218,7 +223,7 @@ def default_reflect_local_value_prompt(
         # 默认都给方法展示 definition.
         return get_callable_definition(value, name)
     elif inspect.ismodule(value):
-        if not module:
+        if not _module:
             return None
         # 只有包含 __prompt__ 的库才有展示.
         prompt = get_magic_prompt(value)
@@ -235,7 +240,7 @@ def default_reflect_local_value_prompt(
 '''
 
     else:
-        if not other:
+        if not _prompter:
             return None
         # attr, 也可能是 module.
         prompt = get_magic_prompt(value)
