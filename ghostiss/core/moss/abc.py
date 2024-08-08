@@ -22,19 +22,21 @@ MOSS 通过 PyContext 来定义一个可持久化, 可以复原的上下文.
 compiler: MOSSCompiler = container.force_fetch(MOSSCompiler)
 
 # 第二步, compiler 可以预定义 Module 的一些内部方法比如 __import__, 或 join pycontext, 然后 compile
-runtime: MOSSRuntime = compiler.compile(xxx)
+# 关于 __import__, 默认会使用 moss.libraries.Modules 的实现. 
+
+runtime: MOSSRuntime = compiler.compile(modulename)
 
 # 这个阶段会编译 pycontext.module 到一个临时的 Module 中, 并对生成的 MOSSRuntime 进行初始化. 
-# runtime 可以用来做依赖注入的准备. 
+# 如果 pycontext.code 存在, 则使用这个 code. 这是为了支持未来 llm 直接修改上下文, 存一个自己的临时副本. 
 
 # 第三步, 生成 context 的 prompt. 
-prompt = runtime.moss_context_prompt()
+prompt = runtime.prompter().moss_context_prompt()
 
 # 第四步, 使用 prompt 生成 chat, 调用大模型或人工生成代码. 
 code = llm_runner(prompt)
 
 # 第五步, 将 llm 生成的 code 让 moss runtime 执行, 并指定返回值或调用的方法 (target) 
-result: MOSSResult = context.interpret(code, target=xxxx)
+result: MOSSResult = runtime.execute(code, target=xxxx)
 
 # 第六步, 使用返回值, 并且 destroy()
 returns = result.returns
@@ -42,7 +44,7 @@ std_output = result.std_output
 # 获取需要保存的 pycontext. 
 pycontext = result.pycontext
 
-
+最后记得执行 runtime.destroy(), 否则可能内存泄漏. 
 """
 
 __all__ = [
@@ -56,20 +58,26 @@ __all__ = [
 ]
 
 MOSS_COMPILE_EVENT = "__moss_compile__"
+"""moss 编译阶段的回调事件, 可以在对应文件里自定义这个事件, 替换系统默认. """
 
 MOSS_ATTR_PROMPTS_EVENT = "__moss_attr_prompts__"
 """通过这个属性来获取一个实例 (module/instance of class) 所有属性的 prompts. """
 
 MOSS_PROMPT_EVENT = "__moss_prompt__"
+""" moss 生成 prompt 阶段的回调事件. """
 
 MOSS_EXEC_EVENT = "__moss_exec__"
+""" moss 执行阶段的回调事件. """
 
 MOSS_TYPE_NAME = "Moss"
 
 MOSS_NAME = "moss"
 
 MOSS_HIDDEN_MARK = "# <moss>"
+""" pycontext.module 源码某一行以这个标记开头, 其后的代码都不生成到 prompt 里. """
+
 MOSS_HIDDEN_UNMARK = "# </moss>"
+""" pycontext.module 源码某一行以这个标记开头, 其后的代码都展示到 prompt 里. """
 
 
 @cls_source_code()

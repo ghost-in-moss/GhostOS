@@ -46,6 +46,7 @@ def test_baseline_exec():
     assert isinstance(moss, moss_type)
 
     # 直接从编译后的数据里取出 __test__ 方法.
+    # 未来直接实现 test suite, 让单测方法都可以批量测试.
     test = runtime.locals()["__test__"]
     assert isinstance(test, Callable)
     e = test(runtime)

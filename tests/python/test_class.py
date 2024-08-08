@@ -174,3 +174,8 @@ def test_setattr_with_func():
 
     setattr(Foo, "hello", hello)
     assert Foo.hello() == "world"
+
+
+def test_subclass():
+    # self is self's subclass. humor but reasonable
+    assert issubclass(Bar, Bar)

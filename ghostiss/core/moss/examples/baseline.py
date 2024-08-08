@@ -5,20 +5,26 @@ from inspect import getsource, getmembers
 
 
 class Foo(ABC):
+    """定义一个本地类, 用来做依赖注入测试. """
 
     @abstractmethod
     def foo(self) -> str:
         pass
 
 
-# baseline test case for moss
-
 def plus(a: int, b: int) -> int:
+    """ 验证本地方法存在于 prompt. """
     return a + b
 
 
 class Moss(Parent):
+    """
+    本地定义的 Moss 类. 每个 MOSS 文件里都应该有一个 Moss 类, 可以是 import 的也可以是本地定义的.
+    记得它要继承自 Moss.
+    """
     life: List[str] = attr(default_factory=list, desc="用来记录发生过的生命周期.")
+    """测试 attr 方法用来定义可持久化的属性. """
+
     foo: Foo
     """依赖注入 Foo 的测试用例. """
 
@@ -48,6 +54,7 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
     class FooImpl(Foo):
         def foo(self) -> str:
             return "hello"
+
     from ghostiss.container import provide
     # 用这种方式, 可以预期 Moss 被依赖注入了 Foo, 注入的是 FooImpl
     provider = provide(Foo, singleton=False)(lambda con: FooImpl())
@@ -90,7 +97,7 @@ if __name__ == '__test__':
         """
         模拟一个 main 方法, 测试 moss 的调用.
         assert 返回值是 3. 外部的 MOSSRuntime 调用这个方法.
-        详见 tests.core.moss.examples.test_baseline
+        详见 __test__
         """
         return plus(1, 2)
 
@@ -122,7 +129,9 @@ if __name__ == '__test__':
 
             # 运行 main 方法.
             result = runtime.execute(target="main", args=["moss"])
+            # main 方法的运行结果.
             assert result.returns == 3
+            # 测试 print 仍然有效.
             assert result.std_output.startswith("hello")
 
             # 动态加载的 attr.
