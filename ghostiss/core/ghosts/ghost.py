@@ -4,7 +4,7 @@ from ghostiss.entity import Entity, EntityFactory, EntityMeta
 from ghostiss.container import Container
 from ghostiss.abc import Descriptive, Identifiable
 from ghostiss.core.shells import Shell
-from ghostiss.core.moss.moss import MOSS
+from ghostiss.core.moss_p1.moss import MOSS
 from ghostiss.core.messages.message import Message, MessageType, MessageTypeParser
 from ghostiss.core.ghosts.operators import Operator
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.session import Session
     from ghostiss.core.ghosts.thoughts import Mindset
     from ghostiss.core.ghosts.minds import MultiTasks, Mindflow
-    from ghostiss.core.moss.modules import Modules
+    from ghostiss.core.moss_p1.modules import Modules
     from ghostiss.core.ghosts.messenger import Messenger
 
 __all__ = ['Ghost', 'Facade']

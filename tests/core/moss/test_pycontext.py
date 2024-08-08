@@ -1,17 +1,19 @@
-from ghostiss.core.moss import PyContext, Imported, Variable
+from ghostiss.core.moss.pycontext import PyContext, Injection, Property
 
 
 def test_pycontext_imported():
     c = PyContext()
-    c.add_import(Imported(module="foo", spec="bar"))
-    assert len(c.imported) == 1
+    c.inject(Injection(import_from="foo:bar"))
+    assert len(c.injections) == 1
 
 
 def test_pycontext_join_baseline():
     left = PyContext()
+    i = Injection.reflect(Injection)
+    left.inject(i)
     right = PyContext()
-    right.add_import(Imported(module="foo", spec="bar"))
+    right.inject(Injection(import_from="foo:bar"))
     joined = left.join(right)
-    assert len(left.imported) == 0
-    assert len(right.imported) == 1
-    assert len(joined.imported) == 1
+    assert len(left.injections) == 1
+    assert len(right.injections) == 1
+    assert len(joined.injections) == 2

@@ -1,6 +1,6 @@
-from ghostiss.core.moss.moss import MOSS, TestMOSSProvider
-from ghostiss.core.moss.modules import BasicModulesProvider
-from ghostiss.core.moss.reflect import (
+from ghostiss.core.moss_p1.moss import MOSS, TestMOSSProvider
+from ghostiss.core.moss_p1.modules import BasicModulesProvider
+from ghostiss.core.moss_p1.reflect import (
     Importing, Attr,
 )
 from ghostiss.container import Container

@@ -8,8 +8,8 @@ import datetime
 from typing import Callable, List
 from ghostiss.container import Container
 from ghostiss.core.runtime.llms import LLMs
-from ghostiss.core.moss.moss import MOSS, BasicPythonMOSSImpl, TestMOSSProvider
-from ghostiss.core.moss.modules import BasicModulesProvider
+from ghostiss.core.moss_p1.moss import MOSS, BasicPythonMOSSImpl, TestMOSSProvider
+from ghostiss.core.moss_p1.modules import BasicModulesProvider
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider

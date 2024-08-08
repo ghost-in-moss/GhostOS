@@ -3,7 +3,7 @@ from typing import Optional, List
 from ghostiss.abc import Identifier
 from ghostiss.core.ghosts.thoughts import Mindset, Thought
 from ghostiss.entity import EntityMeta
-from ghostiss.core.moss.exports import Exporter
+from ghostiss.core.moss_p1.exports import Exporter
 
 
 class FakeMindset(Mindset):

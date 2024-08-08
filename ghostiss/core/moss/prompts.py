@@ -1,5 +1,5 @@
 from typing import Any, Optional, Union, Callable, Dict, Tuple, Iterable, Set
-from ghostiss.core.moss2.utils import (
+from ghostiss.core.moss.utils import (
     unwrap_str,
     is_typing,
     is_code_same_as_print,

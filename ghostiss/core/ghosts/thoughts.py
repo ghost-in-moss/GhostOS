@@ -7,7 +7,7 @@ from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.runner import Runner
 from ghostiss.abc import Identifiable, Descriptive, Identifier
 from ghostiss.helpers import uuid
-from ghostiss.core.moss.exports import Exporter
+from ghostiss.core.moss_p1.exports import Exporter
 from pydantic import BaseModel
 
 

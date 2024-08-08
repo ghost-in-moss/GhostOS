@@ -3,14 +3,14 @@ import sys
 import argparse
 import os
 import yaml
-from ghostiss.core.moss.reflect import ClassSign, Interface
+from ghostiss.core.moss_p1.reflect import ClassSign, Interface
 from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.messages import DefaultTypes
 from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.runtime.threads import MsgThread
-from ghostiss.core.moss import MOSS, BasicPythonMOSSImpl, BasicModulesProvider
+from ghostiss.core.moss_p1 import MOSS, BasicPythonMOSSImpl, BasicModulesProvider
 from ghostiss.framework.messengers import TestMessengerProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.moss.runner import MOSSRunnerTestSuite, MOSSRunnerTestResult
@@ -41,7 +41,7 @@ You can use the api that MOSS provided to implement your plan.
         return MOSS
 
     def factory(self, con: Container) -> Optional[ABSTRACT]:
-        from ghostiss.core.moss import Importing, Typing
+        from ghostiss.core.moss_p1 import Importing, Typing
         from abc import ABC, abstractmethod
         import typing
         from pydantic import BaseModel, Field

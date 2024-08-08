@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.thoughts import Thought
 from ghostiss.core.messages.message import Message, MessageClass
-from ghostiss.core.moss.exports import Exporter
+from ghostiss.core.moss_p1.exports import Exporter
 
 MessageType = Union[Message, MessageClass, AnyStr]
 

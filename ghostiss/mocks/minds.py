@@ -2,7 +2,7 @@ from ghostiss.core.ghosts import Operator
 from ghostiss.core.ghosts.minds import Mindflow, MessageType, MultiTasks
 from ghostiss.core.ghosts.thoughts import Thought
 from ghostiss.mocks.operators import FakeOperator
-from ghostiss.core.moss.exports import Exporter
+from ghostiss.core.moss_p1.exports import Exporter
 
 
 class FakeMindflow(Mindflow):

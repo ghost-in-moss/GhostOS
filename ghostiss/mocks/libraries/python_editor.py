@@ -1,7 +1,7 @@
 from typing import Optional
 
 from ghostiss.framework.libraries.python_editor import PythonEditor, ModuleEditor
-from ghostiss.core.moss.exports import Exporter
+from ghostiss.core.moss_p1.exports import Exporter
 
 
 class FakeModuleEditor(ModuleEditor):

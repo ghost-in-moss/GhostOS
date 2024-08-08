@@ -5,14 +5,14 @@ import io
 import json
 
 from ghostiss.container import Container, Provider
-from ghostiss.core.moss2.abc import (
+from ghostiss.core.moss.abc import (
     MOSS,
     MOSSCompiler, MOSSRuntime, MOSSPrompter, MOSS_NAME, MOSS_TYPE_NAME,
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
-from ghostiss.core.moss2.utils import is_name_public
-from ghostiss.core.moss2.libraries import Modules, ImportWrapper
-from ghostiss.core.moss2.pycontext import PyContext, SerializableType, Property
+from ghostiss.core.moss.utils import is_name_public
+from ghostiss.core.moss.libraries import Modules, ImportWrapper
+from ghostiss.core.moss.pycontext import PyContext, SerializableType, Property
 from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"

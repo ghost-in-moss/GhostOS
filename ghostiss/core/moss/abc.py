@@ -3,11 +3,11 @@ from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Tuple, Ca
 from types import ModuleType
 from abc import ABC, abstractmethod
 from ghostiss.container import Container, Provider, Factory, provide
-from ghostiss.core.moss2.pycontext import PyContext, SerializableType, Property
-from ghostiss.core.moss2.prompts import (
+from ghostiss.core.moss.pycontext import PyContext, SerializableType, Property
+from ghostiss.core.moss.prompts import (
     AttrPrompts, reflect_module_locals, join_prompt_lines, PROMPT_MAGIC_ATTR,
 )
-from ghostiss.core.moss2.decorators import cls_source_code, definition
+from ghostiss.core.moss.decorators import cls_source_code, definition
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -359,7 +359,7 @@ class MOSSPrompter(ABC):
         if MOSS_PROMPT_EVENT in compiled.__dict__:
             fn = compiled.__dict__[MOSS_PROMPT_EVENT]
             return fn(self)
-        from ghostiss.core.moss2.lifecycle import __moss_prompt__
+        from ghostiss.core.moss.lifecycle import __moss_prompt__
         return __moss_prompt__(self)
 
 
@@ -458,7 +458,7 @@ class MOSSRuntime(ABC):
             if MOSS_EXEC_EVENT in compiled.__dict__:
                 fn = compiled.__dict__[MOSS_EXEC_EVENT]
             if fn is None:
-                from ghostiss.core.moss2.lifecycle import __moss_exec__
+                from ghostiss.core.moss.lifecycle import __moss_exec__
                 fn = __moss_exec__
             # 使用系统默认的 exec
             return fn(self, target=target, code=code, args=args, kwargs=kwargs)

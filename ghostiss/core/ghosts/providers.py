@@ -5,7 +5,7 @@ from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.session import Session
 from ghostiss.core.messages import Messenger
-from ghostiss.core.moss import MOSS
+from ghostiss.core.moss_p1 import MOSS
 from ghostiss.core.runtime import Runtime
 from ghostiss.core.runtime.threads import Threads
 

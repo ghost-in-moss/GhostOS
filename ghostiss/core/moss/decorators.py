@@ -1,7 +1,7 @@
 import inspect
 from typing import Callable, Optional, Any, Type
-from ghostiss.core.moss2.prompts import set_prompter, set_class_prompter
-from ghostiss.core.moss2.utils import (
+from ghostiss.core.moss.prompts import set_prompter, set_class_prompter
+from ghostiss.core.moss.utils import (
     get_callable_definition, make_class_prompt,
     strip_source_indent,
 )

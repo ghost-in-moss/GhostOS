@@ -6,9 +6,9 @@ from types import ModuleType
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ghostiss.container import Container, ABSTRACT
-from ghostiss.core.moss.context import PyContext, Variable, Imported
-from ghostiss.core.moss.modules import Modules
-from ghostiss.core.moss.reflect import (
+from ghostiss.core.moss_p1.context import PyContext, Variable, Imported
+from ghostiss.core.moss_p1.modules import Modules
+from ghostiss.core.moss_p1.reflect import (
     Importing,
     reflect, reflects,
     IterableReflection,

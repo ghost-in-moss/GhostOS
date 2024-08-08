@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
-from ghostiss.core.moss.exports import Exporter
+from ghostiss.core.moss_p1.exports import Exporter
 
 if TYPE_CHECKING:
     from ghostiss.core.ghosts.ghost import Ghost
@@ -72,7 +72,3 @@ class FinishOperator(Operator):
 
 class WaitOperator(Operator):
     pass
-
-
-EXPORTS = Exporter(). \
-    class_sign(Operator)

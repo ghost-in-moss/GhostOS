@@ -3,8 +3,8 @@ import importlib
 from types import ModuleType
 from typing import Optional, Type
 
-from ghostiss.core.moss.reflect import reflect, reflects, Reflection, Importing
-from ghostiss.core.moss.exports import EXPORTS_KEY, Exporter
+from ghostiss.core.moss_p1.reflect import reflect, reflects, Reflection, Importing
+from ghostiss.core.moss_p1.exports import EXPORTS_KEY, Exporter
 from ghostiss.container import Provider, Container, ABSTRACT
 
 

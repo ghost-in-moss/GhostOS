@@ -1,13 +1,13 @@
 import inspect
-from ghostiss.core.moss2 import prompts
-from ghostiss.core.moss2.prompts import reflect_module_locals, compile_attr_prompts
+from ghostiss.core.moss import prompts
+from ghostiss.core.moss.prompts import reflect_module_locals, compile_attr_prompts
 
 
 def test_prompts_baseline():
     assert inspect.ismodule(prompts)
     # inspect 也被 prompts 库引用了.
     assert not inspect.isbuiltin(inspect)
-    attr_prompts = reflect_module_locals("ghostiss.core.moss2.prompts", prompts.__dict__)
+    attr_prompts = reflect_module_locals("ghostiss.core.moss.prompts", prompts.__dict__)
     data = {}
     array = []
     for name, prompt in attr_prompts:

@@ -2,7 +2,7 @@ from typing import Optional, List, Iterable, ClassVar
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostiss.core.messages import Message, Payload, copy_messages
-from ghostiss.core.moss.context import PyContext
+from ghostiss.core.moss_p1.context import PyContext
 from ghostiss.core.runtime.llms import Chat
 from ghostiss.helpers import uuid
 

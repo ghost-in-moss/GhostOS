@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Iterable, List, Any, Callable, Type
 from copy import deepcopy
-from ghostiss.core.moss.reflect import (
+from ghostiss.core.moss_p1.reflect import (
     Reflection, Attr, reflects,
     ClassSign, SourceCode,
     Interface, Typing,

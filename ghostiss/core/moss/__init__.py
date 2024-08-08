@@ -1,4 +1,19 @@
-from ghostiss.core.moss.moss import MOSS, System, TestMOSSProvider, BasicPythonMOSSImpl
-from ghostiss.core.moss.modules import Modules, BasicModules, BasicModulesProvider
-from ghostiss.core.moss.context import PyContext, Imported, Variable
-from ghostiss.core.moss.reflect import *
+from ghostiss.container import Container
+from ghostiss.core.moss.abc import (
+    MOSS, MOSSCompiler, MOSSRuntime, MOSSPrompter, MOSSResult,
+    MOSS_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
+    MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT
+)
+from ghostiss.core.moss.impl import TestMOSSProvider
+from ghostiss.core.moss.libraries import (
+    DefaultModulesProvider,
+    DefaultModules,
+    Modules,
+)
+
+
+def test_container() -> Container:
+    container = Container()
+    container.register(TestMOSSProvider())
+    container.register(DefaultModulesProvider())
+    return container

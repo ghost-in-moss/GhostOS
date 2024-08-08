@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Optional, List, Dict, Any
-    from ghostiss.core.moss2.prompts import AttrPrompts
-    from ghostiss.core.moss2.abc import MOSSPrompter, MOSSResult, MOSSRuntime, MOSSCompiler
+    from ghostiss.core.moss.prompts import AttrPrompts
+    from ghostiss.core.moss.abc import MOSSPrompter, MOSSResult, MOSSRuntime, MOSSCompiler
 
 """
 这个文件提供了 MOSS 生命周期的关键方法, 每一个都是可选的.
@@ -52,7 +52,7 @@ def __moss_attr_prompts__() -> "AttrPrompts":
     可选的魔术方法.
 
     系统本身会反射代码的本地变量, 为它们中的一部分添加 prompt.
-    默认的反射方法见 ghostiss.moss2.prompts.prompts.py 文件.
+    默认的反射方法见 ghostiss.moss.prompts.prompts.py 文件.
 
     而这个方法则可以替代或追加必要的 prompt, 优先于系统生成的反射.
     还有一些在 <moss></moss> 标记内定义的代码, 想要在 prompt 里呈现, 也可以在这个方法里定义.
@@ -70,7 +70,7 @@ def __moss_prompt__(prompter: "MOSSPrompter") -> str:
 
     这个方法生成的 Prompt, 会用来描述当前文件, 其中包含了注入的 MOSS 类和 moss 实例.
     """
-    from ghostiss.core.moss2.prompts import escape_string_quotes
+    from ghostiss.core.moss.prompts import escape_string_quotes
     # 获取原始的代码.
     origin_code = prompter.pycontext_code(model_visible=True)
     # 基于 origin code 生成关于这些变量的 prompt.
@@ -116,7 +116,7 @@ def __moss_exec__(
     :param kwargs: 为 target 准备的 **kwargs 参数, 这里需要指定 argument_name => module_attr_name
     """
     from typing import Callable
-    from ghostiss.core.moss2.abc import MOSSResult
+    from ghostiss.core.moss.abc import MOSSResult
     local_values = runtime.locals()
     # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
     with runtime.runtime_ctx():

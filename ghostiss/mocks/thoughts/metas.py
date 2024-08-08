@@ -9,7 +9,7 @@ from ghostiss.core.ghosts.thoughts import Thought
 from pydantic import BaseModel, Field
 
 from ghostiss.entity import EntityMeta
-from ghostiss.core.moss.exports import Exporter
+from ghostiss.core.moss_p1.exports import Exporter
 
 
 class FlowThoughtNode(BaseModel):
