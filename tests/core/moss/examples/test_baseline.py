@@ -1,8 +1,9 @@
 from typing import Callable
 from ghostiss.core.moss import test_container
-from ghostiss.core.moss.abc import MossCompiler, Moss, MOSS_TYPE_NAME, MOSS_NAME
+from ghostiss.core.moss.abc import MossCompiler, Moss, MOSS_TYPE_NAME
 from ghostiss.core.moss.pycontext import PyContext
 from ghostiss.core.moss.examples import baseline
+from ghostiss.core.moss.libraries import ImportWrapper
 
 
 def test_baseline_exec():
@@ -26,6 +27,7 @@ def test_baseline_exec():
     assert module.__name__ == modulename
     hack_import = module.__dict__.get('__import__', None)
     assert hack_import is not None
+    assert isinstance(hack_import, ImportWrapper)
 
     # 先测试 ctx
     with runtime.runtime_ctx():
