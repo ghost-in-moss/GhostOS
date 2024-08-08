@@ -11,17 +11,18 @@ __all__ = [
     'get_modulename',
 
     'is_typing', 'is_builtin', 'is_classmethod',
-    'is_model_class', 'get_model_object_meta', 'new_model_instance',
+    'is_model_class', 'get_model_object_meta',
     'parse_comments',
     'parse_doc_string', 'escape_string_quotes',
     'strip_source_indent', 'add_source_indent', 'make_class_prompt',
     'is_callable', 'is_public_callable', 'get_callable_definition',
-    'get_typehint_string', 'get_default_typehint', 'get_import_comment', 'get_extends_comment',
+    'get_typehint_string', 'get_import_comment', 'get_extends_comment',
     'get_class_def_from_source',
     'count_source_indent',
     'replace_class_def_name',
     'get_calling_modulename',
     'is_code_same_as_print',
+    'is_name_public',
 ]
 
 
@@ -321,6 +322,10 @@ def get_model_object_meta(obj: Any) -> Optional[Dict]:
 
 def is_callable(obj: Any) -> bool:
     return isinstance(obj, Callable)
+
+
+def is_name_public(name: str) -> bool:
+    return not name.startswith('_')
 
 
 def is_public_callable(attr: Any) -> bool:

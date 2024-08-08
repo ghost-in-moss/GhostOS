@@ -210,3 +210,4 @@ def test_parse_doc_string():
 
     for c in cases:
         assert parse_doc_string(c.doc, inline=c.inline) == c.expect.strip()
+

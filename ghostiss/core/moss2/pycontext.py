@@ -3,7 +3,7 @@ from typing import Dict, Any, Union, List, Optional, Tuple, TypedDict, NamedTupl
 from types import ModuleType
 import inspect
 from pydantic import BaseModel, Field
-from ghostiss.helpers import parse_import_module_and_spec, import_from_str
+from ghostiss.helpers import parse_import_module_and_spec, import_from_str, join_import_module_and_spec
 
 
 # --- python context that transportable --- #
@@ -32,7 +32,7 @@ class PyContext(BaseModel):
     )
 
     def inject(self, injected: "Injection") -> None:
-        self.injections[injected.get_import_path()] = injected
+        self.injections[injected.import_from] = injected
 
     def define(self, d: "Property") -> None:
         self.properties[d.name] = d
@@ -44,6 +44,8 @@ class PyContext(BaseModel):
         copied = self.model_copy(deep=True)
         if ctx.module:
             copied.module = ctx.module
+        if ctx.code:
+            copied.code = ctx.code
         for imp in ctx.injections.values():
             copied.inject(imp)
         for var in ctx.properties.values():
@@ -55,12 +57,8 @@ class Injection(BaseModel):
     """
     from module import specific attribute then inject to MOSS Context
     """
-    module: str = Field(
+    import_from: str = Field(
         description="the imported module name or use module path pattern such as 'modulename:attr_name'",
-    )
-    spec: Optional[str] = Field(
-        default=None,
-        description="the specific attribute name from the module. could be None if defined in self.module",
     )
     alias: Optional[str] = Field(default=None, description="context attr alias for the imported value")
 
@@ -72,14 +70,14 @@ class Injection(BaseModel):
         :param alias:
         :return:
         """
-        modulename = inspect.getmodulename(value)
+        modulename = inspect.getmodule(value).__name__
         if inspect.ismodule(value):
             spec = None
         else:
             spec = getattr(value, '__name__', None)
+        import_from = join_import_module_and_spec(modulename, spec)
         return Injection(
-            module=modulename,
-            spec=spec,
+            import_from=import_from,
             alias=alias,
         )
 
@@ -93,14 +91,7 @@ class Injection(BaseModel):
         """
         :return: modulename and attribute name from the module
         """
-        if self.spec:
-            return self.module, self.spec
-        return parse_import_module_and_spec(self.module)
-
-    def get_import_path(self) -> str:
-        module, spec = self.get_from_module_attr()
-        spec = ":" + spec if spec else ""
-        return module + spec
+        return parse_import_module_and_spec(self.import_from)
 
 
 SerializableType = Union[str, int, float, bool, None, list, dict, BaseModel, TypedDict]
@@ -113,7 +104,7 @@ class Property(BaseModel):
     可以在 MOSS 上下文中声明的变量.
     """
     name: str = Field(description="property name in the moss context")
-    # desc: Optional[str] = Field(default=None, description="describe the value to the attr docstring")
+    desc: str = Field(default="", description="describe the property's purpose")
     value: SerializableType = Field(default=None, description="the serializable value")
     model: Optional[str] = Field(
         default=None,
@@ -121,7 +112,15 @@ class Property(BaseModel):
     )
 
     @classmethod
-    def from_value(cls, name: str, value: SerializableType) -> Optional["Property"]:
+    def from_value(cls, name: str, value: SerializableType, desc: str = "") -> Optional["Property"]:
+        p = cls(name=name, desc=desc)
+        p.set_value(value)
+        return p
+
+    def set_value(self, value: Any) -> None:
+        if not isinstance(value, SerializableType):
+            # 赋值的时候报错.
+            raise AttributeError(f"{value} is not property serializable type {SerializableType}")
         model = None
         has_model = (
                 value is not None and isinstance(value, BaseModel)
@@ -131,7 +130,8 @@ class Property(BaseModel):
             model = inspect.getmodule(value).__name__ + ':' + type(value).__name__
         if isinstance(value, BaseModel):
             value = value.model_dump(exclude_defaults=True)
-        return cls(name=name, value=value, model=model)
+        self.value = value
+        self.model = model
 
     def generate_value(self, module: ModuleType) -> Any:
         model = self.model
@@ -141,9 +141,13 @@ class Property(BaseModel):
         elif isinstance(value, Dict):
             modulename, spec = parse_import_module_and_spec(model)
             if modulename == module.__name__:
-                cls = module.__dict__[modulename]
+                cls = module.__dict__.get(modulename, None)
             else:
                 cls = import_from_str(model)
+            if cls is None:
+                # 防止错误的上下文导致阻塞死.
+                self.value = None
+                return None
             return cls(**value)
         else:
             return None

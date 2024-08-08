@@ -101,8 +101,9 @@ def __moss_prompt__(prompter: "MOSSPrompter") -> str:
 
 def __moss_exec__(
         runtime: "MOSSRuntime",
-        code: str,
+        *,
         target: str,
+        code: "Optional[str]" = None,
         args: "Optional[List[str]]" = None,
         kwargs: "Optional[Dict[str, Any]]" = None,
 ) -> "MOSSResult":
@@ -119,16 +120,17 @@ def __moss_exec__(
     local_values = runtime.locals()
     # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
     with runtime.runtime_ctx():
-        compiled = compile(code, filename='<MOSS>', mode='exec')
-        exec(compiled, local_values)
+        if code:
+            compiled = compile(code, filename='<MOSS>', mode='exec')
+            exec(compiled, local_values)
 
     if target not in local_values:
         raise NotImplementedError(f"target `{target}` not implemented")
 
-    target_module_attr = local_values[target]
+    target_module_attr = local_values.get(target, None)
     is_function = isinstance(target_module_attr, Callable)
-    if args is not None or kwargs is not None and not is_function:
-        raise TypeError(f"target {target} is not callable")
+    if (args is not None or kwargs is not None) and not is_function:
+        raise TypeError(f"target '{target}' value '{target_module_attr}' is not callable")
 
     if is_function:
         real_args = []

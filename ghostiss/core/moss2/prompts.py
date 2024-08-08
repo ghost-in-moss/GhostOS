@@ -55,13 +55,19 @@ name 是为了去重, prompt 应该就是原有的 prompt.
 """
 
 
-def prompt_module_locals(
+def reflect_module_locals(
         modulename: str,
         local_values: Dict[str, Any],
+        *,
         includes: Optional[Set[str]] = None,
         excludes: Optional[Set[str]] = None,
         includes_module_prefixes: Optional[Set[str]] = None,
         excludes_module_prefixes: Optional[Set[str]] = None,
+        _cls: bool = True,
+        _typing: bool = True,
+        _func: bool = True,
+        _module: bool = False,
+        _other: bool = True,
 ) -> AttrPrompts:
     """
     MOSS 系统自带的反射方法, 对一个module 的本地变量做最小化的反射展示.
@@ -92,16 +98,22 @@ def prompt_module_locals(
     :param excludes: if given, any attr that name in it will not be prompted
     :param includes_module_prefixes: if given, the other module's value will only be prompted if the module match prefix
     :param excludes_module_prefixes: if given, the other module's value will not be prompted if the module match prefix
+    :param _cls: 是否允许反射类.
+    :param _module: 是否允许反射模块.
+    :param _typing: 是否允许反射 typing
+    :param _func: 是否允许反射 function.
+    :param _other: 其它类型.
     """
     for name, value in local_values.items():
-        prompt = reflect_module_value(
+        prompt = reflect_module_attr(
             name, value, modulename, includes, excludes, includes_module_prefixes, excludes_module_prefixes,
+            _cls, _module, _func, _other,
         )
         if prompt is not None:
             yield name, prompt
 
 
-def reflect_module_value(
+def reflect_module_attr(
         name: str,
         value: Any,
         current_module: Optional[str] = None,
@@ -109,9 +121,17 @@ def reflect_module_value(
         excludes: Optional[Set[str]] = None,
         includes_module_prefixes: Optional[Set[str]] = None,
         excludes_module_prefixes: Optional[Set[str]] = None,
+        _cls: bool = True,
+        _typing: bool = True,
+        _func: bool = True,
+        _module: bool = False,
+        _other: bool = True,
 ) -> Optional[str]:
+    """
+    反射其中的一个值.
+    """
     # 名字相关的过滤逻辑.
-    if name in excludes:
+    if excludes and name in excludes:
         return None
     elif includes is not None and name not in includes:
         return None
@@ -143,7 +163,10 @@ def reflect_module_value(
                 break
         if not has_prefix:
             return None
-    return default_reflect_local_value_prompt(name, value, cls=True, typing=True, module=True, func=True, other=True)
+    return default_reflect_local_value_prompt(
+        name, value,
+        cls=_cls, typing=_typing, module=_module, func=_func, other=_other,
+    )
 
 
 def default_reflect_local_value_prompt(
@@ -170,6 +193,8 @@ def default_reflect_local_value_prompt(
     if is_typing(value):
         if not typing:
             return None
+        if value.__module__ == "typing":
+            return None
         return f"{name} = {value}"
 
     elif inspect.isclass(value):
@@ -181,7 +206,7 @@ def default_reflect_local_value_prompt(
             return prompt
         if inspect.isabstract(value):
             source = inspect.getsource(value)
-            return get_class_def_from_source(source)
+            return source
 
     elif inspect.isfunction(value) or inspect.ismethod(value):
         if not func:
@@ -195,6 +220,7 @@ def default_reflect_local_value_prompt(
     elif inspect.ismodule(value):
         if not module:
             return None
+        # 只有包含 __prompt__ 的库才有展示.
         prompt = get_magic_prompt(value)
         if prompt:
             parsed = escape_string_quotes(prompt, '"""')
@@ -259,9 +285,10 @@ def join_prompt_lines(*prompts: Optional[str]) -> str:
     """
     result = []
     for prompt in prompts:
-        if prompt:
+        line = prompt.rstrip()
+        if line:
             result.append(prompt)
-    return '\n'.join(result)
+    return '\n\n\n'.join(result)
 
 
 def assign_prompt(typehint: Optional[Any], assigment: Optional[Any]) -> str:
@@ -292,16 +319,11 @@ def compile_attr_prompts(attr_prompts: AttrPrompts) -> str:
     :return: prompt in real python code pattern
     """
     prompt_lines = []
-    for prompt, name in attr_prompts:
-        if not prompt:
-            # prompt 为空就跳过.
-            continue
-        elif name:
-            # 这里判断 prompt 的结构是 `[: typehint] = value[\n"""doc"""]`
-            prompt_lines.append(f"{name}{prompt}")
-        else:
+    for name, prompt in attr_prompts:
+        line = prompt.strip()
+        if line:
             # 使用注释 + 描述的办法.
-            prompt_lines.append(prompt)
+            prompt_lines.append(line)
     return join_prompt_lines(*prompt_lines)
 
 

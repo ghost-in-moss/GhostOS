@@ -42,7 +42,9 @@ def test_definition():
     assert "pass" in prompt
     assert "test" in prompt
 
-    wrapped = cls_definition(doc="test foo")(Foo)
+    # 尝试替换 doc. 必须用 force.
+    # 所以 decorator 有污染效果, 还是要考虑直接用方法获取.
+    wrapped = cls_definition(doc="test foo", force=True)(Foo)
     prompt = get_prompt(wrapped)
     assert "test foo" in prompt
 

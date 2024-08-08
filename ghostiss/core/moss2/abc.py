@@ -3,11 +3,11 @@ from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Tuple, Ca
 from types import ModuleType
 from abc import ABC, abstractmethod
 from ghostiss.container import Container, Provider, Factory, provide
-from ghostiss.core.moss2.pycontext import PyContext, SerializableType
+from ghostiss.core.moss2.pycontext import PyContext, SerializableType, Property
 from ghostiss.core.moss2.prompts import (
-    AttrPrompts, prompt_module_locals, join_prompt_lines, PROMPT_MAGIC_ATTR,
+    AttrPrompts, reflect_module_locals, join_prompt_lines, PROMPT_MAGIC_ATTR,
 )
-from ghostiss.core.moss2.decorators import cls_source_code
+from ghostiss.core.moss2.decorators import cls_source_code, definition
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -70,6 +70,15 @@ MOSS_NAME = "moss"
 MOSS_HIDDEN_MARK = "# <moss>"
 MOSS_HIDDEN_UNMARK = "# </moss>"
 
+@definition()
+def attr(default: Any = None, desc: str = "") -> Any:
+    """
+
+    :param default:
+    :param desc:
+    :return:
+    """
+    return Property()
 
 @cls_source_code()
 class MOSS(ABC):
@@ -80,7 +89,6 @@ class MOSS(ABC):
     SerializeType means: int, float, str, None, list, dict, BaseModel, TypedDict
     You can edit them if you need.
     """
-    pass
 
 
 #    @abstractmethod
@@ -302,7 +310,7 @@ class MOSSPrompter(ABC):
         module = self.module()
         name = module.__name__
         local_values = module.__dict__
-        yield from prompt_module_locals(name, local_values, excludes=excludes)
+        yield from reflect_module_locals(name, local_values, excludes=excludes)
 
     def pycontext_code_prompt(self, auto_generation: bool = True) -> str:
         """
@@ -310,8 +318,8 @@ class MOSSPrompter(ABC):
         主要是从其它库引入的变量.
         :return: 用 python 风格描述的上下文变量.
         """
-        done = {'MOSS': self.moss_type_prompt()}
-        names = ['MOSS']
+        done = {}
+        names = []
         # 查看是否有源码自带的魔术方法.
         module = self.module()
         if MOSS_ATTR_PROMPTS_EVENT in module.__dict__:
@@ -429,8 +437,8 @@ class MOSSRuntime(ABC):
     def execute(
             self,
             *,
-            code: str,
             target: str,
+            code: Optional[str] = None,
             args: Optional[List[str]] = None,
             kwargs: Optional[Dict[str, str]] = None,
     ) -> "MOSSResult":
@@ -444,14 +452,16 @@ class MOSSRuntime(ABC):
         :exception: any exception will be raised, handle them outside
         """
         compiled = self.module()
+        fn = None
         with self.runtime_ctx():
             # 使用 module 自定义的 exec
             if MOSS_EXEC_EVENT in compiled.__dict__:
                 fn = compiled.__dict__[MOSS_EXEC_EVENT]
-                return fn(self, code, target, args, kwargs)
+            if fn is None:
+                from ghostiss.core.moss2.lifecycle import __moss_exec__
+                fn = __moss_exec__
             # 使用系统默认的 exec
-            from ghostiss.core.moss2.lifecycle import __moss_exec__
-            return __moss_exec__(self, code, target, args, kwargs)
+            return fn(self, target=target, code=code, args=args, kwargs=kwargs)
 
     def destroy(self) -> None:
         """

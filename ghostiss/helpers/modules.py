@@ -24,3 +24,10 @@ def parse_import_module_and_spec(import_path: str) -> Tuple[str, Optional[str]]:
     if len(parts) == 1:
         return parts[0], None
     return parts[0], parts[1]
+
+
+def join_import_module_and_spec(modulename: str, spec: Optional[str]) -> str:
+    attr = ""
+    if spec:
+        attr = f":{spec}"
+    return f"{modulename}{attr}"

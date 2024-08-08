@@ -2,6 +2,7 @@ def plus(a: int, b: int) -> int:
     return a + b
 
 
+# <moss>
 """
 使用独立行 `# <moss>\n` 开头, 直到结尾或者独立行 `# </moss>` 的代码, 
 在生成 prompt 时默认对 LLM 不可见, 但仍然会执行. 

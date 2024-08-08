@@ -31,11 +31,14 @@ class PromptAble(ABC):
     这里只是一个示范, 并不需要真正继承这个类, 只需要有 __prompt__ 方法或属性.
     """
 
+    @abstractmethod
     def __prompt__(self) -> str:
         pass
 
 
 class PromptAbleClass(ABC):
 
-    def __class_prompt__(self) -> str:
+    @classmethod
+    @abstractmethod
+    def __class_prompt__(cls) -> str:
         pass
