@@ -10,6 +10,7 @@ from ghostiss.core.moss.libraries import (
     DefaultModules,
     Modules,
 )
+from ghostiss.core.moss.test_suites import MossTestSuite
 
 
 def test_container() -> Container:

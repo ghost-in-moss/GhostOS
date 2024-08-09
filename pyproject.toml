@@ -25,6 +25,7 @@ tree-sitter-languages = "^1.10.2"
 [tool.poetry.scripts]
 llm_test = "ghostiss.scripts.llm_test:main"
 moss_test = "ghostiss.scripts.moss_test:main"
+moss_run = "ghostiss.scripts.moss_run:main"
 
 [build-system]
 requires = ["poetry-core"]
