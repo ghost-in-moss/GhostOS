@@ -103,3 +103,5 @@ if __name__ == "__test__":
         assert 返回值是 4. 外部的 MOSSRuntime 调用这个方法.
         """
         return plus(2, 2)
+
+# </moss>
