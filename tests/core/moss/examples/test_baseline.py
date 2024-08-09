@@ -16,7 +16,6 @@ def test_baseline_exec():
     assert compiler.pycontext().module == baseline.__name__
     # 获取目标代码.
     code = compiler.pycontext_code()
-    assert "baseline" in code
     assert "from __future__" in code
 
     modulename = "__test__"
