@@ -317,16 +317,31 @@ def assign_prompt(typehint: Optional[Any], assigment: Optional[Any]) -> str:
     return f"{typehint_str}{assigment_str}"
 
 
-def compile_attr_prompts(attr_prompts: AttrPrompts) -> str:
+def compile_attr_prompts(local_values: Dict[str, Any], attr_prompts: AttrPrompts) -> str:
     """
     将 Attr prompt 进行合并.
+    :param local_values: 用来做类型判断, 如何处理 name.
     :param attr_prompts:
     :return: prompt in real python code pattern
     """
     prompt_lines = []
     for name, prompt in attr_prompts:
         line = prompt.strip()
-        if line:
+        if not line:
+            # 空值跳过.
+            continue
+        value = local_values.get(name, None)
+        if value is None:
+            prompt_lines.append(line)
+        elif inspect.isclass(value) or inspect.isfunction(value):
+            # 考虑到重命名.
+            prefix = "" if name == value.__name__ else f"# value '{name}':\n"
+            prompt_lines.append(prefix + line)
+        elif inspect.ismodule(value):
+            # 考虑到重命名.
+            prefix = "" if name == value.__name__ else f"# value '{name}':\n"
+            prompt_lines.append(prefix + f"\n# <module name='{value.__name__}'" + line + f"\n# </module>")
+        else:
             # 使用注释 + 描述的办法.
             prompt_lines.append(f"# value '{name}':\n{line}")
     return join_prompt_lines(*prompt_lines)

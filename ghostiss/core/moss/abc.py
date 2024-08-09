@@ -341,7 +341,7 @@ class MossPrompter(ABC):
 
         # 保证一下顺序.
         prompts = [(name, done[name]) for name in names]
-        return compile_attr_prompts(prompts)
+        return compile_attr_prompts(self.module().__dict__, prompts)
 
     def dump_context_prompt(self) -> str:
         """
