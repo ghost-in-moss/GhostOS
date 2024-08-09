@@ -70,3 +70,18 @@ def test_container_baseline():
     foo = container.force_fetch(Abstract)
     assert foo.foo() == 1
     assert foo.foo() == 2
+
+
+def test_sub_container():
+    class Foo:
+        def __init__(self, foo: int):
+            self.foo = foo
+
+    container = Container()
+    container.set(Foo, Foo(1))
+    sub = Container(parent=container)
+    sub.set(Foo, Foo(2))
+
+    # 验证父子互不污染.
+    assert container.force_fetch(Foo).foo == 1
+    assert sub.force_fetch(Foo).foo == 2
