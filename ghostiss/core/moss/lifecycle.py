@@ -72,7 +72,7 @@ def __moss_prompt__(prompter: "MossPrompter") -> str:
     """
     from ghostiss.core.moss.prompts import escape_string_quotes
     # 获取原始的代码.
-    origin_code = prompter.pycontext_code(model_visible=True)
+    origin_code = prompter.pycontext_code(exclude_moss_mark_code=True)
     # 基于 origin code 生成关于这些变量的 prompt.
     escaped_code_prompt = prompter.pycontext_code_prompt()
     # 这部分变量的描述, 放到一个 string 里表示不污染当前上下文.
