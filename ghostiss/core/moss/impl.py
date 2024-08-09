@@ -227,12 +227,14 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         for line in lines:
             if line.startswith(MOSS_HIDDEN_MARK):
                 hide = True
+
+            if line.startswith(MOSS_HIDDEN_UNMARK):
+                hide = False
+
             if hide and model_visible:
                 continue
             if not hide or not model_visible:
                 results.append(line)
-            elif line.startswith(MOSS_HIDDEN_UNMARK):
-                hide = False
         return "\n".join(results)
 
     def destroy(self) -> None:
