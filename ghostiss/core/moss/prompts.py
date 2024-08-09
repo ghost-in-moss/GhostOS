@@ -1,16 +1,17 @@
 import typing
 from typing import Any, Optional, Union, Callable, Dict, Tuple, Iterable, Set
+from types import ModuleType
 from ghostiss.core.moss.utils import (
     unwrap_str,
     is_typing,
     is_code_same_as_print,
     escape_string_quotes,
     get_modulename,
-    get_class_def_from_source,
     get_callable_definition,
     add_source_indent,
 )
 from ghostiss.abc import PromptAble, PromptAbleClass
+from ghostiss.helpers import import_from_str
 import inspect
 
 """
@@ -317,14 +318,16 @@ def assign_prompt(typehint: Optional[Any], assigment: Optional[Any]) -> str:
     return f"{typehint_str}{assigment_str}"
 
 
-def compile_attr_prompts(local_values: Dict[str, Any], attr_prompts: AttrPrompts) -> str:
+def compile_attr_prompts(module: ModuleType, attr_prompts: AttrPrompts) -> str:
     """
     将 Attr prompt 进行合并.
-    :param local_values: 用来做类型判断, 如何处理 name.
+    :param module: 用来做类型判断, 如何处理 name.
     :param attr_prompts:
     :return: prompt in real python code pattern
     """
     prompt_lines = []
+    local_values = module.__dict__
+    local_module = module.__name__
     for name, prompt in attr_prompts:
         line = prompt.strip()
         if not line:
@@ -332,19 +335,38 @@ def compile_attr_prompts(local_values: Dict[str, Any], attr_prompts: AttrPrompts
             continue
         value = local_values.get(name, None)
         if value is None:
+            # 不在当前的变量里, 直接加入上下文.
             prompt_lines.append(line)
-        elif inspect.isclass(value) or inspect.isfunction(value):
+        elif getattr(value, "__module__", None) == local_module:
+            prompt_lines.append(line)
+        elif inspect.isclass(value):
             # 考虑到重命名.
-            prefix = "" if name == value.__name__ else f"# value '{name}':\n"
-            prompt_lines.append(prefix + line)
+            if name != value.__name__:
+                line = xml_wrap_code(line, "class", name=name, path=value.__module__ + ':' + value.__qualname__)
+            prompt_lines.append(line)
+        elif inspect.isfunction(value):
+            # 考虑到重命名.
+            if name != value.__name__:
+                line = xml_wrap_code(line, "func", name=name, path=value.__module__ + ':' + value.__qualname__)
+            prompt_lines.append(line)
         elif inspect.ismodule(value):
             # 考虑到重命名.
-            prefix = "" if name == value.__name__ else f"# value '{name}':\n"
-            prompt_lines.append(prefix + f"\n# <module name='{value.__name__}'" + line + f"\n# </module>")
+            line = xml_wrap_code(line, "module", name=name, module=value.__name__)
+            prompt_lines.append(line)
         else:
             # 使用注释 + 描述的办法.
             prompt_lines.append(f"# value '{name}':\n{line}")
     return join_prompt_lines(*prompt_lines)
+
+
+def xml_wrap_code(value: str, mark: str, **kwargs: str) -> str:
+    kwargs_str = ""
+    if kwargs:
+        lines = [f"{name}='{arg}'" for name, arg in kwargs.items()]
+        kwargs_str = ' ' + ' '.join(lines)
+    start = f"# <{mark}{kwargs_str}>"
+    end = f"# </{mark}>"
+    return "\n".join([start, value, end])
 
 
 def set_prompter(value: Any, prompter: Union[PromptFn, str], force: bool = False) -> None:
