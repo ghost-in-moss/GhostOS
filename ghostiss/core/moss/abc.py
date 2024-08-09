@@ -219,11 +219,11 @@ class MossCompiler(ABC):
 
     def compile(
             self,
-            modulename: str = "__main__",
+            modulename: Optional[str],
     ) -> "MossRuntime":
         """
         正式编译出一个 MOSSRuntime. 每一个 Compiler 只能编译一次.
-        :param modulename: 生成的 ModuleType 所在的包名. 相关代码会在这个临时 ModuleType 里生成.
+        :param modulename: 生成的 ModuleType 所在的包名. 相关代码会在这个临时 ModuleType 里生成. 如果 modulename为空, 则使用原来的
         """
         if self.__compiling__:
             raise RuntimeError('recursively calling compile method')
@@ -248,7 +248,7 @@ class MossCompiler(ABC):
             self.destroy()
 
     @abstractmethod
-    def _compile(self, modulename: str) -> ModuleType:
+    def _compile(self, modulename: Optional[str] = None) -> ModuleType:
         """
         运行 pycontext.module 的代码, 编译 Module.
         """

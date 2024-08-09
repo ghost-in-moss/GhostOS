@@ -9,9 +9,8 @@ from ghostiss.core.moss.abc import (
     MossCompiler, MossRuntime, MossPrompter, MOSS_NAME, MOSS_TYPE_NAME,
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
-from ghostiss.core.moss.utils import is_name_public
 from ghostiss.core.moss.libraries import Modules, ImportWrapper
-from ghostiss.core.moss.pycontext import PyContext, SerializableType, Property
+from ghostiss.core.moss.pycontext import PyContext, Property
 from ghostiss.helpers import get_module_spec
 from contextlib import contextmanager, redirect_stdout
 
@@ -47,12 +46,16 @@ class MossCompilerImpl(MossCompiler):
         self._injections.update(attrs)
         return self
 
-    def _compile(self, modulename: str) -> ModuleType:
-        code = self.pycontext_code(model_visible_only=False)
-        module = ModuleType(modulename)
-        module.__dict__.update(self._predefined_locals)
-        compiled = compile(code, modulename, "exec")
-        exec(compiled, module.__dict__)
+    def _compile(self, modulename: Optional[str] = None) -> ModuleType:
+        if modulename is None and self._pycontext.code is None:
+            module = self._modules.import_module(self._pycontext.module)
+        else:
+            code = self.pycontext_code(model_visible_only=False)
+            # 创建临时模块.
+            module = ModuleType(modulename)
+            module.__dict__.update(self._predefined_locals)
+            compiled = compile(code, modulename, "exec")
+            exec(compiled, module.__dict__)
         return module
 
     def _new_runtime(self, module: ModuleType) -> "MossRuntime":

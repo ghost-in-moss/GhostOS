@@ -3,7 +3,7 @@ name = "ghostiss"
 version = "0.0.1"
 description = "model-oriented operation system"
 authors = ["thirdgerb <thirdgerb@gmail.com>"]
-license = "MIT"
+license = "Apache-2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]

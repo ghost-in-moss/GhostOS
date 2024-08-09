@@ -129,7 +129,10 @@ class Property(BaseModel):
         if value is self:
             return
         if isinstance(value, Property):
-            raise ValueError('not allowed to set property with Property to Property')
+            self.value = value.value
+            self.model = value.model
+            self.name = value.name
+            self.model = value.model
         self.set_value(value)
 
     def __get__(self, instance, owner):

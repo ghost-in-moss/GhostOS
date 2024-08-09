@@ -79,6 +79,7 @@ def test_bind_property_as_attr():
         bar: Optional[str] = attr(None, desc="bar")
 
     z = Zoo()
+    assert Zoo.foo is z.foo
     assert Zoo.foo.foo is 123
     assert Zoo.bar is None
     z.bar = "bar"

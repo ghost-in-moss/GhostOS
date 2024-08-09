@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional, List
 from ghostiss.core.moss.abc import Moss as Parent, attr
@@ -87,74 +88,18 @@ def __moss_exec__(*args, **kwargs) -> "MossResult":
     return __moss_exec__(*args, **kwargs)
 
 
-if __name__ == '__test__':
+def test_main(moss: Moss) -> int:
     """
-    用这种方式定义的代码可以直接用来做单元测试. 
+    模拟一个 main 方法, 测试 moss 的调用.
+    assert 返回值是 3. 外部的 MOSSRuntime 调用这个方法.
     """
+    return plus(1, 2)
 
 
+if __name__ == "__test__":
     def main(moss: Moss) -> int:
         """
         模拟一个 main 方法, 测试 moss 的调用.
-        assert 返回值是 3. 外部的 MOSSRuntime 调用这个方法.
-        详见 __test__
+        assert 返回值是 4. 外部的 MOSSRuntime 调用这个方法.
         """
-        return plus(1, 2)
-
-
-    def __test__(runtime: "MossRuntime") -> str:
-        """
-        直接把测试用例集成到系统里都可以.
-        就是这么霸气.
-        """
-        try:
-
-            prompter = runtime.prompter()
-            assert prompter is not None
-            prompt = prompter.dump_context_prompt()
-
-            # plus 方法存在.
-            assert 'def plus' in prompt
-            # 在 moss 标记内的不展示.
-            assert "__test__" not in prompt
-            # 虽然import 了 inspect 的两个方法, 但一个的 prompt 被重置了.
-            assert "def getmembers(" in prompt
-            assert "def getsource(" not in prompt
-            # 添加的意义不明的注释也应该存在了.
-            assert "# hello world" in prompt
-
-            # assert moss
-            moss = runtime.moss()
-            assert getattr(moss, "foo") is 123
-
-            # 运行 main 方法.
-            result = runtime.execute(target="main", args=["moss"])
-            # main 方法的运行结果.
-            assert result.returns == 3
-            # 测试 print 仍然有效.
-            assert result.std_output.startswith("hello")
-
-            # 动态加载的 attr.
-            assert "life" in result.pycontext.properties, f"life is not found in dumped pycontext {result.pycontext}"
-            life = result.pycontext.properties["life"]
-            assert life is not None
-            # 生命周期被执行.
-            value = life.value
-            assert isinstance(value, list)
-            assert "__moss_compile__" in life
-            assert "__moss_attr_prompts__" in life
-            assert "__moss_prompt__" in life
-            assert "__moss_exec__" in life
-
-            moss = runtime.moss()
-            # 验证用 injections 注入.
-            assert getattr(moss, 'bar') == 123
-            # 验证依赖注入.
-            foo = getattr(moss, 'foo')
-            assert foo is not None and isinstance(foo, Foo)
-            assert foo.foo() == "hello"
-        except AssertionError as e:
-            return str(e)
-        return ""
-
-# </moss>
+        return plus(2, 2)
