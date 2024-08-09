@@ -214,27 +214,34 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
 
     def pycontext_code(
             self,
-            model_visible: bool = True,
+            exclude_moss_mark_code: bool = True,
     ) -> str:
         code = self._source_code
-        return self._parse_pycontext_code(code, model_visible)
+        return self._parse_pycontext_code(code, exclude_moss_mark_code)
 
     @staticmethod
-    def _parse_pycontext_code(code: str, model_visible: bool = True) -> str:
+    def _parse_pycontext_code(code: str, exclude_moss_mark_code: bool = True) -> str:
+        if not exclude_moss_mark_code:
+            return code
+
         lines = code.split("\n")
         results = []
+        num_hidden_mark = 0
         hide = False
         for line in lines:
-            if line.startswith(MOSS_HIDDEN_MARK):
+            if line.lstrip().startswith(MOSS_HIDDEN_MARK):
+                num_hidden_mark += 1
                 hide = True
+            elif line.lstrip().startswith(MOSS_HIDDEN_UNMARK):
+                num_hidden_mark -= 1
+                if num_hidden_mark <= 0:
+                    hide = False
+            else:
+                if hide:
+                    continue
+                else:
+                    results.append(line)
 
-            if line.startswith(MOSS_HIDDEN_UNMARK):
-                hide = False
-
-            if hide and model_visible:
-                continue
-            if not hide or not model_visible:
-                results.append(line)
         return "\n".join(results)
 
     def destroy(self) -> None:

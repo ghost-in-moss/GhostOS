@@ -295,12 +295,12 @@ class MossPrompter(ABC):
     @abstractmethod
     def pycontext_code(
             self,
-            model_visible: bool = True,
+            exclude_moss_mark_code: bool = True,
     ) -> str:
         """
         返回通过 pycontext.module 预定义的代码.
         第一行应该是 from __future__ import annotations. 解决上下文乱续的提示问题.
-        :param model_visible: 如果为 True, 只返回大模型可以阅读的代码.
+        :param exclude_moss_mark_code: 如果为 True, 只返回大模型可以阅读的代码.
         """
         pass
 
