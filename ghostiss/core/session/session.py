@@ -6,6 +6,8 @@ from ghostiss.core.session.processes import Process
 from ghostiss.core.session.tasks import Task
 from ghostiss.core.session.threads import MsgThread
 
+__all__ = ['Session']
+
 
 class Session(ABC):
     """
