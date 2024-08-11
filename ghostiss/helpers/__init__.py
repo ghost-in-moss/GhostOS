@@ -2,8 +2,8 @@ from ghostiss.helpers.dictionary import (dict_without_none, dict_without_zero)
 from ghostiss.helpers.string import camel_to_snake
 from ghostiss.helpers.yaml import yaml_pretty_dump, yaml_multiline_string_pipe
 from ghostiss.helpers.modules import (
-    import_from_str, parse_import_module_and_spec, join_import_module_and_spec,
-    get_module_spec,
+    import_from_path, parse_import_module_and_spec, join_import_module_and_spec,
+    get_module_spec, generate_module_spec, generate_import_path,
 )
 from ghostiss.helpers.io import BufferPrint
 

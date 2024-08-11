@@ -40,6 +40,9 @@ class TaskState(str, Enum):
 
 
 class AwaitGroup(BaseModel):
+    """
+    await group of children tasks that will wake up the task.
+    """
     description: str = Field(description="why to create the group")
     on_callback: str = Field(description="prompt when waiting tasks are done")
     tasks: List[str] = Field(description="children task ids to wait")
@@ -100,9 +103,9 @@ children task ids to wait
     )
 
     # --- thought --- #
-    thought_meta: EntityMeta = Field(
+    meta: EntityMeta = Field(
         description="""
-The meta data that restore the thought to handle this task.
+The meta data to restore the handler of this task. 
 """
     )
 

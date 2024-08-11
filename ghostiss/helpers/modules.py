@@ -1,7 +1,8 @@
+import inspect
 from typing import Any, Tuple, Optional, Dict
 
 
-def import_from_str(module_spec: str) -> Any:
+def import_from_path(module_spec: str) -> Any:
     from importlib import import_module
     parts = module_spec.split(':', 2)
     module = parts[0]
@@ -27,6 +28,15 @@ def get_module_spec(module, spec: str) -> Optional[Any]:
     return value
 
 
+def generate_module_spec(value: Any) -> Tuple[str, Optional[str]]:
+    if inspect.ismodule(value):
+        return value.__name__, None
+    else:
+        module = getattr(value, '__module__', '')
+        spec = getattr(value, '__qualname__', getattr(value, '__name__', ""))
+        return module, spec
+
+
 def parse_import_module_and_spec(import_path: str) -> Tuple[str, Optional[str]]:
     """
     parse import_path to modulename and spec
@@ -37,6 +47,11 @@ def parse_import_module_and_spec(import_path: str) -> Tuple[str, Optional[str]]:
     if len(parts) == 1:
         return parts[0], None
     return parts[0], parts[1]
+
+
+def generate_import_path(value: Any) -> str:
+    module, spec = generate_module_spec(value)
+    return join_import_module_and_spec(module, spec)
 
 
 def join_import_module_and_spec(modulename: str, spec: Optional[str]) -> str:

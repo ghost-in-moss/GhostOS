@@ -1,13 +1,13 @@
-from typing import TYPE_CHECKING, List, Optional, Union, Callable, Iterable
+from typing import List, Optional, Callable
 from abc import ABC, abstractmethod
 from ghostiss.entity import EntityMeta
-from ghostiss.core.messages import Message, Stream, Retriever
+from ghostiss.core.messages import Message, Stream
 from ghostiss.core.session import Runtime
 from ghostiss.core.session.tasks import Task, TaskState
 from ghostiss.core.session.processes import Process
 from ghostiss.core.ghosts import Ghost
 from ghostiss.core.ghosts.operators import fire_event
-from ghostiss.core.ghosts.events import EventBus, Event, DefaultEventType
+from ghostiss.core.session.events import EventBus, Event, DefaultEventType
 from ghostiss.container import Container
 from pydantic import BaseModel, Field
 

@@ -1,12 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from abc import ABC, abstractmethod
 from enum import Enum
-from importlib import import_module
 from ghostiss.entity import EntityMeta, Entity, EntityFactory
 from pydantic import BaseModel, Field
 from ghostiss.core.messages.message import Message
-from ghostiss.helpers import uuid
-from ghostiss.core.moss_p1.exports import Exporter
+from ghostiss.helpers import uuid, generate_import_path, import_from_path
 
 __all__ = [
     'Event', 'EventFactory', 'EventBus', 'DefaultEventType',
@@ -15,15 +13,37 @@ __all__ = [
 
 class Event(BaseModel, Entity):
     """
-    task receive an event to
+    Tasks communicate each others by Event.
+    Event shall dispatch by EventBus.
+    System use the Event popped from EventBus to restore a Session,
+    Session.task() shall handle the Event, change the session state, and maybe fire more events.
     """
-    id: str = Field(default_factory=uuid, description="event id")
-    type: str = Field(default="", description="event type")
-    task_id: str = Field(description="task id in which this event shall be handled")
-    from_task_id: Optional[str] = Field(default=None, description="task id in which this event is fired")
-    priority: float = Field(default=0, description="priority of this event", min_items=0.0, max_items=1.0)
-    instruction: Optional[str] = Field(default=None, description="event instruction")
-    messages: List[Message] = Field(default_factory=list)
+    id: str = Field(
+        default_factory=uuid,
+        description="event id",
+    )
+    type: str = Field(
+        default="",
+        description="event type, by default the handler shall named on_{type}"
+    )
+    task_id: str = Field(
+        description="task id of which this event shall send to.",
+    )
+    from_task_id: Optional[str] = Field(
+        default=None,
+        description="task id in which this event is fired",
+    )
+    priority: float = Field(
+        default=0, description="priority of this event", min_items=0.0, max_items=1.0,
+    )
+    messages: List[Message] = Field(
+        default_factory=list,
+        description="list of messages sent by this event",
+    )
+    payloads: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="more structured data that follow the message.Payload pattern",
+    )
 
     def event_type(self) -> str:
         return self.type
@@ -33,10 +53,10 @@ class Event(BaseModel, Entity):
 
     def to_entity_meta(self) -> EntityMeta:
         cls = self.__class__
-        entity_type = f"{cls.__module__}:{cls.__name__}"
+        import_path = generate_import_path(cls)
         return EntityMeta(
             id=self.id,
-            type=entity_type,
+            type=import_path,
             data=self.model_dump(exclude={'id'})
         )
 
@@ -98,20 +118,11 @@ class OnFinish(Event):
 class EventFactory(EntityFactory[Event]):
 
     def new_entity(self, meta_data: EntityMeta) -> Optional[Event]:
-        parts = meta_data['type'].split(':', 2)
-        if len(parts) != 2:
-            return None
-        module, spec = parts[0], parts[1]
-        imported_module = import_module(module)
-        if imported_module is None:
-            return None
-        model = imported_module[spec]
-        if model is None or not issubclass(model, Event):
-            # todo: raise
-            return None
+        import_path = meta_data['type']
+        cls = import_from_path(import_path)
         data = meta_data['data']
         data['id'] = meta_data['id']
-        return model(**data)
+        return cls(**data)
 
     def force_new_event(self, meta_data: EntityMeta) -> Event:
         e = self.new_entity(meta_data)
@@ -133,10 +144,3 @@ class EventBus(ABC):
     @abstractmethod
     def pop_global_event(self) -> Optional[Event]:
         pass
-
-
-EXPORTS = Exporter().\
-    source_code(Event).\
-    interface(EventBus).\
-    interface(EventFactory)
-
