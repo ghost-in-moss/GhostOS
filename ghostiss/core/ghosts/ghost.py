@@ -11,7 +11,7 @@ from ghostiss.core.ghosts.operators import Operator
 if TYPE_CHECKING:
     from ghostiss.core.session import Runtime
     from ghostiss.contracts.logger import LoggerItf
-    from ghostiss.core.ghosts.events import EventBus
+    from ghostiss.core.session.events import EventBus
     from ghostiss.core.session.session import Session
     from ghostiss.core.ghosts.thoughts import Mindset
     from ghostiss.core.ghosts.minds import MultiTasks, Mindflow

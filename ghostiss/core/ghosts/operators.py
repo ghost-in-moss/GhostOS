@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
-from ghostiss.core.moss_p1.exports import Exporter
 
 if TYPE_CHECKING:
     from ghostiss.core.ghosts.ghost import Ghost
-    from ghostiss.core.ghosts.events import Event
+    from ghostiss.core.session.events import Event
 
 
 class Operator(ABC):
@@ -28,9 +27,9 @@ def fire_event(g: "Ghost", e: "Event") -> Optional["Operator"]:
     if task.task_id != e.task_id:
         g.eventbus.send_event(e)
         return None
-    thought = g.thoughts.new_entity(task.thought_meta)
+    thought = g.thoughts.new_entity(task.meta)
     op = thought.on_event(g, e)
-    task.thought_meta = thought.to_entity_meta()
+    task.meta = thought.to_entity_meta()
     session.update_task(task)
     return op
 
@@ -64,11 +63,3 @@ class EventOperator(Operator):
 
     def destroy(self) -> None:
         del self.event
-
-
-class FinishOperator(Operator):
-    pass
-
-
-class WaitOperator(Operator):
-    pass

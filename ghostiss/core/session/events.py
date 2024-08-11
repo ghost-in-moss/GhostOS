@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from abc import ABC, abstractmethod
 from enum import Enum
 from importlib import import_module
@@ -15,15 +15,37 @@ __all__ = [
 
 class Event(BaseModel, Entity):
     """
-    task receive an event to
+    Tasks communicate each others by Event.
+    Event shall dispatch by EventBus.
+    System use the Event popped from EventBus to restore a Session,
+    Session.task() shall handle the Event, change the session state, and maybe fire more events.
     """
-    id: str = Field(default_factory=uuid, description="event id")
-    type: str = Field(default="", description="event type")
-    task_id: str = Field(description="task id in which this event shall be handled")
-    from_task_id: Optional[str] = Field(default=None, description="task id in which this event is fired")
-    priority: float = Field(default=0, description="priority of this event", min_items=0.0, max_items=1.0)
-    instruction: Optional[str] = Field(default=None, description="event instruction")
-    messages: List[Message] = Field(default_factory=list)
+    id: str = Field(
+        default_factory=uuid,
+        description="event id",
+    )
+    type: str = Field(
+        default="",
+        description="event type, by default the handler shall named on_{type}"
+    )
+    task_id: str = Field(
+        description="task id of which this event shall send to.",
+    )
+    from_task_id: Optional[str] = Field(
+        default=None,
+        description="task id in which this event is fired",
+    )
+    priority: float = Field(
+        default=0, description="priority of this event", min_items=0.0, max_items=1.0,
+    )
+    messages: List[Message] = Field(
+        default_factory=list,
+        description="list of messages sent by this event",
+    )
+    payloads: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="more structured data that follow the message.Payload pattern",
+    )
 
     def event_type(self) -> str:
         return self.type
@@ -133,10 +155,3 @@ class EventBus(ABC):
     @abstractmethod
     def pop_global_event(self) -> Optional[Event]:
         pass
-
-
-EXPORTS = Exporter().\
-    source_code(Event).\
-    interface(EventBus).\
-    interface(EventFactory)
-

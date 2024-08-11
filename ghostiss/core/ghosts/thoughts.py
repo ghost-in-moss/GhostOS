@@ -2,7 +2,7 @@ from typing import Optional, List, TypeVar, ClassVar, Generic, Type
 from abc import ABC, abstractmethod
 from ghostiss.entity import InContainerEntity, EntityFactory, EntityMeta
 from ghostiss.core.ghosts.ghost import Ghost
-from ghostiss.core.ghosts.events import Event
+from ghostiss.core.session.events import Event
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.runner import Runner
 from ghostiss.abc import Identifiable, Descriptive, Identifier
