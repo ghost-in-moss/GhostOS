@@ -5,7 +5,7 @@ import inspect
 from pydantic import BaseModel, Field
 from ghostiss.core.moss.decorators import definition
 from ghostiss.helpers import (
-    parse_import_module_and_spec, import_from_str, join_import_module_and_spec,
+    parse_import_module_and_spec, import_from_path, join_import_module_and_spec,
     get_module_spec,
 )
 
@@ -180,7 +180,7 @@ class Property(BaseModel):
                     # 用这种方法解决临时模块里的变量问题.
                     cls = get_module_spec(module.__dict__, spec)
             if cls is None:
-                cls = import_from_str(model)
+                cls = import_from_path(model)
             if issubclass(cls, BaseModel):
                 self.value = cls(**value)
         return self.value

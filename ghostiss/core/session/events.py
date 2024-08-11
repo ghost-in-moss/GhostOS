@@ -1,12 +1,10 @@
 from typing import List, Optional, Dict
 from abc import ABC, abstractmethod
 from enum import Enum
-from importlib import import_module
 from ghostiss.entity import EntityMeta, Entity, EntityFactory
 from pydantic import BaseModel, Field
 from ghostiss.core.messages.message import Message
-from ghostiss.helpers import uuid
-from ghostiss.core.moss_p1.exports import Exporter
+from ghostiss.helpers import uuid, generate_import_path, import_from_path
 
 __all__ = [
     'Event', 'EventFactory', 'EventBus', 'DefaultEventType',
@@ -55,10 +53,10 @@ class Event(BaseModel, Entity):
 
     def to_entity_meta(self) -> EntityMeta:
         cls = self.__class__
-        entity_type = f"{cls.__module__}:{cls.__name__}"
+        import_path = generate_import_path(cls)
         return EntityMeta(
             id=self.id,
-            type=entity_type,
+            type=import_path,
             data=self.model_dump(exclude={'id'})
         )
 
@@ -120,20 +118,11 @@ class OnFinish(Event):
 class EventFactory(EntityFactory[Event]):
 
     def new_entity(self, meta_data: EntityMeta) -> Optional[Event]:
-        parts = meta_data['type'].split(':', 2)
-        if len(parts) != 2:
-            return None
-        module, spec = parts[0], parts[1]
-        imported_module = import_module(module)
-        if imported_module is None:
-            return None
-        model = imported_module[spec]
-        if model is None or not issubclass(model, Event):
-            # todo: raise
-            return None
+        import_path = meta_data['type']
+        cls = import_from_path(import_path)
         data = meta_data['data']
         data['id'] = meta_data['id']
-        return model(**data)
+        return cls(**data)
 
     def force_new_event(self, meta_data: EntityMeta) -> Event:
         e = self.new_entity(meta_data)

@@ -11,7 +11,6 @@ from ghostiss.core.moss.utils import (
     add_source_indent,
 )
 from ghostiss.abc import PromptAble, PromptAbleClass
-from ghostiss.helpers import import_from_str
 import inspect
 
 """

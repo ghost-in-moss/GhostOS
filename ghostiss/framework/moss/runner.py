@@ -11,7 +11,7 @@ from ghostiss.core.moss_p1 import MOSS, PyContext
 from ghostiss.core.messages import DefaultTypes, Message
 from ghostiss.core.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
 from ghostiss.core.session.threads import MsgThread, thread_to_chat
-from ghostiss.helpers import uuid, import_from_str
+from ghostiss.helpers import uuid, import_from_path
 from pydantic import BaseModel, Field
 from ghostiss.framework.llms.chatfilters import AssistantNameFilter
 from ghostiss.framework.moss.action import MOSSAction
@@ -143,7 +143,7 @@ class MOSSRunnerTestSuite(BaseModel):
         从配置文件里生成 runner 的实例.
         """
         if self.import_runner:
-            runner: MossRunner = import_from_str(self.import_runner)
+            runner: MossRunner = import_from_path(self.import_runner)
             if not isinstance(runner, MossRunner):
                 raise AttributeError(f"import {self.import_runner} must be an instance of MossRunner")
             runner._llm_api_name = llm_api
@@ -153,7 +153,7 @@ class MOSSRunnerTestSuite(BaseModel):
         actions = []
         if self.actions:
             for action in self.actions:
-                imported = import_from_str(action)
+                imported = import_from_path(action)
                 if not isinstance(imported, Action):
                     raise AttributeError(f"{imported} imported from {action} is not an action")
                 actions.append(imported)
