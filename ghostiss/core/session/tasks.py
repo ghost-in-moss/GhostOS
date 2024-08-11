@@ -136,6 +136,9 @@ the state of the current task.
 
 
 class Tasks(ABC):
+    """
+    管理 task 存储的模块. 通常集成到 Session 里.
+    """
 
     @abstractmethod
     def create_task(self, task: Task) -> Task:

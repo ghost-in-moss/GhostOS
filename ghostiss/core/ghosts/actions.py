@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from ghostiss.container import Container
 from ghostiss.core.llms import Chat
 from ghostiss.core.ghosts.operators import Operator
-from ghostiss.core.ghosts.messenger import Messenger
+from ghostiss.core.session.messenger import Messenger
 from ghostiss.core.messages.message import Caller
 from ghostiss.abc import Identifiable
 

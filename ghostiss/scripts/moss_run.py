@@ -9,7 +9,7 @@ from ghostiss.core.messages import DefaultTypes
 from ghostiss.core.ghosts import Operator, Mindflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
-from ghostiss.core.runtime.threads import MsgThread
+from ghostiss.core.session.threads import MsgThread
 from ghostiss.core.moss_p1 import MOSS, BasicPythonMOSSImpl, BasicModulesProvider
 from ghostiss.framework.messengers import TestMessengerProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider

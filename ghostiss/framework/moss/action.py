@@ -7,9 +7,9 @@ from ghostiss.core.llms import Chat, FunctionalToken
 from ghostiss.core.messages import DefaultTypes, Caller
 from ghostiss.core.moss_p1 import MOSS
 from ghostiss.core.ghosts.operators import Operator
-from ghostiss.core.ghosts.messenger import Messenger
+from ghostiss.core.session.messenger import Messenger
 from ghostiss.abc import Identifier
-from ghostiss.core.runtime.threads import MsgThread
+from ghostiss.core.session.threads import MsgThread
 from pydantic import BaseModel, Field
 from traceback import format_exc
 

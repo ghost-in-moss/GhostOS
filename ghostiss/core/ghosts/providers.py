@@ -1,13 +1,13 @@
-from typing import Optional, Type, Generic, Iterable
+from typing import Type, Generic, Iterable
 from abc import ABC, abstractmethod
 
 from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.ghosts.ghost import Ghost
-from ghostiss.core.ghosts.session import Session
+from ghostiss.core.session.session import Session
 from ghostiss.core.messages import Messenger
 from ghostiss.core.moss_p1 import MOSS
-from ghostiss.core.runtime import Runtime
-from ghostiss.core.runtime.threads import Threads
+from ghostiss.core.session import Runtime
+from ghostiss.core.session.threads import Threads
 
 
 class GhostProvider(Generic[ABSTRACT], Provider[ABSTRACT], ABC):

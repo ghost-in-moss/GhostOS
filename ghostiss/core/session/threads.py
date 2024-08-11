@@ -109,6 +109,9 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: MsgThread) -> Ch
 
 
 class Threads(ABC):
+    """
+    管理 Threads 存取的模块. 通常集成到 Session 里.
+    """
 
     @abstractmethod
     def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:

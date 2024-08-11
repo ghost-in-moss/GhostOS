@@ -1,13 +1,22 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 from abc import ABC, abstractmethod
 
-if TYPE_CHECKING:
-    from ghostiss.core.runtime.processes import Process
-    from ghostiss.core.runtime.tasks import Task
-    from ghostiss.core.runtime.threads import MsgThread
+from ghostiss.core.session.messenger import Messenger
+from ghostiss.core.session.processes import Process
+from ghostiss.core.session.tasks import Task
+from ghostiss.core.session.threads import MsgThread
 
 
 class Session(ABC):
+    """
+    对 Ghost 的 Task 运行时状态统一管理的 API.
+    通常每个运行中的 Task 都会创建一个独立的 Session.
+    Session 在运行周期里不会立刻调用底层 IO 存储消息, 而是要等 Finish 执行后.
+    这是为了减少运行时错误对状态机造成的副作用.
+    """
+
+    def id(self) -> str:
+        return self.process().session_id
 
     @abstractmethod
     def process(self) -> "Process":
@@ -21,6 +30,15 @@ class Session(ABC):
     def thread(self) -> "MsgThread":
         """
         Session 会持有当前 Thread, 只有 finish 的时候才会真正地保存它.
+        """
+        pass
+
+    @abstractmethod
+    def messenger(self) -> "Messenger":
+        """
+        Task 当前运行状态下, 向上游发送消息的 Messenger.
+        每次会实例化一个 Messenger, 理论上不允许并行发送消息. 但也可能做一个技术方案去支持它.
+        Messenger 未来要支持双工协议, 如果涉及多流语音还是很复杂的.
         """
         pass
 

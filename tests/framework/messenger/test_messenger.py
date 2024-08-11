@@ -1,5 +1,5 @@
 from ghostiss.framework.messengers import DefaultMessenger
-from ghostiss.core.runtime.threads import MsgThread
+from ghostiss.core.session.threads import MsgThread
 from ghostiss.core.messages import Message
 from ghostiss.core.llms import FunctionalToken
 

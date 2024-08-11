@@ -16,6 +16,9 @@ Unique process id for the agent session. Session shall only have one process a t
 Stop the process will stop all the tasks that belongs to it.
 """,
     )
+    session_id: str = Field(
+
+    )
     ghost_id: str = Field(
         description="""
 The id of the ghost in which the process belongs.
@@ -34,6 +37,9 @@ The meta data that waken the sleeping ghost in disputed services.
 
 
 class Processes(ABC):
+    """
+    管理进程存储的模块. 通常集成到 Session 里.
+    """
 
     @abstractmethod
     def get_process(self, process_id: str) -> Process:

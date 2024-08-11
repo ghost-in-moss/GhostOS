@@ -1,11 +1,11 @@
 from typing import Optional, Iterable, TYPE_CHECKING, Type
 from ghostiss.container import Container, Provider
-from ghostiss.core.ghosts.messenger import Messenger, Buffed
+from ghostiss.core.session.messenger import Messenger, Buffed
 from ghostiss.core.messages import (
     Message, Payload, Attachment, Role, DefaultTypes,
     Buffer, Stream,
 )
-from ghostiss.core.runtime.threads import MsgThread
+from ghostiss.core.session.threads import MsgThread
 from ghostiss.core.llms import FunctionalToken
 from ghostiss.framework.messages.buffers import DefaultBuffer
 
