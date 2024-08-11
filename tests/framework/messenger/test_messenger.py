@@ -1,7 +1,7 @@
 from ghostiss.framework.messengers import DefaultMessenger
 from ghostiss.core.runtime.threads import MsgThread
 from ghostiss.core.messages import Message
-from ghostiss.core.runtime.llms import FunctionalToken
+from ghostiss.core.llms import FunctionalToken
 
 
 def test_default_messenger_baseline():

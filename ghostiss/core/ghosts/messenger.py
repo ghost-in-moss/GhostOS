@@ -4,7 +4,7 @@ from ghostiss.core.messages.message import Message, Payload, Attachment, Caller
 from ghostiss.core.messages.buffers import Buffer
 from ghostiss.core.messages.stream import Stream
 from ghostiss.core.runtime.threads import MsgThread
-from ghostiss.core.runtime.llms import FunctionalToken
+from ghostiss.core.llms import FunctionalToken
 
 
 class Buffed(NamedTuple):

@@ -3,7 +3,7 @@ import json
 from ghostiss.core.ghosts.actions import Action
 from typing import Optional, ClassVar
 from ghostiss.container import Container
-from ghostiss.core.runtime.llms import Chat, FunctionalToken
+from ghostiss.core.llms import Chat, FunctionalToken
 from ghostiss.core.messages import DefaultTypes, Caller
 from ghostiss.core.moss_p1 import MOSS
 from ghostiss.core.ghosts.operators import Operator

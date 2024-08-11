@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Type
 from ghostiss.container import Container, Provider, ABSTRACT
-from ghostiss.core.runtime.llms import LLMs
+from ghostiss.core.llms import LLMs
 from ghostiss.core.runtime.threads import Threads
 from ghostiss.core.runtime.tasks import Tasks
 from ghostiss.core.runtime.processes import Processes

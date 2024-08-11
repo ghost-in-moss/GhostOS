@@ -6,7 +6,7 @@ from ghostiss.core.messages import (
     Buffer, Stream,
 )
 from ghostiss.core.runtime.threads import MsgThread
-from ghostiss.core.runtime.llms import FunctionalToken
+from ghostiss.core.llms import FunctionalToken
 from ghostiss.framework.messages.buffers import DefaultBuffer
 
 if TYPE_CHECKING:

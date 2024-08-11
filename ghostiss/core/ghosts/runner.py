@@ -4,7 +4,7 @@ from ghostiss.container import Container
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.actions import Action
 from ghostiss.core.runtime.threads import MsgThread
-from ghostiss.core.runtime.llms import LLMApi, Chat
+from ghostiss.core.llms import LLMApi, Chat
 from ghostiss.core.ghosts.messenger import Messenger
 
 __all__ = [

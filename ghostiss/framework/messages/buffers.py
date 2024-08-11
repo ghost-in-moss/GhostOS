@@ -2,7 +2,7 @@ import time
 from typing import Iterable, Optional, List, Dict, Set
 
 from ghostiss.core.messages import Message, Caller, DefaultTypes, Role, Payload, Attachment, Buffer, Flushed
-from ghostiss.core.runtime.llms import FunctionalToken
+from ghostiss.core.llms import FunctionalToken
 from ghostiss.helpers import uuid
 
 __all__ = ['DefaultBuffer']

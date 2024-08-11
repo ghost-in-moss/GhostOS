@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Iterator, Tuple, List
 from os import environ
 
-from ghostiss.core.runtime.llms import LLMs, LLMApi, ServiceConf, ModelConf, LLMDriver, LLMsConfig
+from ghostiss.core.llms import LLMs, LLMApi, ServiceConf, ModelConf, LLMDriver, LLMsConfig
 
 __all__ = ['LLMsImpl']
 

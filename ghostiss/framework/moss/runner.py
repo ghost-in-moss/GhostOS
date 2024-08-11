@@ -9,7 +9,7 @@ import datetime
 from ghostiss.core.ghosts.messenger import Messenger
 from ghostiss.core.moss_p1 import MOSS, PyContext
 from ghostiss.core.messages import DefaultTypes, Message
-from ghostiss.core.runtime.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
+from ghostiss.core.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
 from ghostiss.core.runtime.threads import MsgThread, thread_to_chat
 from ghostiss.helpers import uuid, import_from_str
 from pydantic import BaseModel, Field
