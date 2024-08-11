@@ -7,10 +7,14 @@ if TYPE_CHECKING:
 
 
 class Operator(ABC):
-    """系统运行时产生的算子, 会在外层运行. 只允许通过已有的系统函数生成, 不允许临时实现."""
+    """系统运行时产生的算子, 会在外层运行. 只允许通过已有的系统函数生成, 不应该临时实现."""
 
     @abstractmethod
     def run(self, g: "Ghost") -> Optional["Operator"]:
+        """
+        结合 ghost 运行, 并生成下一个算子. 当下一个算子为 None 的时候, 终止流程.
+        :param g: ghost instance from the task
+        """
         pass
 
     @abstractmethod
@@ -18,19 +22,23 @@ class Operator(ABC):
         pass
 
 
-def fire_event(g: "Ghost", e: "Event") -> Optional["Operator"]:
+def handle_event(g: "Ghost", e: "Event") -> Optional["Operator"]:
     """
     ghost 执行事件的基本逻辑.
     """
     session = g.session
     task = session.task()
     if task.task_id != e.task_id:
-        g.eventbus.send_event(e)
-        return None
-    thought = g.thoughts.new_entity(task.meta)
+        # todo: use ghostiss error
+        raise AttributeError(f"event {e.task_id} does not belong to Task {task.task_id}")
+    # regenerate the thought from meta
+    thought = g.mindset.force_new_entity(task.meta)
+    # handle event
     op = thought.on_event(g, e)
+    # update the task.meta from the thought that may be changed
     task.meta = thought.to_entity_meta()
     session.update_task(task)
+    # return the operator that could be None (use default operator outside)
     return op
 
 
@@ -59,7 +67,7 @@ class EventOperator(Operator):
         self.event = event
 
     def run(self, g: "Ghost") -> Optional["Operator"]:
-        return fire_event(g, self.event)
+        return handle_event(g, self.event)
 
     def destroy(self) -> None:
         del self.event

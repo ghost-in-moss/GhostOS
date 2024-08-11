@@ -4,6 +4,7 @@ from ghostiss.helpers.yaml import yaml_pretty_dump, yaml_multiline_string_pipe
 from ghostiss.helpers.modules import (
     import_from_path, parse_import_module_and_spec, join_import_module_and_spec,
     get_module_spec, generate_module_spec, generate_import_path,
+    Importer,
 )
 from ghostiss.helpers.io import BufferPrint
 

@@ -3,20 +3,13 @@ from abc import ABC, abstractmethod
 from ghostiss.entity import Entity, EntityFactory, EntityMeta
 from ghostiss.container import Container
 from ghostiss.abc import Descriptive, Identifiable
-from ghostiss.core.shells import Shell
-from ghostiss.core.moss_p1.moss import MOSS
-from ghostiss.core.messages.message import Message, MessageType, MessageTypeParser
-from ghostiss.core.ghosts.operators import Operator
+from ghostiss.core.ghosts.shells import Shell
+from ghostiss.core.messages.message import MessageType, MessageTypeParser
 
-if TYPE_CHECKING:
-    from ghostiss.core.session import Runtime
-    from ghostiss.contracts.logger import LoggerItf
-    from ghostiss.core.session.events import EventBus
-    from ghostiss.core.session.session import Session
-    from ghostiss.core.ghosts.thoughts import Mindset
-    from ghostiss.core.ghosts.minds import MultiTasks, Mindflow
-    from ghostiss.core.moss_p1.modules import Modules
-    from ghostiss.core.session.messenger import Messenger
+from ghostiss.core.session import Session, EventBus
+from ghostiss.contracts.logger import LoggerItf
+from ghostiss.core.ghosts.thoughts import Mindset
+from ghostiss.core.ghosts.minds import MultiTasks, Mindflow
 
 __all__ = ['Ghost', 'Facade']
 
@@ -37,12 +30,9 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
         """
         pass
 
-    @property
-    def runtime(self) -> "Runtime":
-        """
-        提供 runtime 的基建调用, 本质上是 unsafe 的.
-        """
-        return self.container.force_fetch(Runtime)
+    @abstractmethod
+    def session(self) -> Session:
+        pass
 
     @property
     def shell(self) -> Shell:
@@ -53,15 +43,7 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
 
     @property
     @abstractmethod
-    def session(self) -> "Session":
-        """
-        当前上下文的管理体系. 是对 runtime 的二次封装.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def thoughts(self) -> "Mindset":
+    def mindset(self) -> "Mindset":
         """
         ghost 可以管理的所有 Thoughts.
         """
@@ -98,23 +80,6 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
         """
         pass
 
-    def moss(self) -> MOSS:
-        """
-        ghost 实例化自己的通用 MOSS
-        每次创建一个新的实例.
-        """
-        moss = self.container.force_fetch(MOSS)
-        return moss.new().with_vars(
-            # todo: 需要用更好的封装.
-            Operator,
-            Message,
-            MessageType,
-        )
-
-    @abstractmethod
-    def messenger(self, saving: bool = True, sending: bool = True) -> "Messenger":
-        pass
-
     @abstractmethod
     def taskmanager(self) -> "Mindflow":
         pass
@@ -131,15 +96,8 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
     def finish(self, err: Optional[Exception]) -> None:
         pass
 
-    def destroy(self) -> None:
-        # 从系统设计上看, 需要执行 destroy 的几个库.
-        self.session.destroy()
-        self.modules.destroy()
-        self.container.destroy()
-        self._destroy()
-
     @abstractmethod
-    def _destroy(self) -> None:
+    def destroy(self) -> None:
         pass
 
 

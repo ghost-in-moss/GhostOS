@@ -1,5 +1,4 @@
-import typing
-from typing import Any, Optional, Union, Callable, Dict, Tuple, Iterable, Set
+from typing import Any, Optional, Union, Callable, Dict, Tuple, Iterable, Set, Type
 from types import ModuleType
 from ghostiss.core.moss.utils import (
     unwrap_str,
@@ -11,6 +10,7 @@ from ghostiss.core.moss.utils import (
     add_source_indent,
 )
 from ghostiss.abc import PromptAble, PromptAbleClass
+from ghostiss.helpers import generate_import_path
 import inspect
 
 """
@@ -374,16 +374,19 @@ def set_prompter(value: Any, prompter: Union[PromptFn, str], force: bool = False
     setattr(value, PROMPT_MAGIC_ATTR, prompter)
 
 
-def set_class_prompter(value: Any, class_prompter: Union[PromptFn, str], force: bool = False) -> None:
+def set_class_prompter(value: Type, class_prompter: Union[PromptFn, str], force: bool = False) -> None:
     if not inspect.isclass(value):
         raise TypeError(f'`value` should be a class, not {type(value)}')
-    class_name = value.__module__ + ':' + value.__name__
+    class_name = generate_import_path(value)
     if hasattr(value, CLASS_PROMPT_MAGIC_ATTR):
         method = getattr(value, CLASS_PROMPT_MAGIC_ATTR)
         if method is not None and isinstance(method, Callable):
             cls_name = getattr(method, '__prompter_class__', None)
+            # 同一个类已经有 prompt 的情况, 必须加 force 参数才能修改原有的.
             if cls_name == class_name and not force:
                 return
     if isinstance(class_prompter, Callable):
+        # 会给 prompter 方法添加 __prompter_class__ 用来做归属判断.
+        # todo: 有没有更好的解决办法?
         class_prompter.__prompter_class__ = class_name
     setattr(value, CLASS_PROMPT_MAGIC_ATTR, class_prompter)

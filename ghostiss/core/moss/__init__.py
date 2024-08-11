@@ -5,10 +5,8 @@ from ghostiss.core.moss.abc import (
     MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT
 )
 from ghostiss.core.moss.impl import TestMOSSProvider
-from ghostiss.core.moss.libraries import (
+from ghostiss.contracts.modules import (
     DefaultModulesProvider,
-    DefaultModules,
-    Modules,
 )
 from ghostiss.core.moss.test_suites import MossTestSuite
 

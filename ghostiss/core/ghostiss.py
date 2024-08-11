@@ -6,7 +6,7 @@ from ghostiss.core.session import Runtime
 from ghostiss.core.session.tasks import Task, TaskState
 from ghostiss.core.session.processes import Process
 from ghostiss.core.ghosts import Ghost
-from ghostiss.core.ghosts.operators import fire_event
+from ghostiss.core.ghosts.operators import handle_event
 from ghostiss.core.session.events import EventBus, Event, DefaultEventType
 from ghostiss.container import Container
 from pydantic import BaseModel, Field
@@ -161,7 +161,7 @@ class GhostInShellSystem(ABC):
         ghost = self.make_ghost(runtime=runtime, ghost_meta=process.ghost_meta, deliver=deliver)
         err = None
         try:
-            op = fire_event(ghost, e)
+            op = handle_event(ghost, e)
             while op is not None:
                 # todo: log and try except
                 op = op.run(ghost)

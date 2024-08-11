@@ -22,7 +22,7 @@ class FakeMindset(Mindset):
     def get_thought(self, thought_id: str) -> Optional[Thought]:
         return None
 
-    def force_get_thought(self, thought_id: str) -> Thought:
+    def force_make_thought(self, thought_id: str) -> Thought:
         raise NotImplementedError("thought id '{}' not found".format(thought_id))
 
     def new_entity(self, meta_data: EntityMeta) -> Optional[Thought]:

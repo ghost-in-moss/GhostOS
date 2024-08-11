@@ -1,13 +1,13 @@
-from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Optional, TypedDict
+from typing import Optional, TypedDict
 from typing_extensions import Required
-from ghostiss.container import Container
+from ghostiss.helpers import generate_import_path, import_from_path
+from pydantic import BaseModel
 
 __all__ = [
     'Entity', 'EntityMeta',
-    'ENTITY_TYPE', 'InContainerEntity',
-    'EntityClass', 'EntityFactory',
+    'EntityFactory',
+    'ModelEntity', 'ModelEntityFactory',
 ]
 
 
@@ -23,9 +23,6 @@ class EntityMeta(TypedDict, total=False):
 
     type: Required[str]
     """ different type of entity use different EntityFactory to initialize from meta"""
-
-    driver: Optional[str]
-    """ optional for EntityFactory to choose driver """
 
     data: Required[dict]
     """ use dict to restore the serializable data"""
@@ -44,33 +41,42 @@ class Entity(ABC):
         pass
 
 
-class EntityClass(Entity, ABC):
-
-    @classmethod
-    @abstractmethod
-    def new_entity(cls, meta: EntityMeta) -> Optional["EntityClass"]:
-        pass
-
-
-class InContainerEntity(Entity, ABC):
-
-    @classmethod
-    @abstractmethod
-    def new_entity(cls, container: Container, meta: EntityMeta) -> Optional["InContainerEntity"]:
-        pass
-
-
-ENTITY_TYPE = TypeVar("ENTITY_TYPE", bound=Entity)
-
-
-class EntityFactory(Generic[ENTITY_TYPE], ABC):
+class EntityFactory(ABC):
 
     @abstractmethod
-    def new_entity(self, meta_data: EntityMeta) -> Optional[ENTITY_TYPE]:
+    def new_entity(self, meta_data: EntityMeta) -> Optional[Entity]:
         pass
 
-    def force_new_entity(self, meta_data: EntityMeta) -> ENTITY_TYPE:
+    def force_new_entity(self, meta_data: EntityMeta) -> Entity:
         mind = self.new_entity(meta_data)
         if mind is None:
             raise NotImplemented("todo")
         return mind
+
+
+class ModelEntity(BaseModel, Entity, ABC):
+
+    def to_entity_meta(self) -> EntityMeta:
+        """
+        """
+        data = self.model_dump(exclude_none=True)
+        cls = self.__class__
+        type_ = generate_import_path(cls)
+        # 默认没有 id 字段.
+        return EntityMeta(
+            type=type_,
+            data=data,
+        )
+
+
+class ModelEntityFactory(EntityFactory):
+
+    def new_entity(self, meta_data: EntityMeta) -> Optional[ModelEntity]:
+        data_ = meta_data.get('data', {})
+        type_ = meta_data.get('type', '')
+        if not type_:
+            return None
+        cls = import_from_path(type_)
+        if not issubclass(cls, ModelEntity):
+            return None
+        return cls(**data_)
