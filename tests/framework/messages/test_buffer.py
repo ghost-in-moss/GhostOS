@@ -1,7 +1,7 @@
 from ghostiss.core.messages import (
     Message
 )
-from ghostiss.core.runtime.llms import FunctionalToken
+from ghostiss.core.llms import FunctionalToken
 from ghostiss.framework.messages import DefaultBuffer
 
 

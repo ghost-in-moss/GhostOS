@@ -2,9 +2,9 @@ from typing import TYPE_CHECKING, List, Optional, Union, Callable, Iterable
 from abc import ABC, abstractmethod
 from ghostiss.entity import EntityMeta
 from ghostiss.core.messages import Message, Stream, Retriever
-from ghostiss.core.runtime import Runtime
-from ghostiss.core.runtime.tasks import Task, TaskState
-from ghostiss.core.runtime.processes import Process
+from ghostiss.core.session import Runtime
+from ghostiss.core.session.tasks import Task, TaskState
+from ghostiss.core.session.processes import Process
 from ghostiss.core.ghosts import Ghost
 from ghostiss.core.ghosts.operators import fire_event
 from ghostiss.core.ghosts.events import EventBus, Event, DefaultEventType

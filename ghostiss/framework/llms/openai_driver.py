@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostiss.core.errors import GhostissIOError
 from ghostiss.core.messages import Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultTypes
-from ghostiss.core.runtime.llms import (
+from ghostiss.core.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
     Chat,
     Embedding, Embeddings,

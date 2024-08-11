@@ -3,7 +3,7 @@ import time
 import datetime
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-from ghostiss.core.runtime.llms import LLMs, Chat, ModelConf, ServiceConf
+from ghostiss.core.llms import LLMs, Chat, ModelConf, ServiceConf
 from ghostiss.core.messages import Message, DefaultTypes
 
 

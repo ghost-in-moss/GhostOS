@@ -15,7 +15,7 @@ __all__ = [
 
 class Event(BaseModel, Entity):
     """
-    事件机制.
+    task receive an event to
     """
     id: str = Field(default_factory=uuid, description="event id")
     type: str = Field(default="", description="event type")

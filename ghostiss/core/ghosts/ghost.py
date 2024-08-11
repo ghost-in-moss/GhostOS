@@ -9,14 +9,14 @@ from ghostiss.core.messages.message import Message, MessageType, MessageTypePars
 from ghostiss.core.ghosts.operators import Operator
 
 if TYPE_CHECKING:
-    from ghostiss.core.runtime import Runtime
+    from ghostiss.core.session import Runtime
     from ghostiss.contracts.logger import LoggerItf
     from ghostiss.core.ghosts.events import EventBus
-    from ghostiss.core.ghosts.session import Session
+    from ghostiss.core.session.session import Session
     from ghostiss.core.ghosts.thoughts import Mindset
     from ghostiss.core.ghosts.minds import MultiTasks, Mindflow
     from ghostiss.core.moss_p1.modules import Modules
-    from ghostiss.core.ghosts.messenger import Messenger
+    from ghostiss.core.session.messenger import Messenger
 
 __all__ = ['Ghost', 'Facade']
 

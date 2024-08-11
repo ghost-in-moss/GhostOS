@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostiss.core.messages import Message, Payload, copy_messages
 from ghostiss.core.moss_p1.context import PyContext
-from ghostiss.core.runtime.llms import Chat
+from ghostiss.core.llms import Chat
 from ghostiss.helpers import uuid
 
 __all__ = [
@@ -109,6 +109,9 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: MsgThread) -> Ch
 
 
 class Threads(ABC):
+    """
+    管理 Threads 存取的模块. 通常集成到 Session 里.
+    """
 
     @abstractmethod
     def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:

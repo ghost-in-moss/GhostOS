@@ -1,6 +1,5 @@
 import argparse
 import sys
-import json
 from ghostiss.core.moss import test_container, MossTestSuite, MossResult
 from rich.console import Console
 from rich.panel import Panel

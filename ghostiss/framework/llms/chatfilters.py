@@ -1,6 +1,6 @@
 from typing import Optional
 from ghostiss.core.messages import Message, Role
-from ghostiss.core.runtime.llms import ChatFilter, Chat
+from ghostiss.core.llms import ChatFilter, Chat
 
 
 class AssistantNameFilter(ChatFilter):
