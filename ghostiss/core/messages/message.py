@@ -330,10 +330,16 @@ class Message(BaseModel):
 
 class MessageClass(ABC):
     """
-    一种特殊的 Message, 本体是别的数据结构, 但可以通过 to_messages 方法生成一条或多条消息.
+    一种特殊的 Message, 本体是强类型数据结构, 映射到 Message 类型中解决 payloads 等参数问题.
     """
 
-    def to_messages(self) -> Iterable[Message]:
+    @abstractmethod
+    def to_messages(self) -> Message:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_message(cls) -> Optional[Message]:
         pass
 
 

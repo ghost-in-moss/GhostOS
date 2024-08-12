@@ -1,13 +1,18 @@
 import inspect
-from typing import Any, Tuple, Optional, Dict
+from typing import Any, Tuple, Optional, Dict, Callable
+from types import ModuleType
+
+Importer = Callable[[str], ModuleType]
 
 
-def import_from_path(module_spec: str) -> Any:
-    from importlib import import_module
+def import_from_path(module_spec: str, importer: Optional[Importer] = None) -> Any:
+    if importer is None:
+        from importlib import import_module
+        importer = import_module
     parts = module_spec.split(':', 2)
     module = parts[0]
     spec = parts[1] if len(parts) > 1 else None
-    imported_module = import_module(module)
+    imported_module = importer(module)
     if spec:
         return get_module_spec(imported_module.__dict__, spec)
     return imported_module

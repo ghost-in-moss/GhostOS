@@ -1,8 +1,10 @@
+import time
 from typing import Optional, List, Set
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
 from ghostiss.entity import EntityMeta
+from ghostiss.abc import Identifier, Identifiable
 
 __all__ = [
     'Task', 'TaskState', 'Tasks',
@@ -48,9 +50,13 @@ class AwaitGroup(BaseModel):
     tasks: List[str] = Field(description="children task ids to wait")
 
 
-class Task(BaseModel):
+class Task(BaseModel, Identifiable):
     locker: Optional[str] = Field(
         description="task locker ",
+    )
+    round: int = Field(
+        default=0,
+        description="记录 Process 已经运行过多少次. 如果是第一次的话, 则意味着它刚刚被创建出来. ",
     )
 
     # -- scope --- #
@@ -116,6 +122,30 @@ The meta data to restore the handler of this task.
 the state of the current task.
 """
     )
+    # --- time related --- #
+    created: float = Field(
+        default_factory=lambda: round(time.time(), 4),
+        description="The time the task was created.",
+    )
+    updated: float = Field(
+        default_factory=lambda: round(time.time(), 4),
+        description="The time the task was updated.",
+    )
+    overdue: float = Field(
+        default=0.0,
+        description="The time the task was overdue.",
+    )
+    timeout: float = Field(
+        default=0.0,
+        description="timeout for each round of the task execution",
+    )
+
+    def identifier(self) -> Identifier:
+        return Identifier(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+        )
 
     def awaiting_tasks(self) -> Set[str]:
         result = set()
@@ -148,7 +178,7 @@ class Tasks(ABC):
         pass
 
     @abstractmethod
-    def get_task(self, task_id: str) -> Optional[Task]:
+    def get_task(self, task_id: str, lock: bool) -> Optional[Task]:
         pass
 
     @abstractmethod

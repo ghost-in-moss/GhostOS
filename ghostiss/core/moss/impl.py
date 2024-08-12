@@ -9,7 +9,7 @@ from ghostiss.core.moss.abc import (
     MossCompiler, MossRuntime, MossPrompter, MOSS_NAME, MOSS_TYPE_NAME,
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
-from ghostiss.core.moss.libraries import Modules, ImportWrapper
+from ghostiss.contracts.modules import Modules, ImportWrapper
 from ghostiss.core.moss.pycontext import PyContext, Property
 from ghostiss.helpers import get_module_spec
 from contextlib import contextmanager, redirect_stdout

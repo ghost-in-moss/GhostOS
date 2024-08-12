@@ -5,6 +5,7 @@ from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.actions import Action
 from ghostiss.core.session.threads import MsgThread
 from ghostiss.core.llms import LLMApi, Chat
+from ghostiss.core.session import Session
 from ghostiss.core.session.messenger import Messenger
 
 __all__ = [
@@ -23,6 +24,16 @@ class Runner(ABC):
         """
         运行 Thread, 同时返回一个新的 Thread. 不做存储修改, 方便单元测试.
         """
+        pass
+
+
+class NewRunner(ABC):
+    """
+    准备取代 runner, 先做一个独立的然后再改名.
+    """
+
+    @abstractmethod
+    def run(self, container: Container, session: Session) -> Optional[Operator]:
         pass
 
 

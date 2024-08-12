@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
+from ghostiss.helpers import generate_import_path
 
 
 class Descriptive(ABC):
@@ -23,6 +24,28 @@ class Identifiable(ABC):
     @abstractmethod
     def identifier(self) -> Identifier:
         pass
+
+
+class IdentifiableClass(ABC):
+
+    @classmethod
+    @abstractmethod
+    def class_identifier(cls) -> Identifier:
+        pass
+
+
+def describe_class(cls: type) -> Identifier:
+    """
+    一个默认的用来描述类的方法.
+    :param cls: 目标类.
+    :return: 返回一个 identifier.
+    """
+    if issubclass(cls, IdentifiableClass):
+        return cls.class_identifier()
+    id_ = generate_import_path(cls)
+    name = cls.__name__
+    desc = cls.__doc__
+    return Identifier(id=id_, name=name, description=desc)
 
 
 class PromptAble(ABC):

@@ -1,17 +1,14 @@
-from typing import Optional, List, TypeVar, ClassVar, Generic, Type
+from typing import Optional, List, TypeVar, ClassVar, Generic, Type, Tuple
 from abc import ABC, abstractmethod
-from ghostiss.entity import InContainerEntity, EntityFactory, EntityMeta
+from ghostiss.entity import Entity, EntityMeta, EntityFactory
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.session.events import Event
 from ghostiss.core.ghosts.operators import Operator
-from ghostiss.core.ghosts.runner import Runner
-from ghostiss.abc import Identifiable, Descriptive, Identifier
+from ghostiss.abc import Identifiable, Identifier, IdentifiableClass
 from ghostiss.helpers import uuid
-from ghostiss.core.moss_p1.exports import Exporter
-from pydantic import BaseModel
 
 
-class Thought(BaseModel, Identifiable, ABC):
+class Thought(Identifiable, ABC):
     """
     用代码的方式实现的思维链描述, 是 Llm-based Agent 的思维单元.
     可以用来创建并且驱动一个任务.
@@ -20,41 +17,88 @@ class Thought(BaseModel, Identifiable, ABC):
     只要继承自 Thought 类, 就可以驱动思维.
     """
 
-    thought_driver: ClassVar[Type["ThoughtDriver"]]
     """
-    定义 Thought 类的Driver. 可以在定义 Thought 类之后, 手动添加. 例如: 
-    
-    class MyThought(Thought):
-        ...
-        
-    class MyThoughtDriver(ThoughtDriver):
-        ...
-        
-    MyThought.thought_driver = MyThoughtDriver
+    tips:
+    从工程设计的角度看, Thought 不要用继承的方式定义使用, 而应该用组合的方式.
+    每个 Thought 都应该是完备的 BaseModel. 不要使用继承. 
+    这样可以最好地自解释.
+    对于复杂度比较高的 Thought, 可以用函数来实现一些子封装. 
     """
+
+    __thought_driver__: ClassVar[Optional[Type["ThoughtDriver"]]] = None
+    """
+    定义 Thought 类的Driver.
+    依照约定优先于配置, driver 为 None 时, 系统默认从 Thought 所属模块取 Thought.__name__ + 'Driver' 的类作为 Driver. 
+    """
+
+    @abstractmethod
+    def identifier(self) -> Identifier:
+        """
+        生成一个 Identifier 的实例用来描述 Thought 的实例.
+        """
+        pass
 
 
 T = TypeVar("T", bound=Thought)
 
 
-class ThoughtDriver(Generic[T], InContainerEntity, ABC):
+class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
     """
-    每个 ThoughtDriver 都要实现 Identifier, 因此有三个关键信息:
-    1. id: 用 python 的 module.module:spec 风格描述的一个全局唯一的 thought 路径.
-    2. name: thought 可以描述的名称.
-    3. description: thought 实例的用途, 能力, 使用思路的简单描述.
+    ThoughtDriver 是 Thought 运行时生成的实例.
+    实际上就是把 Python 的 Class 拆成了 Model (数据结构) + Driver (各种 methods)
+    这样 Thought 作为一个 Model, 可以直接将源码呈现给大模型, 用于各种场景的使用.
+
+    同时也起到一个双向数据桥梁的作用:
+    1. Thought => ThoughtInstance => EntityMeta
+    2. EntityMeta => ThoughtInstance => Thought
     """
 
     def __init__(self, thought: T):
-        self.thought = thought
+        """
+        实例化 ThoughtDriver, 这个方法入参不要修改. 系统要使用这个方法实例化.
+        """
+        self.thought: T = thought
 
-    def to_entity_meta(self) -> EntityMeta:
+    @classmethod
+    @abstractmethod
+    def class_identifier(cls) -> Identifier:
+        """
+        这里是 Driver 对自身的描述.
+        可以用来召回某种类型的 thought 类.
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def entity_type(cls) -> str:
+        """
+        ThoughtDriver 可以生成 EntityMeta, 这个方法返回它固定的 entity_type
+        用来反查 Driver.
+        """
         pass
 
     @abstractmethod
-    def new_task_id(self, g: Ghost) -> str:
+    def to_entity_meta(self) -> EntityMeta:
+        """
+        将 Thought 来生成 EntityMeta 对象.
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_entity_meta(cls, factory: EntityFactory, meta: EntityMeta) -> "ThoughtDriver":
+        """
+        结合 Factory, 将一个 EntityMeta 反解成 ThoughtInstance.
+        :param factory: 支持递归的生成 Thought 实例.
+        :param meta: 原始数据.
+        """
+        pass
+
+    @abstractmethod
+    def new_task_id(self, process_id: str) -> str:
         """
         创建一个唯一的 task id.
+        在 create task 时会调用.
         """
         pass
 
@@ -69,7 +113,7 @@ class ThoughtDriver(Generic[T], InContainerEntity, ABC):
         return None
 
 
-class BasicThoughtDriver(Thought, Identifiable, Descriptive, ABC):
+class BasicThoughtDriver(ThoughtDriver, ABC):
 
     def new_task_id(self, g: Ghost) -> str:
         # 如果生成的 task id 是不变的, 则在同一个 process 里是一个单例. 但要考虑互相污染的问题.
@@ -77,7 +121,7 @@ class BasicThoughtDriver(Thought, Identifiable, Descriptive, ABC):
 
     def on_create(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
-        基于 Thought 创建一个 Task 时触发的事件.
+        基于 Thought 创建了 Task 时触发的事件.
         可以根据事件做必要的初始化.
         """
         #  默认没有任何动作.
@@ -108,7 +152,7 @@ class BasicThoughtDriver(Thought, Identifiable, Descriptive, ABC):
         thread.inputs = e.messages
         messenger = g.messenger()
         # 执行 runner.
-        op = runner.run(g.container, messenger, thread)
+        op = runner.on_inputs(g.container, messenger, thread)
         return op
 
     def on_finish_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
@@ -129,7 +173,7 @@ class BasicThoughtDriver(Thought, Identifiable, Descriptive, ABC):
         op = None
         if fulfilled:
             runner = self.runner(g, e)
-            thread, op = runner.run(g.container, messenger, thread)
+            thread, op = runner.on_inputs(g.container, messenger, thread)
         session.update_thread(thread)
         return op
 
@@ -140,45 +184,88 @@ class BasicThoughtDriver(Thought, Identifiable, Descriptive, ABC):
         return self._run_event(g, e)
 
 
-class Mindset(EntityFactory[Thought], ABC):
+class Thoughts(ABC):
     """
     思维集合, 用来管理所有可以使用的 Thought 实例.
     是一个可持续学习, 召回的记忆空间.
     """
 
     @abstractmethod
-    def recall(self, description: str, limit: int = 10, offset: int = 0) -> List[Identifier]:
+    def make_thought_instance(self, meta: EntityMeta) -> Optional[ThoughtDriver]:
         """
-        尝试使用描述, 从 mindset 中召回一个 Thought 实例.
-        :param description: 用自然语言描述想要回忆的对象. 可以是: 你当前的需求|你对某个工具或能力的期望|这个 thought 实例可能的 desc 等.
-        :param limit: 召回的最大数量. 会根据接近程度进行排序, 越前面的越高.
-        :param offset: 如果召回的数据量非常大, 可以通过 offset + limit 来遍历数据.
-        :return: 返回搜索到的 Thought 的 Identifier. 只保留 id, name, description. 未来可以用 id 召回某个精确的 thought 实例.
+        使用 meta 来获取一个 ThoughtDriver 实例. 其中也包含了 Thought 数据的实例.
+        :param meta: thought 生成的可序列化数据.
+        :return:
+        """
+        pass
+
+    def force_make_thought(self, meta: EntityMeta) -> ThoughtDriver:
+        """
+        语法糖.
+        """
+        instance = self.make_thought_instance(meta)
+        if instance is None:
+            raise ModuleNotFoundError(f'No Thoughts found for {meta}')
+        return instance
+
+    @abstractmethod
+    def instance_thought(self, thought: Thought) -> ThoughtDriver:
+        """
+        通过代码空间的 Thought 实例来生成一个 ThoughtDriver 的实例, 使之具备响应上下文的能力.
+        :param thought:
+        :return:
         """
         pass
 
     @abstractmethod
-    def remember(self, thought: Thought) -> None:
+    def register_thought_type(self, cls: Type[Thought], driver: Optional[Type[ThoughtDriver]] = None) -> None:
         """
-        记住一个思维实例, 可以在未来召回.
-        通过这个方法, 可以把 thought 作为 记忆|工具|能力 等保存在思维里.
+        注册一个 thought class, 还可以替换它的 driver.
+
+        系统默认的优先级应该是:
+        1. registered driver.
+        2. thought's defined driver in __thought_driver__
+        3. thought class's __name__ + 'Driver' in the same module.
+
+        如果无法解析出任何 driver, 需要抛出异常.
+
+        注册动作会默认将 ThoughtDriver 的 Identifier 做为索引, 方便根据需要反查到 Thought.
+        :param cls:
+        :param driver:
+        :return:
         """
         pass
 
     @abstractmethod
-    def get_thought(self, thought_id: str) -> Optional[Thought]:
+    def get_driver(self, cls: Type[Thought]) -> ThoughtDriver:
         """
-        使用 id 来查找一个 Thought 实例. 前提是已经知道它的 id.
-        :param thought_id: Thought 实例通常会有一个可识别的 identifier, 提供唯一 id.
+        使用 Thought 的类反查 Driver.
+        :param cls:
+        :return:
         """
         pass
 
     @abstractmethod
-    def force_get_thought(self, thought_id: str) -> Thought:
+    def recall_thought_type(
+            self,
+            # path: str,
+            # name: str,
+            # description: str,
+            recollection: str,
+            limit: int, offset: int = 0,
+    ) -> List[Tuple[Type[Thought], Identifier]]:
         """
-        对 get_thought 的封装, 如果目标 thought 不存在会抛出 NotFoundError
+        召回已经注册过的 thought 类, 和它对应 Driver 的 Identifier.
         """
         pass
 
-
-EXPORTS = Exporter().class_sign(Thought).interface(Mindset).source_code(Identifier)
+    @abstractmethod
+    def recall_thought_instance(self, description: str, limit: int, offset: int = 0) -> List[Thought]:
+        """
+        召回一个 Thought 的实例.
+        :param description:
+        :param limit:
+        :param offset:
+        :return:
+        """
+        pass

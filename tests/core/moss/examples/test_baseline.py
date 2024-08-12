@@ -2,7 +2,7 @@ from ghostiss.core.moss import test_container
 from ghostiss.core.moss.abc import MossCompiler, Moss, MOSS_TYPE_NAME
 from ghostiss.core.moss.pycontext import PyContext
 from ghostiss.core.moss.examples import baseline
-from ghostiss.core.moss.libraries import ImportWrapper
+from ghostiss.contracts.modules import ImportWrapper
 
 
 def test_baseline_exec():
