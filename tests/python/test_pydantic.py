@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from pydantic.errors import PydanticSchemaGenerationError
 from typing import TypedDict, Required, Iterable, List
 from typing_extensions import Literal
 
@@ -93,3 +94,21 @@ def test_deep_copy() -> None:
     assert copied.bars[0].bar == "baz"
 
 
+def test_basemodel_with_none_mode_field():
+    class Bar:
+        i = 123
+
+        def bar(self):
+            return self.i + 1
+
+    err = None
+    try:
+        # 不允许 BaseModel 里定义非 BaseModel 类型的变量了.
+        class Foo(BaseModel):
+            foo: str = Field(default="test")
+            bar: Bar
+
+        f = Foo(bar=Bar())
+    except PydanticSchemaGenerationError as e:
+        err = e
+    assert err is not None

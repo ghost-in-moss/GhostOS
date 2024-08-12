@@ -6,7 +6,7 @@ import yaml
 from ghostiss.core.moss_p1.reflect import ClassSign, Interface
 from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.messages import DefaultTypes
-from ghostiss.core.ghosts import Operator, Mindflow
+from ghostiss.core.ghosts import Operator, Taskflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.session.threads import MsgThread
@@ -57,7 +57,7 @@ You can use the api that MOSS provided to implement your plan.
         args.extend(Importing.iterate(values=[BaseModel, Field], module='pydantic'))
         args.extend([
             ClassSign(cls=Operator),
-            Interface(cls=Mindflow),
+            Interface(cls=Taskflow),
         ])
         kwargs = {
             'typing': Importing(value=typing, module='typing'),

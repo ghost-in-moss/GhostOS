@@ -1,93 +1,74 @@
 from abc import ABC, abstractmethod
+from typing import Optional, Type, Iterable
+from ghostiss.container import Provider, Container, ABSTRACT
+from ghostiss.core.llms import Chat
 
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Type
-from ghostiss.entity import EntityMeta, EntityClass
-from ghostiss.entity import EntityFactory
-from ghostiss.core.messages.stream import Stream
-
-__all__ = ['Shell', 'ShellFactory', 'Driver', 'App', 'Envs']
-
-
-class Envs(BaseModel):
-    description: str = Field(default="", description="对 ghost 所处环境的描述.")
-    trace: Dict = Field(default_factory=dict, description="通讯参数.")
-    objects: List[EntityMeta] = Field(
-        default_factory=list,
-        description="环境中各种物体的元数据. 协议不对齐时, 无法理解环境.",
-    )
-
-    __objects: Optional[Dict[str, EntityMeta]] = None
-
-    def __map(self):
-        if self.__objects is not None:
-            return
-        self.__objects = {}
-        for o in self.objects:
-            self.__objects[o["type"]] = o
-
-    def get_meta(self, cls: Type[EntityClass]) -> Optional[EntityClass]:
-        self.__map()
-        data = self.get_object_meta(cls.entity_type())
-        if data is None:
-            return None
-        return cls.new_entity(data)
-
-    def get_object_meta(self, meta_kind: str) -> Optional[EntityMeta]:
-        self.__map()
-        return self.__objects.get(meta_kind, None)
-
-
-class Driver(ABC):
-    """
-    可以实现的抽象驱动.
-    """
-
-    @classmethod
-    @abstractmethod
-    def description(cls) -> str:
-        pass
-
-
-class App(ABC):
-    """
-    自解释的 app.
-    """
-
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @abstractmethod
-    def description(self) -> str:
-        pass
+__all__ = ['Shell', 'ShellProvider']
 
 
 class Shell(ABC):
+    """
+    Shell 是对端侧能力的抽象.
+    这些能力不是在 Ghost 里预定义的, 而是端侧可能动态变更的.
+    Shell 通过 Process 里存储的 Meta 数据实例化而来.
+    当 Meta 数据变更时, Shell 的信息也应该同时变更.
+    """
 
     @abstractmethod
     def id(self) -> str:
         pass
 
     @abstractmethod
-    def description(self) -> str:
-        pass
-
-    @abstractmethod
-    def get_drivers(self, drivers: List[Type[Driver]]) -> Dict[str, Driver]:
-        pass
-
-    @abstractmethod
-    def get_apps(self) -> List[App]:
-        pass
-
-    @abstractmethod
-    def deliver(self) -> Stream:
+    def update_chat(self, chat: Chat) -> Chat:
         """
-        消息发送管道.
+        将端侧的信息注入到 Chat 中.
+        这些讯息应该包含对自身和环境的感知信息.
         """
         pass
 
+    @abstractmethod
+    def drivers(self) -> Iterable[Type[ABSTRACT]]:
+        """
+        当前 Shell 可以供 Moss 调用的抽象.
+        在 Shell 实例化时, 这些抽象就应该通过 Shell Provider 注册到 Container 中.
+        方便对 Moss 进行依赖注入.
 
-class ShellFactory(EntityFactory[Shell], ABC):
-    pass
+        经常要搭配 Moss 功能设计使用. 举个例子:
+        1. 某个 moss 文件依赖 class MusicPlayer(ABC)
+        2. Shell 包含了 MusicPlayer 的实现, thought 调用 moss 时实际从 Shell 里获取了实例.
+        3. Shell 如果不包含这个实现, 则 thought 应该得到错误信息的提示, 得知这个抽象不存在.
+        """
+        pass
+
+    @abstractmethod
+    def get_driver(self, driver: Type[ABSTRACT]) -> ABSTRACT:
+        """
+        获取某个抽象的实例.
+        """
+        pass
+
+
+class ShellProvider(Provider):
+    """
+    通过这个 provider 将 shell 持有的 driver 提供到控制反转容器里.
+    """
+
+    @classmethod
+    def from_shell(cls, shell: Shell) -> Iterable["ShellProvider"]:
+        for driver in shell.drivers():
+            yield ShellProvider(driver)
+
+    def __init__(self, driver: Type[ABSTRACT]):
+        self.driver: Type[ABSTRACT] = driver
+
+    def singleton(self) -> bool:
+        return False
+
+    def contract(self) -> Type[ABSTRACT]:
+        return self.driver
+
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
+        shell = con.force_fetch(Shell)
+        # 返回 shell driver 的实例.
+        # todo: 如果不存在应该抛出特殊的异常.
+        return shell.get_driver(driver=self.driver)

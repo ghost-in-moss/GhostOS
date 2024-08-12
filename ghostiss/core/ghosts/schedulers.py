@@ -3,12 +3,11 @@ from abc import ABC, abstractmethod
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.thoughts import Thought
 from ghostiss.core.messages.message import Message, MessageClass
-from ghostiss.core.moss_p1.exports import Exporter
 
 MessageType = Union[Message, MessageClass, AnyStr]
 
 
-class MultiTasks(ABC):
+class MultiTask(ABC):
     """
     You are equipped with this MultiTasks Library that can execute thought in an asynchronous task.
     A thought is a mind-machine usually driven by LLM, can resolve certain type of task in multi-turns chain of thought.
@@ -51,9 +50,10 @@ class MultiTasks(ABC):
         pass
 
 
-class Mindflow(ABC):
+class Taskflow(ABC):
     """
-    这个 library 可以直接管理当前多轮对话里的任务, 通过method 返回的 Operator 会操作系统变更当前任务的状态.
+    这个 library 可以直接管理当前任务的状态调度.
+    通过method 返回的 Operator 会操作系统变更当前任务的状态.
     """
 
     @abstractmethod
@@ -97,9 +97,3 @@ class Mindflow(ABC):
         :param reasons: 发送一条或多条消息告知用户失败的原因.
         """
         pass
-
-
-EXPORTS = Exporter(). \
-    interface(Mindflow). \
-    interface(MultiTasks). \
-    typing(MessageType, "MessageType")

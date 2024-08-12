@@ -1,13 +1,16 @@
-from typing import Optional
+from typing import Optional, ClassVar, Type, TypeVar, Generic
+import json
 from abc import ABC, abstractmethod
 from ghostiss.container import Container
 from ghostiss.core.llms import Chat
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.session.messenger import Messenger
 from ghostiss.core.messages.message import Caller
-from ghostiss.abc import Identifiable
+from ghostiss.core.llms import LLMTool
+from ghostiss.abc import Identifiable, Identifier
+from pydantic import BaseModel
 
-__all__ = ['Action']
+__all__ = ['Action', 'ToolAction']
 
 
 class Action(Identifiable, ABC):
@@ -34,3 +37,60 @@ class Action(Identifiable, ABC):
         :return: the operator that predefined to control the ghost state
         """
         pass
+
+
+A = TypeVar('A', bound=Type[BaseModel])
+
+
+class ToolAction(Generic[A], ABC):
+    """
+    定义一个 ToolAction.
+    泛型并不是必须的, 主要是提示 ToolAction 如何生成.
+    """
+    name: ClassVar[str]
+    """工具的名字"""
+
+    description: ClassVar[str]
+    """工具的描述"""
+
+    args_model: A
+    """工具的入参. """
+
+    @abstractmethod
+    def _act(self, container: "Container", messenger: "Messenger", arguments: A) -> Optional["Operator"]:
+        """
+        工具真实的实现.
+        """
+        pass
+
+    def update_chat(self, chat: Chat) -> Chat:
+        """
+        将工具注入到 chat.
+        """
+        tool = LLMTool.new(
+            name=self.name,
+            desc=self.description,
+            parameters=self.args_model.model_json_schema(),
+        )
+        chat.functions.append(tool)
+        return chat
+
+    def act(self, container: "Container", messenger: "Messenger", caller: Caller) -> Optional["Operator"]:
+        """
+        接受 LLM 生产的 caller 运行.
+        """
+        # 反解出 json
+        loaded = json.loads(caller.arguments)
+        # 反解出 ToolActionArgs
+        arguments = self.args_model(**loaded)
+        # 运行逻辑.
+        return self.act(container, messenger, arguments)
+
+    def identifier(self) -> Identifier:
+        """
+        对自身的描述.
+        """
+        return Identifier(
+            name=self.name,
+            description=self.description,
+        )

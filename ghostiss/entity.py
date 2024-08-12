@@ -59,7 +59,7 @@ class ModelEntity(BaseModel, Entity, ABC):
     def to_entity_meta(self) -> EntityMeta:
         """
         """
-        data = self.model_dump(exclude_none=True)
+        data = self.model_dump(exclude_defaults=True)
         cls = self.__class__
         type_ = generate_import_path(cls)
         # 默认没有 id 字段.

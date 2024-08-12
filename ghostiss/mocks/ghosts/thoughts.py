@@ -1,12 +1,12 @@
 from typing import Optional, List
 
 from ghostiss.abc import Identifier
-from ghostiss.core.ghosts.thoughts import Mindset, Thought
+from ghostiss.core.ghosts.thoughts import Thoughts, Thought
 from ghostiss.entity import EntityMeta
 from ghostiss.core.moss_p1.exports import Exporter
 
 
-class FakeMindset(Mindset):
+class FakeThoughts(Thoughts):
     def recall(self, description: str, limit: int = 10, offset: int = 0) -> List[Identifier]:
         return [
             Identifier(
@@ -29,4 +29,4 @@ class FakeMindset(Mindset):
         return None
 
 
-EXPORTS = Exporter().attr('mindset', FakeMindset(), Mindset)
+EXPORTS = Exporter().attr('mindset', FakeThoughts(), Thoughts)

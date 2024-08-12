@@ -1,28 +1,53 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional, TYPE_CHECKING, List, Type
 from abc import ABC, abstractmethod
-from ghostiss.entity import Entity, EntityFactory, EntityMeta
+from ghostiss.entity import Entity, EntityMeta
 from ghostiss.container import Container
-from ghostiss.abc import Descriptive, Identifiable
-from ghostiss.core.ghosts.shells import Shell
-from ghostiss.core.messages.message import MessageType, MessageTypeParser
-
-from ghostiss.core.session import Session, EventBus
+from ghostiss.abc import Identifiable, Identifier
 from ghostiss.contracts.logger import LoggerItf
-from ghostiss.core.ghosts.thoughts import Mindset
-from ghostiss.core.ghosts.minds import MultiTasks, Mindflow
+from ghostiss.contracts.modules import Modules
+from ghostiss.contracts.storage import Storage
+from ghostiss.core.session import Session, Threads, Tasks, Processes, EventBus
+from ghostiss.core.moss import MossCompiler
+from ghostiss.core.llms import LLMs, Chat
 
-__all__ = ['Ghost', 'Facade']
+if TYPE_CHECKING:
+    # 避免 python 文件管理风格导致的循环依赖.
+    from ghostiss.core.ghosts.utils import Utils
+    from ghostiss.core.ghosts.shells import Shell
+    from ghostiss.core.ghosts.thoughts import Thoughts
+    from ghostiss.core.ghosts.schedulers import MultiTask, Taskflow
+
+__all__ = ['Ghost']
 
 
-class Ghost(Entity, Descriptive, Identifiable, ABC):
+class Ghost(Entity, Identifiable, ABC):
 
-    def get_description(self) -> str:
+    @abstractmethod
+    def identifier(self) -> Identifier:
         """
-        ghost 实例的描述. 用于外部系统.
+        Ghost 的自我描述. 可能用来生成 prompt.
         """
-        return self.identifier().get_description()
+        pass
 
-    @property
+    @abstractmethod
+    def to_entity_meta(self) -> EntityMeta:
+        """
+        用来生成 Ghost Meta 保存到 Process 里.
+        """
+        pass
+
+    @abstractmethod
+    def update_chat(self, chat: Chat) -> Chat:
+        """
+        将 Ghost 的 meta prompt 注入到 Chat 里.
+        update_chat 应该包含:
+        1. 注入 ghost 的自我认知.
+        2. 注入 ghost 的元指令.
+        3. 注入 shell 的描述.
+        4. 注入 thought 无关的通用工具.
+        """
+        pass
+
     @abstractmethod
     def container(self) -> Container:
         """
@@ -32,40 +57,35 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
 
     @abstractmethod
     def session(self) -> Session:
+        """
+        会话的构建, 在 Ghost In Shell 的架构里, Session 要先于 Ghost 构建.
+        由于全异步 Session 作为基础设施, 所以 Ghost 每次运行时都是在一个特定的 task 里.
+        """
         pass
 
-    @property
-    def shell(self) -> Shell:
-        """
-        返回 ghost 所属的 shell 抽象. 本质上也是 unsafe 的.
-        """
-        return self.container.force_fetch(Shell)
-
-    @property
     @abstractmethod
-    def mindset(self) -> "Mindset":
+    def shell(self) -> "Shell":
         """
-        ghost 可以管理的所有 Thoughts.
+        返回 ghost 所属的 shell 抽象.
+        持有了对端设备交互能力的抽象.
         """
         pass
 
-    @property
+    @abstractmethod
+    def thoughts(self) -> "Thoughts":
+        """
+        thoughts 管理所有的 Thoughts, 仍可以用来召回.
+        """
+        pass
+
     @abstractmethod
     def modules(self) -> "Modules":
         """
-        基于 modules 可以动态 import 各种库.
+        基于 modules 可以管理所有类库.
+        通过预加载, 可以搜索存在的类库.
         """
         pass
 
-    @property
-    @abstractmethod
-    def eventbus(self) -> "EventBus":
-        """
-        用来管理事件通讯.
-        """
-        pass
-
-    @property
     @abstractmethod
     def logger(self) -> "LoggerItf":
         """
@@ -74,74 +94,88 @@ class Ghost(Entity, Descriptive, Identifiable, ABC):
         pass
 
     @abstractmethod
-    def meta_prompt(self) -> str:
+    def multitasks(self) -> "MultiTask":
         """
-        ghost 动态生成自己的 meta prompt.
+        当前 Task 的多任务管理模块.
+        提供原语管理基础的多任务调度.
+        作为基础的调度模块, 可供其它类库的封装.
         """
         pass
 
     @abstractmethod
-    def taskmanager(self) -> "Mindflow":
+    def taskflow(self) -> "Taskflow":
+        """
+        对当前 Task 自身的状态管理器.
+        提供原语管理自身的任务调度.
+        """
         pass
 
     @abstractmethod
-    def multitasks(self) -> "MultiTasks":
+    def moss(self) -> "MossCompiler":
+        """
+        实例化一个 moss compiler.
+        """
         pass
 
     @abstractmethod
-    def facade(self) -> "Facade":
+    def workspace(self) -> Storage:
+        """
+        返回 Ghost 所持有的文件空间.
+        这里面的文件都是 Ghost 可以管理的.
+        """
         pass
 
     @abstractmethod
     def finish(self, err: Optional[Exception]) -> None:
+        """
+        Ghost 运行时用统一的 Finish 方法来结束一个周期.
+        用来存储状态变更, 或者处理异常.
+        :param err: 记录运行时异常.
+        """
         pass
 
     @abstractmethod
+    def utils(self) -> Utils:
+        """
+        Ghost 的
+        """
+        pass
+
+    @classmethod
+    def contracts(cls) -> List[Type]:
+        """
+        Ghost 完成初始化后, IoC container 必须要提供的抽象列表.
+        可以用于检查 Ghost 的初始化是否完成.
+        """
+        from ghostiss.core.ghosts.shells import Shell
+        from ghostiss.core.ghosts.thoughts import Thoughts
+        from ghostiss.core.ghosts.schedulers import MultiTask, Taskflow
+        return [
+
+            LoggerItf,  # 日志模块. 为了动态传递一些数据, 所以用 LoggerItf
+
+            Ghost,  # ghost 自身.
+            Shell,  # shell 的封装.
+            MossCompiler,  # 生成 MossCompiler
+
+            Thoughts,  # 管理所有的 thought.
+            Modules,  # 安全管理下的 Modules 模块.
+            LLMs,  # 大模型的 API 集成.
+            MultiTask,  # 多任务管理的原语.
+            Taskflow,  # 当前任务自身管理的原语.
+
+            Session,  # 状态管理.
+            # unsafe 的底层模块.
+            Threads,
+            Tasks,
+            Processes,
+            EventBus,
+        ]
+
+    @abstractmethod
     def destroy(self) -> None:
-        pass
-
-
-class Matrix(EntityFactory[Ghost], ABC):
-    """
-    ghost factory
-    """
-
-    def force_new_ghost(self, meta: EntityMeta) -> "Ghost":
-        g = self.new_entity(meta)
-        if g is None:
-            raise NotImplementedError(f"Ghost initialize failed for {meta}")
-        return g
-
-
-class Facade:
-    """
-    基于 ghost 抽象可以实现的各种基础功能, 放到 facade 里.
-    """
-
-    def __init__(self, ghost: Ghost):
-        self.ghost = ghost
-
-    def send(self, *messages: MessageType) -> None:
         """
-        发送多条消息. 并且把消息直接加入到当前的 Thread 中间.
-        todo: move to session
+        主动做垃圾回收的准备.
+        避免运行时的内存泄漏.
         """
-        parser = MessageTypeParser()
-        session = self.ghost.session
-        thread = session.thread()
-        messenger = self.ghost.messenger().new(thread=thread)
-        iterator = parser.parse(messages)
-        for msg in iterator:
-            messenger.deliver(msg)
-
-        messages, _ = messenger.flush()
-        session.update_thread(thread)
-
-
-class GhostFactory(EntityFactory[Ghost], ABC):
-
-    def register(self, ghost_meta: EntityMeta) -> None:
         pass
-
-    def force_new_ghost(self, meta: EntityMeta) -> Ghost:
-        return self.force_new_entity(meta)
