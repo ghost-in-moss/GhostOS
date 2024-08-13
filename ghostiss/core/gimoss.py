@@ -1,46 +1,13 @@
 from typing import List, Optional, Callable, Dict
 from abc import ABC, abstractmethod
 from ghostiss.entity import EntityMeta
-from ghostiss.core.messages import Message, Stream
-from ghostiss.core.session import Session, Tasks, TaskState
-from ghostiss.core.ghosts import Ghost
-from ghostiss.core.session.events import EventBus, Event, DefaultEventType
+from ghostiss.core.messages import Stream
+from ghostiss.core.session import Session
+from ghostiss.core.ghosts import Ghost, Inputs
+from ghostiss.core.session.events import EventBus, Event
 from ghostiss.contracts.logger import LoggerItf
 from ghostiss.container import Container
 from ghostiss.helpers import uuid
-from pydantic import BaseModel, Field
-
-
-class Inputs(BaseModel):
-    """
-    定义一个标准的请求协议.
-    """
-
-    trace: str = Field(
-        default="",
-        description="inputs 的 trace id, 应该记录到日志中, 贯穿整个流程.",
-    )
-
-    ghost_meta: EntityMeta = Field(
-        description="ghost 的配置信息. 指定了响应请求的 Ghost.",
-    )
-
-    messages: List[Message] = Field(
-        description="本轮请求真正的输入数据. 不应该为空. "
-    )
-
-    process_id: Optional[str] = Field(
-        default=None,
-        description="指定响应时进程的 id. 如果目标进程存在, 则用它响应. ",
-    )
-    task_id: Optional[str] = Field(
-        default=None,
-        description="指定响应的 task id. 如果目标 task 存在, 则用它来响应. ",
-    )
-    thought_meta: Optional[str] = Field(
-        default=None,
-        description="",
-    )
 
 
 class GhostInMOSS(ABC):
@@ -103,13 +70,10 @@ class GhostInMOSS(ABC):
         task_id = inputs.task_id if inputs.task_id else inputs.trace
         session = self.find_or_create_session(inputs.ghost_meta, upstream, task_id)
         ghost = self.create_ghost(session)
-        event = DefaultEventType.INTERCEPT.new(
-            eid=inputs.trace,
-            task_id=inputs.task_id,
-            messages=inputs.message,
-        )
-        # 无锁操作, 拦截事件. 只会运行一轮.
-        self.handle_event(ghost, event)
+        event = ghost.on_inputs(inputs)
+        if event is not None:
+            # 无锁操作, 拦截事件. 只会运行一轮.
+            self.handle_event(ghost, event)
 
     @abstractmethod
     def dispatch(self, caller: Callable, *, timeout: float, args: List, kwargs: Dict) -> Callable:

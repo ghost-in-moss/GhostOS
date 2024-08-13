@@ -25,10 +25,10 @@ def test_class_object_source():
         foo: str
 
     t = Test()
-    # can not get source from instance
-    data = inspect.getsource(t)
     e = None
     try:
+        # can not get source from instance
+        data = inspect.getsource(t)
         assert "class Test" in data
     except TypeError as exp:
         e = exp

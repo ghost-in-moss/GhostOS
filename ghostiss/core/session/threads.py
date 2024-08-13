@@ -112,6 +112,12 @@ class Threads(ABC):
 
     @abstractmethod
     def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:
+        """
+        获取一个 Thread 实例. 如果不存在的话, 返回 None.
+        :param thread_id: thread_id
+        :param create: 如果
+        :return:
+        """
         pass
 
     @abstractmethod

@@ -1,8 +1,7 @@
 import inspect
 import re
-from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Type, is_typeddict
+from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, is_typeddict
 from pydantic import BaseModel
-from ghostiss.entity import EntityClass
 from ghostiss.abc import Identifiable, Descriptive
 
 __all__ = [
@@ -309,7 +308,7 @@ def add_name_to_set(names: set, name: str) -> set:
 def is_model_class(typ: type) -> bool:
     if not isinstance(typ, type) or inspect.isabstract(typ):
         return False
-    return issubclass(typ, BaseModel) or is_typeddict(typ) or issubclass(typ, EntityClass)
+    return issubclass(typ, BaseModel) or is_typeddict(typ)
 
 
 def get_model_object_meta(obj: Any) -> Optional[Dict]:
