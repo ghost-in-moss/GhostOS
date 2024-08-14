@@ -1,13 +1,16 @@
 import time
-from typing import Optional, List, Set
+from typing import Optional, List, Set, Iterable, ClassVar
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
 from ghostiss.entity import EntityMeta
 from ghostiss.abc import Identifier, Identifiable
+from ghostiss.core.messages import Payload
 
 __all__ = [
-    'Task', 'TaskState', 'Tasks',
+    'Task', 'TaskPayload', 'TaskBrief',
+    'TaskState',
+    'Tasks',
     'AwaitGroup',
 ]
 
@@ -24,8 +27,8 @@ class TaskState(str, Enum):
     WAITING = "waiting"
     """the task needs more inputs"""
 
-    QUEUED = "queued"
-    """the task is queued to run"""
+    # QUEUED = "queued"
+    # """the task is queued to run"""
 
     CANCELLED = "cancelled"
     """the task is canceled"""
@@ -50,8 +53,48 @@ class AwaitGroup(BaseModel):
     tasks: List[str] = Field(description="children task ids to wait")
 
 
-class Task(BaseModel, Identifiable):
+class TaskBrief(BaseModel, Identifiable):
+    task_id: str = Field(description="the id of the task")
+    name: str = Field(description="the name of the task")
+    description: str = Field(description="the description of the task")
+    task_state: TaskState = Field(description="the state of the task")
+    logs: List[str] = Field(description="the logs of the task")
+    created: float = Field(
+        default_factory=lambda: round(time.time(), 4),
+        description="The time the task was created.",
+    )
+    updated: float = Field(
+        default_factory=lambda: round(time.time(), 4),
+        description="The time the task was updated.",
+    )
+    overdue: float = Field(
+        default=0.0,
+        description="The time the task was overdue.",
+    )
+    timeout: float = Field(
+        default=0.0,
+        description="timeout for each round of the task execution",
+    )
+
+    def identifier(self) -> Identifier:
+        return Identifier(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+        )
+
+
+class TaskPayload(Payload):
+    key: ClassVar[str] = "task_info"
+    task_id: str = Field(description="the id of the task")
+    task_name: str = Field(description="the name of the task")
+    process_id: str = Field(description="the id of the process")
+    thread_id: str = Field(description="the id of the thread")
+
+
+class Task(TaskBrief):
     locker: Optional[str] = Field(
+        default=None,
         description="task locker ",
     )
     round: int = Field(
@@ -60,22 +103,25 @@ class Task(BaseModel, Identifiable):
     )
 
     # -- scope --- #
+    session_id: str = Field(
+        description="session id that task belongs.",
+    )
     process_id: str = Field(
         description="""
 the id of the process that the task belongs to.
 """,
     )
-
+    task_id: str = Field(
+        description="""
+    the id of the task. 
+    """,
+    )
     thread_id: str = Field(
         description="""
 the id of the thread that contains the context of the task.
 """,
     )
-    task_id: str = Field(
-        description="""
-the id of the task. 
-""",
-    )
+
     parent: Optional[str] = Field(
         default=None,
         description="""
@@ -122,6 +168,11 @@ The meta data to restore the handler of this task.
 the state of the current task.
 """
     )
+    # --- state ---#
+    logs: List[str] = Field(
+        default_factory=list,
+        description="log of the status change of the task",
+    )
     # --- time related --- #
     created: float = Field(
         default_factory=lambda: round(time.time(), 4),
@@ -140,12 +191,36 @@ the state of the current task.
         description="timeout for each round of the task execution",
     )
 
+    @classmethod
+    def new(
+            cls, *,
+            task_id: str,
+            session_id: str,
+            process_id: str,
+            name: str, description: str,
+            meta: EntityMeta,
+            parent_task_id: Optional[str] = None,
+    ) -> "Task":
+        return Task(
+            id=task_id,
+            session_id=session_id,
+            process_id=process_id,
+            thread_id=task_id,
+            parent=parent_task_id,
+            meta=meta,
+            name=name,
+            description=description,
+        )
+
     def identifier(self) -> Identifier:
         return Identifier(
             id=self.id,
             name=self.name,
             description=self.description,
         )
+
+    def brief(self) -> TaskBrief:
+        return TaskBrief(**self.model_dump())
 
     def awaiting_tasks(self) -> Set[str]:
         result = set()
@@ -167,6 +242,17 @@ the state of the current task.
         self.awaiting = awaiting
         return fulfill
 
+    def as_payload(self) -> TaskPayload:
+        """
+        根据当前 Task 获取添加到消息体里的 payload.
+        """
+        return TaskPayload(
+            task_id=self.task_id,
+            process_id=self.process_id,
+            thread_id=self.thread_id,
+            name=self.name,
+        )
+
 
 class Tasks(ABC):
     """
@@ -179,6 +265,35 @@ class Tasks(ABC):
 
     @abstractmethod
     def get_task(self, task_id: str, lock: bool) -> Optional[Task]:
+        pass
+
+    @abstractmethod
+    def get_tasks(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[Task]:
+        """
+        从数据库里读取出多个 task. 不会获取目标 task 的锁, 所以也无法更新.
+        :param task_ids:
+        :param states:
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def get_task_briefs(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[TaskBrief]:
+        """
+        获取多个任务的摘要信息.
+        :param task_ids:
+        :param states:
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def cancel_tasks(self, task_ids: List[str]) -> None:
+        """
+        变更一组任务的状态, 强制取消. 目标任务应该周期性检查状态.
+        :param task_ids:
+        :return:
+        """
         pass
 
     @abstractmethod

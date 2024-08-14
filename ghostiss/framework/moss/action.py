@@ -4,7 +4,7 @@ from ghostiss.core.ghosts.actions import Action
 from typing import Optional, ClassVar
 from ghostiss.container import Container
 from ghostiss.core.llms import Chat, FunctionalToken
-from ghostiss.core.messages import DefaultTypes, Caller
+from ghostiss.core.messages import DefaultMessageTypes, Caller
 from ghostiss.core.moss_p1 import MOSS
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.session.messenger import Messenger
@@ -102,7 +102,7 @@ Here is the context provided to you in this turn:
 
         # update code prompt as system message
         code_prompt = self._moss.dump_code_prompt()
-        moss_prompt = DefaultTypes.DEFAULT.new_system(
+        moss_prompt = DefaultMessageTypes.DEFAULT.new_system(
             content=self.template.format(code=code_prompt),
         )
         chat.system.append(moss_prompt)
@@ -132,13 +132,13 @@ Here is the context provided to you in this turn:
                 content = f"run moss result: \n {printed}"
             # 生成消息并发送.
             if content:
-                message = DefaultTypes.DEFAULT.new_assistant(content=content)
+                message = DefaultMessageTypes.DEFAULT.new_assistant(content=content)
                 # todo: 这个消息理论上应该发送, 则 message 需要有 debug 模式.
                 self._thread.update([message], pycontext)
         except Exception as e:
             # 将异常作为消息. todo: 完善消息.
             content = f"run moss failed: \n{e} \n\n{format_exc()}"
-            message = DefaultTypes.DEFAULT.new_system(content=content)
+            message = DefaultMessageTypes.DEFAULT.new_system(content=content)
             self._thread.update([message])
         finally:
             # 将 moss 清空掉.

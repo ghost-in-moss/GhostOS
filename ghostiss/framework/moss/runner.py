@@ -8,12 +8,12 @@ from ghostiss.core.ghosts import (
 import datetime
 from ghostiss.core.session.messenger import Messenger
 from ghostiss.core.moss_p1 import MOSS, PyContext
-from ghostiss.core.messages import DefaultTypes, Message
+from ghostiss.core.messages import DefaultMessageTypes, Message
 from ghostiss.core.llms import LLMs, LLMApi, Chat, ChatFilter, filter_chat
 from ghostiss.core.session.threads import MsgThread, thread_to_chat
 from ghostiss.helpers import uuid, import_from_path
 from pydantic import BaseModel, Field
-from ghostiss.framework.llms.chatfilters import AssistantNameFilter
+from ghostiss.framework.chatfilters.assistant_filter import OtherAgentOrTaskFilter
 from ghostiss.framework.moss.action import MOSSAction
 
 __all__ = [
@@ -66,8 +66,8 @@ class MossRunner(LLMRunner):
         :return:
         """
         system = [
-            DefaultTypes.DEFAULT.new_system(content=self._system_prompt),
-            DefaultTypes.DEFAULT.new_system(content=self._instruction),
+            DefaultMessageTypes.DEFAULT.new_system(content=self._system_prompt),
+            DefaultMessageTypes.DEFAULT.new_system(content=self._instruction),
         ]
         chat = thread_to_chat(chat_id=uuid(), thread=thread, system=system)
         actions = self.actions(container, thread)
@@ -81,7 +81,7 @@ class MossRunner(LLMRunner):
         return result_actions, chat
 
     def filters(self) -> Iterable[ChatFilter]:
-        yield AssistantNameFilter(name=self._name)
+        yield OtherAgentOrTaskFilter(assistant_name=self._name)
 
     def get_llmapi(self, container: Container) -> LLMApi:
         llms = container.force_fetch(LLMs)

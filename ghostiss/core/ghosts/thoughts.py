@@ -96,7 +96,7 @@ class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
         pass
 
     @abstractmethod
-    def new_task_id(self, process_id: str) -> str:
+    def new_task_id(self, g: Ghost) -> str:
         """
         创建一个唯一的 task id.
         在 create task 时会调用.

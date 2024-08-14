@@ -5,7 +5,7 @@ import os
 import yaml
 from ghostiss.core.moss_p1.reflect import ClassSign, Interface
 from ghostiss.container import Container, Provider, ABSTRACT
-from ghostiss.core.messages import DefaultTypes
+from ghostiss.core.messages import DefaultMessageTypes
 from ghostiss.core.ghosts import Operator, Taskflow
 from ghostiss.contracts.storage import Storage, FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
@@ -184,7 +184,7 @@ def main() -> None:
     # 递归生成 thread 信息.
     thread = get_thread(storage, root_path, suite)
     if parsed.input:
-        input_msg = DefaultTypes.DEFAULT.new_user(content=parsed.input)
+        input_msg = DefaultMessageTypes.DEFAULT.new_user(content=parsed.input)
         thread.inputs = [input_msg]
         if not suite.thread.inputs:
             suite.thread.inputs = thread.inputs

@@ -1,5 +1,5 @@
 from ghostiss.core.messages.message import (
-    Message, Role, DefaultTypes,
+    Message, Role, DefaultMessageTypes,
     Caller, Payload, PayloadItem, Attachment,
     MessageClass, MessageType, MessageTypeParser,
 )

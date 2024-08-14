@@ -9,7 +9,7 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostiss.core.errors import GhostissIOError
-from ghostiss.core.messages import Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultTypes
+from ghostiss.core.messages import Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultMessageTypes
 from ghostiss.core.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
     Chat,
@@ -152,7 +152,7 @@ class OpenAIAdapter(LLMApi):
         prompt = FunctionalTokenPrompt(self._functional_token_prompt)
         content = prompt.format_tokens(chat.functional_tokens)
         if len(chat.system) == 0:
-            chat.system = [DefaultTypes.DEFAULT.new_system(content=content)]
+            chat.system = [DefaultMessageTypes.DEFAULT.new_system(content=content)]
         else:
             chat.system[-1].content += "\n\n" + content
         return chat

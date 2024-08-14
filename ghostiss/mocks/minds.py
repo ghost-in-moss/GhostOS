@@ -9,8 +9,8 @@ class FakeTaskflow(Taskflow):
     def send(self, *messages: MessageType) -> None:
         print(*messages)
 
-    def awaits(self, *questions: MessageType) -> Operator:
-        return FakeOperator("FakeMindflow:awaits", *questions)
+    def awaits(self, *replies: MessageType) -> Operator:
+        return FakeOperator("FakeMindflow:awaits", *replies)
 
     def observe(self, *args, **kwargs) -> Operator:
         return FakeOperator("FakeMindflow:observe", *args, **kwargs)

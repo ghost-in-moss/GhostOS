@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterable, List
 from abc import ABC, abstractmethod
 
 from ghostiss.core.session.events import Event
@@ -6,6 +6,7 @@ from ghostiss.core.session.messenger import Messenger
 from ghostiss.core.session.processes import Process
 from ghostiss.core.session.tasks import Task
 from ghostiss.core.session.threads import MsgThread
+from ghostiss.core.messages import MessageType
 
 __all__ = ['Session']
 
@@ -85,11 +86,20 @@ class Session(ABC):
         pass
 
     @abstractmethod
+    def send_messages(self, *messages: MessageType) -> None:
+        """
+        发送消息.
+        :param messages:
+        :return:
+        """
+        pass
+
+    @abstractmethod
     def update_task(self, task: "Task", thread: Optional["MsgThread"] = None) -> None:
         """
         更新当前 session 的 task.
         :param task: 如果不属于当前 session, 则会报错
-        :param thread: 由于 thread 和 task 是绑定的, 需要一起保存.
+        :param thread: 由于 thread 和 task 是绑定的, 需要一起保存. update thread 的时候, thread 的 appending 等信息会更新.
         """
         pass
 
@@ -101,11 +111,20 @@ class Session(ABC):
         """
         pass
 
+    # --- 多任务管理的 api. 在 session.finish 时真正执行. --- #
+
     @abstractmethod
-    def fire_event(self, event: "Event") -> None:
+    def fire_events(self, *events: "Event") -> None:
         """
-        发送一个事件.
-        :param event:
+        发送多个事件.
+        """
+        pass
+
+    @abstractmethod
+    def cancel_tasks(self, *task_ids: str) -> None:
+        """
+        取消多个任务.
+        :param task_ids:
         :return:
         """
         pass
