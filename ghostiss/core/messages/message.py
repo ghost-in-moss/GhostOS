@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from ghostiss.helpers import uuid
 
 __all__ = [
-    "Message", "Role", "DefaultTypes",
+    "Message", "Role", "DefaultMessageTypes",
     "MessageClass",
     "MessageType", "MessageTypeParser",
     "Payload", "PayloadItem", "Attachment", "Caller",
@@ -28,7 +28,7 @@ class Role(str, enum.Enum):
         return set(map(lambda x: x.value, cls))
 
 
-class DefaultTypes(str, enum.Enum):
+class DefaultMessageTypes(str, enum.Enum):
     DEFAULT = ""
     CHAT_COMPLETION = "chat_completion"
     ERROR = "error"
@@ -308,7 +308,7 @@ class Message(BaseModel):
         """
         返回消息的类型.
         """
-        return self.type or DefaultTypes.DEFAULT
+        return self.type or DefaultMessageTypes.DEFAULT
 
     def is_empty(self) -> bool:
         """

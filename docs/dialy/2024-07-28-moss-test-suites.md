@@ -196,11 +196,11 @@ def main(os: "MOSS") -> "Operator":
 - memory runner: 这个 runner 会自动调用 memory 的讯息来补充上下文, 为 thought 运行提供提示. 
 
 典型的例子, 是根据 input 自动 RAG 召回 examples 或者 cot. 但 Thought 可以主动调用方法存储 example 或 cot. 
-llms 生成的 moss 代码可能是: 
+llms 生成的 moss 代码可能是:
 
 ```python
 def main(os: "MOSS") -> "Operator":
-    os.examples.memorize() # 系统自动把上一轮对话 user => output 存储到 rag 记忆里. 
+    os.examples.memorize()  # 系统自动把上一轮对话 user => output 存储到 rag 记忆里. 
     return os.awaits("回复用户的内容")
 ```
 

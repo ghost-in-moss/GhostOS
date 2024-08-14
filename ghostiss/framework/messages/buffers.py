@@ -1,7 +1,7 @@
 import time
 from typing import Iterable, Optional, List, Dict, Set
 
-from ghostiss.core.messages import Message, Caller, DefaultTypes, Role, Payload, Attachment, Buffer, Flushed
+from ghostiss.core.messages import Message, Caller, DefaultMessageTypes, Role, Payload, Attachment, Buffer, Flushed
 from ghostiss.core.llms import FunctionalToken
 from ghostiss.helpers import uuid
 
@@ -88,7 +88,7 @@ class DefaultBuffer(Buffer):
             return []
         # 不深拷贝的话, 加工逻辑就会交叉污染?
         # pack = origin.model_copy(deep=True)
-        if DefaultTypes.is_protocol_type(pack):
+        if DefaultMessageTypes.is_protocol_type(pack):
             # final 包不进行 buffer.
             yield pack
             return

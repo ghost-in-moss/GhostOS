@@ -1,4 +1,5 @@
 import inspect
+from types import ModuleType
 from ghostiss.core.moss import prompts
 from ghostiss.core.moss.prompts import reflect_module_locals, compile_attr_prompts
 
@@ -27,7 +28,7 @@ def test_prompts_baseline():
     # 引用的抽象类应该存在.
     assert "PromptAble" in data
 
-    prompt = compile_attr_prompts(array)
+    prompt = compile_attr_prompts(ModuleType("test"), array)
     assert "class PromptAble" in prompt
 
 

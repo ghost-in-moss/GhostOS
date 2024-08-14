@@ -2,7 +2,7 @@ from typing import Optional, Iterable, TYPE_CHECKING, Type
 from ghostiss.container import Container, Provider
 from ghostiss.core.session.messenger import Messenger, Buffed
 from ghostiss.core.messages import (
-    Message, Payload, Attachment, Role, DefaultTypes,
+    Message, Payload, Attachment, Role, DefaultMessageTypes,
     Buffer, Stream,
 )
 from ghostiss.core.session.threads import MsgThread
@@ -112,11 +112,11 @@ class DefaultMessenger(Messenger, Stream):
             return False
         # 下游返回 error, 会导致全链路的 messenger 因为 error 而停止.
         # 所以 error 类型的消息, 链路里只能有一个.
-        if DefaultTypes.ERROR.match(pack):
+        if DefaultMessageTypes.ERROR.match(pack):
             self._stop(pack)
             return True
 
-        if DefaultTypes.is_final(pack):
+        if DefaultMessageTypes.is_final(pack):
             # 下游发送的 final 包, 上游会装作已经发送成功.
             if self._downstream_messenger:
                 # 发送成功了, 就去掉 _downstream_messenger
@@ -128,7 +128,7 @@ class DefaultMessenger(Messenger, Stream):
 
     def _deliver(self, delivery: Iterable[Message]) -> bool:
         for item in delivery:
-            if self._saving and not DefaultTypes.is_protocol_type(item) and not item.pack and self._thread:
+            if self._saving and not DefaultMessageTypes.is_protocol_type(item) and not item.pack and self._thread:
                 self._thread.update([item])
             if self._upstream:
                 # 如果发送不成功, 直接中断.
@@ -158,8 +158,8 @@ class DefaultMessenger(Messenger, Stream):
         停止并且发送指定的 final 包. 如果没有指定, 则发送 DefaultTypes.final()
         """
         self._stopped = True
-        if final is None or not DefaultTypes.is_protocol_type(final):
-            final = DefaultTypes.final()
+        if final is None or not DefaultMessageTypes.is_protocol_type(final):
+            final = DefaultMessageTypes.final()
         if self._upstream and not self._upstream.stopped():
             self._upstream.deliver(final)
 

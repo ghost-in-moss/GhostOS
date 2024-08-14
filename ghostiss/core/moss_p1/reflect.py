@@ -3,7 +3,6 @@ import re
 from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, Union, Type, is_typeddict, Tuple
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from ghostiss.entity import EntityClass
 from ghostiss.abc import Identifiable, Descriptive
 
 __all__ = [
@@ -38,9 +37,9 @@ BasicTypes = Union[str, int, float, bool, list, dict]
 
 AttrDefaultTypes = Union[int, float, bool]
 
-ModelObject = Union[BaseModel, TypedDict, EntityClass]
+ModelObject = Union[BaseModel, TypedDict]
 
-ModelType = Union[Type[BaseModel], Type[TypedDict], Type[EntityClass]]
+ModelType = Union[Type[BaseModel], Type[TypedDict]]
 
 
 class Reflection(ABC):

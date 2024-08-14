@@ -26,6 +26,10 @@ class Event(BaseModel, Entity):
     task_id: str = Field(
         description="task id of which this event shall send to.",
     )
+    reason: str = Field(
+        default="",
+        description="reason of the event.",
+    )
 
     type: str = Field(
         default="",
@@ -41,9 +45,10 @@ class Event(BaseModel, Entity):
         default=None,
         description="task id in which this event is fired",
     )
-    priority: float = Field(
-        default=0, description="priority of this event", min_items=0.0, max_items=1.0,
-    )
+    # 没想好就先不做.
+    # priority: float = Field(
+    #     default=0, description="priority of this event", min_items=0.0, max_items=1.0,
+    # )
     messages: List[Message] = Field(
         default_factory=list,
         description="list of messages sent by this event",
@@ -81,10 +86,13 @@ class DefaultEventType(str, Enum):
     """自我驱动的思考"""
 
     FINISH_CALLBACK = "finish_callback"
-    """第三方 task 运行正常, 返回的消息. """
+    """child task 运行正常, 返回的消息. """
 
     FAILURE_CALLBACK = "failure_callback"
-    """第三方 task 运行失败, 返回的消息. """
+    """child task 运行失败, 返回的消息. """
+
+    NOTIFY_CALLBACK = "notify_callback"
+    """child task send some notice messages"""
 
     WAIT_CALLBACK = "wait_callback"
     """Child task 返回消息, 期待更多的输入. """
@@ -98,27 +106,23 @@ class DefaultEventType(str, Enum):
     FAILED = "failed"
     """任务失败时, 触发的事件. 可用于反思."""
 
-    INTERCEPT = "intercept"
-    """对输入消息的拦截. 可以做预处理. """
-
     def block(self) -> bool:
-        return self not in {
-            DefaultEventType.INTERCEPT,
-        }
+        return self not in {}
 
     def new(
             self, *,
             task_id: str,
-            from_task_id: Optional[str] = None,
-            eid: Optional[str] = None,
             messages: List[Message],
-            priority: float = 0.0,
+            from_task_id: Optional[str] = None,
+            reason: str = "",
+            eid: Optional[str] = None,
     ) -> Event:
         id_ = eid if eid else uuid()
         type_ = str(self.value)
         return Event(
             type=type_, task_id=task_id, block=self.block(),
-            id=id_, from_task_id=from_task_id, priority=priority,
+            id=id_, from_task_id=from_task_id,
+            reason=reason,
             messages=messages,
         )
 

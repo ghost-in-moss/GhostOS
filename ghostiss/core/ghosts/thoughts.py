@@ -4,6 +4,7 @@ from ghostiss.entity import Entity, EntityMeta, EntityFactory
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.session.events import Event
 from ghostiss.core.ghosts.operators import Operator
+from ghostiss.core.ghosts.runner import Runner
 from ghostiss.abc import Identifiable, Identifier, IdentifiableClass
 from ghostiss.helpers import uuid
 
@@ -95,7 +96,7 @@ class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
         pass
 
     @abstractmethod
-    def new_task_id(self, process_id: str) -> str:
+    def new_task_id(self, g: Ghost) -> str:
         """
         创建一个唯一的 task id.
         在 create task 时会调用.

@@ -18,7 +18,7 @@ class MultiTask(ABC):
     @abstractmethod
     def wait_on_tasks(self, *thoughts: Thought) -> Operator:
         """
-        使用 Thought 创建多个任务, 同时等待这些任务返回结果, 触发下一轮思考.
+        使用 Thought 创建多个任务, 同时等待这些任务返回结果. 当结果返回时会触发下一轮思考.
         :param thoughts: 每个 Thought 会创建出一个子任务.
         """
         pass
@@ -64,12 +64,11 @@ class Taskflow(ABC):
         pass
 
     @abstractmethod
-    def awaits(self, *questions: MessageType) -> Operator:
+    def awaits(self, *replies: MessageType, log: str = "") -> Operator:
         """
-        当前任务挂起, 等待下一轮用户输入后重新开始思考.
-        如果使用了 MOSS, awaits 是默认的调度方法.
-        **当你需要等待用户进一步输入时, 请总是调用这个方法.**
-        :param questions: 可以主动向用户提出问题.
+        当前任务挂起, 等待下一轮输入.
+        :param replies: 可以发送回复, 或者主动提出问题或要求. 并不是必要的.
+        :param log: 如果不为空, 会更新当前任务的日志. 只需要记录对任务进行有意义而且非常简介的讯息.
         """
         pass
 
@@ -82,18 +81,20 @@ class Taskflow(ABC):
         pass
 
     @abstractmethod
-    def finish(self, *results: MessageType) -> Operator:
+    def finish(self, log: str, *response: MessageType) -> Operator:
         """
         结束当前的任务, 返回任务结果.
         如果当前任务是持续的, 还要等待更多用户输入, 请使用 awaits.
-        :param results: 发送一条或多条消息作为任务的结论发送给用户.
+        :param log: 简单记录当前任务完成的理由.
+        :param response: 发送一条或多条消息作为任务的结论发送给用户.
         """
         pass
 
     @abstractmethod
-    def fail(self, *reasons: MessageType) -> Operator:
+    def fail(self, log: str, *messages: MessageType) -> Operator:
         """
         标记当前任务失败
-        :param reasons: 发送一条或多条消息告知用户失败的原因.
+        :param log: 记录当前任务失败的原因.
+        :param messages: 发送给用户或者父任务的消息. 如果为空的话, 把 log 作为讯息传递.
         """
         pass

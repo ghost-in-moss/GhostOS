@@ -4,7 +4,7 @@ import datetime
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 from ghostiss.core.llms import LLMs, Chat, ModelConf, ServiceConf
-from ghostiss.core.messages import Message, DefaultTypes
+from ghostiss.core.messages import Message, DefaultMessageTypes
 
 
 # 测试用, 不直接对外开放.
@@ -58,7 +58,7 @@ def run_test_case(api_info: APIInfo, chat: Chat, llms: LLMs, result: Dict[str, M
     try:
         message = api.chat_completion(chat)
     except Exception as e:
-        message = DefaultTypes.ERROR.new(content=str(e))
+        message = DefaultMessageTypes.ERROR.new(content=str(e))
     finally:
         end = time.time()
         duration = end - start

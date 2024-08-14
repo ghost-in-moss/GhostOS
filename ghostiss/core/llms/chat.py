@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_function_call_option_param import ChatCom
 
 from pydantic import BaseModel, Field
 from ghostiss import helpers
-from ghostiss.core.messages import Message, DefaultTypes, Caller
+from ghostiss.core.messages import Message, DefaultMessageTypes, Caller
 
 __all__ = [
     'LLMTool', 'FunctionalToken',
@@ -93,7 +93,7 @@ class Chat(BaseModel):
                 content = message.get_content()
                 contents.append(content)
             content = "\n\n".join(contents)
-            system = DefaultTypes.DEFAULT.new_system(content=content)
+            system = DefaultMessageTypes.DEFAULT.new_system(content=content)
             messages.append(system)
         if self.history:
             for item in self.history:
@@ -143,7 +143,8 @@ class Chat(BaseModel):
 
 class ChatFilter(ABC):
     """
-    用来对 chat filter 做加工.
+    用来对 chat message 做加工.
+    基本思路是, 尽可能保证消息体本身的一致性, 在使用的时候才对消息结构做调整.
     """
 
     @abstractmethod

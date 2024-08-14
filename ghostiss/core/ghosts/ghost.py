@@ -6,9 +6,11 @@ from ghostiss.abc import Identifiable, Identifier
 from ghostiss.contracts.logger import LoggerItf
 from ghostiss.contracts.modules import Modules
 from ghostiss.contracts.storage import Storage
-from ghostiss.core.session import Session, Threads, Tasks, Processes, EventBus
+from ghostiss.core.session import Session, Threads, Tasks, Processes, EventBus, Event
+from ghostiss.core.messages import Message
 from ghostiss.core.moss import MossCompiler
 from ghostiss.core.llms import LLMs, Chat
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     # 避免 python 文件管理风格导致的循环依赖.
@@ -17,7 +19,39 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.thoughts import Thoughts
     from ghostiss.core.ghosts.schedulers import MultiTask, Taskflow
 
-__all__ = ['Ghost']
+__all__ = ['Ghost', 'Inputs']
+
+
+class Inputs(BaseModel):
+    """
+    定义一个标准的请求协议.
+    """
+
+    trace: str = Field(
+        default="",
+        description="inputs 的 trace id, 应该记录到日志中, 贯穿整个流程.",
+    )
+
+    ghost_meta: EntityMeta = Field(
+        description="ghost 的配置信息. 指定了响应请求的 Ghost.",
+    )
+
+    messages: List[Message] = Field(
+        description="本轮请求真正的输入数据. 不应该为空. "
+    )
+
+    process_id: Optional[str] = Field(
+        default=None,
+        description="指定响应时进程的 id. 如果目标进程存在, 则用它响应. ",
+    )
+    task_id: Optional[str] = Field(
+        default=None,
+        description="指定响应的 task id. 如果目标 task 存在, 则用它来响应. ",
+    )
+    thought_meta: Optional[str] = Field(
+        default=None,
+        description="",
+    )
 
 
 class Ghost(Entity, Identifiable, ABC):
@@ -33,6 +67,16 @@ class Ghost(Entity, Identifiable, ABC):
     def to_entity_meta(self) -> EntityMeta:
         """
         用来生成 Ghost Meta 保存到 Process 里.
+        """
+        pass
+
+    @abstractmethod
+    def on_inputs(self, inputs: Inputs) -> Optional["Event"]:
+        """
+        对请求进行预处理, 如果返回一个事件, 则触发事件响应流程.
+        可以在这个环节使用管道的方式预处理输入消息, 比如检查消息体是否过大, 或者是否触发一个命令.
+        :param inputs: 输入消息.
+        :return: 是否正式触发一个事件.
         """
         pass
 
@@ -135,7 +179,7 @@ class Ghost(Entity, Identifiable, ABC):
         pass
 
     @abstractmethod
-    def utils(self) -> Utils:
+    def utils(self) -> "Utils":
         """
         Ghost 的
         """

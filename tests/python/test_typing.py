@@ -48,10 +48,6 @@ def test_type_add_property():
     assert getattr(f, '__desc__') == "desc"
 
 
-def test_caller_module_and_spec():
-    assert inspect.getargspec(inspect.getargspec) == 'getargspec'
-
-
 def test_attr_typehint():
     class Foo:
         foo: int = 123

@@ -40,7 +40,8 @@ def test_typed_dict_with_undefined():
         a: Optional[int]
 
     bar = Bar(a=None)
-    assert "a" not in bar
+    assert "a" in bar
+    assert bar["a"] is None
     bar = Bar(b=1)
     assert "b" in bar
 
