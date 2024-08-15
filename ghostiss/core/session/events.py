@@ -5,6 +5,7 @@ from ghostiss.entity import EntityMeta, Entity, EntityFactory
 from pydantic import BaseModel, Field
 from ghostiss.core.messages.message import Message
 from ghostiss.helpers import uuid
+from contextlib import contextmanager
 
 __all__ = [
     'Event', 'EventFactory', 'EventBus', 'DefaultEventType',
@@ -57,6 +58,12 @@ class Event(BaseModel, Entity):
         default_factory=dict,
         description="more structured data that follow the message.Payload pattern",
     )
+
+    def from_self(self) -> bool:
+        """
+        通过任务是否是自己触发的, 来判断是否要继续.
+        """
+        return self.task_id == self.from_task_id
 
     def event_type(self) -> str:
         return self.type
@@ -149,15 +156,54 @@ class EventFactory(EntityFactory):
 
 
 class EventBus(ABC):
+    """
+    global event bus.
+    """
 
     @abstractmethod
-    def send_event(self, e: Event, max_count: int, priority: float = 0.0) -> None:
+    def send_event(self, e: Event, notify: bool) -> None:
+        """
+        send an event to the event bus, and notify the task.
+        :param e: event to send
+        :param notify: whether to notify the task
+        """
         pass
 
     @abstractmethod
     def pop_task_event(self, task_id: str) -> Optional[Event]:
+        """
+        pop a task event by task_id.
+        :param task_id: certain task id.
+        :return: event or None if timeout is reached
+        """
         pass
 
     @abstractmethod
-    def pop_global_event(self) -> Optional[Event]:
+    def pop_task_notification(self) -> Optional[str]:
+        """
+        pop a task notification from the main queue.
+        :return: task id or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    def notify_task(self, task_id: str) -> None:
+        """
+        notify a task to check new events.
+        :param task_id: task id
+        """
+        pass
+
+    @abstractmethod
+    def lock_task(self, task_id: str) -> Optional[str]:
+        """
+        锁定 task, 只有锁定成功才能消费
+        """
+        pass
+
+    @abstractmethod
+    def unlock_task(self, task_id: str, lock: str) -> bool:
+        """
+        使用锁后返回的 key 进行解锁.
+        """
         pass

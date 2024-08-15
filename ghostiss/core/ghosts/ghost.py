@@ -1,4 +1,4 @@
-from typing import Optional, TYPE_CHECKING, List, Type
+from typing import Optional, TYPE_CHECKING, List, Type, Tuple
 from abc import ABC, abstractmethod
 from ghostiss.entity import Entity, EntityMeta
 from ghostiss.container import Container
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from ghostiss.core.ghosts.shells import Shell
     from ghostiss.core.ghosts.thoughts import Thoughts
     from ghostiss.core.ghosts.schedulers import MultiTask, Taskflow
+    from ghostiss.core.ghosts.operators import Operator
 
 __all__ = ['Ghost', 'Inputs']
 
@@ -78,6 +79,10 @@ class Ghost(Entity, Identifiable, ABC):
         :param inputs: 输入消息.
         :return: 是否正式触发一个事件.
         """
+        pass
+
+    @abstractmethod
+    def init_operator(self, event: "Event") -> Tuple["Operator", int]:
         pass
 
     @abstractmethod
@@ -170,15 +175,6 @@ class Ghost(Entity, Identifiable, ABC):
         pass
 
     @abstractmethod
-    def finish(self, err: Optional[Exception]) -> None:
-        """
-        Ghost 运行时用统一的 Finish 方法来结束一个周期.
-        用来存储状态变更, 或者处理异常.
-        :param err: 记录运行时异常.
-        """
-        pass
-
-    @abstractmethod
     def utils(self) -> "Utils":
         """
         Ghost 的
@@ -215,6 +211,19 @@ class Ghost(Entity, Identifiable, ABC):
             Processes,
             EventBus,
         ]
+
+    @abstractmethod
+    def fail(self, err: Optional[Exception]) -> None:
+        """
+        Ghost 运行时用统一的 Finish 方法来结束一个周期.
+        用来存储状态变更, 或者处理异常.
+        :param err: 记录运行时异常.
+        """
+        pass
+
+    @abstractmethod
+    def finish(self) -> None:
+        pass
 
     @abstractmethod
     def destroy(self) -> None:

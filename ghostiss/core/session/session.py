@@ -45,12 +45,12 @@ class Session(ABC):
         """
         pass
 
-    @abstractmethod
-    def refresh_lock(self) -> bool:
-        """
-        Session 尝试用已有的锁, 更新自身的锁. 更新失败的话, 返回 False.
-        """
-        pass
+    # @abstractmethod
+    # def refresh_lock(self) -> bool:
+    #     """
+    #     Session 尝试用已有的锁, 更新自身的锁. 更新失败的话, 返回 False.
+    #     """
+    #     pass
 
     @abstractmethod
     def process(self) -> "Process":
@@ -130,9 +130,18 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def finish(self, err: Optional[Exception]) -> None:
+    def finish(self) -> None:
         """
         完成 session, 需要清理和真正保存状态.
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def fail(self, err: Optional[Exception]) -> bool:
+        """
+        任务执行异常的处理. 需要判断任务是致命的, 还是可以恢复.
+        :param err:
         :return:
         """
         pass

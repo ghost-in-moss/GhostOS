@@ -24,9 +24,8 @@ class DefaultMessenger(Messenger, Stream):
 
     def __init__(
             self, *,
-            thread: "MsgThread",
             upstream: Optional[Stream] = None,
-            saving: bool = True,
+            thread: Optional["MsgThread"] = None,
             name: Optional[str] = None,
             role: Optional[str] = None,
             buffer: Optional[Buffer] = None,
@@ -35,8 +34,19 @@ class DefaultMessenger(Messenger, Stream):
             functional_tokens: Optional[Iterable[FunctionalToken]] = None,
             logger: Optional["LoggerItf"] = None,
     ):
-        self._thread = thread
-        self._saving = saving
+        """
+        初始化一个 Messenger.
+        :param upstream: 如果为 None 的话, 不会对上游发送消息.
+        :param thread: 如果不为 None, 会把发送的尾包记录到 thread 里.
+        :param name: 消息体的名字.
+        :param role: 消息体的角色, 默认设定为 Assistant
+        :param buffer: 是否传入自定义的 buffer.
+        :param payloads: 每条消息都必须添加的 payload.
+        :param attachments: 每条消息都必须添加的 attachments.
+        :param functional_tokens: 是否有需要处理的 functional tokens
+        :param logger:
+        """
+        self._thread: Optional[MsgThread] = thread
         self._name = name
         self._logger = logger
         self._role = role if role else Role.ASSISTANT.value
@@ -91,7 +101,7 @@ class DefaultMessenger(Messenger, Stream):
 
         # 如果能传输数据, 则传递上游的 upstream.
         upstream = self._upstream if sending else None
-        thread = thread if thread else self._thread
+        thread = self._thread
         functional_tokens = functional_tokens if functional_tokens else self._functional_tokens
         messenger = DefaultMessenger(
             upstream=upstream,
@@ -128,8 +138,11 @@ class DefaultMessenger(Messenger, Stream):
 
     def _deliver(self, delivery: Iterable[Message]) -> bool:
         for item in delivery:
-            if self._saving and not DefaultMessageTypes.is_protocol_type(item) and not item.pack and self._thread:
-                self._thread.update([item])
+            if (self._thread is not None   # thread exists.
+                    and not DefaultMessageTypes.is_protocol_type(item)   # not a protocol type message.
+                    and not item.pack):  # is tail package.
+                # append tail message to thread.
+                self._thread.append(item)
             if self._upstream:
                 # 如果发送不成功, 直接中断.
                 success = self._upstream.deliver(item)
@@ -179,4 +192,4 @@ class TestMessengerProvider(Provider[Messenger]):
         return Messenger
 
     def factory(self, con: Container) -> Messenger:
-        return DefaultMessenger(thread=MsgThread())
+        return DefaultMessenger()

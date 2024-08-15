@@ -93,15 +93,6 @@ class TaskPayload(Payload):
 
 
 class Task(TaskBrief):
-    locker: Optional[str] = Field(
-        default=None,
-        description="task locker ",
-    )
-    round: int = Field(
-        default=0,
-        description="记录 Process 已经运行过多少次. 如果是第一次的话, 则意味着它刚刚被创建出来. ",
-    )
-
     # -- scope --- #
     session_id: str = Field(
         description="session id that task belongs.",
@@ -179,7 +170,7 @@ the state of the current task.
         description="The time the task was created.",
     )
     updated: float = Field(
-        default_factory=lambda: round(time.time(), 4),
+        default=0.0,
         description="The time the task was updated.",
     )
     overdue: float = Field(
@@ -189,6 +180,27 @@ the state of the current task.
     timeout: float = Field(
         default=0.0,
         description="timeout for each round of the task execution",
+    )
+
+    # --- system --- #
+    lock: Optional[str] = Field(
+        default=None,
+    )
+    think_turns: int = Field(
+        default=0,
+        description="记录 task 已经自动运行过多少次. 如果是 -1 的话, 则意味着它刚刚被创建出来. ",
+    )
+    max_think_turns: int = Field(
+        default=20,
+        description="任务最大自动运行轮数, 为 0 的话表示无限. "
+    )
+    pending: bool = Field(
+        default=False,
+        description="if the task is pending. use Tasks lib to restore it",
+    )
+    depth: int = Field(
+        default=0,
+        description="task depth that should be parent task depth +1 if parent exists",
     )
 
     @classmethod
@@ -211,6 +223,12 @@ the state of the current task.
             name=name,
             description=description,
         )
+
+    def should_pending(self) -> bool:
+        """
+        任务是否超过了自动思考的轮次.
+        """
+        return self.pending or (0 < self.max_think_turns <= self.think_turns)
 
     def identifier(self) -> Identifier:
         return Identifier(
@@ -260,11 +278,19 @@ class Tasks(ABC):
     """
 
     @abstractmethod
-    def create_task(self, task: Task) -> Task:
+    def save_task(self, task: Task) -> None:
+        """
+        保存一个 task.
+        """
         pass
 
     @abstractmethod
     def get_task(self, task_id: str, lock: bool) -> Optional[Task]:
+        """
+        使用 task id 来获取一个 task.
+        :param task_id:
+        :param lock: 是否尝试对 task 上锁, 如果要求上锁但没成功, 返回 None.
+        """
         pass
 
     @abstractmethod
@@ -297,11 +323,7 @@ class Tasks(ABC):
         pass
 
     @abstractmethod
-    def has_task(self, task_id: str) -> bool:
-        pass
-
-    @abstractmethod
-    def lock_task(self, task_id: str) -> Task:
+    def unlock_task(self, task_id: str, lock: str) -> None:
         pass
 
     @abstractmethod

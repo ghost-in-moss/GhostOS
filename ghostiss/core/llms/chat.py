@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from enum import Enum
 from abc import ABC, abstractmethod
 
 from typing import List, Iterable, Dict, Optional, Union, Callable
@@ -41,6 +41,15 @@ class LLMTool(BaseModel):
         if "title" in parameters:
             del parameters["title"]
         return cls(name=name, description=desc, parameters=parameters)
+
+
+class FunctionalTokenMode(str, Enum):
+    XML = "xml"
+    """ xml 模式, 使用 <name> </name> 包起来的是内容. """
+    TOOL = "tool"
+    """ tool mod, 使用 llm tool 进行封装. """
+    TOKEN = "token"
+    """ token mod. use single token to parse content. """
 
 
 class FunctionalToken(BaseModel):

@@ -4,7 +4,7 @@ from ghostiss.entity import Entity, EntityMeta, EntityFactory
 from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.session.events import Event
 from ghostiss.core.ghosts.operators import Operator
-from ghostiss.core.ghosts.runner import Runner
+from ghostiss.core.ghosts.runner import NewRunner
 from ghostiss.abc import Identifiable, Identifier, IdentifiableClass
 from ghostiss.helpers import uuid
 
@@ -26,7 +26,7 @@ class Thought(Identifiable, ABC):
     对于复杂度比较高的 Thought, 可以用函数来实现一些子封装. 
     """
 
-    __thought_driver__: ClassVar[Optional[Type["ThoughtDriver"]]] = None
+    __thought_entity__: ClassVar[Optional[Type["ThoughtEntity"]]] = None
     """
     定义 Thought 类的Driver.
     依照约定优先于配置, driver 为 None 时, 系统默认从 Thought 所属模块取 Thought.__name__ + 'Driver' 的类作为 Driver. 
@@ -39,13 +39,30 @@ class Thought(Identifiable, ABC):
         """
         pass
 
+    def to_entity(self) -> "ThoughtEntity":
+        """
+        根据约定, 将 Thought 类封装到 Entity 对象里.
+        :return:
+        """
+        cls = self.__thought_entity__
+        if cls is None:
+            thought_cls = self.__class__
+            name = thought_cls.__name__
+            expect_name = f"{name}Entity"
+            import inspect
+            module = inspect.getmodule(thought_cls)
+            if module is None or expect_name not in module.__dict__:
+                raise NotImplementedError(f"{expect_name} does not exists in {thought_cls.__module__}")
+            cls = module.__dict__[expect_name]
+        return cls(self)
+
 
 T = TypeVar("T", bound=Thought)
 
 
-class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
+class ThoughtEntity(Generic[T], Entity, IdentifiableClass, ABC):
     """
-    ThoughtDriver 是 Thought 运行时生成的实例.
+    ThoughtEntity 是 Thought 运行时生成的实例.
     实际上就是把 Python 的 Class 拆成了 Model (数据结构) + Driver (各种 methods)
     这样 Thought 作为一个 Model, 可以直接将源码呈现给大模型, 用于各种场景的使用.
 
@@ -56,7 +73,7 @@ class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
 
     def __init__(self, thought: T):
         """
-        实例化 ThoughtDriver, 这个方法入参不要修改. 系统要使用这个方法实例化.
+        实例化 ThoughtEntity, 这个方法入参不要修改. 系统要使用这个方法实例化.
         """
         self.thought: T = thought
 
@@ -73,7 +90,7 @@ class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
     @abstractmethod
     def entity_type(cls) -> str:
         """
-        ThoughtDriver 可以生成 EntityMeta, 这个方法返回它固定的 entity_type
+        ThoughtEntity 可以生成 EntityMeta, 这个方法返回它固定的 entity_type
         用来反查 Driver.
         """
         pass
@@ -87,7 +104,7 @@ class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
 
     @classmethod
     @abstractmethod
-    def from_entity_meta(cls, factory: EntityFactory, meta: EntityMeta) -> "ThoughtDriver":
+    def from_entity_meta(cls, factory: EntityFactory, meta: EntityMeta) -> "ThoughtEntity":
         """
         结合 Factory, 将一个 EntityMeta 反解成 ThoughtInstance.
         :param factory: 支持递归的生成 Thought 实例.
@@ -114,23 +131,24 @@ class ThoughtDriver(Generic[T], Entity, IdentifiableClass, ABC):
         return None
 
 
-class BasicThoughtDriver(ThoughtDriver, ABC):
+class BasicThoughtEntity(ThoughtEntity, ABC):
 
     def new_task_id(self, g: Ghost) -> str:
         # 如果生成的 task id 是不变的, 则在同一个 process 里是一个单例. 但要考虑互相污染的问题.
         return uuid()
 
-    def on_create(self, g: Ghost, e: Event) -> Optional[Operator]:
+    def on_created(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         基于 Thought 创建了 Task 时触发的事件.
         可以根据事件做必要的初始化.
         """
-        #  默认没有任何动作.
+        #  默认没有任何动作的话, 会执行 g.taskflow().observe()
         return None
 
     def on_finished(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         当前 Thought 所生成的 task 结束之后, 会回调的事件.
+        可以用于反思.
         """
         # 默认没有任何动作.
         return None
@@ -142,18 +160,23 @@ class BasicThoughtDriver(ThoughtDriver, ABC):
         return self._run_event(g, e)
 
     @abstractmethod
-    def runner(self, g: Ghost, e: Event) -> Runner:
+    def runner(self, g: Ghost, e: Event) -> NewRunner:
+        """
+        生成一个 Runner 实例, 用来拆分最核心的可单测单元.
+        这样整个 ThoughtEntity 用来处理事件的加工逻辑, 而 Runner 真正运行大模型相关逻辑.
+        :param g: 拿到外部的 Ghost, 从而拿到包括 container 在内的核心 api
+        :param e: 可以根据具体的事件获得不同的 Runner.
+        """
         pass
 
     def _run_event(self, g: Ghost, e: Event) -> Optional[Operator]:
         runner = self.runner(g, e)
-        session = g.session
+        session = g.session()
         thread = session.thread()
         # thread 更新消息体.
         thread.inputs = e.messages
-        messenger = g.messenger()
         # 执行 runner.
-        op = runner.on_inputs(g.container, messenger, thread)
+        op = runner.run(g.container(), session)
         return op
 
     def on_finish_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
@@ -192,15 +215,15 @@ class Thoughts(ABC):
     """
 
     @abstractmethod
-    def make_thought_instance(self, meta: EntityMeta) -> Optional[ThoughtDriver]:
+    def make_thought_instance(self, meta: EntityMeta) -> Optional[ThoughtEntity]:
         """
-        使用 meta 来获取一个 ThoughtDriver 实例. 其中也包含了 Thought 数据的实例.
+        使用 meta 来获取一个 ThoughtEntity 实例. 其中也包含了 Thought 数据的实例.
         :param meta: thought 生成的可序列化数据.
         :return:
         """
         pass
 
-    def force_make_thought(self, meta: EntityMeta) -> ThoughtDriver:
+    def force_make_thought(self, meta: EntityMeta) -> ThoughtEntity:
         """
         语法糖.
         """
@@ -210,16 +233,16 @@ class Thoughts(ABC):
         return instance
 
     @abstractmethod
-    def instance_thought(self, thought: Thought) -> ThoughtDriver:
+    def instance_thought(self, thought: Thought) -> ThoughtEntity:
         """
-        通过代码空间的 Thought 实例来生成一个 ThoughtDriver 的实例, 使之具备响应上下文的能力.
+        通过代码空间的 Thought 实例来生成一个 ThoughtEntity 的实例, 使之具备响应上下文的能力.
         :param thought:
         :return:
         """
         pass
 
     @abstractmethod
-    def register_thought_type(self, cls: Type[Thought], driver: Optional[Type[ThoughtDriver]] = None) -> None:
+    def register_thought_type(self, cls: Type[Thought], driver: Optional[Type[ThoughtEntity]] = None) -> None:
         """
         注册一个 thought class, 还可以替换它的 driver.
 
@@ -230,7 +253,7 @@ class Thoughts(ABC):
 
         如果无法解析出任何 driver, 需要抛出异常.
 
-        注册动作会默认将 ThoughtDriver 的 Identifier 做为索引, 方便根据需要反查到 Thought.
+        注册动作会默认将 ThoughtEntity 的 Identifier 做为索引, 方便根据需要反查到 Thought.
         :param cls:
         :param driver:
         :return:
@@ -238,7 +261,7 @@ class Thoughts(ABC):
         pass
 
     @abstractmethod
-    def get_driver(self, cls: Type[Thought]) -> ThoughtDriver:
+    def get_driver(self, cls: Type[Thought]) -> ThoughtEntity:
         """
         使用 Thought 的类反查 Driver.
         :param cls:
