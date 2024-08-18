@@ -36,10 +36,12 @@ def get_module_spec(module, spec: str) -> Optional[Any]:
 def generate_module_spec(value: Any) -> Tuple[str, Optional[str]]:
     if inspect.ismodule(value):
         return value.__name__, None
-    else:
+    elif inspect.isclass(value):
         module = getattr(value, '__module__', '')
         spec = getattr(value, '__qualname__', getattr(value, '__name__', ""))
         return module, spec
+    else:
+        raise AttributeError(f'value {value} should be module or class to generate module spec')
 
 
 def parse_import_module_and_spec(import_path: str) -> Tuple[str, Optional[str]]:

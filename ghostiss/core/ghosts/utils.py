@@ -3,12 +3,12 @@ from ghostiss.core.ghosts.ghost import Ghost
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.thoughts import Thought
 from ghostiss.core.session import (
-    Event, DefaultEventType, AwaitGroup,
+    Event, DefaultEventType, WaitGroup,
     Task, TaskState, Tasks,
 )
 
 from ghostiss.core.messages import (
-    MessageType,
+    MessageKind,
     MessageTypeParser,
     Message,
     Role,
@@ -19,6 +19,31 @@ class Utils:
     def __init__(self, ghost: Ghost):
         self.ghost = ghost
 
+    def initialize(self) -> Optional["Event"]:
+        session = self.ghost.session()
+        process = session.process()
+        if process.initialized:
+            return None
+        task_id = process.main_task_id
+        root_thought = self.ghost.root_thought()
+        identifier = root_thought.identifier()
+        task = Task.new(
+            task_id=task_id,
+            session_id=session.id(),
+            process_id=process.id,
+            name=identifier.name,
+            description=identifier.description,
+            meta=root_thought.to_entity().to_entity_meta(),
+            parent_task_id=None,
+        )
+        process.initialized = True
+        session.update_process(process)
+        session.update_task(task)
+        return DefaultEventType.CREATED.new(
+            task_id=task_id,
+            messages=[],
+        )
+
     def handle_event(self, e: "Event") -> Optional["Operator"]:
         """
         ghost 执行事件的基本逻辑.
@@ -28,18 +53,19 @@ class Utils:
         if task.task_id != e.task_id:
             # todo: use ghostiss error
             raise AttributeError(f"event {e.task_id} does not belong to Task {task.task_id}")
-        if e.block and not (session.alive() and session.refresh_lock()):
+        if not session.alive():
             # e 要求锁定 session, 但是获取锁失败.
-            session.fire_events(e)
-            return None
+            # todo: 是抛出异常还是记录日志?
+            raise RuntimeError(f'session {session.id()} is not alive when handling event {e}')
+            # 终止运行链路.
 
         # regenerate the thought from meta
-        mindset = self.ghost.thoughts()
-        thought_driver = mindset.force_make_thought(task.meta)
+        thoughts = self.ghost.thoughts()
+        thought_entity = thoughts.force_make_thought(task.meta)
         # handle event
-        op = thought_driver.on_event(self.ghost, e)
+        op = thought_entity.on_event(self.ghost, e)
         # update the task.meta from the thought that may be changed
-        task.meta = thought_driver.to_entity_meta()
+        task.meta = thought_entity.to_entity_meta()
         session.update_task(task)
         # return the operator that could be None (use default operator outside)
         return op
@@ -61,12 +87,12 @@ class Utils:
         tasks = []
         children_task_ids = set(current_task.children)
         for thought in thoughts:
-            thought_driver = self.ghost.thoughts().instance_thought(thought)
-            meta = thought_driver.to_entity_meta()
+            entity = thought.to_entity()
+            meta = entity.to_entity_meta()
             session_id = process.session_id
             process_id = process.process_id
             identifier = thought.identifier()
-            task_id = thought_driver.new_task_id(self.ghost)
+            task_id = entity.new_task_id(self.ghost)
             children_task_ids.add(task_id)
             # 创建任务.
             task = Task.new(
@@ -94,12 +120,12 @@ class Utils:
         current_task.children = children
         # 更新 awaits 的信息.
         if awaits:
-            group = AwaitGroup(
-                tasks=children,
+            group = WaitGroup(
+                tasks={child_id: False for child_id in children},
                 description="",
                 on_callaback=""
             )
-            current_task.awaiting.append(group)
+            current_task.depending.append(group)
         session.update_task(current_task)
 
     def cancel_children_tasks(
@@ -150,7 +176,7 @@ class Utils:
             session.fire_events(*canceling_events)
         return
 
-    def send(self, *messages: MessageType) -> None:
+    def send(self, *messages: MessageKind) -> None:
         if len(messages) == 0:
             return
         parser = MessageTypeParser()
@@ -161,7 +187,7 @@ class Utils:
             self, *,
             task_id: str,
             event_type: str,
-            messages: List[MessageType],
+            messages: List[MessageKind],
             reason: str = "",
             self_task: Optional[Task] = None,
     ) -> None:

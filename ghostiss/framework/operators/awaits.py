@@ -4,7 +4,7 @@ from ghostiss.core.ghosts import (
     Operator, Ghost,
 )
 from ghostiss.core.messages import (
-    MessageType,
+    MessageKind,
 )
 from ghostiss.core.session import (
     DefaultEventType,
@@ -22,7 +22,7 @@ class AwaitsOperator(Operator):
 
     def __init__(
             self, *,
-            replies: List[MessageType],
+            replies: List[MessageKind],
             log: str = "",
     ):
         self.log = log
@@ -42,7 +42,7 @@ class AwaitsOperator(Operator):
 
         # 状态判断.
         thread = session.thread()
-        appending = thread.get_appending(ignore_delivered=True)
+        appending = thread.get_appending()
         # 消息不为空的时候才发送.
         if appending and task.parent:
             # 发送消息给父任务.

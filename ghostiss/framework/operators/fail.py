@@ -1,6 +1,6 @@
 from typing import Optional, List
 from ghostiss.core.ghosts import Operator, Ghost
-from ghostiss.core.messages import MessageType
+from ghostiss.core.messages import MessageKind
 from ghostiss.core.session import DefaultEventType, TaskState
 
 
@@ -17,7 +17,7 @@ class FailOperator(Operator):
     def __init__(
             self, *,
             reason: str,
-            messages: List[MessageType],
+            messages: List[MessageKind],
     ):
         self.reason = reason
         self.messages = messages
@@ -45,12 +45,13 @@ class FailOperator(Operator):
         if self.reason:
             task.logs.append(f"{TaskState.FAILED}: {self.reason}")
 
+        appending = thread.get_appending()
         if task.parent:
             # 发送消息给父任务.
             utils.send_task_event(
                 task_id=task.parent,
                 event_type=DefaultEventType.FAILURE_CALLBACK,
-                messages=thread.get_appending(ignore_delivered=True),
+                messages=appending,
                 self_task=task,
             )
 

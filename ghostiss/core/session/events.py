@@ -21,9 +21,7 @@ class Event(BaseModel, Entity):
     System use the Event popped from EventBus to restore a Session,
     Session.task() shall handle the Event, change the session state, and maybe fire more events.
     """
-    block: bool = Field(
-        description="whether the target task shall be locked by this event.",
-    )
+
     task_id: str = Field(
         description="task id of which this event shall send to.",
     )
@@ -207,3 +205,7 @@ class EventBus(ABC):
         使用锁后返回的 key 进行解锁.
         """
         pass
+
+    @contextmanager
+    def transaction(self):
+        yield

@@ -6,7 +6,7 @@ from ghostiss.core.session.events import Event
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.runner import NewRunner
 from ghostiss.abc import Identifiable, Identifier, IdentifiableClass
-from ghostiss.helpers import uuid
+from ghostiss.helpers import uuid, generate_import_path
 
 
 class Thought(Identifiable, ABC):
@@ -87,13 +87,12 @@ class ThoughtEntity(Generic[T], Entity, IdentifiableClass, ABC):
         pass
 
     @classmethod
-    @abstractmethod
     def entity_type(cls) -> str:
         """
         ThoughtEntity 可以生成 EntityMeta, 这个方法返回它固定的 entity_type
         用来反查 Driver.
         """
-        pass
+        return generate_import_path(cls)
 
     @abstractmethod
     def to_entity_meta(self) -> EntityMeta:
@@ -182,7 +181,7 @@ class BasicThoughtEntity(ThoughtEntity, ABC):
     def on_finish_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
         session = g.session
         task = session.task()
-        awaiting = task.awaiting_tasks()
+        awaiting = task.depending_tasks()
         if e.from_task_id not in awaiting:
             # todo: log
             return None
@@ -231,15 +230,6 @@ class Thoughts(ABC):
         if instance is None:
             raise ModuleNotFoundError(f'No Thoughts found for {meta}')
         return instance
-
-    @abstractmethod
-    def instance_thought(self, thought: Thought) -> ThoughtEntity:
-        """
-        通过代码空间的 Thought 实例来生成一个 ThoughtEntity 的实例, 使之具备响应上下文的能力.
-        :param thought:
-        :return:
-        """
-        pass
 
     @abstractmethod
     def register_thought_type(self, cls: Type[Thought], driver: Optional[Type[ThoughtEntity]] = None) -> None:

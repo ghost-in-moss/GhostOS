@@ -1,7 +1,7 @@
 from ghostiss.core.session.session import Session
 from ghostiss.core.session.tasks import (
     Task, TaskPayload, TaskBrief,
-    Tasks, TaskState, AwaitGroup,
+    Tasks, TaskState, WaitGroup,
 )
 from ghostiss.core.session.threads import Threads, MsgThread, thread_to_chat
 from ghostiss.core.session.processes import Process, Processes

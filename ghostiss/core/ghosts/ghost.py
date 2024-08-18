@@ -7,7 +7,7 @@ from ghostiss.contracts.logger import LoggerItf
 from ghostiss.contracts.modules import Modules
 from ghostiss.contracts.storage import Storage
 from ghostiss.core.session import Session, Threads, Tasks, Processes, EventBus, Event
-from ghostiss.core.messages import Message
+from ghostiss.core.messages import Message, Caller
 from ghostiss.core.moss import MossCompiler
 from ghostiss.core.llms import LLMs, Chat
 from pydantic import BaseModel, Field
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     # 避免 python 文件管理风格导致的循环依赖.
     from ghostiss.core.ghosts.utils import Utils
     from ghostiss.core.ghosts.shells import Shell
-    from ghostiss.core.ghosts.thoughts import Thoughts
+    from ghostiss.core.ghosts.thoughts import Thoughts, Thought
     from ghostiss.core.ghosts.schedulers import MultiTask, Taskflow
     from ghostiss.core.ghosts.operators import Operator
 
@@ -31,6 +31,9 @@ class Inputs(BaseModel):
     trace: str = Field(
         default="",
         description="inputs 的 trace id, 应该记录到日志中, 贯穿整个流程.",
+    )
+    session_id: str = Field(
+        description="session id",
     )
 
     ghost_meta: EntityMeta = Field(
@@ -128,6 +131,10 @@ class Ghost(Entity, Identifiable, ABC):
         pass
 
     @abstractmethod
+    def root_thought(self) -> "Thought":
+        pass
+
+    @abstractmethod
     def modules(self) -> "Modules":
         """
         基于 modules 可以管理所有类库.
@@ -152,10 +159,11 @@ class Ghost(Entity, Identifiable, ABC):
         pass
 
     @abstractmethod
-    def taskflow(self) -> "Taskflow":
+    def taskflow(self, caller: Optional[Caller] = None) -> "Taskflow":
         """
         对当前 Task 自身的状态管理器.
         提供原语管理自身的任务调度.
+        :param caller: 如果在 llm caller 中运行 taskflow, 可以将 caller 带上, 用来生成 function 类型的消息.
         """
         pass
 
@@ -180,37 +188,6 @@ class Ghost(Entity, Identifiable, ABC):
         Ghost 的
         """
         pass
-
-    @classmethod
-    def contracts(cls) -> List[Type]:
-        """
-        Ghost 完成初始化后, IoC container 必须要提供的抽象列表.
-        可以用于检查 Ghost 的初始化是否完成.
-        """
-        from ghostiss.core.ghosts.shells import Shell
-        from ghostiss.core.ghosts.thoughts import Thoughts
-        from ghostiss.core.ghosts.schedulers import MultiTask, Taskflow
-        return [
-
-            LoggerItf,  # 日志模块. 为了动态传递一些数据, 所以用 LoggerItf
-
-            Ghost,  # ghost 自身.
-            Shell,  # shell 的封装.
-            MossCompiler,  # 生成 MossCompiler
-
-            Thoughts,  # 管理所有的 thought.
-            Modules,  # 安全管理下的 Modules 模块.
-            LLMs,  # 大模型的 API 集成.
-            MultiTask,  # 多任务管理的原语.
-            Taskflow,  # 当前任务自身管理的原语.
-
-            Session,  # 状态管理.
-            # unsafe 的底层模块.
-            Threads,
-            Tasks,
-            Processes,
-            EventBus,
-        ]
 
     @abstractmethod
     def fail(self, err: Optional[Exception]) -> None:

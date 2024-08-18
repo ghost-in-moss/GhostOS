@@ -1,10 +1,9 @@
-import time
-from typing import List, Optional, Callable, Dict, Tuple
+from typing import Optional, Callable, Tuple
 from abc import ABC, abstractmethod
 from ghostiss.entity import EntityMeta
 from ghostiss.core.messages import Stream
-from ghostiss.core.session import Session, EventBus, Event, Tasks
-from ghostiss.core.ghosts import Ghost, Inputs, Operator
+from ghostiss.core.session import Session, EventBus, Event, Tasks, Task
+from ghostiss.core.ghosts import Ghost, Inputs
 from ghostiss.contracts.logger import LoggerItf
 from ghostiss.container import Container
 from ghostiss.helpers import uuid, Timeleft
@@ -31,20 +30,24 @@ class GhostInMOSS(ABC):
             self, *,
             upstream: Stream,
             task_id: str,
+            task: Optional[Task] = None,
     ) -> Optional[Session]:
         """
         找到一个判断已经存在的 Session
         :param upstream:
         :param task_id:
+        :param task: exists task.
         :return:
         """
         pass
 
     @abstractmethod
-    def find_or_create_session(
+    def create_session(
             self, *,
             ghost_meta: EntityMeta,
             upstream: Stream,
+            session_id: str,
+            is_async: bool,
             task_id: Optional[str] = None,
     ) -> Session:
         """
@@ -52,6 +55,8 @@ class GhostInMOSS(ABC):
         :param ghost_meta: 基于 ghost_meta 配置项生成 Session. ghost_meta 主要用来生成进程.
         :param upstream: 上游的消息通道. 接收方应该于外部定义. 对于异步运行的 Session,
                          上游的 upstream 应该不发送消息到端, 除非支持多流协议.
+        :param session_id: 必填.
+        :param is_async: 如果 is_async 为 True, ghost 的所有任务包括子任务都只能 background 运行.
         :param task_id: 指定使用哪个 task id 来获取 session. 不存在的话, 会创建一个.
         :exception: 运行错误不应该返回 None, 而应该抛出异常.
         """
@@ -68,49 +73,60 @@ class GhostInMOSS(ABC):
     def tasks(self) -> Tasks:
         pass
 
-    @abstractmethod
-    def create_ghost(self, session: Session) -> Ghost:
+    def instance_ghost(self, session: Session) -> Ghost:
         """
         使用 Session 实例化当前的 Ghost.
         """
         pass
 
-    def on_inputs(self, inputs: Inputs, upstream: Stream) -> Optional[Callable[[], bool]]:
+    def on_inputs(self, inputs: Inputs, upstream: Stream, is_async: bool = False) -> Optional[Callable[[], bool]]:
         """
         处理同步请求. deliver 的实现应该在外部.
         这个方法是否异步执行, 也交给外部判断.
         :param inputs: 同步请求的参数.
         :param upstream: 对上游输出的 output
+        :param is_async: 是否异步运行.
         :returns: 返回一个闭包, 执行它会真正运转 ghost. 直到它的返回值为 false.
         """
         if not inputs.trace:
             inputs.trace = uuid()
         task_id = inputs.task_id if inputs.task_id else inputs.trace
-        session = self.find_or_create_session(
-            ghost_meta=inputs.ghost_meta,
-            upstream=upstream,
-            task_id=task_id,
-        )
+        session_id = inputs.session_id
+        session = self.find_session(upstream=upstream, task_id=task_id)
+        if session is None:
+            session = self.create_session(
+                ghost_meta=inputs.ghost_meta,
+                upstream=upstream,
+                session_id=session_id,
+                task_id=task_id,
+                is_async=is_async,
+            )
+        ghost = self.instance_ghost(session)
         err = None
         try:
-            ghost = self.create_ghost(session)
+            # 处理 input.
             event = ghost.on_inputs(inputs)
             # todo: 异常体系以后管理.
             if event is None:
                 # 无锁操作, 拦截事件.
-                return
+                return None
 
             eventbus = self.eventbus()
-            # 发送
-            eventbus.send_event(event, notify=False)
+            # 发送事件.
+            eventbus.send_event(event, notify=is_async)
             task_id = session.task().task_id
 
             # 尝试运行一轮, 但是要加锁.
             def main() -> bool:
                 # 每一轮要实例化一个新的 session.
                 running_session = self.find_session(upstream=upstream, task_id=task_id)
+                if running_session is None:
+                    # 为 None 通常是没有锁上.
+                    return False
                 return self.background_run_session_event(running_session, task_id=task_id)
 
+            ghost.finish()
+            session.finish()
             return main
 
         except Exception as e:
@@ -119,9 +135,9 @@ class GhostInMOSS(ABC):
         finally:
             # 主 session 只是为了完成初始化创建, 还有拦截消息.
             if err is not None:
+                ghost.fail(err)
                 session.fail(err)
-            else:
-                session.finish()
+            ghost.destroy()
             session.destroy()
 
     def background_run(self, upstream: Stream, timeout: float = 0.0) -> bool:
@@ -163,10 +179,14 @@ class GhostInMOSS(ABC):
             logger.info("no background task was found")
             return notified, locked, handled
         notified = True
-        locked, handled = self.background_run_locked_task_event(upstream, task_id)
+        locked, handled = self.background_lock_task_run_event(upstream=upstream, task_id=task_id)
         return notified, locked, handled
 
-    def background_run_locked_task_event(self, upstream: Stream, task_id: str) -> Tuple[bool, bool]:
+    def background_lock_task_run_event(
+            self, *,
+            upstream: Stream,
+            task_id: str,
+    ) -> Tuple[bool, bool]:
         """
         指定一个 task id, 尝试运行它的事件.
         下一层方法是: self.background_run_session_event()
@@ -175,8 +195,8 @@ class GhostInMOSS(ABC):
         :return: (locked, handled)
         """
         handled = False
-        tasks = self.tasks()
         logger = self.logger()
+        tasks = self.tasks()
         task = tasks.get_task(task_id, lock=True)
         lock = task.lock
         locked = lock is not None
@@ -185,15 +205,8 @@ class GhostInMOSS(ABC):
             return locked, handled
 
         try:
-            # 关键逻辑: 如果任务
-            if task.should_pending():
-                # 不消费事件, 而是直接停止.
-                task.pending = True
-                self.tasks().save_task(task)
-                return locked, handled
-
             # 先创建 session.
-            session = self.find_session(upstream=upstream, task_id=task_id)
+            session = self.find_session(upstream=upstream, task_id=task_id, task=task)
             if session is None:
                 logger.error(f"no session was found by task_id: {task_id}")
                 return locked, handled
@@ -221,17 +234,12 @@ class GhostInMOSS(ABC):
                 # 没有任何事件, 就不需要再继续推骨牌了.
                 shall_continue_to_notify = False
                 return False
-            # 思考次数加一.
-            task = session.task()
-            if popped.from_self():
-                task.think_turns += 1
-                session.update_task(task)
-            else:
-                task.think_turns = 0
-
             # 无论怎么样都运行.
-            ghost = self.create_ghost(session)
+            ghost = self.instance_ghost(session)
             self.handle_ghost_event(ghost=ghost, event=popped)
+
+            # session finish 在 ghost 之后.
+            session.finish()
             return True
         except Exception as exp:
             # 异常都应该被 ghost 处理. 否则应该向上反馈.
@@ -246,12 +254,10 @@ class GhostInMOSS(ABC):
             # 清空 session.
             if err is not None:
                 session.fail(err)
-            else:
-                session.finish()
             session.destroy()
 
     @abstractmethod
-    def handle_ghost_event(self, ghost: Ghost, event: Event) -> None:
+    def handle_ghost_event(self, *, ghost: Ghost, event: Event) -> None:
         """
         使用 ghost 实例运行一个事件.
         :param ghost:
@@ -259,21 +265,32 @@ class GhostInMOSS(ABC):
         :return:
         """
         err = None
+        # 先按需做初始化.
+        on_created = ghost.utils().initialize()
+        if on_created is not None:
+            self.handle_ghost_event(ghost=ghost, event=on_created)
+
+        # 然后才真正运行逻辑.
         try:
             op, max_op = ghost.init_operator(event)
             count = 0
+            session = ghost.session()
             while op is not None:
                 if count > max_op:
-                    # todo: stack overflow error
+                    # todo: too much operator shall raise an error.
                     raise RuntimeError(f"stackoverflow")
                 # todo: log op
                 _next = op.run(ghost)
+                # 检查 session 状态.
+                if not (session.alive() and session.refresh_lock()):
+                    raise RuntimeError(f"session is overdue")
                 count += 1
+                op = _next
+            # 结束运行.
+            ghost.finish()
         except Exception as exp:
             err = exp
         finally:
             if err is not None:
                 ghost.fail(err)
-            else:
-                ghost.finish()
             ghost.destroy()

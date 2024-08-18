@@ -46,11 +46,11 @@ You can use the api that MOSS provided to implement your plan.
         import typing
         from pydantic import BaseModel, Field
         from typing import TypedDict
-        from ghostiss.core.messages import Message, MessageType, MessageClass
+        from ghostiss.core.messages import Message, MessageKind, MessageClass
         args = []
         args.extend([
             ClassSign(cls=Message),
-            Typing(typing=MessageType, name="MessageType"),
+            Typing(typing=MessageKind, name="MessageKind"),
             ClassSign(cls=MessageClass),
         ])
         args.extend(Importing.iterate(values=[ABC, abstractmethod], module='abc'))

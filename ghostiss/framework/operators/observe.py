@@ -4,7 +4,7 @@ from ghostiss.core.ghosts import (
     Operator, Ghost,
 )
 from ghostiss.core.messages import (
-    MessageType,
+    MessageKind,
 )
 from ghostiss.core.session import (
     DefaultEventType,
@@ -12,18 +12,20 @@ from ghostiss.core.session import (
 )
 
 
-class ThinkOperator(Operator):
+class ObserveOperator(Operator):
     """
     运行下一轮思考.
     """
 
     def __init__(
             self, *,
-            observation: List[MessageType],
+            observation: List[MessageKind],
             log: str = "",
+            caller_id: str = "",
     ):
         self.observation = observation
         self.log = log
+        self.caller_id = caller_id
 
     def run(self, g: "Ghost") -> Optional["Operator"]:
         session = g.session()

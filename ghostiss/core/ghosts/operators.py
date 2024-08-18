@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 __all__ = ['Operator', 'EventOperator', 'get_event_operator']
 
+
 class Operator(ABC):
     """系统运行时产生的算子, 会在外层运行. 只允许通过已有的系统函数生成, 不应该临时实现."""
 

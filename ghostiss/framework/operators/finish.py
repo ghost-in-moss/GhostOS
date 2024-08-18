@@ -3,7 +3,7 @@ from ghostiss.core.ghosts import (
     Operator, Ghost,
 )
 from ghostiss.core.messages import (
-    MessageType,
+    MessageKind,
 )
 from ghostiss.core.session import (
     DefaultEventType,
@@ -24,7 +24,7 @@ class FinishOperator(Operator):
     def __init__(
             self, *,
             log: str,
-            messages: List[MessageType],
+            messages: List[MessageKind],
             reason_formatter: str = "task is canceled cause parent task is finished: {log}"
     ):
         self.log = log
@@ -54,12 +54,13 @@ class FinishOperator(Operator):
         if self.log:
             task.logs.append(f"{TaskState.FINISHED}: {self.log}")
 
+        appending = thread.get_appending()
         if task.parent:
             # 发送消息给父任务.
             utils.send_task_event(
                 task_id=task.parent,
                 event_type=DefaultEventType.FINISH_CALLBACK,
-                messages=thread.get_appending(ignore_delivered=True),
+                messages=appending,
                 self_task=task,
             )
 
