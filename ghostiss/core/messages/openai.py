@@ -10,6 +10,7 @@ from openai.types.chat.chat_completion_message_tool_call_param import ChatComple
 from openai.types.chat.chat_completion_system_message_param import ChatCompletionSystemMessageParam
 from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
+from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 
 from ghostiss.core.messages.message import Message, DefaultMessageTypes, Role, Caller, PayloadItem
 from ghostiss.container import Provider, Container, ABSTRACT
@@ -98,6 +99,14 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             return [
                 ChatCompletionFunctionMessageParam(content=message.get_content(), name=message.name, role="function")
             ]
+        elif message.role == Role.TOOL:
+            return [
+                ChatCompletionToolMessageParam(
+                    tool_call_id=message.ref_id,
+                    content=message.get_content(),
+                    role="tool",
+                )
+            ]
         else:
             return []
 
@@ -183,9 +192,11 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     @staticmethod
     def _new_pack_from_delta(delta: ChoiceDelta, first: bool) -> Message:
         if first:
-            pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content, typ_=DefaultMessageTypes.CHAT_COMPLETION)
+            pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content,
+                                    typ_=DefaultMessageTypes.CHAT_COMPLETION)
         else:
-            pack = Message.new_pack(role=Role.ASSISTANT.value, content=delta.content, typ_=DefaultMessageTypes.CHAT_COMPLETION)
+            pack = Message.new_pack(role=Role.ASSISTANT.value, content=delta.content,
+                                    typ_=DefaultMessageTypes.CHAT_COMPLETION)
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())

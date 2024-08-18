@@ -12,7 +12,7 @@ from ghostiss.core.session import (
 )
 
 
-class ThinkAnotherRoundOperator(Operator):
+class ThinkOperator(Operator):
     """
     运行下一轮思考.
     """
@@ -32,10 +32,11 @@ class ThinkAnotherRoundOperator(Operator):
 
         task = session.task()
         thread = session.thread()
-        appending = thread.get_appending(ignore_delivered=True)
+        appending = thread.get_appending()
         task.state = TaskState.RUNNING
         if self.log:
             task.logs.append(f"{TaskState.RUNNING}: {self.log}")
+        # 必须要有消息时才发送.
         if appending and task.parent:
             utils = g.utils()
             utils.send_task_event(
@@ -45,6 +46,7 @@ class ThinkAnotherRoundOperator(Operator):
                 self_task=task,
             )
         session.update_task(task, thread)
+        # 执行下一轮思考.
         utils = g.utils()
         utils.send_task_event(
             task_id=task.task_id,

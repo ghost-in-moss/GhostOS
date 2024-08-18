@@ -8,7 +8,7 @@ from ghostiss.helpers import uuid
 __all__ = [
     "Message", "Role", "DefaultMessageTypes",
     "MessageClass",
-    "MessageType", "MessageTypeParser",
+    "MessageKind", "MessageTypeParser",
     "Payload", "PayloadItem", "Attachment", "Caller",
 ]
 
@@ -22,6 +22,7 @@ class Role(str, enum.Enum):
     ASSISTANT = "assistant"
     SYSTEM = "system"
     FUNCTION = "function"
+    TOOL = "tool"
 
     @classmethod
     def all(cls) -> Set[str]:
@@ -164,6 +165,7 @@ class Message(BaseModel):
     """标准的消息体."""
 
     msg_id: str = Field(default="", description="消息的全局唯一 id. ")
+    ref_id: Optional[str] = Field(default=None, description="消息的关联目标. 如果 role 是 tool, 则这个是 tool_call_id")
     type: str = Field(default="", description="消息类型是对 payload 的约定. 默认的 type就是 text.")
     created: float = Field(default=0.0, description="Message creation time")
     pack: bool = Field(default=True, description="Message reset time")
@@ -193,6 +195,7 @@ class Message(BaseModel):
             memory: Optional[str] = None,
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
+            ref_id: Optional[str] = None,
             created: int = 0,
     ):
         if msg_id is None:
@@ -202,6 +205,7 @@ class Message(BaseModel):
         return cls(
             role=role, name=name, content=content, memory=memory, pack=True,
             type=typ_,
+            ref_id=ref_id,
             msg_id=msg_id, created=created,
         )
 
@@ -214,12 +218,14 @@ class Message(BaseModel):
             memory: Optional[str] = None,
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
+            ref_id: Optional[str] = None,
             created: int = 0,
     ):
         msg = cls.new_head(
             role=role, name=name, content=content, memory=memory,
             typ_=typ_,
             msg_id=msg_id,
+            ref_id=ref_id,
             created=created,
         )
         msg.pack = False
@@ -343,7 +349,7 @@ class MessageClass(ABC):
         pass
 
 
-MessageType = Union[Message, MessageClass, str]
+MessageKind = Union[Message, MessageClass, str]
 """将三种类型的数据统一视作 message 类型. """
 
 
@@ -355,7 +361,7 @@ class MessageTypeParser:
     def __init__(self, role: str = Role.ASSISTANT.value) -> None:
         self.role = role
 
-    def parse(self, messages: Iterable[MessageType]) -> Iterable[Message]:
+    def parse(self, messages: Iterable[MessageKind]) -> Iterable[Message]:
         for item in messages:
             if isinstance(item, Message):
                 yield item
