@@ -37,12 +37,14 @@ class TaskState(str, Enum):
     FAILED = "failed"
     """the task is failed due to an exception"""
 
+    KILLED = "killed"
+
     FINISHED = "finished"
     """the task is finished"""
 
     @classmethod
     def is_dead(cls, state: str) -> bool:
-        return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED}
+        return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED, cls.KILLED}
 
 
 class WaitGroup(BaseModel):
@@ -161,7 +163,7 @@ the state of the current task.
     )
     think_turns: int = Field(
         default=0,
-        description="记录 task 已经自动运行过多少次. 如果是 -1 的话, 则意味着它刚刚被创建出来. ",
+        description="记录 task 已经自动运行过多少次. 如果是 0 的话, 则意味着它刚刚被创建出来. ",
     )
     depth: int = Field(
         default=0,
@@ -243,6 +245,9 @@ the state of the current task.
             description=self.description,
         )
 
+    def is_dead(self) -> bool:
+        return TaskState.is_dead(self.state)
+
     def depending_tasks(self) -> Set[str]:
         result = set()
         for group in self.depending:
@@ -258,18 +263,18 @@ the state of the current task.
         )
         self.depending.append(group)
 
-    def on_callback_task(self, task_id: str) -> bool:
+    def on_callback_task(self, task_id: str) -> Optional[WaitGroup]:
         """
         得到一个 task id 的回调. 判断是否一组 wait group 被激活了.
         :param task_id:
         :return: 是否有 wait group 激活了.
         """
-        activated = False
         for group in self.depending:
             if task_id in group.tasks:
                 group.tasks[task_id] = True
-                activated = activated or group.is_done()
-        return activated
+                if group.is_done():
+                    return group
+        return None
 
     def update_turn(self) -> None:
         """
@@ -341,7 +346,11 @@ class Tasks(ABC):
     """
 
     @abstractmethod
-    def save_task(self, task: Task) -> None:
+    def with_namespace(self, namespace: str) -> "Tasks":
+        pass
+
+    @abstractmethod
+    def save_task(self, *tasks: Task) -> None:
         """
         保存一个 task.
         """
@@ -372,15 +381,6 @@ class Tasks(ABC):
         获取多个任务的摘要信息.
         :param task_ids:
         :param states:
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def cancel_tasks(self, task_ids: List[str]) -> None:
-        """
-        变更一组任务的状态, 强制取消. 目标任务应该周期性检查状态.
-        :param task_ids:
         :return:
         """
         pass

@@ -8,7 +8,7 @@ from ghostiss.helpers import uuid
 __all__ = [
     "Message", "Role", "DefaultMessageTypes",
     "MessageClass",
-    "MessageKind", "MessageTypeParser",
+    "MessageKind", "MessageKindParser",
     "Payload", "PayloadItem", "Attachment", "Caller",
 ]
 
@@ -49,9 +49,14 @@ class DefaultMessageTypes(str, enum.Enum):
 
     def new_system(
             self, *,
-            content: str, memory: Optional[str] = None,
+            content: str,
+            memory: Optional[str] = None,
+            msg_id: Optional[str] = None,
     ):
-        return self.new(content=content, role=Role.SYSTEM.value, memory=memory)
+        data = dict(content=content, role=Role.SYSTEM.value, memory=memory)
+        if msg_id is not None:
+            data['msg_id'] = msg_id
+        return self.new(**data)
 
     def new_user(
             self, *,
@@ -353,16 +358,19 @@ MessageKind = Union[Message, MessageClass, str]
 """将三种类型的数据统一视作 message 类型. """
 
 
-class MessageTypeParser:
+class MessageKindParser:
     """
     处理 MessageType
     """
 
-    def __init__(self, role: str = Role.ASSISTANT.value) -> None:
+    def __init__(self, role: str = Role.ASSISTANT.value, ref_id: Optional[str] = None) -> None:
         self.role = role
+        self.ref_id = ref_id
 
     def parse(self, messages: Iterable[MessageKind]) -> Iterable[Message]:
         for item in messages:
+            if self.ref_id is not None:
+                item.ref_id = self.ref_id
             if isinstance(item, Message):
                 yield item
             if isinstance(item, MessageClass):

@@ -6,7 +6,6 @@ from ghostiss.core.ghosts.actions import Action
 from ghostiss.core.session.threads import MsgThread
 from ghostiss.core.llms import LLMApi, Chat
 from ghostiss.core.session import Session
-from ghostiss.core.session.messenger import Messenger
 
 __all__ = [
     'Runner', 'LLMRunner', 'PipelineRunner',
@@ -14,20 +13,6 @@ __all__ = [
 
 
 class Runner(ABC):
-    """
-    原本大模型思维状态机的设计就是 Thought.
-    这里必须要从 Thought 内部拆分一个抽象, 目的是方便做单元测试和复用.
-    """
-
-    @abstractmethod
-    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Optional[Operator]:
-        """
-        运行 Thread, 同时返回一个新的 Thread. 不做存储修改, 方便单元测试.
-        """
-        pass
-
-
-class NewRunner(ABC):
     """
     准备取代 runner, 先做一个独立的然后再改名.
     """
@@ -60,13 +45,15 @@ class LLMRunner(Runner, ABC):
         """
         pass
 
-    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Optional[Operator]:
+    def run(self, container: Container, session: Session) -> Optional[Operator]:
         """
         标准的 llm runner 运行逻辑.
         """
         # 基于 thread 生成 chat 对象.
         # 获取当前运行依赖的 actions.
+        thread = session.thread()
         actions, chat = self.prepare(container, thread)
+        chat.stream = not session.process().asynchronous
         # 准备好回调的 map.
         actions_name_map = {}
         for action in actions:
@@ -74,8 +61,7 @@ class LLMRunner(Runner, ABC):
             actions_name_map[name] = action
         # 获取 llm 的 api.
         api = self.get_llmapi(container)
-        # todo: with payload
-        deliver = messenger.new(thread=thread, functional_tokens=chat.functional_tokens)
+        deliver = session.messenger(functional_tokens=chat.functional_tokens)
         api.deliver_chat_completion(chat, deliver)
         messages, callers = deliver.flush()
         for caller in callers:
@@ -83,7 +69,7 @@ class LLMRunner(Runner, ABC):
                 continue
             action = actions_name_map[caller.name]
             # todo: with payload
-            deliver = messenger.new(thread=thread)
+            deliver = session.messenger()
             op = action.act(container, deliver, caller)
             deliver.flush()
             if op is not None:
@@ -99,10 +85,10 @@ class PipelineRunner(Runner):
     def __init__(self, pipes: Iterable[Runner]):
         self.pipes = pipes
 
-    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Optional[Operator]:
+    def run(self, container: Container, session: Session) -> Optional[Operator]:
         for pipe in self.pipes:
             # 任意一个 runner 返回 op, 会中断其它的 runner.
-            thread, op = pipe.run(container, messenger, thread)
+            thread, op = pipe.run(container, session)
             if op is not None:
                 return op
         return None

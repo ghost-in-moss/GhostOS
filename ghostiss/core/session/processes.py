@@ -42,6 +42,10 @@ The meta data that waken the sleeping ghost in disputed services.
         default=False,
         description="if the process is initialized or not.",
     )
+    quited: bool = Field(
+        default=False,
+        description="if the process is quited or not.",
+    )
 
     @classmethod
     def new(

@@ -1,11 +1,11 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 from ghostiss.core.ghosts import Taskflow, Operator
 from ghostiss.core.messages import MessageKind, Caller, DefaultMessageTypes, Role
 from ghostiss.framework.operators import (
-    AwaitsOperator,
     ObserveOperator,
     FinishOperator,
     FailOperator,
+    WaitsOperator,
 )
 from ghostiss.helpers import yaml_pretty_dump
 
@@ -16,22 +16,22 @@ class TaskflowBasicImpl(Taskflow):
         self.caller = caller
 
     def awaits(self, *replies: MessageKind, log: str = "") -> Operator:
-        return AwaitsOperator(
-            replies=list(replies),
-            log=log,
+        return WaitsOperator(
+            messages=list(replies),
+            reason=log,
         )
 
-    def observe(self, *messages: MessageKind, **kwargs) -> Operator:
-        observation = list(messages)
-        if kwargs:
-            values = {name: str(value) for name, value in kwargs.items()}
+    def observe(self, objects: Dict[str, Any], reason: str = "", instruction: str = "") -> Operator:
+        observation = []
+        if objects:
+            values = {name: str(value) for name, value in objects.items()}
             content = yaml_pretty_dump(values)
 
+            # 用什么协议没想明白, function ? tool? system ?
             if self.caller is None:
                 content = "# observe values: \n" + content
-                msg = DefaultMessageTypes.DEFAULT.new(
+                msg = DefaultMessageTypes.DEFAULT.new_system(
                     content=content,
-                    role=Role.SYSTEM.value,
                 )
             else:
                 # 使用 caller 协议, 把结果封装成 Function 或者 tool 类型的消息.
@@ -46,13 +46,14 @@ class TaskflowBasicImpl(Taskflow):
 
         return ObserveOperator(
             observation=observation,
-            log="",
+            reason=reason,
+            instruction=instruction,
         )
 
-    def finish(self, status: str, *response: MessageKind) -> Operator:
+    def finish(self, log: str, *response: MessageKind) -> Operator:
         return FinishOperator(
             messages=list(response),
-            log=status,
+            reason=log,
         )
 
     def fail(self, reason: str, *messages: MessageKind) -> Operator:

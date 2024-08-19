@@ -93,7 +93,8 @@ class GhostInMOSS(ABC):
         task_id = inputs.task_id if inputs.task_id else inputs.trace
         session_id = inputs.session_id
         session = self.find_session(upstream=upstream, task_id=task_id)
-        if session is None:
+        # session 找不到, 或者找到的 session process 已经 quited.
+        if session is None or session.process().quited:
             session = self.create_session(
                 ghost_meta=inputs.ghost_meta,
                 upstream=upstream,
@@ -125,8 +126,8 @@ class GhostInMOSS(ABC):
                     return False
                 return self.background_run_session_event(running_session, task_id=task_id)
 
-            ghost.finish()
-            session.finish()
+            ghost.done()
+            session.done()
             return main
 
         except Exception as e:
@@ -235,11 +236,12 @@ class GhostInMOSS(ABC):
                 shall_continue_to_notify = False
                 return False
             # 无论怎么样都运行.
+            # 这个时候 process 可能已经 quited == True, 仍然要消费消息但不运行.
             ghost = self.instance_ghost(session)
             self.handle_ghost_event(ghost=ghost, event=popped)
 
             # session finish 在 ghost 之后.
-            session.finish()
+            session.done()
             return True
         except Exception as exp:
             # 异常都应该被 ghost 处理. 否则应该向上反馈.
@@ -266,9 +268,9 @@ class GhostInMOSS(ABC):
         """
         err = None
         # 先按需做初始化.
-        on_created = ghost.utils().initialize()
-        if on_created is not None:
-            self.handle_ghost_event(ghost=ghost, event=on_created)
+        on_ghost_created = ghost.utils().initialize()
+        if on_ghost_created is not None:
+            self.handle_ghost_event(ghost=ghost, event=on_ghost_created)
 
         # 然后才真正运行逻辑.
         try:
@@ -287,7 +289,7 @@ class GhostInMOSS(ABC):
                 count += 1
                 op = _next
             # 结束运行.
-            ghost.finish()
+            ghost.done()
         except Exception as exp:
             err = exp
         finally:

@@ -4,10 +4,11 @@ from abc import ABC, abstractmethod
 from ghostiss.core.session.events import Event
 from ghostiss.core.session.messenger import Messenger
 from ghostiss.core.session.processes import Process
-from ghostiss.core.session.tasks import Task
+from ghostiss.core.session.tasks import Task, TaskBrief
 from ghostiss.core.session.threads import MsgThread
-from ghostiss.core.messages import MessageKind, Role
-from ghostiss.entity import EntityMeta
+from ghostiss.contracts.logger import LoggerItf
+from ghostiss.core.messages import MessageKind, Role, Buffer, Payload, Attachment
+from ghostiss.core.llms import FunctionalToken
 
 __all__ = ['Session']
 
@@ -33,11 +34,13 @@ class Session(ABC):
             self, *,
             name: str,
             role: str = Role.ASSISTANT.value,
+            logger: Optional[LoggerItf] = None,
     ) -> "Session":
         """
         添加 Ghost 相关的信息.
         :param name: ghost (agent) name
         :param role: message role.
+        :param logger: logger instance.
         :return: self
         """
         pass
@@ -93,7 +96,16 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def messenger(self) -> "Messenger":
+    def messenger(
+            self, *,
+            sending: bool = True,
+            thread: Optional[MsgThread] = None,
+            name: Optional[str] = None,
+            buffer: Optional[Buffer] = None,
+            payloads: Optional[Iterable[Payload]] = None,
+            attachments: Optional[Iterable[Attachment]] = None,
+            functional_tokens: Optional[Iterable[FunctionalToken]] = None
+    ) -> "Messenger":
         """
         Task 当前运行状态下, 向上游发送消息的 Messenger.
         每次会实例化一个 Messenger, 理论上不允许并行发送消息. 但也可能做一个技术方案去支持它.
@@ -112,23 +124,35 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def update_task(self, task: "Task", thread: Optional["MsgThread"] = None) -> None:
+    def update_task(self, task: "Task", thread: Optional["MsgThread"], update_history: bool) -> None:
         """
         更新当前 session 的 task.
         :param task: 如果不属于当前 session, 则会报错
         :param thread: 由于 thread 和 task 是绑定的, 需要一起保存. update thread 的时候, thread 的 appending 等信息会更新.
+        :param update_history: 如果为 True, thread 会把 current round 添加到 history.
         """
         pass
 
     @abstractmethod
     def update_process(self, process: "Process") -> None:
+        """
+        改动 process 并保存. 通常只在初始化里才需要.
+        """
         pass
 
     @abstractmethod
-    def update_thread(self, thread: "MsgThread") -> None:
+    def update_thread(self, thread: "MsgThread", update_history: bool) -> None:
         """
         单独更新当前 session 的 thread.
         :param thread: 如果不属于当前 session, 则会报错
+        :param update_history: 是否要将 thread 的历史更新掉.
+        """
+        pass
+
+    @abstractmethod
+    def create_tasks(self, *tasks: "Task") -> None:
+        """
+        创建多个 task. 只有 session.done() 的时候才会执行.
         """
         pass
 
@@ -137,7 +161,8 @@ class Session(ABC):
     @abstractmethod
     def fire_events(self, *events: "Event") -> None:
         """
-        发送多个事件.
+        发送多个事件. 这个环节需要给 event 标记 callback.
+        在 session.done() 时才会真正执行.
         """
         pass
 
@@ -153,16 +178,16 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def cancel_tasks(self, *task_ids: str) -> None:
+    def get_task_briefs(self, *task_ids, children: bool = False) -> List[TaskBrief]:
         """
-        取消多个任务.
-        :param task_ids:
-        :return:
+        获取多个任务的简介.
+        :param task_ids: 可以指定要获取的 task id
+        :param children: 如果为 true, 会返回当前任务的所有子任务数据.
         """
         pass
 
     @abstractmethod
-    def finish(self) -> None:
+    def done(self) -> None:
         """
         完成 session, 需要清理和真正保存状态.
         需要做的事情包括:

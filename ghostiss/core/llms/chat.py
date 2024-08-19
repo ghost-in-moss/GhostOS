@@ -91,6 +91,8 @@ class Chat(BaseModel):
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
 
+    stream: bool = Field(default=True, description="stream messages")
+
     def get_messages(self) -> List[Message]:
         """
         返回所有的消息.

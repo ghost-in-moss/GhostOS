@@ -56,6 +56,10 @@ class LLMApi(ABC):
         """
         逐个发送消息的包.
         """
+        if not chat.stream:
+            message = self.chat_completion(chat)
+            deliver.deliver(message)
+            return
         items = self.chat_completion_chunks(chat)
         # todo: payload 要计算 tokens
         for item in items:

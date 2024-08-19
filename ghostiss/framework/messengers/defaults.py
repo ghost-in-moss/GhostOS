@@ -56,7 +56,6 @@ class DefaultMessenger(Messenger, Stream):
         """默认的 payloads"""
         self._attachments: Optional[Iterable[Attachment]] = attachments
         """消息体默认的附件. """
-        self._downstream_messenger: Optional["Messenger"] = None
         self._functional_tokens = functional_tokens
         if buffer is None:
             buffer = DefaultBuffer(
@@ -128,10 +127,6 @@ class DefaultMessenger(Messenger, Stream):
 
         if DefaultMessageTypes.is_final(pack):
             # 下游发送的 final 包, 上游会装作已经发送成功.
-            if self._downstream_messenger:
-                # 发送成功了, 就去掉 _downstream_messenger
-                # 允许新的 downstream 生产.
-                self._downstream_messenger = None
             return True
         delivery = self._buffer.buff(pack)
         return self._deliver(delivery)

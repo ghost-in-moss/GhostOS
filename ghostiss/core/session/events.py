@@ -25,11 +25,6 @@ class Event(BaseModel, Entity):
     task_id: str = Field(
         description="task id of which this event shall send to.",
     )
-    reason: str = Field(
-        default="",
-        description="reason of the event.",
-    )
-
     type: str = Field(
         default="",
         description="event type, by default the handler shall named on_{type}"
@@ -44,10 +39,18 @@ class Event(BaseModel, Entity):
         default=None,
         description="task id in which this event is fired",
     )
-    # 没想好就先不做.
-    # priority: float = Field(
-    #     default=0, description="priority of this event", min_items=0.0, max_items=1.0,
-    # )
+    from_task_name: Optional[str] = Field(
+        default=None,
+        description="task name in which this event is fired",
+    )
+    reason: str = Field(
+        default="",
+        description="reason of the event.",
+    )
+    instruction: str = Field(
+        default="",
+        description="instruction from the event telling what to do.",
+    )
     messages: List[Message] = Field(
         default_factory=list,
         description="list of messages sent by this event",
@@ -56,12 +59,19 @@ class Event(BaseModel, Entity):
         default_factory=dict,
         description="more structured data that follow the message.Payload pattern",
     )
+    callback: bool = Field(
+        default=False,
+        description="if the event is a callback from child task to parent task.",
+    )
 
     def from_self(self) -> bool:
         """
         通过任务是否是自己触发的, 来判断是否要继续.
         """
         return self.task_id == self.from_task_id
+
+    def no_reason_or_instruction(self) -> bool:
+        return not self.reason and not self.instruction
 
     def event_type(self) -> str:
         return self.type
@@ -90,6 +100,10 @@ class DefaultEventType(str, Enum):
     THINK = "think"
     """自我驱动的思考"""
 
+    CANCELING = "cancelling"
+    """任务取消时, 触发的事件. 需要广播给子节点. """
+    KILLING = "killing"
+
     FINISH_CALLBACK = "finish_callback"
     """child task 运行正常, 返回的消息. """
 
@@ -105,9 +119,6 @@ class DefaultEventType(str, Enum):
     FINISHED = "finished"
     """任务结束时, 触发的事件. 可用于反思."""
 
-    CANCELED = "cancelled"
-    """任务取消时, 触发的事件. 可用于反思. """
-
     FAILED = "failed"
     """任务失败时, 触发的事件. 可用于反思."""
 
@@ -120,15 +131,22 @@ class DefaultEventType(str, Enum):
             messages: List[Message],
             from_task_id: Optional[str] = None,
             reason: str = "",
+            instruction: str = "",
             eid: Optional[str] = None,
+            payload: Optional[Dict] = None,
     ) -> Event:
         id_ = eid if eid else uuid()
         type_ = str(self.value)
+        payload = payload if payload is not None else {}
         return Event(
-            type=type_, task_id=task_id, block=self.block(),
-            id=id_, from_task_id=from_task_id,
+            id=id_,
+            type=type_,
+            task_id=task_id,
+            from_task_id=from_task_id,
             reason=reason,
+            instruction=instruction,
             messages=messages,
+            payloads=payload,
         )
 
 
@@ -159,9 +177,19 @@ class EventBus(ABC):
     """
 
     @abstractmethod
+    def with_namespace(self, namespace: str) -> "EventBus":
+        """
+        允许根据命名空间做隔离. 可以不实现这个方法.
+        :param namespace: 隔离不同事件的命名空间.
+        :return:
+        """
+        pass
+
+    @abstractmethod
     def send_event(self, e: Event, notify: bool) -> None:
         """
-        send an event to the event bus, and notify the task.
+        send an event to the event bus, and notify the task if it's Ture.
+        !! Canceled event is higher priority.
         :param e: event to send
         :param notify: whether to notify the task
         """
@@ -171,6 +199,7 @@ class EventBus(ABC):
     def pop_task_event(self, task_id: str) -> Optional[Event]:
         """
         pop a task event by task_id.
+        the canceled event has higher priority to others.
         :param task_id: certain task id.
         :return: event or None if timeout is reached
         """
@@ -189,20 +218,6 @@ class EventBus(ABC):
         """
         notify a task to check new events.
         :param task_id: task id
-        """
-        pass
-
-    @abstractmethod
-    def lock_task(self, task_id: str) -> Optional[str]:
-        """
-        锁定 task, 只有锁定成功才能消费
-        """
-        pass
-
-    @abstractmethod
-    def unlock_task(self, task_id: str, lock: str) -> bool:
-        """
-        使用锁后返回的 key 进行解锁.
         """
         pass
 

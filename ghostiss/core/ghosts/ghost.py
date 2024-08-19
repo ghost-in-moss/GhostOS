@@ -1,4 +1,4 @@
-from typing import Optional, TYPE_CHECKING, List, Type, Tuple
+from typing import Optional, TYPE_CHECKING, List, Tuple
 from abc import ABC, abstractmethod
 from ghostiss.entity import Entity, EntityMeta
 from ghostiss.container import Container
@@ -6,10 +6,11 @@ from ghostiss.abc import Identifiable, Identifier
 from ghostiss.contracts.logger import LoggerItf
 from ghostiss.contracts.modules import Modules
 from ghostiss.contracts.storage import Storage
-from ghostiss.core.session import Session, Threads, Tasks, Processes, EventBus, Event
-from ghostiss.core.messages import Message, Caller
+from ghostiss.core.session import Session, Event
+from ghostiss.core.messages import Message, Caller, Role
 from ghostiss.core.moss import MossCompiler
-from ghostiss.core.llms import LLMs, Chat
+from ghostiss.core.llms import Chat
+from ghostiss.helpers import generate_import_path
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -58,7 +59,43 @@ class Inputs(BaseModel):
     )
 
 
-class Ghost(Entity, Identifiable, ABC):
+class GhostConf(BaseModel, Entity, ABC):
+
+    def ghost_id(self) -> str:
+        pass
+
+    def to_entity_meta(self) -> EntityMeta:
+        id_ = self.ghost_id()
+        type_ = generate_import_path(self.__class__)
+        return EntityMeta(
+            id=id_,
+            type=type_,
+            data=self.model_dump(exclude_defaults=True),
+        )
+
+    @abstractmethod
+    def make_ghost(self, container: Container, session: Session) -> "Ghost":
+        """
+        实例化 Ghost.
+        :param container: 需要传入的外部容器.
+        :param session: Session 优先于 Ghost 生成.
+        :return:
+        """
+        pass
+
+    def instance_ghost(self, container: Container, session: Session) -> "Ghost":
+        """
+        实例化 Ghost.
+        :param container:
+        :param session:
+        """
+        ghost = self.make_ghost(container, session)
+        identifier = ghost.identifier()
+        session.with_ghost(name=identifier.name, role=ghost.role())
+        return ghost
+
+
+class Ghost(Identifiable, ABC):
 
     @abstractmethod
     def identifier(self) -> Identifier:
@@ -67,12 +104,8 @@ class Ghost(Entity, Identifiable, ABC):
         """
         pass
 
-    @abstractmethod
-    def to_entity_meta(self) -> EntityMeta:
-        """
-        用来生成 Ghost Meta 保存到 Process 里.
-        """
-        pass
+    def role(self) -> str:
+        return Role.ASSISTANT.value
 
     @abstractmethod
     def on_inputs(self, inputs: Inputs) -> Optional["Event"]:
@@ -132,6 +165,9 @@ class Ghost(Entity, Identifiable, ABC):
 
     @abstractmethod
     def root_thought(self) -> "Thought":
+        """
+        Ghost 的根节点思维单元.
+        """
         pass
 
     @abstractmethod
@@ -199,7 +235,10 @@ class Ghost(Entity, Identifiable, ABC):
         pass
 
     @abstractmethod
-    def finish(self) -> None:
+    def done(self) -> None:
+        """
+        Ghost 完成运行.
+        """
         pass
 
     @abstractmethod

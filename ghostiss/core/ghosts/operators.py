@@ -34,12 +34,11 @@ class EventOperator(Operator, ABC):
     event_type: ClassVar[str] = ""
     """对齐 Event.type"""
 
-    @classmethod
-    @abstractmethod
-    def new(cls, event: Event) -> "EventOperator":
-        """
-        """
-        pass
+    def __init__(self, event: Event):
+        self.event = event
+
+    def destroy(self) -> None:
+        del self.event
 
 
 def get_event_operator(operators: Dict[str, Type[EventOperator]], event: Event) -> Optional[EventOperator]:
@@ -50,7 +49,7 @@ def get_event_operator(operators: Dict[str, Type[EventOperator]], event: Event) 
     :return:
     """
     if event.type in operators:
-        return operators[event.type].new(event)
+        return operators[event.type](event)
     if "" in operators:
-        return operators[""].new(event)
+        return operators[""](event)
     return None

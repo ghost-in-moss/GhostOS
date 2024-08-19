@@ -1,16 +1,21 @@
 from typing import Dict
 
 from ghostiss.core.ghosts import MultiTask, Operator, Thought, Ghost
+from ghostiss.core.session import Session
 from ghostiss.core.messages import MessageKind
+from ghostiss.framework.operators import WaitOnTasksOperator
 
-
-# from ghostiss.framework.operators.wait_tasks import
 
 
 class MultiTaskBasicImpl(MultiTask):
 
+    def __init__(self, session: Session):
+        self._session = session
+
     def wait_on_tasks(self, *thoughts: Thought) -> Operator:
-        pass
+        return WaitOnTasksOperator(
+
+        )
 
     def run_tasks(self, *thoughts: Thought) -> Dict[str, str]:
         pass

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Any
 from abc import ABC, abstractmethod
 from ghostiss.core.ghosts.operators import Operator
 from ghostiss.core.ghosts.thoughts import Thought
@@ -25,19 +25,22 @@ class Taskflow(ABC):
         pass
 
     @abstractmethod
-    def observe(self, *messages: MessageKind, **kwargs) -> Operator:
+    def observe(self, objects: Dict[str, Any], reason: str = "", instruction: str = "") -> Operator:
         """
         系统会打印这些变量的值, 作为一条新的输入消息让你观察, 开启你的下一轮思考.
         是实现 Chain of thought 的基本方法.
+        :param objects: the observing objects by name to value
+        :param reason: if given, will record the observing reason to task logs.
+        :param instruction: give the instruction when observe the result, in case of forgetting.
         """
         pass
 
     @abstractmethod
-    def finish(self, status: str, *response: MessageKind) -> Operator:
+    def finish(self, log: str, *response: MessageKind) -> Operator:
         """
         结束当前的任务, 返回任务结果.
         如果当前任务是持续的, 还要等待更多用户输入, 请使用 awaits.
-        :param status: 简单记录当前任务完成的理由.
+        :param log: 简单记录当前任务完成的理由.
         :param response: 发送一条或多条消息作为任务的结论发送给用户.
         """
         pass
@@ -61,18 +64,19 @@ class MultiTask(ABC):
     """
 
     @abstractmethod
-    def wait_on_tasks(self, *thoughts: Thought) -> Operator:
+    def wait_on_tasks(self, *thoughts: Thought, reason: str = "", instruction: str = "") -> Operator:
         """
         使用 Thought 创建多个任务, 同时等待这些任务返回结果. 当结果返回时会触发下一轮思考.
         :param thoughts: 每个 Thought 会创建出一个子任务.
+        :param reason: if given, will log why create the tasks to the current task.
+        :param instruction: if given, will notice the instruction for you when receive callback from the tasks.
         """
         pass
 
     @abstractmethod
-    def run_tasks(self, *thoughts: Thought) -> Dict[str, str]:
+    def run_tasks(self, *thoughts: Thought) -> None:
         """
-        使用 thoughts 动态创建多个 task 异步运行. 不影响你当前状态.
-        :return: dict of created task name to description
+        使用 thoughts 动态创建一个或者多个 task 异步运行. 不影响你当前状态.
         """
         pass
 

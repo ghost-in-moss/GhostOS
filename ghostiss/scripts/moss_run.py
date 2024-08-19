@@ -103,7 +103,7 @@ def get_thread(storage: Storage, root_path: str, suite: MOSSRunnerTestSuite) -> 
     last_suite_path = os.path.join(root_path, last_round)
     last_suite = get_suite(storage, last_suite_path)
     history_thread = get_thread(storage, root_path, last_suite)
-    history_messages = history_thread.updated().messages + current_thread.messages
+    history_messages = history_thread.update_history().messages + current_thread.messages
     return current_thread.model_copy(update=dict(messages=history_messages))
 
 
