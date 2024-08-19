@@ -22,6 +22,9 @@ sympy = "^1.13.1"
 tree-sitter = "0.21.3"
 tree-sitter-languages = "^1.10.2"
 mem0ai = "^0.0.20"
+networkx = "^3.3"
+grep-ast = "^0.3.3"
+litellm = "^1.43.18"
 
 [tool.poetry.scripts]
 llm_test = "ghostiss.scripts.llm_test:main"
