@@ -133,7 +133,10 @@ class OpenAIAdapter(LLMApi):
     def chat_completion(self, chat: Chat) -> Message:
         chat = self.parse_chat(chat)
         message: ChatCompletion = self._chat_completion(chat, stream=False)
-        return self._parser.from_chat_completion(message.choices[0].message)
+        pack = self._parser.from_chat_completion(message.choices[0].message)
+        if not pack.is_tail():
+            pack.pack = False
+        return pack
 
     def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
         chat = self.parse_chat(chat)

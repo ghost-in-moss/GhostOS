@@ -2,8 +2,27 @@ from abc import ABC, abstractmethod
 from typing import Optional, Type, Iterable
 from ghostiss.container import Provider, Container, ABSTRACT
 from ghostiss.core.llms import Chat
+from ghostiss.abc import Identifiable
 
 __all__ = ['Shell', 'ShellProvider']
+
+
+class Env(Identifiable, ABC):
+    """
+    对环境抽象的感知.
+    """
+
+    @abstractmethod
+    def update_chat(self, chat: Chat) -> Chat:
+        pass
+
+    @abstractmethod
+    def driver(self) -> Type[ABSTRACT]:
+        pass
+
+    @abstractmethod
+    def provide(self) -> ABSTRACT:
+        pass
 
 
 class Shell(ABC):

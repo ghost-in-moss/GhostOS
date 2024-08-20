@@ -1,17 +1,18 @@
 import time
-from typing import Optional, List, Set, Iterable, ClassVar
+from typing import Optional, List, Set, Iterable, ClassVar, Dict
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
 from ghostiss.entity import EntityMeta
 from ghostiss.abc import Identifier, Identifiable
 from ghostiss.core.messages import Payload
+from contextlib import contextmanager
 
 __all__ = [
     'Task', 'TaskPayload', 'TaskBrief',
     'TaskState',
     'Tasks',
-    'AwaitGroup',
+    'WaitGroup',
 ]
 
 
@@ -36,72 +37,32 @@ class TaskState(str, Enum):
     FAILED = "failed"
     """the task is failed due to an exception"""
 
+    KILLED = "killed"
+
     FINISHED = "finished"
     """the task is finished"""
 
     @classmethod
     def is_dead(cls, state: str) -> bool:
-        return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED}
+        return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED, cls.KILLED}
 
 
-class AwaitGroup(BaseModel):
+class WaitGroup(BaseModel):
     """
     await group of children tasks that will wake up the task.
     """
-    description: str = Field(description="why to create the group")
-    on_callback: str = Field(description="prompt when waiting tasks are done")
-    tasks: List[str] = Field(description="children task ids to wait")
+    reason: str = Field(description="why to create the group")
+    instruction: str = Field(description="prompt when waiting tasks are done")
+    tasks: Dict[str, bool] = Field(description="children task ids to wait")
+
+    def is_done(self) -> bool:
+        for _, ok in self.tasks.items():
+            if not ok:
+                return False
+        return True
 
 
-class TaskBrief(BaseModel, Identifiable):
-    task_id: str = Field(description="the id of the task")
-    name: str = Field(description="the name of the task")
-    description: str = Field(description="the description of the task")
-    task_state: TaskState = Field(description="the state of the task")
-    logs: List[str] = Field(description="the logs of the task")
-    created: float = Field(
-        default_factory=lambda: round(time.time(), 4),
-        description="The time the task was created.",
-    )
-    updated: float = Field(
-        default_factory=lambda: round(time.time(), 4),
-        description="The time the task was updated.",
-    )
-    overdue: float = Field(
-        default=0.0,
-        description="The time the task was overdue.",
-    )
-    timeout: float = Field(
-        default=0.0,
-        description="timeout for each round of the task execution",
-    )
-
-    def identifier(self) -> Identifier:
-        return Identifier(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-        )
-
-
-class TaskPayload(Payload):
-    key: ClassVar[str] = "task_info"
-    task_id: str = Field(description="the id of the task")
-    task_name: str = Field(description="the name of the task")
-    process_id: str = Field(description="the id of the process")
-    thread_id: str = Field(description="the id of the thread")
-
-
-class Task(TaskBrief):
-    locker: Optional[str] = Field(
-        default=None,
-        description="task locker ",
-    )
-    round: int = Field(
-        default=0,
-        description="记录 Process 已经运行过多少次. 如果是第一次的话, 则意味着它刚刚被创建出来. ",
-    )
-
+class Task(BaseModel):
     # -- scope --- #
     session_id: str = Field(
         description="session id that task belongs.",
@@ -150,8 +111,9 @@ children task ids to wait
 """
     )
 
-    awaiting: List[AwaitGroup] = Field(
+    depending: List[WaitGroup] = Field(
         default_factory=list,
+        description="the children task ids that wait them callback",
     )
 
     # --- thought --- #
@@ -179,7 +141,7 @@ the state of the current task.
         description="The time the task was created.",
     )
     updated: float = Field(
-        default_factory=lambda: round(time.time(), 4),
+        default=0.0,
         description="The time the task was updated.",
     )
     overdue: float = Field(
@@ -191,13 +153,39 @@ the state of the current task.
         description="timeout for each round of the task execution",
     )
 
+    # --- system --- #
+    lock: Optional[str] = Field(
+        default=None,
+    )
+    turns: int = Field(
+        default=0,
+        description="the turn number of the task runs",
+    )
+    think_turns: int = Field(
+        default=0,
+        description="记录 task 已经自动运行过多少次. 如果是 0 的话, 则意味着它刚刚被创建出来. ",
+    )
+    depth: int = Field(
+        default=0,
+        description="task depth that should be parent task depth +1 if parent exists",
+    )
+    max_think_turns: int = Field(
+        default=20,
+        description="任务最大自动运行轮数, 为 0 的话表示无限. "
+    )
+    max_children: int = Field(
+        default=20,
+        description="当前任务最大的子任务数, 超过这范围的子任务开始垃圾回收. "
+    )
+
     @classmethod
     def new(
             cls, *,
             task_id: str,
             session_id: str,
             process_id: str,
-            name: str, description: str,
+            name: str,
+            description: str,
             meta: EntityMeta,
             parent_task_id: Optional[str] = None,
     ) -> "Task":
@@ -212,6 +200,44 @@ the state of the current task.
             description=description,
         )
 
+    def add_child(
+            self, *,
+            task_id: str,
+            name: str,
+            description: str,
+            meta: EntityMeta,
+    ) -> "Task":
+        self.children.append(task_id)
+        return self.new(
+            task_id=task_id,
+            session_id=self.session_id,
+            process_id=self.process_id,
+            name=name,
+            description=description,
+            meta=meta,
+            parent_task_id=self.task_id,
+        )
+
+    def think_too_much(self) -> bool:
+        """
+        任务是否超过了自动思考的轮次.
+        """
+        return 0 < self.max_think_turns <= self.think_turns
+
+    def too_much_children(self) -> bool:
+        return 0 < self.max_children <= len(self.children)
+
+    def remove_child(self, child_task_id: str) -> bool:
+        results = []
+        removed = False
+        for exists_child_id in self.children:
+            if child_task_id == exists_child_id:
+                removed = True
+                continue
+            results.append(exists_child_id)
+        self.children = results
+        return removed
+
     def identifier(self) -> Identifier:
         return Identifier(
             id=self.id,
@@ -219,38 +245,98 @@ the state of the current task.
             description=self.description,
         )
 
-    def brief(self) -> TaskBrief:
-        return TaskBrief(**self.model_dump())
+    def is_dead(self) -> bool:
+        return TaskState.is_dead(self.state)
 
-    def awaiting_tasks(self) -> Set[str]:
+    def depending_tasks(self) -> Set[str]:
         result = set()
-        for group in self.awaiting:
+        for group in self.depending:
             for task in group.tasks:
                 result.add(task)
         return result
 
-    def update_awaits(self, task_id: str) -> bool:
-        awaiting = []
-        fulfill = False
-        for group in self.awaiting:
-            if task_id in group.tasks:
-                group.tasks.remove(task_id)
-            if len(group.awaiting) > 0:
-                awaiting.append(group)
-            else:
-                fulfill = True
-        self.awaiting = awaiting
-        return fulfill
+    def depend_on_tasks(self, task_ids: List[str], reason: str, instruction: str) -> None:
+        group = WaitGroup(
+            reason=reason,
+            instruction=instruction,
+            tasks={task_id: False for task_id in task_ids},
+        )
+        self.depending.append(group)
 
-    def as_payload(self) -> TaskPayload:
+    def on_callback_task(self, task_id: str) -> Optional[WaitGroup]:
         """
-        根据当前 Task 获取添加到消息体里的 payload.
+        得到一个 task id 的回调. 判断是否一组 wait group 被激活了.
+        :param task_id:
+        :return: 是否有 wait group 激活了.
         """
-        return TaskPayload(
-            task_id=self.task_id,
-            process_id=self.process_id,
-            thread_id=self.thread_id,
+        for group in self.depending:
+            if task_id in group.tasks:
+                group.tasks[task_id] = True
+                if group.is_done():
+                    return group
+        return None
+
+    def update_turn(self) -> None:
+        """
+        保存一轮变更之前运行的方法.
+        """
+        self.updated = round(time.time(), 4)
+        self.turns += 1
+
+
+class TaskBrief(BaseModel, Identifiable):
+    task_id: str = Field(description="the id of the task")
+    name: str = Field(description="the name of the task")
+    description: str = Field(description="the description of the task")
+    task_state: TaskState = Field(description="the state of the task")
+    logs: List[str] = Field(description="the logs of the task")
+    created: float = Field(
+        default_factory=lambda: round(time.time(), 4),
+        description="The time the task was created.",
+    )
+    updated: float = Field(
+        default_factory=lambda: round(time.time(), 4),
+        description="The time the task was updated.",
+    )
+    overdue: float = Field(
+        default=0.0,
+        description="The time in seconds that the task will overdue.",
+    )
+    timeout: float = Field(
+        default=0.0,
+        description="timeout for each round of the task execution",
+    )
+
+    def is_overdue(self) -> bool:
+        now = time.time()
+        return now - self.updated > self.overdue
+
+    def identifier(self) -> Identifier:
+        return Identifier(
+            id=self.id,
             name=self.name,
+            description=self.description,
+        )
+
+    @classmethod
+    def from_task(cls, task: Task) -> "TaskBrief":
+        return TaskBrief(**task.model_dump())
+
+
+class TaskPayload(Payload):
+    key: ClassVar[str] = "task_info"
+    task_id: str = Field(description="the id of the task")
+    task_name: str = Field(description="the name of the task")
+    process_id: str = Field(description="the id of the process")
+    thread_id: str = Field(description="the id of the thread")
+
+    @classmethod
+    def from_task(cls, task: Task) -> "TaskPayload":
+        return cls(
+            task_id=task.task_id,
+            process_id=task.process_id,
+            thread_id=task.thread_id,
+            name=task.name,
         )
 
 
@@ -260,11 +346,23 @@ class Tasks(ABC):
     """
 
     @abstractmethod
-    def create_task(self, task: Task) -> Task:
+    def with_namespace(self, namespace: str) -> "Tasks":
+        pass
+
+    @abstractmethod
+    def save_task(self, *tasks: Task) -> None:
+        """
+        保存一个 task.
+        """
         pass
 
     @abstractmethod
     def get_task(self, task_id: str, lock: bool) -> Optional[Task]:
+        """
+        使用 task id 来获取一个 task.
+        :param task_id:
+        :param lock: 是否尝试对 task 上锁, 如果要求上锁但没成功, 返回 None.
+        """
         pass
 
     @abstractmethod
@@ -288,22 +386,25 @@ class Tasks(ABC):
         pass
 
     @abstractmethod
-    def cancel_tasks(self, task_ids: List[str]) -> None:
+    def unlock_task(self, task_id: str, lock: str) -> None:
         """
-        变更一组任务的状态, 强制取消. 目标任务应该周期性检查状态.
-        :param task_ids:
+        对一个任务解锁.
+        :param task_id:
+        :param lock:
         :return:
         """
         pass
 
     @abstractmethod
-    def has_task(self, task_id: str) -> bool:
+    def refresh_task_lock(self, task_id: str, lock: str) -> Optional[str]:
+        """
+        更新一个任务的锁, 也会给它续期.
+        :param task_id:
+        :param lock:
+        :return:
+        """
         pass
 
-    @abstractmethod
-    def lock_task(self, task_id: str) -> Task:
-        pass
-
-    @abstractmethod
-    def update_task(self, task: Task) -> Task:
-        pass
+    @contextmanager
+    def transaction(self):
+        yield

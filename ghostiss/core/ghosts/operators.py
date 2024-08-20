@@ -5,6 +5,8 @@ from ghostiss.core.session import Event
 if TYPE_CHECKING:
     from ghostiss.core.ghosts.ghost import Ghost
 
+__all__ = ['Operator', 'EventOperator', 'get_event_operator']
+
 
 class Operator(ABC):
     """系统运行时产生的算子, 会在外层运行. 只允许通过已有的系统函数生成, 不应该临时实现."""
@@ -32,12 +34,11 @@ class EventOperator(Operator, ABC):
     event_type: ClassVar[str] = ""
     """对齐 Event.type"""
 
-    @classmethod
-    @abstractmethod
-    def new(cls, event: Event) -> "EventOperator":
-        """
-        """
-        pass
+    def __init__(self, event: Event):
+        self.event = event
+
+    def destroy(self) -> None:
+        del self.event
 
 
 def get_event_operator(operators: Dict[str, Type[EventOperator]], event: Event) -> Optional[EventOperator]:
@@ -48,7 +49,7 @@ def get_event_operator(operators: Dict[str, Type[EventOperator]], event: Event) 
     :return:
     """
     if event.type in operators:
-        return operators[event.type].new(event)
+        return operators[event.type](event)
     if "" in operators:
-        return operators[""].new(event)
+        return operators[""](event)
     return None

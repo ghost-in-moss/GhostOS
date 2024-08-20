@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from enum import Enum
 from abc import ABC, abstractmethod
 
 from typing import List, Iterable, Dict, Optional, Union, Callable
@@ -43,6 +43,15 @@ class LLMTool(BaseModel):
         return cls(name=name, description=desc, parameters=parameters)
 
 
+class FunctionalTokenMode(str, Enum):
+    XML = "xml"
+    """ xml 模式, 使用 <name> </name> 包起来的是内容. """
+    TOOL = "tool"
+    """ tool mod, 使用 llm tool 进行封装. """
+    TOKEN = "token"
+    """ token mod. use single token to parse content. """
+
+
 class FunctionalToken(BaseModel):
     """
     定义特殊的 token, 用来在流式输出中生成 caller.
@@ -81,6 +90,8 @@ class Chat(BaseModel):
     functions: List[LLMTool] = Field(default_factory=list)
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
+
+    stream: bool = Field(default=True, description="stream messages")
 
     def get_messages(self) -> List[Message]:
         """

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from pydantic.errors import PydanticSchemaGenerationError
-from typing import TypedDict, Required, Iterable, List
+from typing import TypedDict, Required, Iterable, List, Optional
 from typing_extensions import Literal
 
 
@@ -112,3 +112,15 @@ def test_basemodel_with_none_mode_field():
     except PydanticSchemaGenerationError as e:
         err = e
     assert err is not None
+
+
+def test_field_is_none():
+    class Bar(BaseModel):
+        bar: Optional[str] = Field(default="bar")
+
+    b = Bar(bar=None)
+    assert b.bar is None
+
+    b = Bar()
+    assert b.bar == "bar"
+

@@ -51,7 +51,8 @@ class MossRunner(LLMRunner):
             moss = moss.with_vars(**self._variables)
         if self._pycontext:
             moss = moss.update_context(self._pycontext)
-        moss = moss.update_context(thread.pycontext)
+        thread_pycontext = thread.get_pycontext()
+        moss = moss.update_context(thread_pycontext)
         yield MOSSAction(moss, thread=thread)
         # 也遍历上层传入的 actions.
         if self._actions:

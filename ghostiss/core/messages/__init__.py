@@ -1,7 +1,7 @@
 from ghostiss.core.messages.message import (
     Message, Role, DefaultMessageTypes,
     Caller, Payload, PayloadItem, Attachment,
-    MessageClass, MessageType, MessageTypeParser,
+    MessageClass, MessageKind, MessageKindParser,
 )
 from ghostiss.core.messages.openai import (
     OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultOpenAIParserProvider,
