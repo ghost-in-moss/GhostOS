@@ -18,12 +18,6 @@ Unique process id for the agent session. Session shall only have one process a t
 Stop the process will stop all the tasks that belongs to it.
 """,
     )
-    asynchronous: bool = Field(
-        default=False,
-        description="if the process is asynchronous, every task includes main one shall run in"
-                    "an asynchronous process or thread. "
-                    "if False, the main task shall not run without an inputs.",
-    )
 
     session_id: str = Field(
         description="session id in which the process belongs",

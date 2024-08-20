@@ -202,7 +202,7 @@ class MsgThread(BaseModel):
 
     def new_round(
             self,
-            event: Event,
+            event: Optional[Event],
             *,
             turn_id: Optional[str] = None,
             pycontext: Optional[PyContext] = None,
@@ -216,21 +216,26 @@ class MsgThread(BaseModel):
         if self.current is not None:
             self.history.append(self.current)
             self.current = None
-        last_turn = self.last_turn()
-        pycontext = pycontext or last_turn.pycontext
+        if pycontext is None:
+            last_turn = self.last_turn()
+            pycontext = last_turn.pycontext
         turn_id = turn_id or event.id
         new_turn = Turn.new(event=event, turn_id=turn_id, pycontext=pycontext)
         self.current = new_turn
 
-    def append(self, *messages: Message) -> None:
+    def append(self, *messages: Message, pycontext: Optional[PyContext] = None) -> None:
         """
         添加新的消息体.
         :param messages:
+        :param pycontext:
         :return:
         """
         if self.current is None:
-            self.new_round([])
-        self.current.append(*messages)
+            self.new_round(None)
+        if messages:
+            self.current.append(*messages)
+        if pycontext:
+            self.current.pycontext = pycontext
 
     def get_generates(self) -> List[Message]:
         if self.current is None:

@@ -20,6 +20,10 @@ class Stream(ABC):
         pass
 
     @abstractmethod
+    def is_streaming(self) -> bool:
+        pass
+
+    @abstractmethod
     def send(self, messages: Iterable[Message]) -> bool:
         """
         发送消息.

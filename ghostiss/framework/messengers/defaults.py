@@ -114,6 +114,11 @@ class DefaultMessenger(Messenger, Stream):
         )
         return messenger
 
+    def is_streaming(self) -> bool:
+        if self._upstream is None:
+            return False
+        return self._upstream.is_streaming()
+
     def deliver(self, pack: "Message") -> bool:
         if self.stopped():
             return False
@@ -133,8 +138,8 @@ class DefaultMessenger(Messenger, Stream):
 
     def _deliver(self, delivery: Iterable[Message]) -> bool:
         for item in delivery:
-            if (self._thread is not None   # thread exists.
-                    and not DefaultMessageTypes.is_protocol_type(item)   # not a protocol type message.
+            if (self._thread is not None  # thread exists.
+                    and not DefaultMessageTypes.is_protocol_type(item)  # not a protocol type message.
                     and not item.pack):  # is tail package.
                 # append tail message to thread.
                 self._thread.append(item)

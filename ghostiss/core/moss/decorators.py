@@ -13,7 +13,7 @@ __all__ = [
 
 DECORATOR = Callable[[Any], Any]
 FUNC_DECORATOR = Callable[[Callable], Callable]
-CLASS_DECORATOR = Callable[[Type], Type]
+CLASS_DECORATOR = Callable[[Any], Any]
 
 
 def cls_source_code(*, force: bool = False, doc: Optional[str] = None) -> DECORATOR:

@@ -56,7 +56,7 @@ class LLMApi(ABC):
         """
         逐个发送消息的包.
         """
-        if not chat.stream:
+        if not deliver.is_streaming():
             message = self.chat_completion(chat)
             deliver.deliver(message)
             return
