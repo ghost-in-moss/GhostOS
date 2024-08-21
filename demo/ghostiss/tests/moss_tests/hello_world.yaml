@@ -1,7 +1,11 @@
 system_prompt: 你是一个 ai 助手, 名字叫做 JoJo.
 instruction: 你需要使用自己的工具, 帮助用户解决各种问题.
 llm_apis:
-- moonshot-v1-32k
+#- moonshot-v1-32k
+#- claude-3-5-sonnet
+- claude-3-haiku
+#- deepseek-chat
+#- deepseek-coder
 pycontext:
   imported:
   - module: ghostiss.mocks.minds
@@ -11,7 +15,8 @@ thread:
   messages:
   - role: user
     content: 你好!
-  - content: 你也好啊! 有什么我可以帮您的?
+  - role: assistant
+    content: 你也好啊! 有什么我可以帮您的?
   inputs:
   - role: user
     content: 你可以做什么?
