@@ -53,7 +53,6 @@ class LLMRunner(Runner, ABC):
         # 获取当前运行依赖的 actions.
         thread = session.thread()
         actions, chat = self.prepare(container, thread)
-        chat.stream = not session.process().asynchronous
         # 准备好回调的 map.
         actions_name_map = {}
         for action in actions:

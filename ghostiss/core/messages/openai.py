@@ -153,7 +153,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         )]
 
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
-        pack = Message.new_tail(typ_=DefaultMessageTypes.CHAT_COMPLETION, role=message.role, content=message.content)
+        pack = Message.new_tail(type_=DefaultMessageTypes.CHAT_COMPLETION, role=message.role, content=message.content)
         if message.function_call:
             caller = Caller(
                 name=message.function_call.name,

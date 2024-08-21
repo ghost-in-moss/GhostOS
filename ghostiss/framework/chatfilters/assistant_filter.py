@@ -1,10 +1,10 @@
 from typing import Optional
 from ghostiss.core.messages import Message, Role
-from ghostiss.core.llms import ChatFilter, Chat
+from ghostiss.core.llms import ChatUpdater, Chat
 from ghostiss.core.session import TaskPayload
 
 
-class OtherAgentOrTaskFilter(ChatFilter):
+class OtherAgentOrTaskUpdater(ChatUpdater):
     """
     调整 assistant name, 如果一条 assistant 消息的 name 与当前 name 相同则去掉.
     这样就会认为是自己的消息.
@@ -15,7 +15,7 @@ class OtherAgentOrTaskFilter(ChatFilter):
         self._task_id = task_id
         self._with_task_name = with_task_name
 
-    def filter(self, chat: Chat) -> Chat:
+    def update_chat(self, chat: Chat) -> Chat:
         def filter_fn(message: Message) -> Optional[Message]:
             if message.role != Role.ASSISTANT.value:
                 return message

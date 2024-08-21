@@ -234,7 +234,7 @@ class BasicSession(Session):
         main_task_id = process.main_task_id
         for e in self._firing_events:
             # 异步进程需要通知.
-            notify = process.asynchronous or e.task_id != main_task_id
+            notify = not self._upstream.is_streaming() or e.task_id != main_task_id
             bus.send_event(e, notify)
 
     def _do_finish_task_and_thread(self) -> None:

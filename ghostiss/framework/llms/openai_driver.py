@@ -125,6 +125,7 @@ class OpenAIAdapter(LLMApi):
             model=self._model.model,
             function_call=chat.get_openai_function_call(),
             functions=chat.get_openai_functions(),
+            tools=chat.get_openai_tools(),
             max_tokens=self._model.max_tokens,
             temperature=self._model.temperature,
             n=self._model.n,

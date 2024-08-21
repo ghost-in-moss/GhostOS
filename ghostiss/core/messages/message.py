@@ -28,6 +28,14 @@ class Role(str, enum.Enum):
     def all(cls) -> Set[str]:
         return set(map(lambda x: x.value, cls))
 
+    def new(self, content: str, memory: Optional[str] = None, type_: Optional[str] = None) -> "Message":
+        return Message.new_tail(
+            type_=type_ if type_ else DefaultMessageTypes.DEFAULT.value,
+            role=self.value,
+            content=content,
+            memory=memory,
+        )
+
 
 class DefaultMessageTypes(str, enum.Enum):
     DEFAULT = ""
@@ -217,7 +225,7 @@ class Message(BaseModel):
     @classmethod
     def new_tail(
             cls, *,
-            typ_: str = "",
+            type_: str = "",
             role: str = Role.ASSISTANT.value,
             content: Optional[str] = None,
             memory: Optional[str] = None,
@@ -228,7 +236,7 @@ class Message(BaseModel):
     ):
         msg = cls.new_head(
             role=role, name=name, content=content, memory=memory,
-            typ_=typ_,
+            typ_=type_,
             msg_id=msg_id,
             ref_id=ref_id,
             created=created,

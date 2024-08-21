@@ -7,21 +7,24 @@ from typing import List, Iterable, Dict, Optional, Union, Callable
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
+from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 
 from pydantic import BaseModel, Field
+from ghostiss.abc import Identifiable, Identifier
 from ghostiss import helpers
 from ghostiss.core.messages import Message, DefaultMessageTypes, Caller
 
 __all__ = [
     'LLMTool', 'FunctionalToken',
-    'Chat', 'ChatFilter',
-    'filter_chat',
+    'Chat', 'ChatUpdater',
+    'update_chat',
 ]
 
 
 # ---- tool and function ---- #
 
 class LLMTool(BaseModel):
+    id: Optional[str] = Field(default=None, description="The id of the LLM tool.")
     name: str = Field(description="function name")
     description: str = Field(default="", description="function description")
     parameters: Optional[Dict] = Field(default=None, description="function parameters")
@@ -52,7 +55,7 @@ class FunctionalTokenMode(str, Enum):
     """ token mod. use single token to parse content. """
 
 
-class FunctionalToken(BaseModel):
+class FunctionalToken(Identifiable, BaseModel):
     """
     定义特殊的 token, 用来在流式输出中生成 caller.
     """
@@ -68,6 +71,12 @@ class FunctionalToken(BaseModel):
             name=self.name,
             arguments=arguments,
             functional_token=True,
+        )
+
+    def identifier(self) -> Identifier:
+        return Identifier(
+            name=self.name,
+            description=self.description,
         )
 
     def as_tool(self) -> LLMTool:
@@ -90,8 +99,6 @@ class Chat(BaseModel):
     functions: List[LLMTool] = Field(default_factory=list)
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
-
-    stream: bool = Field(default=True, description="stream messages")
 
     def get_messages(self) -> List[Message]:
         """
@@ -140,9 +147,23 @@ class Chat(BaseModel):
             return NOT_GIVEN
         functions = []
         for func in self.functions:
+            if func.id is not None:
+                continue
             openai_func = Function(**func.model_dump())
             functions.append(openai_func)
         return functions
+
+    def get_openai_tools(self) -> Union[List[ChatCompletionToolParam], NotGiven]:
+        if not self.functions:
+            return NOT_GIVEN
+        tools = []
+        for func in self.functions:
+            if func.id is None:
+                continue
+            openai_func = Function(**func.model_dump())
+            tool = ChatCompletionToolParam(function=openai_func)
+            tools.append(tool)
+        return tools
 
     def get_openai_function_call(self) -> Union[FunctionCall, NotGiven]:
         if not self.functions:
@@ -152,21 +173,21 @@ class Chat(BaseModel):
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
 
 
-class ChatFilter(ABC):
+class ChatUpdater(ABC):
     """
     用来对 chat message 做加工.
     基本思路是, 尽可能保证消息体本身的一致性, 在使用的时候才对消息结构做调整.
     """
 
     @abstractmethod
-    def filter(self, chat: Chat) -> Chat:
+    def update_chat(self, chat: Chat) -> Chat:
         pass
 
 
-def filter_chat(chat: Chat, filters: Iterable[ChatFilter]) -> Chat:
+def update_chat(chat: Chat, updater: Iterable[ChatUpdater]) -> Chat:
     """
     通过多个 filter 来加工 chat.
     """
-    for f in filters:
-        chat = f.filter(chat)
+    for f in updater:
+        chat = f.update_chat(chat)
     return chat
