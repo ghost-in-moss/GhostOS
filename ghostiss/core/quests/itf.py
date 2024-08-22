@@ -2,22 +2,26 @@ from typing import Generic, TypeVar, Any, Optional, Type, ClassVar, Tuple, Dict
 import json
 from abc import ABC, abstractmethod
 from ghostiss.container import Container
-from ghostiss.core.llms import Chat, LLMTool, ChatUpdater
+from ghostiss.core.llms import Chat, LLMTool, ChatPreparer
 from ghostiss.core.moss.decorators import cls_definition, cls_source_code
+from ghostiss.core.moss.abc import MossCompiler
 from ghostiss.core.session import MsgThread, Messenger
 from ghostiss.core.messages import Caller, Message, Role
 from ghostiss.abc import Identifiable
 from pydantic import BaseModel
 
 __all__ = [
-    'Step', 'Quest', 'QuestDriver',
+    'QuestOperator', 'Quest', 'QuestDriver',
     'QuestContext', 'QuestLib',
     'QuestAction', 'QuestToolAction',
 ]
 
 
 @cls_definition()
-class Step(ABC):
+class QuestOperator(ABC):
+    """
+    operates the thought
+    """
 
     @abstractmethod
     def next(
@@ -25,26 +29,69 @@ class Step(ABC):
             context: "QuestContext",
             driver: "QuestDriver",
             thread: MsgThread,
-    ) -> Tuple[MsgThread, Optional["Step"]]:
+    ) -> Tuple[MsgThread, Optional["QuestOperator"]]:
         pass
 
 
 @cls_definition()
 class Quest(ABC):
-    __result_type__: ClassVar[Type]
+    """
+    function like object that produce __result__ after running.
+    """
+    __result__: Any = None
     __quest_driver__: ClassVar[Optional[Type["QuestDriver"]]] = None
 
 
 Q = TypeVar('Q', bound=Quest)
 
 
-class QuestAction(Identifiable, ChatUpdater, ABC):
+class QuestDriver(Generic[Q], ABC):
+    """
+    Quest 的驱动类库.
+    和 Quest 类有对应关系.
+    默认 Quest 类目录下, Quest.__name__ + 'Driver' 就是 quest driver.
+    这是为了分离 Quest 的数据结构, 和它的方法. 数据结构可以自解释, 方法不需要对外呈现.
+    """
+
+    def __init__(self, quest: Q):
+        self.quest: Q = quest
+
+    @abstractmethod
+    def init(self) -> MsgThread:
+        """
+        initialize the quest thread by quest configuration.
+        """
+        pass
+
+    @abstractmethod
+    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Tuple[MsgThread, QuestOperator]:
+        """
+        运行这个 Chat, 获取状态变更.
+        :param container: ioc container that provide libraries
+        :param messenger:
+        :param thread: thread
+        :return: (updated chat, next step)
+        """
+        pass
+
+    @abstractmethod
+    def on_save(self, container: Container, thread: MsgThread) -> None:
+        """
+        一切运行结束的时候, 保存 chat 数据.
+        :param container:
+        :param thread:
+        :return:
+        """
+        pass
+
+
+class QuestAction(Identifiable, ChatPreparer, ABC):
     """
     能够在 Quest 里直接使用的工具.
     """
 
     @abstractmethod
-    def update_chat(self, chat: Chat) -> Chat:
+    def prepare_chat(self, chat: Chat) -> Chat:
         """
         更新 chat 信息.
         :param chat:
@@ -53,7 +100,7 @@ class QuestAction(Identifiable, ChatUpdater, ABC):
         pass
 
     @abstractmethod
-    def callback(self, thread: MsgThread, caller: Caller) -> Tuple[MsgThread, Optional[Step]]:
+    def callback(self, thread: MsgThread, caller: Caller) -> Tuple[MsgThread, Optional[QuestOperator]]:
         """
         响应 chat callback.
         """
@@ -75,17 +122,17 @@ class QuestToolAction(QuestAction, ABC):
     def handle(self, arguments: BaseModel) -> Any:
         pass
 
-    def update_chat(self, chat: Chat) -> Chat:
+    def prepare_chat(self, chat: Chat) -> Chat:
         chat.functions.append(self.as_llm_tool())
         return chat
 
-    def callback(self, thread: MsgThread, caller: Caller) -> Tuple[MsgThread, Optional[Step]]:
+    def callback(self, thread: MsgThread, caller: Caller) -> Tuple[MsgThread, Optional[QuestOperator]]:
         model = self.args_model()
         data = json.loads(caller.arguments)
         args = model(**data)
         result = self.handle(args)
-        if isinstance(result, Step):
-            step: Step = result
+        if isinstance(result, QuestOperator):
+            step: QuestOperator = result
             return thread, step
         elif isinstance(result, Message):
             thread.append(result)
@@ -105,54 +152,27 @@ class QuestToolAction(QuestAction, ABC):
         )
 
 
-class QuestDriver(Generic[Q], ABC):
-    """
-    Quest 的驱动类库.
-    和 Quest 类有对应关系.
-    默认 Quest 类目录下, Quest.__name__ + 'Driver' 就是 quest driver.
-    这是为了分离 Quest 的数据结构, 和它的方法. 数据结构可以自解释, 方法不需要对外呈现.
-    """
+class FileDebugQuest(Quest):
+    instruction: str
+    file_path: str
 
-    def __init__(self, quest: Q):
-        self.quest: Q = quest
-
-    @abstractmethod
-    def init(self) -> MsgThread:
-        pass
-
-    @abstractmethod
-    def run(self, container: Container, messenger: Messenger, thread: MsgThread) -> Tuple[MsgThread, Step]:
-        """
-        运行这个 Chat, 获取状态变更.
-        :param container: ioc container that provide libraries
-        :param messenger:
-        :param thread: thread
-        :return: (updated chat, next step)
-        """
-        pass
-
-    @abstractmethod
-    def on_finish(self, container: Container, thread: MsgThread) -> None:
-        """
-        一切运行结束的时候, 保存 chat 数据.
-        :param container:
-        :param thread:
-        :return:
-        """
-        pass
+# FileDebugQuest result is
+'''
+Class FileDebugQuestResult(BaseModel)
+    pass
+'''
 
 
 @cls_source_code()
 class QuestLib(ABC):
     """
-    可以给大模型使用的类库, 直接操作子 task.
-    todo: 将 doc 替换成 大模型想看的 doc.
+    任务管理器, 可以用来运行 Quest 实例描述的任务, 返回最终结果.
     """
 
     @abstractmethod
     def run(self, key: str, quest: Quest) -> Any:
         """
-        运行一个 Quest, 将结果保存到 key 里, 同时返回它.
+        运行一个 Quest, 将结果保存到 key 里, 方便下一轮思考的时候获取.
         :param key:
         :param quest:
         :return:
@@ -179,7 +199,7 @@ class QuestLib(ABC):
         pass
 
     @abstractmethod
-    def observe(self, **kwargs) -> Step:
+    def observe(self, **kwargs) -> QuestOperator:
         """
         观察多个值的结果, 引发下一轮思考.
         :param kwargs:
@@ -188,11 +208,9 @@ class QuestLib(ABC):
         pass
 
     @abstractmethod
-    def finish(self, result: Any) -> Step:
+    def finish(self, result: Any) -> QuestOperator:
         """
-        结束运行, 返回 result.
-        :param result:
-        :return:
+        结束当前的思考, 传入 result 作为当前任务的结果.
         """
         pass
 
@@ -205,14 +223,16 @@ class QuestContext(QuestLib, ABC):
 
     @abstractmethod
     def container(self) -> Container:
+        """
+        为 Quest 准备的 IoC 容器.
+        可以用于支持 moss.
+        """
         pass
 
     @abstractmethod
     def execute(self, quest: Quest) -> Any:
         """
-        执行 quest.
-        :param quest:
-        :return:
+        执行一个 quest, 直到拿到它的返回结果.
         """
         pass
 

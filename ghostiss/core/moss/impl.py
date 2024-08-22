@@ -198,7 +198,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
     def moss(self) -> object:
         return self._moss
 
-    def dump_context(self) -> PyContext:
+    def dump_pycontext(self) -> PyContext:
         return self._pycontext
 
     def dump_std_output(self) -> str:

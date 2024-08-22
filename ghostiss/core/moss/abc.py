@@ -412,7 +412,7 @@ class MossRuntime(ABC):
         return Moss
 
     @abstractmethod
-    def dump_context(self) -> PyContext:
+    def dump_pycontext(self) -> PyContext:
         """
         返回当前的可存储上下文.
         """

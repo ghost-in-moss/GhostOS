@@ -179,3 +179,15 @@ def test_setattr_with_func():
 def test_subclass():
     # self is self's subclass. humor but reasonable
     assert issubclass(Bar, Bar)
+
+
+def test_method_belongs_to_class():
+    class Foo:
+        def foo(self):
+            return 1
+
+    class Bar(Foo):
+        pass
+
+    assert Bar.foo.__module__ == Foo.__module__
+    assert Bar.foo.__qualname__.startswith(Foo.__qualname__)

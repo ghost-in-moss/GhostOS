@@ -1,1 +1,1 @@
-from ghostiss.framework.chatfilters.assistant_filter import OtherAgentOrTaskUpdater
+from ghostiss.framework.chatfilters.assistant_filter import OtherAgentOrTaskPreparer

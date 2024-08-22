@@ -85,7 +85,7 @@ class OnUpstreamEventOperator(EventOperator):
         # 思考轮次设置为 0.
         task.think_turns = 0
         thread = session.thread()
-        thread.new_round(self.event)
+        thread.new_turn(self.event)
         session.update_task(task, thread, update_history=False)
         return g.utils().handle_event(self.event)
 
@@ -117,7 +117,7 @@ class OnSelfEventOperator(EventOperator):
         # 思考轮次设置为 0.
         task.think_turns += 1
         thread = session.thread()
-        thread.new_round(self.event)
+        thread.new_turn(self.event)
         if task.think_too_much():
             session.update_task(task, thread, update_history=True)
             # 不再运行思考. 只是追加信息. 必须等待上游的输入才能继续运行.
@@ -152,7 +152,7 @@ class OnCallbackEventOperator(EventOperator):
         task = session.task()
         # 思考轮次设置为 0.
         thread = session.thread()
-        thread.new_round(self.event)
+        thread.new_turn(self.event)
         session.update_task(task, thread, update_history=False)
         return task.is_dead()
 

@@ -9,11 +9,11 @@ import datetime
 from ghostiss.core.session.messenger import Messenger
 from ghostiss.core.moss_p1 import MOSS, PyContext
 from ghostiss.core.messages import DefaultMessageTypes, Message
-from ghostiss.core.llms import LLMs, LLMApi, Chat, ChatUpdater, update_chat
+from ghostiss.core.llms import LLMs, LLMApi, Chat, ChatPreparer, update_chat
 from ghostiss.core.session.threads import MsgThread, thread_to_chat
 from ghostiss.helpers import uuid, import_from_path
 from pydantic import BaseModel, Field
-from ghostiss.framework.chatfilters.assistant_filter import OtherAgentOrTaskUpdater
+from ghostiss.framework.chatfilters.assistant_filter import OtherAgentOrTaskPreparer
 from ghostiss.framework.moss.action import MOSSAction
 
 __all__ = [
@@ -81,8 +81,8 @@ class MossRunner(LLMRunner):
         chat = update_chat(chat, filters)
         return result_actions, chat
 
-    def filters(self) -> Iterable[ChatUpdater]:
-        yield OtherAgentOrTaskUpdater(assistant_name=self._name)
+    def filters(self) -> Iterable[ChatPreparer]:
+        yield OtherAgentOrTaskPreparer(assistant_name=self._name)
 
     def get_llmapi(self, container: Container) -> LLMApi:
         llms = container.force_fetch(LLMs)

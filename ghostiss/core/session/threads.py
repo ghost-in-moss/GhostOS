@@ -119,7 +119,7 @@ class MsgThread(BaseModel):
     @classmethod
     def new(
             cls,
-            messages: List[Message],
+            event: Optional[Event],
             *,
             pycontext: Optional[PyContext] = None,
             thread_id: Optional[str] = None,
@@ -128,15 +128,16 @@ class MsgThread(BaseModel):
     ) -> "MsgThread":
         """
         初始化一个 Thread.
-        :param messages: 首轮的输入消息.
+        :param event: 首轮输入的信息.
         :param pycontext: 初始化时的 pycontext.
         :param thread_id: 指定的 thread id.
         :param root_id: 指定的 root id.
         :param parent_id: 任务的 parent id.
         :return:
         """
+
         data = {
-            "on_created": Turn.new(inputs=messages, turn_id=thread_id, pycontext=pycontext),
+            "on_created": Turn.new(event=event, turn_id=thread_id, pycontext=pycontext),
         }
         if thread_id is not None:
             data["thread_id"] = thread_id
@@ -173,7 +174,7 @@ class MsgThread(BaseModel):
 
     def update_pycontext(self, pycontext: PyContext) -> None:
         if self.current is None:
-            self.new_round([])
+            self.new_turn(None)
         self.current.pycontext = pycontext
 
     def update_history(self) -> "MsgThread":
@@ -200,7 +201,7 @@ class MsgThread(BaseModel):
         if self.current is not None:
             yield self.current
 
-    def new_round(
+    def new_turn(
             self,
             event: Optional[Event],
             *,
@@ -231,7 +232,7 @@ class MsgThread(BaseModel):
         :return:
         """
         if self.current is None:
-            self.new_round(None)
+            self.new_turn(None)
         if messages:
             self.current.append(*messages)
         if pycontext:
