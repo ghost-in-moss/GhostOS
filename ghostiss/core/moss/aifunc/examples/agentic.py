@@ -6,6 +6,13 @@ from ghostiss.core.moss import Moss as Parent
 from pydantic import Field
 
 
+class AgentFn(AIFunc):
+    """
+    AIFunc that act like an agent
+    """
+    request: str = Field(description="raw request for the agent")
+
+
 class AgentFnResult(AIFuncResult):
     """
     the result that follow the agent request
@@ -18,17 +25,12 @@ __result_type__ = AgentFnResult
 
 
 class Moss(Parent):
+
     ai_func_ctx: AIFuncCtx
     """useful to run AIFunc"""
 
 
 # <moss>
-
-class AgentFn(AIFunc):
-    """
-    AIFunc that act like an agent
-    """
-    request: str = Field(description="raw request for the agent")
 
 
 def __aifunc_instruction__(fn: AgentFn) -> str:

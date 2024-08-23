@@ -1,14 +1,7 @@
 from typing import Optional, List
 from ghostiss.core.moss.aifunc import AIFunc, AIFuncResult
 from pydantic import BaseModel, Field
-
-
-class NewsAIFunc(AIFunc):
-    """
-    search news
-    """
-    request: str = Field(description="user's request about the news he want.")
-    limit: int = Field(default=5, description="how many news you want.")
+from ghostiss.core.moss import Moss
 
 
 class NewsAIFuncResult(AIFuncResult):
@@ -29,6 +22,14 @@ __result_type__ = NewsAIFuncResult
 
 
 # <moss>
+
+class NewsAIFunc(AIFunc):
+    """
+    search news
+    """
+    request: str = Field(description="user's request about the news he want.")
+    limit: int = Field(default=5, description="how many news you want.")
+
 
 def __aifunc_instruction__(fn: NewsAIFunc) -> str:
     return (

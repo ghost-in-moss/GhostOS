@@ -128,7 +128,9 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def think(self, manager: AIFuncManager, thread: MsgThread) -> Tuple[MsgThread, Optional[Any], bool]:
         logger = manager.container().get(LoggerItf)
         compiler = manager.compiler()
-        runtime = compiler.join_context(thread.get_pycontext()).compile(None)
+        compiler.join_context(thread.get_pycontext())
+        compiler.bind(self.aifunc.__class__, self.aifunc)
+        runtime = compiler.compile(None)
         # 使用默认的方法, 将 thread 转成 chat.
         systems = self.generate_system_messages(runtime)
         systems.append(Role.SYSTEM.new(
