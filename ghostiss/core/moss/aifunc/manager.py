@@ -1,13 +1,13 @@
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Type
 
-from ghostiss.container import Container
+from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.llms import LLMApi, LLMs
 from ghostiss.core.moss import MossCompiler
 from ghostiss.core.moss.aifunc.func import AIFunc, AIFuncResult
 from ghostiss.core.moss.aifunc.interfaces import AIFuncManager, AIFuncCtx, AIFuncDriver
 from ghostiss.core.moss.aifunc.driver import DefaultAIFuncDriverImpl
 
-__all__ = ['DefaultAIFuncManagerImpl']
+__all__ = ['DefaultAIFuncManagerImpl', 'DefaultAIFuncManagerProvider']
 
 
 class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
@@ -17,7 +17,8 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             container: Container,
             llm_api_name: str = "",
             max_step: int = 10,
-            depth: int = 0
+            depth: int = 0,
+            default_driver: Optional[Type[AIFuncDriver]] = None
     ):
         self._container = Container(parent=container)
         self._container.set(AIFuncCtx, self)
@@ -26,6 +27,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         self._sub_managers: List[AIFuncManager] = []
         self._max_step = max_step
         self._depth = depth
+        self._default_driver_type = default_driver if default_driver else DefaultAIFuncDriverImpl
 
     def sub_manager(self) -> "AIFuncManager":
         manager = DefaultAIFuncManagerImpl(
@@ -69,7 +71,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         cls = fn.__class__
         if cls.__aifunc_driver__ is not None:
             return cls.__aifunc_driver__(fn)
-        return DefaultAIFuncDriverImpl(fn)
+        return self._default_driver_type(fn)
 
     def run(self, key: str, fn: AIFunc) -> AIFuncResult:
         sub_manager = self.sub_manager()
@@ -93,3 +95,21 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         self._container.destroy()
         del self._container
         del self._values
+
+
+class DefaultAIFuncManagerProvider(Provider):
+
+    def __init__(self, llm_api_name: str = ""):
+        self._llm_api_name = llm_api_name
+
+    def singleton(self) -> bool:
+        return False
+
+    def contract(self) -> Type[ABSTRACT]:
+        return AIFuncManager
+
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
+        return DefaultAIFuncManagerImpl(
+            container=con,
+            llm_api_name=self._llm_api_name,
+        )

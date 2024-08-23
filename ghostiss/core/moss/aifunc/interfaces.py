@@ -6,6 +6,7 @@ from ghostiss.core.moss.abc import MossCompiler
 from ghostiss.core.llms import LLMApi
 from ghostiss.core.session import MsgThread
 from ghostiss.container import Container
+from ghostiss.contracts.logger import LoggerItf
 
 __all__ = [
     'AIFuncManager', 'AIFuncCtx', 'AIFuncDriver'

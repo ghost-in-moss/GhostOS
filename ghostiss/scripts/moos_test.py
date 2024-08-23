@@ -5,7 +5,7 @@ from typing import List
 from ghostiss.container import Container
 from ghostiss.core.moss_p1.moss import MOSS, TestMOSSProvider
 from ghostiss.core.moss_p1.modules import BasicModulesProvider
-from ghostiss.contracts.storage import FileStorageProvider
+from ghostiss.framework.storage import FileStorageProvider
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from pydantic import BaseModel

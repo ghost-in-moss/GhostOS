@@ -7,7 +7,7 @@ from ghostiss.core.moss_p1.reflect import ClassSign, Interface
 from ghostiss.container import Container, Provider, ABSTRACT
 from ghostiss.core.messages import DefaultMessageTypes
 from ghostiss.core.ghosts import Operator, Taskflow
-from ghostiss.contracts.storage import Storage, FileStorageProvider
+from ghostiss.contracts.storage import Storage
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.core.session.threads import MsgThread
 from ghostiss.core.moss_p1 import MOSS, BasicPythonMOSSImpl, BasicModulesProvider
@@ -15,6 +15,7 @@ from ghostiss.framework.messengers import TestMessengerProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 from ghostiss.framework.moss.runner import MOSSRunnerTestSuite, MOSSRunnerTestResult
 from ghostiss.framework.llms.test_case import ChatCompletionTestCase, APIInfo
+from ghostiss.framework.storage import FileStorageProvider
 from ghostiss.helpers import yaml_pretty_dump
 from rich.console import Console
 from rich.panel import Panel

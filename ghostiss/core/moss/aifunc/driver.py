@@ -2,12 +2,14 @@ from typing import Tuple, List, Optional, Any
 
 from ghostiss.core.moss.aifunc.interfaces import AIFuncDriver, AIFuncManager
 from ghostiss.core.moss.aifunc.func import (
+    AIFunc,
     get_aifunc_instruction, get_aifunc_result_type, get_aifunc_pycontext, get_aifunc_llmapi,
 )
-from ghostiss.core.llms import LLMs
+from ghostiss.core.llms import LLMs, Chat
 from ghostiss.core.moss.abc import MossRuntime
 from ghostiss.core.session import MsgThread, DefaultEventType, Threads, thread_to_chat
 from ghostiss.core.messages import Role, Message
+from ghostiss.contracts.logger import LoggerItf
 
 __all__ = [
     'DefaultAIFuncDriverImpl',
@@ -32,7 +34,7 @@ The Python context that moss provide to you are below:
 ```
 
 With MOSS you shall generate a single block of Python code, 
-and in the code you shall defines a function `def main(os: MOSS) -> bool:`.
+and in the code you shall defines a function `def main(os: Moss) -> bool:`.
 The MOSS will compile your code to the context, 
 then automatically execute the main function with IoC injection for class Moss, 
 and take next step based on the returns from the main function:  
@@ -66,6 +68,14 @@ def default_aifunc_prompt(
 
 class DefaultAIFuncDriverImpl(AIFuncDriver):
 
+    def __init__(self, fn: AIFunc):
+        self.error_times = 0
+        self.max_error_times = 3
+        super().__init__(fn)
+
+    def name(self) -> str:
+        return self.aifunc.__class__.__name__
+
     def initialize(self) -> MsgThread:
         instruction = get_aifunc_instruction(self.aifunc)
         pycontext = get_aifunc_pycontext(self.aifunc)
@@ -97,12 +107,24 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         message = Role.SYSTEM.new(content=prompt)
         return [message]
 
+    def on_chat(self, chat: Chat) -> None:
+        pass
+
+    def on_message(self, message: Message) -> None:
+        pass
+
+    def on_system_messages(self, messages: List[Message]) -> None:
+        pass
+
     def think(self, manager: AIFuncManager, thread: MsgThread) -> Tuple[MsgThread, Optional[Any], bool]:
+        logger = manager.container().get(LoggerItf)
         compiler = manager.compiler()
         runtime = compiler.join_context(thread.get_pycontext()).compile("__aifunc__")
         # 使用默认的方法, 将 thread 转成 chat.
         systems = self.generate_system_messages(runtime)
+        self.on_system_messages(systems)
         chat = thread_to_chat(thread.id, systems, thread)
+        self.on_chat(chat)
         # todo: log
         # 实例化 llm api
         llms = manager.container().force_fetch(LLMs)
@@ -110,23 +132,26 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         if llm_api is None:
             llm_api = manager.default_llm_api()
         # 调用 llm api
+        logger and logger.info(f"run aifunc with chat :{chat}")
         message = llm_api.chat_completion(chat)
+        self.on_message(message)
         code = self.parse_moss_code_in_message(message)
 
         result = None
         # 运行 moss.
         try:
-            finish = runtime.execute(code=code, target='main', args=['moss'])
+            executed = runtime.execute(code=code, target='main', args=['moss'])
+            finish = executed.returns
             if not isinstance(finish, bool):
                 raise RuntimeError(f"Result from main function {finish} is not boolean")
             if finish:
                 result = runtime.locals().get("__result__", None)
 
-            outputs = runtime.dump_std_output()
+            outputs = executed.std_output
             output_message = Role.SYSTEM.new(
                 content=f"moss executed main, std output is: \n{outputs}"
             )
-            pycontext = runtime.dump_pycontext()
+            pycontext = executed.pycontext
             thread.new_turn(
                 event=DefaultEventType.THINK.new(
                     messages=[output_message],
@@ -135,6 +160,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                 ),
                 pycontext=pycontext,
             )
+            self.error_times = 0
         except Exception as e:
             output_message = Role.SYSTEM.new(
                 content=f"moss executed main, exception occurs: \n{e}"
@@ -146,7 +172,11 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                     from_task_id=thread.id,
                 ),
             )
-            finish = True
+            self.error_times += 1
+            if self.error_times >= 3:
+                raise RuntimeError(f"AIFunc `{self.name()}` failed {self.error_times} times, can not fix itself: \n{e}")
+            else:
+                finish = False
         finally:
             runtime.destroy()
         return thread, result, finish

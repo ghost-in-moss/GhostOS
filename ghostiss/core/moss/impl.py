@@ -1,6 +1,6 @@
 import inspect
 from types import ModuleType
-from typing import Optional, Any, Dict, get_type_hints, Type
+from typing import Optional, Any, Dict, get_type_hints, Type, List
 import io
 
 from ghostiss.container import Container, Provider
@@ -10,6 +10,7 @@ from ghostiss.core.moss.abc import (
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
 from ghostiss.contracts.modules import Modules, ImportWrapper
+from ghostiss.core.moss.prompts import AttrPrompts
 from ghostiss.core.moss.pycontext import PyContext, Property
 from ghostiss.helpers import get_module_spec
 from contextlib import contextmanager, redirect_stdout
@@ -27,6 +28,7 @@ class MossCompilerImpl(MossCompiler):
             '__import__': ImportWrapper(self._modules),
         }
         self._injections: Dict[str, Any] = {}
+        self._attr_prompts: List = []
 
     def container(self) -> Container:
         return self._container
@@ -40,6 +42,11 @@ class MossCompilerImpl(MossCompiler):
 
     def with_locals(self, **kwargs) -> "MossCompiler":
         self._predefined_locals.update(kwargs)
+        return self
+
+    def with_ignore_prompts(self, *attr_names) -> "MossCompiler":
+        for attr_name in attr_names:
+            self._attr_prompts.append((attr_name, ""))
         return self
 
     def injects(self, **attrs: Any) -> "MossCompiler":
@@ -59,12 +66,16 @@ class MossCompilerImpl(MossCompiler):
         return module
 
     def _new_runtime(self, module: ModuleType) -> "MossRuntime":
+        attr_prompts = {}
+        for attr_name, value in self._attr_prompts:
+            attr_prompts[attr_name] = value
         return MossRuntimeImpl(
             container=self._container,
             pycontext=self._pycontext.model_copy(deep=True),
             source_code=self.pycontext_code(model_visible_only=False),
             compiled=module,
             injections=self._injections,
+            attr_prompts=attr_prompts,
         )
 
     def pycontext_code(self, model_visible_only: bool = True) -> str:
@@ -109,6 +120,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             source_code: str,
             compiled: ModuleType,
             injections: Dict[str, Any],
+            attr_prompts: Dict[str, str],
     ):
         self._container = container
         self._modules: Modules = container.force_fetch(Modules)
@@ -121,6 +133,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._built: bool = False
         self._moss: Optional[Moss] = None
         self._moss_prompt: Optional[str] = None
+        self._attr_prompts: Dict[str, str] = attr_prompts
         self._bootstrap_moss()
 
     def _bootstrap_moss(self):
@@ -218,6 +231,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
     ) -> str:
         code = self._source_code
         return self._parse_pycontext_code(code, exclude_moss_mark_code)
+
+    def pycontext_attr_prompts(self, excludes: Optional[set] = None) -> AttrPrompts:
+        yield from super().pycontext_attr_prompts(excludes=excludes)
+        yield from self._attr_prompts.items()
 
     @staticmethod
     def _parse_pycontext_code(code: str, exclude_moss_mark_code: bool = True) -> str:
