@@ -1,3 +1,4 @@
+import traceback
 from typing import Tuple, List, Optional, Any
 
 from ghostiss.core.moss.aifunc.interfaces import AIFuncDriver, AIFuncManager
@@ -20,36 +21,44 @@ DEFAULT_AI_FUNC_PROMPT = """
 
 You are an AIFunc named `{aifunc_name}`.
 AIFunc is a LLM-driven function that could complete request by multi-turns thinking,
-and your purpose is to generate AIFuncResult `{aifunc_result_type_name}`.
+And your purpose is to generate AIFuncResult `{aifunc_result_type_name}` as final result.
 
 ## MOSS
 
-You are equipped with a MOSS (model-oriented operating system simulation) in which you can use Python code and 
+You are equipped with a MOSS (model-oriented operating system simulation) in which you can generate Python code and 
 python libraries to reach your goal.
 
-The Python context that moss provide to you are below: 
+The `PYTHON CONTEXT` that MOSS already provide to you are below: 
 
 ```python
 {moss_code}
 ```
 
-With MOSS you shall generate a single block of Python code, 
-and in the code you shall defines a function `def main(os: Moss) -> bool:`.
-The MOSS will compile your code to the context, 
-then automatically execute the main function with IoC injection for class Moss, 
-and take next step based on the returns from the main function:  
+You shall generate a single block of Python code, 
+and in the code you shall defines a main function like: `def main(moss):`.
 
-- if the main function returns `False`, means you need another round of thinking, to observe the outputs you printed.
-- if returns `True`, means you have set the `__result__` variable as the final result of the request.
+about the main function params and returns:
+:param moss: A Moss instance.
+:return: Tuple(result, ok) . 
 
+`result` shall be a instance of `__result_type__` or `None`;
+`ok` is boolean, True means you returned the result, 
+otherwise means you need to observe the output that you print in the function, and think another round.
+
+The MOSS will automatically execute the main function you generated with the instance of class Moss, 
+take next step based on the returns. 
+
+So you shall not repeat the exists code that already provide in the `PYTHON CONTEXT`.
+"""
+
+DEFAULT_NOTICES = """
 ## Notices
-
-* Your final mission is to generate a value in type `{aifunc_result_type_name}` to the `__result__` variable.
-* The variables defined in the main function will not keep in memory during multi-turns thinking. Unless some lib provide the ability.
-* cause you are in the multi-turns thinking mode, you shall not act like in a chat, do not say anything but coding.
-* so just generate the code for the MOSS, put your thought as comment in it. 
-* MOSS will automatic execute the main function so YOU SHOULD NEVER EXECUTE IT YOURSELF.
-* If you are not equipped enough to resolve your quest, you shall admit the it to __result__ or raise an exception.
+- Your code generation will execute immediately in MOSS runtime. Don't suggest any code, you are using them in the real python context provided by MOSS.
+- You can import basic python module if you needed. 
+- The variables defined in the main function will not keep in memory during multi-turns thinking. Unless some lib (AIFuncCtx) provide the ability.
+- MOSS will automatic execute the main function so YOU SHOULD NEVER EXECUTE IT YOURSELF.
+- If you are not equipped enough to resolve your quest, you shall admit the it in the result or raise an exception.
+- **You are not Agent, DO NOT TALK ABOUT YOUR THOUGHT, JUST WRITE THE CODES ONLY**
 """
 
 
@@ -119,9 +128,12 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def think(self, manager: AIFuncManager, thread: MsgThread) -> Tuple[MsgThread, Optional[Any], bool]:
         logger = manager.container().get(LoggerItf)
         compiler = manager.compiler()
-        runtime = compiler.join_context(thread.get_pycontext()).compile("__aifunc__")
+        runtime = compiler.join_context(thread.get_pycontext()).compile(None)
         # 使用默认的方法, 将 thread 转成 chat.
         systems = self.generate_system_messages(runtime)
+        systems.append(Role.SYSTEM.new(
+            content=DEFAULT_NOTICES,
+        ))
         self.on_system_messages(systems)
         chat = thread_to_chat(thread.id, systems, thread)
         self.on_chat(chat)
@@ -133,19 +145,27 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             llm_api = manager.default_llm_api()
         # 调用 llm api
         logger and logger.info(f"run aifunc with chat :{chat}")
-        message = llm_api.chat_completion(chat)
-        self.on_message(message)
-        code = self.parse_moss_code_in_message(message)
+        ai_generation = llm_api.chat_completion(chat)
+        # 插入 ai 生成的消息.
+        thread.append(ai_generation)
+        self.on_message(ai_generation)
+        code = self.parse_moss_code_in_message(ai_generation)
+
+        # code 相关校验:
+        if not code:
+            thread.append(Role.SYSTEM.new(content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT"))
+            return thread, None, False
+        if "main(" not in code:
+            thread.append(Role.SYSTEM.new(content="Error! No main function found in your generation!"))
+            return thread, None, False
 
         result = None
         # 运行 moss.
         try:
             executed = runtime.execute(code=code, target='main', args=['moss'])
-            finish = executed.returns
+            result, finish = executed.returns
             if not isinstance(finish, bool):
                 raise RuntimeError(f"Result from main function {finish} is not boolean")
-            if finish:
-                result = runtime.locals().get("__result__", None)
 
             outputs = executed.std_output
             if outputs:
@@ -166,8 +186,9 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             )
             self.error_times = 0
         except Exception as e:
+            exe_info = "\n".join(traceback.format_exception(e)[-5:])
             output_message = Role.SYSTEM.new(
-                content=f"moss executed main, exception occurs: \n{e}"
+                content=f"moss executed main, exception occurs: \n{exe_info}"
             )
             thread.new_turn(
                 event=DefaultEventType.THINK.new(

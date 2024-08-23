@@ -21,7 +21,6 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             default_driver: Optional[Type[AIFuncDriver]] = None
     ):
         self._container = Container(parent=container)
-        self._container.set(AIFuncCtx, self)
         self._llm_api_name = llm_api_name
         self._values: Dict[str, Any] = {}
         self._sub_managers: List[AIFuncManager] = []
@@ -35,6 +34,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             llm_api_name=self._llm_api_name,
             max_step=self._max_step,
             depth=self._depth + 1,
+            default_driver=self._default_driver_type,
         )
         self._sub_managers.append(manager)
         return manager
@@ -47,7 +47,9 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         return llms.get_api(self._llm_api_name)
 
     def compiler(self) -> MossCompiler:
-        return self._container.force_fetch(MossCompiler)
+        compiler = self._container.force_fetch(MossCompiler)
+        compiler.container().set(AIFuncCtx, self)
+        return compiler
 
     def execute(self, fn: AIFunc) -> AIFuncResult:
         driver = self.get_driver(fn)

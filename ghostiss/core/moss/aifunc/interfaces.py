@@ -6,7 +6,6 @@ from ghostiss.core.moss.abc import MossCompiler
 from ghostiss.core.llms import LLMApi
 from ghostiss.core.session import MsgThread
 from ghostiss.container import Container
-from ghostiss.contracts.logger import LoggerItf
 
 __all__ = [
     'AIFuncManager', 'AIFuncCtx', 'AIFuncDriver'
@@ -22,10 +21,10 @@ class AIFuncCtx(ABC):
     @abstractmethod
     def run(self, key: str, fn: AIFunc) -> AIFuncResult:
         """
-        Run an AIFunc, got result and save it into the key.
+        Run an AIFunc subclass instance, got result and save it into the key.
         :param key: the key that ctx keep the result in multi-turns thinking.
         :param fn: instance of AIFunc that define the task.
-        :return: the certain result from the AIFunc.
+        :return: the certain result that match AIFuncResult and is not None
         """
         pass
 

@@ -54,15 +54,16 @@ class MossCompilerImpl(MossCompiler):
         return self
 
     def _compile(self, modulename: Optional[str] = None) -> ModuleType:
-        if modulename is None and self._pycontext.code is None:
-            module = self._modules.import_module(self._pycontext.module)
-        else:
-            code = self.pycontext_code(model_visible_only=False)
-            # 创建临时模块.
-            module = ModuleType(modulename)
-            module.__dict__.update(self._predefined_locals)
-            compiled = compile(code, modulename, "exec")
-            exec(compiled, module.__dict__)
+        if modulename is None:
+            modulename = self._pycontext.module
+        if not modulename:
+            modulename = "__main__"
+        code = self.pycontext_code(model_visible_only=False)
+        # 创建临时模块.
+        module = ModuleType(modulename)
+        module.__dict__.update(self._predefined_locals)
+        compiled = compile(code, modulename, "exec")
+        exec(compiled, module.__dict__)
         return module
 
     def _new_runtime(self, module: ModuleType) -> "MossRuntime":
@@ -195,6 +196,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._moss = moss
         self._compiled.__dict__[MOSS_NAME] = moss
         self._compiled.__dict__[MOSS_TYPE_NAME] = moss_type
+        self._compiled.__dict__["print"] = self._print
 
     def container(self) -> Container:
         return self._container
@@ -217,13 +219,15 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
     def dump_std_output(self) -> str:
         return self._runtime_std_output
 
-    @contextmanager
-    def runtime_ctx(self):
-        # 保存原始的stdout
+    def _print(self, *args, **kwargs):
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            yield
+            print(*args, **kwargs)
         self._runtime_std_output += str(buffer.getvalue())
+
+    @contextmanager
+    def runtime_ctx(self):
+        yield
 
     def pycontext_code(
             self,

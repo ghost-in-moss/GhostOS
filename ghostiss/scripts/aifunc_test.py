@@ -46,7 +46,7 @@ def main() -> None:
         help="the import path of the AIFunc instance, such as foo.bar:baz",
         type=str,
         # 默认使用专门测试 MossTestSuite 的文件.
-        default="ghostiss.core.moss.aifunc.examples.baseline:baseline_case",
+        default="ghostiss.core.moss.aifunc.examples.agentic:example",
     )
     parser.add_argument(
         "--llm_api", '-l',
@@ -55,6 +55,13 @@ def main() -> None:
         # 默认使用专门测试 MossTestSuite 的文件.
         default="",
     )
+    parser.add_argument(
+        "--auto", '-a',
+        help="auto run the test or stop at each generations",
+        action="store_true",
+        # 默认使用专门测试 MossTestSuite 的文件.
+        default=False,
+    )
 
     parsed = parser.parse_args(sys.argv[1:])
     llm_api = parsed.llm_api
@@ -62,26 +69,30 @@ def main() -> None:
     container = prepare_container(demo_dir)
 
     class TestDriverImpl(DefaultAIFuncDriverImpl):
+        console = console
+
         def on_message(self, message: Message) -> None:
-            console.print(
+            self.console.print(
                 Panel(
                     Markdown(message.get_content()),
-                    title="generated message",
+                    title=f"generated message ({self.name()})",
                 )
             )
-            value = Prompt.ask("Continue?", choices=["Y", "N"], default="Y")
-            if value != "Y":
-                exit(0)
+            if not parsed.auto:
+                value = Prompt.ask("Continue?", choices=["y", "n"], default="y")
+                if value != "y":
+                    exit(0)
 
         def on_chat(self, chat: Chat) -> None:
-            lines = []
             for message in chat.get_messages():
-                lines.append(message.get_content())
-            content = "\n----\n".join(lines)
-            console.print(Panel(
-                Markdown(content),
-                title="chat_info",
-            ))
+                self.console.print(Panel(
+                    Markdown(message.get_content()),
+                    title=f"chat_info ({self.name()})",
+                ))
+            if not parsed.auto:
+                value = Prompt.ask("Continue?", choices=["y", "n"], default="y")
+                if value != "y":
+                    exit(0)
 
         def on_system_messages(self, messages: List[Message]) -> None:
             pass
@@ -90,7 +101,7 @@ def main() -> None:
             current = thread.current
             if current:
                 for message in current.messages():
-                    console.print(
+                    self.console.print(
                         Panel(
                             Markdown(message.get_content()),
                             title="thread new round message",
@@ -118,6 +129,7 @@ def main() -> None:
 
     result = manager_.execute(aifunc)
     console.print(result)
+    manager_.destroy()
 
 
 if __name__ == "__main__":

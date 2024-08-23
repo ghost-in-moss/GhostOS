@@ -191,3 +191,13 @@ def test_method_belongs_to_class():
 
     assert Bar.foo.__module__ == Foo.__module__
     assert Bar.foo.__qualname__.startswith(Foo.__qualname__)
+
+
+def test_subclass_is_parent():
+    class Foo:
+        foo: int = 10
+
+    class Foo1(Foo):
+        foo: int = 11
+
+    assert Foo1 is not Foo

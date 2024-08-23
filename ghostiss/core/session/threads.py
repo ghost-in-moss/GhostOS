@@ -44,8 +44,10 @@ class Turn(BaseModel):
     def new(cls, event: Optional[Event], *, turn_id: Optional[str] = None,
             pycontext: Optional[PyContext] = None) -> "Turn":
         data = {"event": event}
-        turn_id = turn_id if turn_id else event.id
-        data["turn_id"] = turn_id
+        if turn_id is None and event is not None:
+            turn_id = event.id
+        if turn_id:
+            data["turn_id"] = turn_id
         if pycontext is not None:
             data["pycontext"] = pycontext
         return cls(**data)
@@ -228,7 +230,8 @@ class MsgThread(BaseModel):
         if pycontext is None:
             last_turn = self.last_turn()
             pycontext = last_turn.pycontext
-        turn_id = turn_id or event.id
+        if turn_id is None and event is not None:
+            turn_id = event.id
         new_turn = Turn.new(event=event, turn_id=turn_id, pycontext=pycontext)
         self.current = new_turn
 

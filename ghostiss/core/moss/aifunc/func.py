@@ -5,10 +5,11 @@ from pydantic import BaseModel
 from ghostiss.helpers import generate_import_path, import_from_path
 from ghostiss.abc import PromptAbleClass
 from ghostiss.core.llms import LLMs, LLMApi
-from ghostiss.core.moss.utils import make_class_prompt
+from ghostiss.core.moss.utils import make_class_prompt, add_comment_mark
 from ghostiss.core.moss.prompts import get_class_magic_prompt
 from ghostiss.core.moss.pycontext import PyContext
 import inspect
+
 if TYPE_CHECKING:
     from ghostiss.core.moss.aifunc.interfaces import AIFuncDriver
 
@@ -21,6 +22,7 @@ __all__ = [
 class AIFunc(PromptAbleClass, BaseModel, ABC):
     """
     Model interface for an AIFunc arguments, always followed by an AIFuncResult Model.
+    The subclass of AIFunc can run in AIFuncCtx, if you are provided with them, you can use them if you need.
     """
 
     __aifunc_result__: Optional[Type[AIFuncResult]] = None
@@ -31,13 +33,14 @@ class AIFunc(PromptAbleClass, BaseModel, ABC):
 
     @classmethod
     def __class_prompt__(cls) -> str:
-        source = inspect.getsource(cls)
         if cls is AIFunc:
+            source = inspect.getsource(cls)
             return make_class_prompt(source=source, doc=AIFunc.__doc__, attrs=[])
         source = inspect.getsource(cls)
         result_type = cls.__aifunc_result__ if cls.__aifunc_result__ is not None else get_aifunc_result_type(cls)
         result_prompt = get_class_magic_prompt(result_type)
-        return source + f"\n\n# result type is:\n'''\n{result_prompt}\n'''\n"
+        result_prompt = f"result type of {cls.__name__} (which maybe not imported yet) is :\n{result_prompt}"
+        return source + "\n\n" + add_comment_mark(result_prompt)
 
 
 class AIFuncResult(PromptAbleClass, BaseModel, ABC):
@@ -48,12 +51,9 @@ class AIFuncResult(PromptAbleClass, BaseModel, ABC):
     @classmethod
     def __class_prompt__(cls) -> str:
         source = inspect.getsource(cls)
-        if cls is AIFunc:
+        if cls is AIFuncResult:
             return make_class_prompt(source=source, doc=AIFunc.__doc__, attrs=[])
         return source
-
-
-__result__: Optional[AIFuncResult] = None
 
 
 def __aifunc_instruction__(fn: AIFunc) -> str:

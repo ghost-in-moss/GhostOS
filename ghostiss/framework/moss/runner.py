@@ -9,7 +9,7 @@ import datetime
 from ghostiss.core.session.messenger import Messenger
 from ghostiss.core.moss_p1 import MOSS, PyContext
 from ghostiss.core.messages import DefaultMessageTypes, Message
-from ghostiss.core.llms import LLMs, LLMApi, Chat, ChatPreparer, update_chat
+from ghostiss.core.llms import LLMs, LLMApi, Chat, ChatPreparer, prepare_chat
 from ghostiss.core.session.threads import MsgThread, thread_to_chat
 from ghostiss.helpers import uuid, import_from_path
 from pydantic import BaseModel, Field
@@ -78,7 +78,7 @@ class MossRunner(LLMRunner):
             result_actions.append(action)
         # 进行一些消息级别的加工.
         filters = self.filters()
-        chat = update_chat(chat, filters)
+        chat = prepare_chat(chat, filters)
         return result_actions, chat
 
     def filters(self) -> Iterable[ChatPreparer]:
