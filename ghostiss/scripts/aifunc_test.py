@@ -73,7 +73,6 @@ def main() -> None:
             if value != "Y":
                 exit(0)
 
-
         def on_chat(self, chat: Chat) -> None:
             lines = []
             for message in chat.get_messages():

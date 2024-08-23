@@ -148,13 +148,17 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                 result = runtime.locals().get("__result__", None)
 
             outputs = executed.std_output
-            output_message = Role.SYSTEM.new(
-                content=f"moss executed main, std output is: \n{outputs}"
-            )
+            if outputs:
+                output_message = Role.SYSTEM.new(
+                    content=f"moss executed main, std output is: \n{outputs}"
+                )
+                messages = [output_message]
+            else:
+                messages = []
             pycontext = executed.pycontext
             thread.new_turn(
                 event=DefaultEventType.THINK.new(
-                    messages=[output_message],
+                    messages=messages,
                     task_id=thread.id,
                     from_task_id=thread.id,
                 ),
