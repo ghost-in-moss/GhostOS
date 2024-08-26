@@ -22,8 +22,10 @@ services:
 #    proxy: $OPENAI_PROXY
 # 默认的 api.
 default:
-  service: moonshot
-  model: moonshot-v1-32k
+  service: deepseek
+  model: deepseek/deepseek-coder
+#  service: openai
+#  model: gpt-4o
 models:
   moonshot-v1-8k:
     service: moonshot
