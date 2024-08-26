@@ -4,9 +4,10 @@ import os
 import yaml
 from ghostiss.container import Container
 from ghostiss.core.llms import LLMs
-from ghostiss.contracts.storage import Storage, FileStorageProvider
+from ghostiss.contracts.storage import Storage
 from ghostiss.contracts.configs import ConfigsByStorageProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
+from ghostiss.framework.storage import FileStorageProvider
 from ghostiss.framework.llms.test_case import ChatCompletionTestCase, run_test_cases, ChatCompletionTestResult
 from ghostiss.helpers import yaml_pretty_dump
 from rich.console import Console
@@ -15,11 +16,10 @@ from rich.json import JSON
 from rich.markdown import Markdown
 
 
-def _prepare_container() -> Container:
+def _prepare_container(demo_dir) -> Container:
     container = Container()
-    ghostiss_dir = os.path.abspath(os.path.dirname(__file__) + "/../../demo/ghostiss")
-    container.register(FileStorageProvider(ghostiss_dir))
-    container.register(ConfigsByStorageProvider("configs"))
+    container.register(FileStorageProvider(demo_dir))
+    container.register(ConfigsByStorageProvider("ghostiss/configs"))
     container.register(ConfigBasedLLMsProvider("llms/llms_conf.yaml"))
     return container
 
@@ -42,9 +42,10 @@ def main() -> None:
     )
 
     parsed = parser.parse_args(sys.argv[1:])
-    container = _prepare_container()
+    demo_dir = os.path.dirname(__file__) + "/../../demo"
+    container = _prepare_container(demo_dir)
     storage = container.force_fetch(Storage)
-    prefix = "tests/llm_tests/"
+    prefix = "ghostiss/tests/llm_tests/"
     file_name = os.path.join(prefix, parsed.case + ".yaml")
     content = storage.get(file_name)
     if content is None:

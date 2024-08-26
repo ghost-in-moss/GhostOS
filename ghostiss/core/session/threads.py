@@ -44,8 +44,10 @@ class Turn(BaseModel):
     def new(cls, event: Optional[Event], *, turn_id: Optional[str] = None,
             pycontext: Optional[PyContext] = None) -> "Turn":
         data = {"event": event}
-        turn_id = turn_id if turn_id else event.id
-        data["turn_id"] = turn_id
+        if turn_id is None and event is not None:
+            turn_id = event.id
+        if turn_id:
+            data["turn_id"] = turn_id
         if pycontext is not None:
             data["pycontext"] = pycontext
         return cls(**data)
@@ -55,33 +57,37 @@ class Turn(BaseModel):
         if pycontext is not None:
             self.pycontext = pycontext
 
-    def messages(self) -> Iterable[Message]:
+    def event_messages(self) -> Iterable[Message]:
         event = self.event
-        if event is not None:
-            if event.from_self() and not event.no_reason_or_instruction():
-                # todo: 将 event 和历史消息的关联建立起来. 类似 tool id 的方式.
-                contents = [
-                    f"receive self event `{event.type}`",
-                    f"\n- reason: {event.reason}" if event.reason else "",
-                    f"\n- instruction: {event.instruction}" if event.instruction else "",
-                ]
-                content = "".join(contents)
-                # 暂时考虑用系统消息来标记事件.
-                yield DefaultMessageTypes.DEFAULT.new_system(content=content)
-            elif event.from_task_id is not None:
-                # todo: 考虑未来应该怎么优化. task_id 如果是 uuid 的话, 多少有一些问题.
-                contents = [
-                    f"from task {event.from_task_id} receive event `{event.type}`.",
-                    f"\n- reason: {event.reason}" if event.reason else "",
-                    f"\n- instruction: {event.instruction}" if event.instruction else "",
-                ]
-                content = "".join(contents)
-                # 暂时考虑用系统消息来标记事件.
-                yield DefaultMessageTypes.DEFAULT.new_system(content=content)
-            # 携带的消息体.
-            for message in self.event.messages:
-                yield message
+        if event is None:
+            return []
+        if event.from_self() and not event.no_reason_or_instruction():
+            # todo: 将 event 和历史消息的关联建立起来. 类似 tool id 的方式.
+            contents = [
+                f"receive self event `{event.type}`",
+                f"\n- reason: {event.reason}" if event.reason else "",
+                f"\n- instruction: {event.instruction}" if event.instruction else "",
+            ]
+            content = "".join(contents)
+            # 暂时考虑用系统消息来标记事件.
+            yield DefaultMessageTypes.DEFAULT.new_system(content=content)
+        elif not event.from_self() and event.from_task_id is not None:
+            # todo: 考虑未来应该怎么优化. task_id 如果是 uuid 的话, 多少有一些问题.
+            contents = [
+                f"from task {event.from_task_id} receive event `{event.type}`.",
+                f"\n- reason: {event.reason}" if event.reason else "",
+                f"\n- instruction: {event.instruction}" if event.instruction else "",
+            ]
+            content = "".join(contents)
+            # 暂时考虑用系统消息来标记事件.
+            yield DefaultMessageTypes.DEFAULT.new_system(content=content)
 
+        # 携带的消息体.
+        for message in self.event.messages:
+            yield message
+
+    def messages(self) -> Iterable[Message]:
+        yield from self.event_messages()
         if self.generates:
             yield from self.generates
 
@@ -94,6 +100,10 @@ class MsgThread(BaseModel):
     id: str = Field(
         default_factory=uuid,
         description="The id of the thread, also a fork id",
+    )
+    path: Optional[str] = Field(
+        default=None,
+        description="the path that can load the thread after saving."
     )
     root_id: Optional[str] = Field(
         default=None,
@@ -119,7 +129,7 @@ class MsgThread(BaseModel):
     @classmethod
     def new(
             cls,
-            messages: List[Message],
+            event: Optional[Event],
             *,
             pycontext: Optional[PyContext] = None,
             thread_id: Optional[str] = None,
@@ -128,15 +138,16 @@ class MsgThread(BaseModel):
     ) -> "MsgThread":
         """
         初始化一个 Thread.
-        :param messages: 首轮的输入消息.
+        :param event: 首轮输入的信息.
         :param pycontext: 初始化时的 pycontext.
         :param thread_id: 指定的 thread id.
         :param root_id: 指定的 root id.
         :param parent_id: 任务的 parent id.
         :return:
         """
+
         data = {
-            "on_created": Turn.new(inputs=messages, turn_id=thread_id, pycontext=pycontext),
+            "on_created": Turn.new(event=event, turn_id=thread_id, pycontext=pycontext),
         }
         if thread_id is not None:
             data["thread_id"] = thread_id
@@ -173,7 +184,7 @@ class MsgThread(BaseModel):
 
     def update_pycontext(self, pycontext: PyContext) -> None:
         if self.current is None:
-            self.new_round([])
+            self.new_turn(None)
         self.current.pycontext = pycontext
 
     def update_history(self) -> "MsgThread":
@@ -200,7 +211,7 @@ class MsgThread(BaseModel):
         if self.current is not None:
             yield self.current
 
-    def new_round(
+    def new_turn(
             self,
             event: Optional[Event],
             *,
@@ -219,7 +230,8 @@ class MsgThread(BaseModel):
         if pycontext is None:
             last_turn = self.last_turn()
             pycontext = last_turn.pycontext
-        turn_id = turn_id or event.id
+        if turn_id is None and event is not None:
+            turn_id = event.id
         new_turn = Turn.new(event=event, turn_id=turn_id, pycontext=pycontext)
         self.current = new_turn
 
@@ -231,7 +243,7 @@ class MsgThread(BaseModel):
         :return:
         """
         if self.current is None:
-            self.new_round(None)
+            self.new_turn(None)
         if messages:
             self.current.append(*messages)
         if pycontext:
@@ -267,9 +279,12 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: MsgThread) -> Ch
     :return:
     """
     history = list(thread.get_history_messages())
+    inputs = []
+    appending = []
     current_turn = thread.current
-    inputs = current_turn.inputs if current_turn is not None else []
-    appending = current_turn.generates if current_turn is not None else []
+    if current_turn is not None:
+        inputs = list(current_turn.event_messages())
+        appending = current_turn.generates
 
     chat = Chat(
         id=chat_id,

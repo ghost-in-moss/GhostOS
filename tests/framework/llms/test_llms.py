@@ -2,7 +2,7 @@ import os
 from ghostiss.container import Container
 from ghostiss.core.llms import LLMsConfig, LLMs
 from ghostiss.contracts.configs import YamlConfig, ConfigsByStorageProvider, Configs
-from ghostiss.contracts.storage import FileStorageProvider
+from ghostiss.framework.storage import FileStorageProvider
 from ghostiss.framework.llms import ConfigBasedLLMsProvider
 
 

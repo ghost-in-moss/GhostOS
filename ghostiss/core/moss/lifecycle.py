@@ -153,5 +153,5 @@ def __moss_exec__(
     else:
         returns = target_module_attr
     std_output = runtime.dump_std_output()
-    pycontext = runtime.dump_context()
+    pycontext = runtime.dump_pycontext()
     return MossResult(returns, std_output, pycontext)

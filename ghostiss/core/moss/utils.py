@@ -22,6 +22,7 @@ __all__ = [
     'get_calling_modulename',
     'is_code_same_as_print',
     'is_name_public',
+    'add_comment_mark',
 ]
 
 
@@ -377,7 +378,20 @@ def is_code_same_as_print(value: Any) -> bool:
 
 
 def get_modulename(val: Any) -> Optional[str]:
+    name = getattr(val, '__module__', None)
+    if name:
+        return name
     module = inspect.getmodule(val)
     if module and hasattr(module, '__name__'):
         return getattr(module, '__name__', None)
     return None
+
+def add_comment_mark(text: str, comment: str = "# ") -> str:
+    lines = text.split('\n')
+    contents = []
+    for line in lines:
+        if line.startswith(comment):
+            contents.append(line)
+        else:
+            contents.append(comment + line)
+    return "\n".join(contents)

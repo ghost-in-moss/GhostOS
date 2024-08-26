@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Tuple, Optional, Dict, Callable
+from typing import Any, Tuple, Optional, Dict, Callable, Type
 from types import ModuleType
 
 Importer = Callable[[str], ModuleType]
@@ -66,3 +66,13 @@ def join_import_module_and_spec(modulename: str, spec: Optional[str]) -> str:
     if spec:
         attr = f":{spec}"
     return f"{modulename}{attr}"
+
+
+def is_method_belongs_to_class(method: Callable, cls: Type) -> bool:
+    method_module = getattr(method, '__module__', None)
+    cls_module = getattr(cls, '__module__', None)
+    if method_module is None or cls_module is None or method_module != cls_module:
+        return False
+    method_qualname = getattr(method, '__qualname__', "")
+    cls_qualname = getattr(cls, '__qualname__', "")
+    return method_qualname != cls_qualname and method_qualname.startswith(cls_qualname)

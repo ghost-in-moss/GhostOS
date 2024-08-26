@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 
 from ghostiss.abc import Identifier
 from ghostiss.core.llms import Chat, LLMApi
-from ghostiss.core.quests.itf import QuestAction, Step
-from ghostiss.core.quests.steps import ObserveStep
+from ghostiss.core.quests.itf import QuestAction, QuestOperator
+from ghostiss.core.quests.steps import ObserveOperator
 from ghostiss.core.quests.drivers import LLMQuestDriver
 from ghostiss.core.moss import (
     PyContext, MossCompiler, DEFAULT_MOSS_FUNCTIONAL_TOKEN
@@ -58,13 +58,12 @@ class MossQuestAction(QuestAction):
     Moss 的 QuestAction 封装.
     """
 
-    def __init__(self, container: Container, pycontext: PyContext, thread: MsgThread):
-        compiler = container.force_fetch(MossCompiler)
-        compiler = compiler.join_context(pycontext).join_context(thread.get_pycontext())
-        moss_runtime = compiler.compile('__moss__')
+    def __init__(self, compiler: MossCompiler, thread: MsgThread):
+        compiler = compiler.join_context(thread.get_pycontext())
+        moss_runtime = compiler.compile('__quest__')
         self.moss_runtime = moss_runtime
 
-    def update_chat(self, chat: Chat) -> Chat:
+    def prepare_chat(self, chat: Chat) -> Chat:
         code_prompt = self.moss_runtime.prompter().dump_context_prompt()
         system_prompt = DEFAULT_MOSS_PROMPT_TEMPLATE.format(code=code_prompt)
         system_message = Role.SYSTEM.new(content=system_prompt)
@@ -75,22 +74,22 @@ class MossQuestAction(QuestAction):
     def identifier(self) -> Identifier:
         return DEFAULT_MOSS_FUNCTIONAL_TOKEN.identifier()
 
-    def callback(self, thread: MsgThread, caller: Caller) -> Tuple[MsgThread, Optional[Step]]:
+    def callback(self, thread: MsgThread, caller: Caller) -> Tuple[MsgThread, Optional[QuestOperator]]:
         step = self.moss_runtime.execute(
             target='main',
             code=caller.arguments,
             args=['moss']
         )
-        if step is not None and not isinstance(step, Step):
+        if step is not None and not isinstance(step, QuestOperator):
             message = Role.SYSTEM.new(content="main function returns is not instance of Step")
-            return thread, ObserveStep([message])
+            return thread, ObserveOperator([message])
 
         thread = thread.update_history()
-        pycontext = self.moss_runtime.dump_context()
+        pycontext = self.moss_runtime.dump_pycontext()
         content = self.moss_runtime.dump_std_output()
         message = Role.SYSTEM.new(content="moss std output:\n" + content)
         thread.append()
-        thread.new_round(
+        thread.new_turn(
             DefaultEventType.THINK.new(
                 task_id=thread.id,
                 from_task_id=thread.id,
@@ -114,11 +113,8 @@ class MossQuestDriver(LLMQuestDriver, ABC):
     def get_llm_api(self, container: Container) -> LLMApi:
         pass
 
-    def init(self) -> MsgThread:
-        pass
-
     @abstractmethod
-    def default_pycontext(self) -> PyContext:
+    def init(self) -> MsgThread:
         pass
 
     def actions(self, container: Container, thread: MsgThread) -> List[QuestAction]:
@@ -128,6 +124,7 @@ class MossQuestDriver(LLMQuestDriver, ABC):
         :param thread:
         :return:
         """
-        pycontext = self.default_pycontext()
-        moss_action = MossQuestAction(container, pycontext=pycontext, thread=thread)
+        compiler = container.force_fetch(MossCompiler)
+        compiler.with_locals()
+        moss_action = MossQuestAction(compiler, thread=thread)
         return [moss_action]

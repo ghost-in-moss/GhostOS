@@ -137,12 +137,12 @@ def reflect_module_attr(
     # 名字相关的过滤逻辑.
     if excludes and name in excludes:
         return None
-    elif includes is not None and name not in includes:
+    if includes is not None and name not in includes:
         return None
-    elif name.startswith('_') and (includes and name not in includes):
+    if name.startswith('_') and not (includes and name in includes):
         # 私有变量不展示.
         return None
-    elif inspect.isbuiltin(value):
+    if inspect.isbuiltin(value):
         # 系统内置的, 都不展示.
         return None
 
@@ -151,8 +151,7 @@ def reflect_module_attr(
     if value_modulename is None:
         return None
     elif value_modulename == current_module:
-        # 本地只有 __prompt__ 方法存在的一种情况展示.
-        return default_reflect_local_value_prompt(name, value, _prompter=True)
+        return None
 
     if excludes_module_prefixes:
         for prefix in excludes_module_prefixes:
@@ -278,7 +277,7 @@ def get_class_magic_prompt(value: Any) -> Optional[str]:
     不做类型校验, 直接返回 CLASS_PROMPT_MAGIC_ATTR 生成 prompt 的结果.
     :param value: 合理的类型是 class.
     """
-    if isinstance(value, PromptAbleClass):
+    if issubclass(value, PromptAbleClass):
         return value.__class_prompt__()
     fn = getattr(value, CLASS_PROMPT_MAGIC_ATTR, None)
     return unwrap_str(fn) if fn is not None else None

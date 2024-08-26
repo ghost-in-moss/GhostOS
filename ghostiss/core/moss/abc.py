@@ -180,6 +180,10 @@ class MossCompiler(ABC):
         """
         pass
 
+    @abstractmethod
+    def with_ignore_prompts(self, *attr_names) -> "MossCompiler":
+        pass
+
     def register(self, provider: Provider) -> None:
         """
         向生成 MOSS 的 IoC 容器里注册 Provider.
@@ -311,7 +315,12 @@ class MossPrompter(ABC):
         module = self.module()
         name = module.__name__
         local_values = module.__dict__
-        yield from reflect_module_locals(name, local_values, excludes=excludes)
+        yield from reflect_module_locals(
+            name,
+            local_values,
+            excludes=excludes,
+            excludes_module_prefixes={'pydantic', 'typing'},
+        )
 
     def pycontext_code_prompt(self, auto_generation: bool = True) -> str:
         """
@@ -412,7 +421,7 @@ class MossRuntime(ABC):
         return Moss
 
     @abstractmethod
-    def dump_context(self) -> PyContext:
+    def dump_pycontext(self) -> PyContext:
         """
         返回当前的可存储上下文.
         """

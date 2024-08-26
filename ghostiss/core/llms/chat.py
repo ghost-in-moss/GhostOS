@@ -16,8 +16,8 @@ from ghostiss.core.messages import Message, DefaultMessageTypes, Caller
 
 __all__ = [
     'LLMTool', 'FunctionalToken',
-    'Chat', 'ChatUpdater',
-    'update_chat',
+    'Chat', 'ChatPreparer',
+    'prepare_chat',
 ]
 
 
@@ -106,22 +106,13 @@ class Chat(BaseModel):
         """
         messages = []
         if self.system:
-            contents = []
-            for message in self.system:
-                content = message.get_content()
-                contents.append(content)
-            content = "\n\n".join(contents)
-            system = DefaultMessageTypes.DEFAULT.new_system(content=content)
-            messages.append(system)
+            messages.extend(self.system)
         if self.history:
-            for item in self.history:
-                messages.append(item)
+            messages.extend(self.history)
         if self.inputs:
-            for item in self.inputs:
-                messages.append(item)
+            messages.extend(self.inputs)
         if self.appending:
-            for item in self.appending:
-                messages.append(item)
+            messages.extend(self.appending)
         return messages
 
     def filter_messages(self, filter_: Callable[[Message], Optional[Message]]) -> None:
@@ -173,21 +164,21 @@ class Chat(BaseModel):
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
 
 
-class ChatUpdater(ABC):
+class ChatPreparer(ABC):
     """
     用来对 chat message 做加工.
     基本思路是, 尽可能保证消息体本身的一致性, 在使用的时候才对消息结构做调整.
     """
 
     @abstractmethod
-    def update_chat(self, chat: Chat) -> Chat:
+    def prepare_chat(self, chat: Chat) -> Chat:
         pass
 
 
-def update_chat(chat: Chat, updater: Iterable[ChatUpdater]) -> Chat:
+def prepare_chat(chat: Chat, updater: Iterable[ChatPreparer]) -> Chat:
     """
     通过多个 filter 来加工 chat.
     """
     for f in updater:
-        chat = f.update_chat(chat)
+        chat = f.prepare_chat(chat)
     return chat

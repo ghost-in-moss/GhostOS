@@ -30,6 +30,7 @@ litellm = "^1.43.18"
 llm_test = "ghostiss.scripts.llm_test:main"
 moss_test = "ghostiss.scripts.moss_test:main"
 moss_run = "ghostiss.scripts.moss_run:main"
+aifunc_test = "ghostiss.scripts.aifunc_test:main"
 
 [build-system]
 requires = ["poetry-core"]
