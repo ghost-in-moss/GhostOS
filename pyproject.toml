@@ -2,7 +2,7 @@
 name = "ghostos"
 version = "0.0.1"
 description = "model-oriented operation system"
-authors = ["zhuming <thirdgerb@gmail.com>"]
+authors = ["zhuming <thirdgerb@gmail.com>", "Nile Zhou <nilezhou123@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
