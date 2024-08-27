@@ -107,6 +107,7 @@ def main() -> None:
                             title="thread new round message",
                         )
                     )
+            super().on_save(manager, thread)
 
     manager_ = DefaultAIFuncManagerImpl(
         container=container,
