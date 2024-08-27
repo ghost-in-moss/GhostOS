@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "ghostiss"
+name = "ghostos"
 version = "0.0.1"
 description = "model-oriented operation system"
-authors = ["thirdgerb <thirdgerb@gmail.com>"]
-license = "Apache-2.0"
+authors = ["zhuming <thirdgerb@gmail.com>"]
+license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -28,11 +28,11 @@ litellm = "^1.43.18"
 hide-py = "^0.3.0"
 
 [tool.poetry.scripts]
-llm_test = "ghostiss.scripts.llm_test:main"
-moss_test = "ghostiss.scripts.moss_test:main"
-moss_run = "ghostiss.scripts.moss_run:main"
-aifunc_test = "ghostiss.scripts.aifunc_test:main"
-swe_test = "ghostiss.scripts.swe_test:main"
+llm_test = "ghostos.scripts.llm_test:main"
+moss_test = "ghostos.scripts.moss_test:main"
+moss_run = "ghostos.scripts.moss_run:main"
+aifunc_test = "ghostos.scripts.aifunc_test:main"
+swe_test = "ghostos.scripts.swe_test:main"
 
 [build-system]
 requires = ["poetry-core"]

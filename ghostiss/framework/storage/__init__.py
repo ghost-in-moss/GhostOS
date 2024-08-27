@@ -1,1 +1,0 @@
-from ghostiss.framework.storage.filestorage import FileStorageProvider

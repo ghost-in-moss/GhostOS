@@ -1,9 +1,9 @@
-from ghostiss.core.moss_p1.moss import MOSS, TestMOSSProvider
-from ghostiss.core.moss_p1.modules import BasicModulesProvider
-from ghostiss.core.moss_p1.reflect import (
+from ghostos.core.moss_p1.moss import MOSS, TestMOSSProvider
+from ghostos.core.moss_p1.modules import BasicModulesProvider
+from ghostos.core.moss_p1.reflect import (
     Importing, Attr,
 )
-from ghostiss.container import Container
+from ghostos.container import Container
 from pydantic import BaseModel
 
 

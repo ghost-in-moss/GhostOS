@@ -1,8 +1,8 @@
-from ghostiss.core.messages import (
+from ghostos.core.messages import (
     Message
 )
-from ghostiss.core.llms import FunctionalToken
-from ghostiss.framework.messages import DefaultBuffer
+from ghostos.core.llms import FunctionalToken
+from ghostos.framework.messages import DefaultBuffer
 
 
 def test_default_buffer_baseline():

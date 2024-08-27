@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict
 
-from ghostiss.container import Container, Provider
+from ghostos.container import Container, Provider
 
 
 def test_container_baseline():

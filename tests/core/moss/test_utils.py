@@ -1,5 +1,5 @@
 from typing import NamedTuple, List
-from ghostiss.core.moss.utils import (
+from ghostos.core.moss.utils import (
     get_class_def_from_source, replace_class_def_name, strip_source_indent, count_source_indent,
     parse_doc_string,
     escape_string_quotes,

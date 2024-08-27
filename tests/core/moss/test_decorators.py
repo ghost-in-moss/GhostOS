@@ -1,9 +1,9 @@
 from typing import NamedTuple, Any, Optional, List
-from ghostiss.core.moss.decorators import (
+from ghostos.core.moss.decorators import (
     source_code, cls_source_code, cls_definition, definition,
 )
-from ghostiss.core.moss.utils import strip_source_indent
-from ghostiss.core.moss.prompts import get_prompt
+from ghostos.core.moss.utils import strip_source_indent
+from ghostos.core.moss.prompts import get_prompt
 
 
 class Foo:

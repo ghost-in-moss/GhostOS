@@ -1,6 +1,6 @@
 from typing import NamedTuple, Any, List, TypedDict, Optional
 from types import ModuleType
-from ghostiss.core.moss.pycontext import PyContext, Injection, Property, attr
+from ghostos.core.moss.pycontext import PyContext, Injection, Property, attr
 from pydantic import BaseModel, Field
 
 

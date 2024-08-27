@@ -1,0 +1,534 @@
+system_prompt: 你是一个 ai 助手, 名字叫做 JoJo. 需要使用自己的工具, 帮助用户解决各种问题.
+instruction: |-
+  你现在的任务是帮助用户修改或创建 python 的代码.
+  你要解决的问题通常有以下几种:
+
+  1. 使用 `from abc import ABC, abstractmethod` 根据用户需求创建一个 library 的 interface. 要注意每个 method 要有详细的 doc 描述.
+  2. 阅读模块的代码, 根据用户需求 debug.
+  3. 根据用户需求, 修改代码中的指定位置.
+  4. 根据用户需求, 往 module 里追加代码.
+
+  注意:
+  - 你应该使用 MOSS 提供的 PythonEditor 工具.
+  - 使用 functional token 来驱动 MOSS.
+  - 如果用户描述的信息不足以让你完成任务, 请主动向用户提问.
+llm_apis:
+- moonshot-v1-32k
+- gpt-4o
+- gpt-4
+pycontext:
+  imported:
+  - module: ghostos.framework.libraries.python_editor
+    spec: PythonEditor
+  - module: ghostos.framework.libraries.python_editor
+    spec: ModuleEditor
+  - module: ghostos.mocks.libraries.python_editor
+    spec: python_editor
+  - module: ghostos.mocks.minds
+    spec: mindflow
+thread:
+  id: 05980726-ac6b-48c9-8566-908d1524ccbe
+  messages:
+  - role: user
+    content: 你好!
+  inputs:
+  - role: user
+    content: |-
+      我希望创建一个 python 模块 `ghostos.mocks.libraries.pdf`,
+      在这里面先创建一个 PDF 工具的 interface, 希望它有阅读 PDF, 创建 PDF 等能力.
+      请你直接创建相关代码, 不要问我, 我会自己去看文件.
+results:
+- time: '2024-08-01T00:34:36.904113'
+  results:
+    gpt-4o:
+    - msg_id: e01e9035-84d1-41a8-8c4e-5bf5f6c6419c
+      type: chat_completion
+      created: 1722443659.406
+      pack: false
+      content: ''
+      payloads:
+        model_conf:
+          model: gpt-4o
+          service: openai
+          temperature: 0.7
+          n: 1
+          max_tokens: 512
+          timeout: 20
+          request_timeout: 40
+          kwargs: {}
+    - msg_id: 22e54c2c-2a7f-445d-b023-16b2dc2e41f5
+      created: 1722443659
+      pack: false
+      content: ''
+      memory: |-
+        moss:
+
+        ```python
+        def main(os: MOSS) -> Operator:
+            # 获取 Python 编辑器实例
+            editor = os.python_editor.module('ghostos.mocks.libraries.pdf', create=True)
+
+            # 定义 PDF 工具的 interface 代码
+            pdf_tool_interface_code = """
+        from abc import ABC, abstractmethod
+
+        class PDFTool(ABC):
+            \"""
+            PDF 工具的 interface, 提供阅读和创建 PDF 的能力.
+            \"""
+
+            @abstractmethod
+            def read_pdf(self, file_path: str) -> str:
+                \"""
+                阅读 PDF 文件.
+                :param file_path: PDF 文件路径.
+                :return: PDF 文件内容的字符串表示.
+                \"""
+                pass
+
+            @abstractmethod
+            def create_pdf(self, content: str, output_path: str) -> None:
+                \"""
+                创建 PDF 文件.
+                :param content: 要写入 PDF 文件的内容.
+                :param output_path: 输出的 PDF 文件路径.
+                \"""
+                pass
+            """
+
+            # 将定义的代码追加到模块中
+            editor.append(pdf_tool_interface_code)
+
+            # 返回成功的操作
+            return os.mindflow.finish("PDF 工具的 interface 已成功创建.")
+        ```
+      payloads:
+        completion_usage:
+          completion_tokens: 264
+          prompt_tokens: 2317
+          total_tokens: 2581
+      callers:
+      - name: moss
+        arguments: |2-
+
+
+          ```python
+          def main(os: MOSS) -> Operator:
+              # 获取 Python 编辑器实例
+              editor = os.python_editor.module('ghostos.mocks.libraries.pdf', create=True)
+
+              # 定义 PDF 工具的 interface 代码
+              pdf_tool_interface_code = """
+          from abc import ABC, abstractmethod
+
+          class PDFTool(ABC):
+              \"""
+              PDF 工具的 interface, 提供阅读和创建 PDF 的能力.
+              \"""
+
+              @abstractmethod
+              def read_pdf(self, file_path: str) -> str:
+                  \"""
+                  阅读 PDF 文件.
+                  :param file_path: PDF 文件路径.
+                  :return: PDF 文件内容的字符串表示.
+                  \"""
+                  pass
+
+              @abstractmethod
+              def create_pdf(self, content: str, output_path: str) -> None:
+                  \"""
+                  创建 PDF 文件.
+                  :param content: 要写入 PDF 文件的内容.
+                  :param output_path: 输出的 PDF 文件路径.
+                  \"""
+                  pass
+              """
+
+              # 将定义的代码追加到模块中
+              editor.append(pdf_tool_interface_code)
+
+              # 返回成功的操作
+              return os.mindflow.finish("PDF 工具的 interface 已成功创建.")
+          ```
+        functional_token: true
+      pack_count: 265
+      time_cast: 5.6917
+    moonshot-v1-32k:
+    - msg_id: c8ba4576-3d79-4c37-8381-93e17e6643c9
+      type: chat_completion
+      created: 1722443658.4497
+      pack: false
+      content: ''
+      payloads:
+        model_conf:
+          model: moonshot-v1-32k
+          service: moonshot
+          temperature: 0.7
+          n: 1
+          max_tokens: 512
+          timeout: 20
+          request_timeout: 40
+          kwargs: {}
+    - msg_id: cea9df75-f9da-4c0c-ae17-c5061720b141
+      created: 1722443658
+      pack: false
+      content: |-
+        ```python
+        def main(os: MOSS) -> Operator:
+            editor = os.python_editor
+            module_editor = editor.module("ghostos.mocks.libraries.pdf", create=True)
+
+            interface_code = """
+        from abc import ABC, abstractmethod
+
+        class PDFTool(ABC):
+            \"\"\"
+            PDF 工具的接口, 用于阅读和创建 PDF 文件.
+            \"\"\"
+
+            @abstractmethod
+            def read_pdf(self, file_path: str) -> str:
+                """
+                阅读 PDF 文件, 并返回文本内容.
+                :param file_path: PDF 文件的路径
+                :return: PDF 文件的文本内容
+                """
+                pass
+
+            @abstractmethod
+            def create_pdf(self, content: str, file_path: str) -> None:
+                """
+                创建 PDF 文件.
+                :param content: PDF 文件的内容
+                :param file_path: 保存 PDF 文件的路径
+                """
+                pass
+        """
+            success = module_editor.append(interface_code)
+            if not success:
+                os.mindflow.fail("Unable to create the PDF tool interface in the module.")
+                return os.mindflow.fail()
+            return os.mindflow.finish("The PDF tool interface has been successfully created in the module.")
+        ```
+      payloads:
+        completion_usage:
+          completion_tokens: 259
+          prompt_tokens: 2232
+          total_tokens: 2491
+      pack_count: 260
+      time_cast: 10.1824
+    gpt-4:
+    - msg_id: a7512905-f1f8-453f-93d4-352fd20a5936
+      type: chat_completion
+      created: 1722443660.6482
+      pack: false
+      content: ''
+      payloads:
+        model_conf:
+          model: gpt-4
+          service: openai
+          temperature: 0.7
+          n: 1
+          max_tokens: 512
+          timeout: 20
+          request_timeout: 40
+          kwargs: {}
+    - msg_id: 9ad6c07a-7fa8-4077-95d7-1afe778340ad
+      created: 1722443660
+      pack: false
+      content: |-
+        >moss.code:async:def main(os: MOSS) -> Operator:
+            # Get the PythonEditor instance
+            python_editor = os.python_editor
+
+            # Get the module editor for ghostos.mocks.libraries.pdf
+            module_editor = python_editor.module("ghostos.mocks.libraries.pdf", create=True)
+
+            # Define the PDF library interface
+            interface_code = """
+            from abc import ABC, abstractmethod
+            from typing import List
+
+            class PDFToolInterface(ABC):
+
+                @abstractmethod
+                def read_pdf(self, file_path: str) -> List[str]:
+                    \"\"\"
+                    Abstract method to read a PDF file and return the content.
+
+                    :param file_path: The path of the PDF file.
+                    :return: A list of strings, each string is a page's content.
+                    \"\"\"
+                    pass
+
+                @abstractmethod
+                def create_pdf(self, content: List[str], output_path: str) -> None:
+                    \"\"\"
+                    Abstract method to create a PDF file with given content.
+
+                    :param content: A list of strings, each string is a page's content.
+                    :param output_path: The path where the PDF file will be created.
+                    \"\"\"
+                    pass
+            """
+
+            # Append the interface code to the module
+            module_editor.append(interface_code)
+
+            # No need to return an operator as we're not expecting any user interaction
+            return os.mindflow.observe()
+      memory: |-
+        moss.code:async:def main(os: MOSS) -> Operator:
+            # Get the PythonEditor instance
+            python_editor = os.python_editor
+
+            # Get the module editor for ghostos.mocks.libraries.pdf
+            module_editor = python_editor.module("ghostos.mocks.libraries.pdf", create=True)
+
+            # Define the PDF library interface
+            interface_code = """
+            from abc import ABC, abstractmethod
+            from typing import List
+
+            class PDFToolInterface(ABC):
+
+                @abstractmethod
+                def read_pdf(self, file_path: str) -> List[str]:
+                    \"\"\"
+                    Abstract method to read a PDF file and return the content.
+
+                    :param file_path: The path of the PDF file.
+                    :return: A list of strings, each string is a page's content.
+                    \"\"\"
+                    pass
+
+                @abstractmethod
+                def create_pdf(self, content: List[str], output_path: str) -> None:
+                    \"\"\"
+                    Abstract method to create a PDF file with given content.
+
+                    :param content: A list of strings, each string is a page's content.
+                    :param output_path: The path where the PDF file will be created.
+                    \"\"\"
+                    pass
+            """
+
+            # Append the interface code to the module
+            module_editor.append(interface_code)
+
+            # No need to return an operator as we're not expecting any user interaction
+            return os.mindflow.observe()
+      payloads:
+        completion_usage:
+          completion_tokens: 302
+          prompt_tokens: 2523
+          total_tokens: 2825
+      pack_count: 303
+      time_cast: 16.7334
+- time: '2024-08-01T00:32:45.798107'
+  results:
+    gpt-4:
+    - msg_id: 1235cd2e-29d6-4ca8-aedc-689c7ff3098c
+      type: chat_completion
+      created: 1722443558.8185
+      pack: false
+      content: ''
+      payloads:
+        model_conf:
+          model: gpt-4
+          service: openai
+          temperature: 0.7
+          n: 1
+          max_tokens: 512
+          timeout: 20
+          request_timeout: 40
+          kwargs: {}
+    - msg_id: 16a8735a-e532-4a90-a6be-d8a2c69f8ee4
+      created: 1722443558.0
+      pack: false
+      content: 好的，我将在 `ghostos.mocks.libraries.pdf` 模块中创建一个具有阅读 PDF 和创建 PDF 等能力的接口。我会使用
+        MOSS 的 PythonEditor 工具来创建这个模块和接口。
+      payloads:
+        completion_usage:
+          completion_tokens: 62
+          prompt_tokens: 2530
+          total_tokens: 2592
+      pack_count: 56
+      time_cast: 4.1657
+    gpt-4o:
+    - msg_id: 5229a660-32e4-4452-81a4-e929c35e77eb
+      type: chat_completion
+      created: 1722443558.4047
+      pack: false
+      content: ''
+      payloads:
+        model_conf:
+          model: gpt-4o
+          service: openai
+          temperature: 0.7
+          n: 1
+          max_tokens: 512
+          timeout: 20
+          request_timeout: 40
+          kwargs: {}
+    - msg_id: 734a23f6-0ea9-4828-abde-d1231515483c
+      created: 1722443558.0
+      pack: false
+      content: 好的，我会为你创建一个包含阅读 PDF 和创建 PDF 能力的接口。请稍等。
+      memory: |-
+        好的，我会为你创建一个包含阅读 PDF 和创建 PDF 能力的接口。请稍等。
+
+        >moss:
+
+        def main(os: MOSS) -> Operator:
+            editor = os.python_editor.module('ghostos.mocks.libraries.pdf', create=True)
+            code = '''
+        from abc import ABC, abstractmethod
+
+        class PDFTool(ABC):
+            """
+            PDF 工具接口，提供阅读 PDF 和创建 PDF 的能力。
+            """
+
+            @abstractmethod
+            def read_pdf(self, file_path: str) -> str:
+                """
+                读取 PDF 文件的内容。
+
+                :param file_path: PDF 文件的路径。
+                :return: PDF 文件的内容。
+                """
+                pass
+
+            @abstractmethod
+            def create_pdf(self, content: str, file_path: str) -> None:
+                """
+                创建一个 PDF 文件。
+
+                :param content: PDF 文件的内容。
+                :param file_path: 新创建的 PDF 文件的路径。
+                :return: None
+                """
+                pass
+        '''
+            editor.append(code)
+            return os.mindflow.finish("PDF 工具的接口已经创建。")
+      payloads:
+        completion_usage:
+          completion_tokens: 235
+          prompt_tokens: 2324
+          total_tokens: 2559
+      callers:
+      - name: moss
+        arguments: |2-
+
+
+          def main(os: MOSS) -> Operator:
+              editor = os.python_editor.module('ghostos.mocks.libraries.pdf', create=True)
+              code = '''
+          from abc import ABC, abstractmethod
+
+          class PDFTool(ABC):
+              """
+              PDF 工具接口，提供阅读 PDF 和创建 PDF 的能力。
+              """
+
+              @abstractmethod
+              def read_pdf(self, file_path: str) -> str:
+                  """
+                  读取 PDF 文件的内容。
+
+                  :param file_path: PDF 文件的路径。
+                  :return: PDF 文件的内容。
+                  """
+                  pass
+
+              @abstractmethod
+              def create_pdf(self, content: str, file_path: str) -> None:
+                  """
+                  创建一个 PDF 文件。
+
+                  :param content: PDF 文件的内容。
+                  :param file_path: 新创建的 PDF 文件的路径。
+                  :return: None
+                  """
+                  pass
+          '''
+              editor.append(code)
+              return os.mindflow.finish("PDF 工具的接口已经创建。")
+        functional_token: true
+      pack_count: 236
+      time_cast: 4.7256
+    moonshot-v1-32k:
+    - msg_id: 48b42191-687b-49ee-99be-34c509009255
+      type: chat_completion
+      created: 1722443557.7947
+      pack: false
+      content: ''
+      payloads:
+        model_conf:
+          model: moonshot-v1-32k
+          service: moonshot
+          temperature: 0.7
+          n: 1
+          max_tokens: 512
+          timeout: 20
+          request_timeout: 40
+          kwargs: {}
+    - msg_id: 1065eb5f-471c-4df2-ac5d-b48886e29209
+      created: 1722443557.0
+      pack: false
+      content: |-
+        ```python
+        def main(os: MOSS) -> Operator:
+            # 首先尝试获取或创建 `ghostos.mocks.libraries.pdf` 模块的编辑器
+            pdf_module_editor = os.python_editor.module('ghostos.mocks.libraries.pdf', create=True)
+
+            # 定义 PDF 工具的 interface, 包含抽象方法 read_pdf 和 create_pdf
+            pdf_tool_interface_code = """
+        from abc import ABC, abstractmethod
+
+        class PDFTool(ABC):
+            """
+            PDF 工具接口，定义了读取和创建 PDF 文件的能力。
+            """
+
+            @abstractmethod
+            def read_pdf(self, file_path: str) -> 'PDFDocument':
+                """
+                读取 PDF 文件的方法。
+
+                :param file_path: PDF 文件的路径。
+                :return: PDFDocument 对象，包含文件的文本内容和元数据。
+                """
+                pass
+
+            @abstractmethod
+            def create_pdf(self, content: str, file_path: str) -> None:
+                """
+                创建 PDF 文件的方法。
+
+                :param content: 要写入 PDF 的文本内容。
+                :param file_path: 输出 PDF 文件的路径。
+                """
+                pass
+        """
+
+            # 将 PDF 工具的 interface 代码追加到模块中
+            success = pdf_module_editor.append(pdf_tool_interface_code)
+
+            # 如果追加成功，返回成功的消息
+            if success:
+                return os.mindflow.finish("PDFTool interface successfully created in the module.")
+            else:
+                # 如果追加失败，返回失败的消息
+                return os.mindflow.fail("Failed to create PDFTool interface in the module.")
+        ```
+      payloads:
+        completion_usage:
+          completion_tokens: 331
+          prompt_tokens: 2240
+          total_tokens: 2571
+      pack_count: 332
+      time_cast: 8.5595

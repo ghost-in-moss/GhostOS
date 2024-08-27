@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import inspect
-from ghostiss.core.moss.utils import *
+from ghostos.core.moss.utils import *
 
 
 def test_get_callable_definition():

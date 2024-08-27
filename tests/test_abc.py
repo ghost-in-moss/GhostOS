@@ -1,4 +1,4 @@
-from ghostiss.abc import PromptAble, PromptAbleClass
+from ghostos.abc import PromptAble, PromptAbleClass
 import inspect
 
 

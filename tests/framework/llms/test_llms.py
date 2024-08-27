@@ -1,14 +1,14 @@
 import os
-from ghostiss.container import Container
-from ghostiss.core.llms import LLMsConfig, LLMs
-from ghostiss.contracts.configs import YamlConfig, ConfigsByStorageProvider, Configs
-from ghostiss.framework.storage import FileStorageProvider
-from ghostiss.framework.llms import ConfigBasedLLMsProvider
+from ghostos.container import Container
+from ghostos.core.llms import LLMsConfig, LLMs
+from ghostos.contracts.configs import YamlConfig, ConfigsByStorageProvider, Configs
+from ghostos.framework.storage import FileStorageProvider
+from ghostos.framework.llms import ConfigBasedLLMsProvider
 
 
 def _prepare_container() -> Container:
     dirname = os.path.dirname
-    demo_dir = dirname(__file__) + "/../../../demo/ghostiss"
+    demo_dir = dirname(__file__) + "/../../../demo/ghostos"
     demo_dir = os.path.abspath(demo_dir)
     container = Container()
     container.register(FileStorageProvider(demo_dir))

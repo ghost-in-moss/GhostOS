@@ -1,7 +1,7 @@
-from ghostiss.framework.messengers import DefaultMessenger
-from ghostiss.core.session.threads import MsgThread
-from ghostiss.core.messages import Message
-from ghostiss.core.llms import FunctionalToken
+from ghostos.framework.messengers import DefaultMessenger
+from ghostos.core.session.threads import MsgThread
+from ghostos.core.messages import Message
+from ghostos.core.llms import FunctionalToken
 
 
 def test_default_messenger_baseline():
@@ -13,8 +13,8 @@ def test_default_messenger_baseline():
         success = messenger.deliver(msg)
         assert success
     messenger.flush()
-    assert len(thread.appending) == 1
-    assert thread.appending[0].content == content
+    assert len(thread.current.generates) == 1
+    assert thread.current.generates[0].content == content
 
 
 def test_messenger_with_moss():
@@ -42,5 +42,5 @@ def test_messenger_with_moss():
     assert caller.name == "moss"
     assert caller.arguments == " world"
 
-    assert len(thread.appending) == 1
-    assert len(thread.appending[0].callers) == 1
+    assert len(thread.current.generates) == 1
+    assert len(thread.current.generates[0].callers) == 1

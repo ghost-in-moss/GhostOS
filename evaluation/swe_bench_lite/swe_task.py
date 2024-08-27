@@ -1,8 +1,8 @@
 from typing import Optional, List
-from ghostiss.core.moss.aifunc import AIFunc, AIFuncResult
+from ghostos.core.moss.aifunc import AIFunc, AIFuncResult
 from pydantic import BaseModel, Field
-from ghostiss.core.moss import Moss
-from ghostiss.core.moss.decorators import cls_source_code
+from ghostos.core.moss import Moss
+from ghostos.core.moss.decorators import cls_source_code
 
 import logging
 import json
@@ -25,7 +25,7 @@ class SWEDebugTaskCtx(BaseModel):
     # environment_setup_commit: str = Field(..., description="The commit used to environment setup")
 
 
-def get_swe_debug_task_ctx(task_json_path: str="/home/llm/Project/PythonProjects/ghostiss/evaluation/swe_bench_lite/django_15347.json",
+def get_swe_debug_task_ctx(task_json_path: str="/home/llm/Project/PythonProjects/ghostos/evaluation/swe_bench_lite/django_15347.json",
                            workspace_path: str="/home/llm/Project/PythonProjects/workspace") -> SWEDebugTaskCtx:
     with open(task_json_path, 'r') as f:
         task_json = json.load(f)

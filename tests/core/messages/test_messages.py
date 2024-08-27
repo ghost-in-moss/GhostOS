@@ -1,4 +1,4 @@
-from ghostiss.core.messages import (
+from ghostos.core.messages import (
     Role,
     Message,
 )
@@ -12,10 +12,10 @@ def test_text_msg():
 
 
 def test_message_module():
-    from ghostiss.core.messages import Message as Msg
+    from ghostos.core.messages import Message as Msg
     # 不会被重命名而修改掉.
     assert Msg.__name__ == "Message"
-    assert Msg.__module__ == "ghostiss.core.messages.message"
+    assert Msg.__module__ == "ghostos.core.messages.message"
 
 
 def test_message_basic_merge():

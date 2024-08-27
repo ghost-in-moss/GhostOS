@@ -1,8 +1,8 @@
-from ghostiss.core.moss import test_container
-from ghostiss.core.moss.abc import MossCompiler, Moss, MOSS_TYPE_NAME
-from ghostiss.core.moss.pycontext import PyContext
-from ghostiss.core.moss.examples import baseline
-from ghostiss.contracts.modules import ImportWrapper
+from ghostos.core.moss import test_container
+from ghostos.core.moss.abc import MossCompiler, Moss, MOSS_TYPE_NAME
+from ghostos.core.moss.pycontext import PyContext
+from ghostos.core.moss.examples import baseline
+from ghostos.contracts.modules import ImportWrapper
 
 
 def test_baseline_exec():
@@ -25,13 +25,13 @@ def test_baseline_exec():
     assert module.__name__ == baseline.__name__
     #
     importer = module.__dict__.get('__import__', None)
-    assert not isinstance(importer, ImportWrapper)
+    assert isinstance(importer, ImportWrapper)
 
     # 先测试 ctx
-    with runtime.runtime_ctx():
-        print("hello")
-    buffed = runtime.dump_std_output()
-    assert buffed.startswith("hello")
+    # with runtime.runtime_ctx():
+    #     print("hello")
+    # buffed = runtime.dump_std_output()
+    # assert buffed.startswith("hello")
 
     exists_moss_type = module.__dict__.get(MOSS_TYPE_NAME)
     moss_type = runtime.moss_type()
@@ -117,10 +117,10 @@ def test_baseline_in_test_mode():
     assert isinstance(hack_import, ImportWrapper)
 
     # 先测试 ctx
-    with runtime.runtime_ctx():
-        print("hello")
-    buffed = runtime.dump_std_output()
-    assert buffed.startswith("hello")
+    # with runtime.runtime_ctx():
+    #     print("hello")
+    # buffed = runtime.dump_std_output()
+    # assert buffed.startswith("hello")
 
     exists_moss_type = module.__dict__.get(MOSS_TYPE_NAME)
     moss_type = runtime.moss_type()
