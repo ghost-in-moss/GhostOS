@@ -1,11 +1,11 @@
 from typing import Optional, Iterable, List, Callable
 from abc import ABC, abstractmethod
 
-from ghostos.core.session.events import Event
+from ghostos.core.session.events import Event, EventBus
 from ghostos.core.session.messenger import Messenger
-from ghostos.core.session.processes import Process
-from ghostos.core.session.tasks import Task, TaskBrief
-from ghostos.core.session.threads import MsgThread
+from ghostos.core.session.processes import Processes, Process
+from ghostos.core.session.tasks import Tasks, Task, TaskBrief
+from ghostos.core.session.threads import Threads, MsgThread
 from ghostos.contracts.logger import LoggerItf
 from ghostos.core.messages import MessageKind, Role, Buffer, Payload, Attachment
 from ghostos.core.llms import FunctionalToken
@@ -199,6 +199,22 @@ class Session(ABC):
         6. 退出相关的逻辑只能在 finish 里实现.
         :return:
         """
+        pass
+
+    @abstractmethod
+    def tasks(self) -> Tasks:
+        pass
+
+    @abstractmethod
+    def processes(self) -> Processes:
+        pass
+
+    @abstractmethod
+    def threads(self) -> Threads:
+        pass
+
+    @abstractmethod
+    def eventbus(self) -> EventBus:
         pass
 
     @abstractmethod

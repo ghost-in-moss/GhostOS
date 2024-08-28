@@ -33,7 +33,7 @@ def prepare_container(root_dir: str) -> Container:
     container = test_container()
     container.register(FileStorageProvider(root_dir))
     container.register(FileLoggerProvider(logger_name="debug"))
-    container.register(StorageThreadsProvider(thread_dir='runtime/threads'))
+    container.register(StorageThreadsProvider(threads_dir='runtime/threads'))
     container.register(ConfigsByStorageProvider("ghostos/configs"))
     container.register(ConfigBasedLLMsProvider("llms/llms_conf.yaml"))
     return container

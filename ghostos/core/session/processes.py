@@ -66,15 +66,27 @@ class Processes(ABC):
     """
 
     @abstractmethod
-    def get_process(self, process_id: str) -> Process:
+    def get_process(self, process_id: str) -> Optional[Process]:
+        """
+        get process by id
+        :param process_id: process id
+        """
         pass
 
     @abstractmethod
     def get_session_process(self, session_id: str) -> Optional[Process]:
+        """
+        get session process by session id
+        """
         pass
 
     @abstractmethod
     def save_process(self, process: Process) -> None:
+        """
+        save process
+        :param process:
+        :return:
+        """
         pass
 
     @contextmanager

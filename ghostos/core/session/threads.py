@@ -101,10 +101,6 @@ class MsgThread(BaseModel):
         default_factory=uuid,
         description="The id of the thread, also a fork id",
     )
-    path: Optional[str] = Field(
-        default=None,
-        description="the path that can load the thread after saving."
-    )
     root_id: Optional[str] = Field(
         default=None,
         description="The id of the root thread if the thread is a fork",
@@ -300,10 +296,6 @@ class Threads(ABC):
     """
     管理 Threads 存取的模块. 通常集成到 Session 里.
     """
-
-    @abstractmethod
-    def with_namespace(self, namespace: str) -> "Threads":
-        pass
 
     @abstractmethod
     def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:

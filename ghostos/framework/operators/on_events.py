@@ -66,7 +66,8 @@ class OnEventOperator(EventOperator):
                     OnCancelOperator.event_type: OnCancelOperator,
                     OnInputOperator.event_type: OnInputOperator,
                     OnCreatedOperator.event_type: OnCreatedOperator,
-                }
+                },
+                self.event,
             )
             return op
 

@@ -277,6 +277,18 @@ class BasicSession(Session):
                 self._fetched_task_briefs[task_brief.task_id] = task_brief
         return result
 
+    def tasks(self) -> Tasks:
+        return self._tasks
+
+    def processes(self) -> Processes:
+        return self._processes
+
+    def threads(self) -> Threads:
+        return self._threads
+
+    def eventbus(self) -> EventBus:
+        return self._eventbus
+
     def fail(self, err: Optional[Exception]) -> None:
         # 暂时只做解开锁.
         locked = self._task.lock
@@ -323,16 +335,16 @@ class BasicSession(Session):
         process_id = task_id if task_id else uuid()
         process = Process.new(session_id=session_id, is_async=is_async, process_id=process_id, ghost_meta=ghost_meta)
         processes = container.force_fetch(Processes)
-        tasks = container.force_fetch(Tasks).with_namespace(process_id)
+        tasks = container.force_fetch(Tasks)
         task = Task.new(
             task_id=process.main_task_id, session_id=session_id, process_id=process_id,
             name="", description="", meta=EntityMeta(type="", data={}),
         )
         tasks.save_task(task)
-        threads = container.force_fetch(Threads).with_namespace(process_id)
+        threads = container.force_fetch(Threads)
         thread = threads.get_thread(task.thread_id, create=True)
 
-        eventbus = container.force_fetch(EventBus).with_namespace(process_id)
+        eventbus = container.force_fetch(EventBus)
         pool = container.force_fetch(Pool)
         logger = container.force_fetch(LoggerItf)
 

@@ -13,7 +13,7 @@ from ghostos.core.llms import LLMs, LLMApi, Chat, ChatPreparer, prepare_chat
 from ghostos.core.session.threads import MsgThread, thread_to_chat
 from ghostos.helpers import uuid, import_from_path
 from pydantic import BaseModel, Field
-from ghostos.framework.chatfilters.assistant_filter import OtherAgentOrTaskPreparer
+from ghostos.framework.chatpreparers.assistant_preparer import OtherAgentOrTaskPreparer
 from ghostos.framework.moss.action import MOSSAction
 
 __all__ = [

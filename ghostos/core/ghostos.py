@@ -296,3 +296,7 @@ class GhostInMOSS(ABC):
             if err is not None:
                 ghost.fail(err)
             ghost.destroy()
+
+    @abstractmethod
+    def shutdown(self) -> None:
+        pass
