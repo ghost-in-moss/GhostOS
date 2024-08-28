@@ -86,6 +86,32 @@ class Event(BaseModel, Entity):
             data=self.model_dump(exclude={'id'}, exclude_defaults=True)
         )
 
+    @classmethod
+    def new(
+            cls, *,
+            event_type: str,
+            task_id: str,
+            messages: List[Message],
+            from_task_id: Optional[str] = None,
+            reason: str = "",
+            instruction: str = "",
+            eid: Optional[str] = None,
+            payloads: Optional[Dict] = None,
+    ) -> "Event":
+        id_ = eid if eid else uuid()
+        type_ = event_type
+        payloads = payloads if payloads is not None else {}
+        return cls(
+            id=id_,
+            type=type_,
+            task_id=task_id,
+            from_task_id=from_task_id,
+            reason=reason,
+            instruction=instruction,
+            messages=messages,
+            payloads=payloads,
+        )
+
 
 class DefaultEventType(str, Enum):
     """
@@ -133,20 +159,19 @@ class DefaultEventType(str, Enum):
             reason: str = "",
             instruction: str = "",
             eid: Optional[str] = None,
-            payload: Optional[Dict] = None,
+            payloads: Optional[Dict] = None,
     ) -> Event:
-        id_ = eid if eid else uuid()
         type_ = str(self.value)
-        payload = payload if payload is not None else {}
-        return Event(
-            id=id_,
-            type=type_,
+        payloads = payloads if payloads is not None else {}
+        return Event.new(
+            event_type=type_,
             task_id=task_id,
             from_task_id=from_task_id,
             reason=reason,
             instruction=instruction,
             messages=messages,
-            payloads=payload,
+            eid=eid,
+            payloads=payloads,
         )
 
 
@@ -175,15 +200,6 @@ class EventBus(ABC):
     """
     global event bus.
     """
-
-    @abstractmethod
-    def with_namespace(self, namespace: str) -> "EventBus":
-        """
-        允许根据命名空间做隔离. 可以不实现这个方法.
-        :param namespace: 隔离不同事件的命名空间.
-        :return:
-        """
-        pass
 
     @abstractmethod
     def send_event(self, e: Event, notify: bool) -> None:

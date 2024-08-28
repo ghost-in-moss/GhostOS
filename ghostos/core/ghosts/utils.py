@@ -3,14 +3,13 @@ from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought
 from ghostos.core.session import (
-    Event, DefaultEventType, WaitGroup,
+    Event, DefaultEventType,
     Task, TaskState, Tasks,
 )
 
 from ghostos.core.messages import (
     MessageKind,
     MessageKindParser,
-    Message,
     Role,
 )
 

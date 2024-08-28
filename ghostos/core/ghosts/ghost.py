@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ghostos.core.ghosts.schedulers import MultiTask, Taskflow
     from ghostos.core.ghosts.operators import Operator
 
-__all__ = ['Ghost', 'Inputs']
+__all__ = ['Ghost', 'Inputs', 'GhostConf']
 
 
 class Inputs(BaseModel):
@@ -119,17 +119,16 @@ class Ghost(Identifiable, ABC):
 
     @abstractmethod
     def init_operator(self, event: "Event") -> Tuple["Operator", int]:
+        """
+        :param event: the initialize event
+        :return: the operator and max_operator_count
+        """
         pass
 
     @abstractmethod
-    def update_chat(self, chat: Chat) -> Chat:
+    def meta_prompt(self) -> str:
         """
-        将 Ghost 的 meta prompt 注入到 Chat 里.
-        update_chat 应该包含:
-        1. 注入 ghost 的自我认知.
-        2. 注入 ghost 的元指令.
-        3. 注入 shell 的描述.
-        4. 注入 thought 无关的通用工具.
+        Ghost 的 meta prompt, 自我认知的相关讯息.
         """
         pass
 

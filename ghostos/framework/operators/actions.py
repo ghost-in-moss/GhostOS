@@ -193,13 +193,12 @@ class WaitOnTasksOperator(ActionOperator):
     def __init__(
             self, *,
             thoughts: List[Thought],
-            messages: List[MessageKind],
             reason: str = "",
             instruction: str = "",
     ):
         self.thoughts = thoughts
         super().__init__(
-            messages=messages,
+            messages=[],
             reason=reason,
             instruction=instruction,
         )

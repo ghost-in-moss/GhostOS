@@ -90,10 +90,10 @@ class MultiTask(ABC):
         pass
 
     @abstractmethod
-    def cancel_task(self, name: str, reason: str) -> None:
+    def cancel_task(self, task_name: str, reason: str) -> None:
         """
         取消一个已经存在的 task.
-        :param name: 目标 task 的名称.
+        :param task_name: 目标 task 的名称.
         :param reason: 取消的理由.
         """
         pass
