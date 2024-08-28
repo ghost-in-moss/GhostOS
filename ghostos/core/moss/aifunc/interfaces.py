@@ -19,11 +19,12 @@ class AIFuncCtx(ABC):
     """
 
     @abstractmethod
-    def run(self, key: str, fn: AIFunc) -> AIFuncResult:
+    def run(self, key: str, fn: AIFunc, quest: str = "") -> AIFuncResult:
         """
         Run an AIFunc subclass instance, got result and save it into the key.
         :param key: the key that ctx keep the result in multi-turns thinking.
         :param fn: instance of AIFunc that define the task.
+        :param quest: the quest you want the AIFunc to do, if arguments are not enough.
         :return: the certain result that match AIFuncResult and is not None
         """
         pass
@@ -83,7 +84,7 @@ class AIFuncManager(ABC):
         pass
 
     @abstractmethod
-    def execute(self, fn: AIFunc) -> AIFuncResult:
+    def execute(self, fn: AIFunc, quest: str) -> AIFuncResult:
         """
         执行一个 AIFunc, 直到拿到它的返回结果.
         """
@@ -97,11 +98,9 @@ class AIFuncManager(ABC):
         pass
 
     @abstractmethod
-    def get_driver(self, fn: AIFunc) -> "AIFuncDriver":
+    def get_driver(self, fn: AIFunc, request: str) -> "AIFuncDriver":
         """
         根据 AIFunc 实例获取 AIFuncDriver 的实例.
-        :param fn:
-        :return:
         """
         pass
 
@@ -118,8 +117,9 @@ class AIFuncDriver(ABC):
     the driver that produce multi-turns thinking of an AIFunc.
     """
 
-    def __init__(self, fn: AIFunc):
+    def __init__(self, fn: AIFunc, quest: str):
         self.aifunc = fn
+        self.quest = quest
 
     @abstractmethod
     def initialize(self) -> MsgThread:

@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import TYPE_CHECKING
+from typing import Optional, List, Dict, Any
 
 if TYPE_CHECKING:
-    from typing import Optional, List, Dict, Any
     from ghostos.core.moss.prompts import AttrPrompts
     from ghostos.core.moss.abc import MossPrompter, MossResult, MossRuntime, MossCompiler
 
@@ -104,16 +104,20 @@ def __moss_exec__(
         *,
         target: str,
         code: "Optional[str]" = None,
-        args: "Optional[List[str]]" = None,
-        kwargs: "Optional[Dict[str, Any]]" = None,
+        local_args: "Optional[List[str]]" = None,
+        local_kwargs: "Optional[Dict[str, Any]]" = None,
+        args: Optional[List[Any]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
 ) -> "MossResult":
     """
     基于 MOSS Runtime 执行一段代码, 并且调用目标方法或返回目标值.
     :param runtime: moss runtime
     :param code: 会通过 execute
     :param target: 指定一个上下文中的变量, 如果是 callable 则执行它, 如果不是 callable 则直接返回.
-    :param args: 为 target 准备的 *args 参数, 这里只需要指定上下文中的变量名.
-    :param kwargs: 为 target 准备的 **kwargs 参数, 这里需要指定 argument_name => module_attr_name
+    :param local_args: 为 target 准备的 *args 参数, 这里只需要指定上下文中的变量名.
+    :param local_kwargs: 为 target 准备的 **kwargs 参数, 这里需要指定 argument_name => module_attr_name
+    :param args: 从外部注入的参数变量
+    :param kwargs: 从外部注入的参数变量.
     """
     from typing import Callable
     from ghostos.core.moss.abc import MossResult
@@ -130,21 +134,25 @@ def __moss_exec__(
     target_module_attr = local_values.get(target, None)
 
     # 如果定义了参数, 就必须是 callable 方法.
-    has_args = args is not None or kwargs is not None
+    has_args = local_args is not None or local_kwargs is not None
     if isinstance(target_module_attr, Callable):
         real_args = []
         real_kwargs = {}
-        if args:
-            for attr_name in args:
+        if local_args:
+            for attr_name in local_args:
                 if attr_name not in local_values:
                     raise AttributeError(f"module has no attribute `{attr_name}` for `{target}`")
                 arg_val = local_values.get(attr_name, None)
                 real_args.append(arg_val)
-        if kwargs:
-            for argument_name, attr_name in kwargs.items():
+        if args:
+            real_args.extend(args)
+        if local_kwargs:
+            for argument_name, attr_name in local_kwargs.items():
                 if attr_name not in local_values:
                     raise AttributeError(f"module has no attribute {attr_name} for `{target}`")
                 real_kwargs[argument_name] = local_values.get(attr_name, None)
+        if kwargs:
+            real_kwargs.update(kwargs)
         # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
         with runtime.runtime_ctx():
             returns = target_module_attr(*real_args, **real_kwargs)

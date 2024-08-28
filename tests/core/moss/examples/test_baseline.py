@@ -62,7 +62,7 @@ def test_baseline_exec():
     assert getattr(moss, "bar") is 123
 
     # 运行 main 方法.
-    result = runtime.execute(target="test_main", args=["moss"])
+    result = runtime.execute(target="test_main", local_args=["moss"])
     # main 方法的运行结果.
     assert result.returns == 3
     # 测试 print 仍然有效.
@@ -152,7 +152,7 @@ def test_baseline_in_test_mode():
     assert getattr(moss, "bar") is 123
 
     # 运行 main 方法.
-    result = runtime.execute(target="main", args=["moss"])
+    result = runtime.execute(target="main", local_args=["moss"])
     # main 方法的运行结果.
     assert result.returns == 4
 

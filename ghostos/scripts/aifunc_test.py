@@ -1,7 +1,8 @@
 import argparse
 import sys
 import os
-from typing import List
+import yaml
+from typing import List, Dict
 
 from ghostos.core.session import MsgThread
 from ghostos.scripts.logconf import prepare_logger
@@ -15,6 +16,7 @@ from ghostos.framework.llms import ConfigBasedLLMsProvider
 from ghostos.framework.threads import StorageThreadsProvider
 from ghostos.container import Container
 from ghostos.contracts.modules import Modules
+from ghostos.contracts.storage import Storage
 from ghostos.contracts.configs import ConfigsByStorageProvider
 from ghostos.helpers import import_from_path, yaml_pretty_dump
 from rich.console import Console
@@ -42,11 +44,23 @@ def main() -> None:
         description="run ghostos aifunc test cases, show results",
     )
     parser.add_argument(
+        "--case", '-c',
+        help="ghostos aifunc test case name in demo/ghostos/tests/aifunc_tests.yml",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
         "--import_path", '-i',
         help="the import path of the AIFunc instance, such as foo.bar:baz",
         type=str,
         # 默认使用专门测试 MossTestSuite 的文件.
         default="ghostos.core.moss.aifunc.examples.agentic:example",
+    )
+    parser.add_argument(
+        "--quest", '-q',
+        help="describe the quest that aifunc should do",
+        type=str,
+        default="",
     )
     parser.add_argument(
         "--llm_api", '-l',
@@ -67,6 +81,12 @@ def main() -> None:
     llm_api = parsed.llm_api
     demo_dir = os.path.abspath(os.path.dirname(__file__) + "/../../demo")
     container = prepare_container(demo_dir)
+    import_path = parsed.import_path
+    if parsed.case:
+        storage = container.force_fetch(Storage)
+        cases_content_file = storage.get("ghostos/tests/aifunc_tests.yml")
+        cases: Dict[str, str] = yaml.safe_load(cases_content_file)
+        import_path = cases.get(parsed.case, import_path)
 
     class TestDriverImpl(DefaultAIFuncDriverImpl):
         console = console
@@ -115,11 +135,11 @@ def main() -> None:
         default_driver=TestDriverImpl,
     )
     modules = container.force_fetch(Modules)
-    aifunc = import_from_path(parsed.import_path, modules.import_module)
+    aifunc = import_from_path(import_path, modules.import_module)
     if not isinstance(aifunc, AIFunc):
         raise AttributeError(f'aifunc must be an instance of {AIFunc}, {aifunc} given')
 
-    driver = manager_.get_driver(aifunc)
+    driver = manager_.get_driver(aifunc, parsed.quest)
     # print initialized thread.
     thread_ = driver.initialize()
     thread_content = yaml_pretty_dump(thread_.model_dump(exclude_defaults=True))
@@ -128,7 +148,7 @@ def main() -> None:
         title="initialized thread",
     ))
 
-    result = manager_.execute(aifunc)
+    result = manager_.execute(aifunc, parsed.quest)
     console.print(result)
     manager_.destroy()
 

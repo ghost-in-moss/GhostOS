@@ -78,7 +78,7 @@ class MossQuestAction(QuestAction):
         step = self.moss_runtime.execute(
             target='main',
             code=caller.arguments,
-            args=['moss']
+            local_args=['moss']
         )
         if step is not None and not isinstance(step, QuestOperator):
             message = Role.SYSTEM.new(content="main function returns is not instance of Step")

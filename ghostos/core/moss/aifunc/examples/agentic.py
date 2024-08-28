@@ -21,11 +21,7 @@ class AgentFnResult(AIFuncResult):
     err: Optional[str] = Field(default=None, description="error message")
 
 
-__result_type__ = AgentFnResult
-
-
 class Moss(Parent):
-
     ai_func_ctx: AIFuncCtx
     """useful to run AIFunc"""
 

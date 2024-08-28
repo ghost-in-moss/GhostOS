@@ -51,8 +51,8 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         compiler.container().set(AIFuncCtx, self)
         return compiler
 
-    def execute(self, fn: AIFunc) -> AIFuncResult:
-        driver = self.get_driver(fn)
+    def execute(self, fn: AIFunc, quest: str) -> AIFuncResult:
+        driver = self.get_driver(fn, quest)
         thread = driver.initialize()
         step = 0
         finished = False
@@ -69,15 +69,15 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             raise RuntimeError(f"__result__ is not an AIFuncResult")
         return result
 
-    def get_driver(self, fn: AIFunc) -> "AIFuncDriver":
+    def get_driver(self, fn: AIFunc, request: str) -> "AIFuncDriver":
         cls = fn.__class__
         if cls.__aifunc_driver__ is not None:
-            return cls.__aifunc_driver__(fn)
-        return self._default_driver_type(fn)
+            return cls.__aifunc_driver__(fn, request)
+        return self._default_driver_type(fn, request)
 
-    def run(self, key: str, fn: AIFunc) -> AIFuncResult:
+    def run(self, key: str, fn: AIFunc, request: str = "") -> AIFuncResult:
         sub_manager = self.sub_manager()
-        result = sub_manager.execute(fn)
+        result = sub_manager.execute(fn, request)
         self._values[key] = result
         return result
 

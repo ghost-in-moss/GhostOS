@@ -1,0 +1,6 @@
+# 天气测试用例
+weather: "ghostos.core.moss.aifunc.examples.weather:example"
+# 新闻测试用例.
+news: "ghostos.core.moss.aifunc.examples.news:example"
+# 询问天气并查询新闻.
+agentic: "ghostos.core.moss.aifunc.examples.agentic:example"

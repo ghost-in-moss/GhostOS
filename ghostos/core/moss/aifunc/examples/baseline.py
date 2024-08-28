@@ -8,7 +8,7 @@ class AgentFunc(AIFunc):
     """
     agent func that act like an agent
     """
-    instruction: str = Field(description="raw instruction for the agent func")
+    pass
 
 
 class AgentFuncResult(AIFuncResult):
@@ -19,9 +19,6 @@ class AgentFuncResult(AIFuncResult):
     err: Optional[str] = Field(default=None, description="error message")
 
 
-__result_type__ = AgentFuncResult
-
-
 class Moss(Parent):
     ai_func_ctx: AIFuncCtx
     """useful to run AIFunc"""
@@ -30,12 +27,6 @@ class Moss(Parent):
 # <moss>
 
 
-def __aifunc_instruction__(fn: AgentFunc) -> str:
-    return fn.instruction
-
-
-baseline_case = AgentFunc(
-    instruction="please tell me 1.1234 * 2.325 equals?"
-)
+baseline_case = AgentFunc()
 
 # </moss>

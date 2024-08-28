@@ -92,46 +92,6 @@ class Moss(ABC):
     pass
 
 
-#    @abstractmethod
-#    def var(
-#            self,
-#            name: str,
-#            value: SerializableType,
-#            desc: Optional[str] = None,
-#            force: bool = False,
-#    ) -> bool:
-#        """
-#        You can define a serializable value and bind it to moss attributes.
-#        Once defined, you can reassign it any time, the attribute value will automatically save in multi-turns.
-#        :param name: the attribute name in the moss
-#        :param value: the value of the attribute
-#        :param desc: the description of the attribute
-#        :param force: force overwrite existing attribute
-#        :return: False if already defined, otherwise True
-#        :exception: TypeError if value is not SerializableType
-#        """
-#        pass
-
-#    @abstractmethod
-#    def inject(self, modulename: str, **specs: str) -> None:
-#        """
-#        You can inject values from module or its attributes (if specs given) to the MOSS object attributes.
-#        The injections of attributes will persist in multi-turns chat or thinking.
-#        for example:
-#        `moss.inject('module.submodule', 'attr_name'='module_attr_name')`
-#
-#        equals:
-#        `def inject(moss: MOSS):
-#            from module.sub_module import module_attr_name as var
-#            setattr(moss, 'attr_name', var)
-#        inject(moss)
-#        assert hasattr(moss, 'attr_name')`
-#
-#        :exception: NamedError if duplicated attribute name
-#        """
-#        pass
-
-
 class MossCompiler(ABC):
     """
     language Model-oriented Operating System Simulation
@@ -451,15 +411,19 @@ class MossRuntime(ABC):
             *,
             target: str,
             code: Optional[str] = None,
-            args: Optional[List[str]] = None,
-            kwargs: Optional[Dict[str, str]] = None,
+            local_args: Optional[List[str]] = None,
+            local_kwargs: Optional[Dict[str, str]] = None,
+            args: Optional[List[Any]] = None,
+            kwargs: Optional[Dict[str, Any]] = None,
     ) -> "MossResult":
         """
         基于 moos 提供的上下文, 运行一段代码.
         :param code: 需要运行的代码.
         :param target: 指定上下文中一个变量名用来获取返回值. 如果为空, 则返回 None. 如果是一个方法, 则会运行它.
-        :param args: 如果 args 不为 None, 则认为 target 是一个函数, 并从 locals 里指定参数
-        :param kwargs: 类似 args
+        :param local_args: 如果 args 不为 None, 则认为 target 是一个函数, 并从 locals 里指定参数
+        :param local_kwargs: 类似 args
+        :param args: 从外部注入的参数变量
+        :param kwargs: 从外部注入的参数变量.
         :return: 根据 result_name 从 code 中获取返回值.
         :exception: any exception will be raised, handle them outside
         """
@@ -477,7 +441,15 @@ class MossRuntime(ABC):
                     from ghostos.core.moss.lifecycle import __moss_exec__
                     fn = __moss_exec__
                 # 使用系统默认的 exec
-                return fn(self, target=target, code=code, args=args, kwargs=kwargs)
+                return fn(
+                    self,
+                    target=target,
+                    code=code,
+                    local_args=local_args,
+                    local_kwargs=local_kwargs,
+                    args=args,
+                    kwargs=kwargs,
+                )
         finally:
             self.__executing__ = False
 
