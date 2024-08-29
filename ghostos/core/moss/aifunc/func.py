@@ -132,7 +132,7 @@ def get_aifunc_instruction(fn: AIFunc) -> str:
     module = inspect.getmodule(aifunc_cls)
     instruction_fn = module.__dict__.get("__aifunc_instruction__", None)
     if instruction_fn is None:
-        raise NotImplementedError(f"AIFunc magic function '__aifunc_instruction__' is not found in {module.__name__}")
+        return None
     if not isinstance(instruction_fn, Callable):
         raise NotImplementedError(f"'__aifunc_instruction__' in {module.__name__} is not Callable as expected.")
     instruction = instruction_fn(fn)

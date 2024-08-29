@@ -19,7 +19,7 @@ class AIFuncCtx(ABC):
     """
 
     @abstractmethod
-    def run(self, key: str, fn: AIFunc, quest: str = "") -> AIFuncResult:
+    def run(self, key: str, fn: AIFunc, request: str = "") -> AIFuncResult:
         """
         Run an AIFunc subclass instance, got result and save it into the key.
         :param key: the key that ctx keep the result in multi-turns thinking.
