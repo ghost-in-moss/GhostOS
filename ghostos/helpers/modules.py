@@ -25,7 +25,7 @@ def get_module_spec(module, spec: str) -> Optional[Any]:
         if value is None:
             raise AttributeError(f'Module has no attribute {spec}')
         if part == "<locals>":
-            raise AttributeError(f'local attribute {spec} is not allowed to get')
+            raise AttributeError(f'local attribute {spec} is not support yet')
         if isinstance(value, Dict):
             value = value.get(part)
         else:

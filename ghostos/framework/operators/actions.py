@@ -193,13 +193,12 @@ class WaitOnTasksOperator(ActionOperator):
     def __init__(
             self, *,
             thoughts: List[Thought],
-            messages: List[MessageKind],
             reason: str = "",
             instruction: str = "",
     ):
         self.thoughts = thoughts
         super().__init__(
-            messages=messages,
+            messages=[],
             reason=reason,
             instruction=instruction,
         )
@@ -249,7 +248,7 @@ class ObserveOperator(ActionOperator):
         utils = g.utils()
         utils.send_task_event(
             task_id=task.task_id,
-            event_type=DefaultEventType.THINK.value,
+            event_type=DefaultEventType.OBSERVE.value,
             reason=self.reason,
             instruction=self.instruction,
             messages=observations,

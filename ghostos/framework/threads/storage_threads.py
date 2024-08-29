@@ -1,11 +1,13 @@
 from typing import Optional, Type
-from os.path import join
-from ghostos.core.session import MsgThread
-from ghostos.core.session.threads import Threads
+from ghostos.core.session import MsgThread, Threads
+from ghostos.core.ghosts import Workspace
 from ghostos.contracts.storage import Storage
+from ghostos.contracts.logger import LoggerItf
 from ghostos.helpers import yaml_pretty_dump
 from ghostos.container import Provider, Container
 import yaml
+
+__all__ = ['StorageThreads', 'StorageThreadsProvider', 'WorkspaceThreadsProvider']
 
 
 class StorageThreads(Threads):
@@ -13,19 +15,10 @@ class StorageThreads(Threads):
     def __init__(
             self, *,
             storage: Storage,
-            threads_dir: str,
-            namespace: str = "",
+            logger: LoggerItf
     ):
         self._storage = storage
-        self._threads_dir = threads_dir
-        self._namespace = namespace
-
-    def with_namespace(self, namespace: str) -> "Threads":
-        return StorageThreads(
-            storage=self._storage,
-            threads_dir=self._threads_dir,
-            namespace=namespace,
-        )
+        self._logger = logger
 
     def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:
         path = self._get_thread_filename(thread_id)
@@ -42,29 +35,19 @@ class StorageThreads(Threads):
         path = self._get_thread_filename(thread.id)
         saving = data_content.encode('utf-8')
         self._storage.put(path, saving)
-        if thread.path:
-            filepath = self._get_thread_defined_path_filename(thread.path)
-            self._storage.put(filepath, saving)
 
-    def _get_thread_filename(self, thread_id: str) -> str:
-        dir_ = self._threads_dir
-        if self._namespace:
-            dir_ = join(dir_, self._namespace)
-        filename = thread_id + ".thread.yaml"
-        filepath = join(dir_, filename)
-        return filepath
-
-    def _get_thread_defined_path_filename(self, path: str) -> str:
-        return path + ".thread.yaml"
+    @staticmethod
+    def _get_thread_filename(thread_id: str) -> str:
+        return thread_id + ".thread.yml"
 
     def fork_thread(self, thread: MsgThread) -> MsgThread:
-        raise NotImplementedError()
+        return thread.fork()
 
 
 class StorageThreadsProvider(Provider[Threads]):
 
-    def __init__(self, thread_dir: str = "runtime/threads"):
-        self._thread_dir = thread_dir
+    def __init__(self, threads_dir: str = "runtime/threads"):
+        self._threads_dir = threads_dir
 
     def singleton(self) -> bool:
         return True
@@ -74,4 +57,24 @@ class StorageThreadsProvider(Provider[Threads]):
 
     def factory(self, con: Container) -> Optional[Threads]:
         storage = con.force_fetch(Storage)
-        return StorageThreads(storage=storage, threads_dir=self._thread_dir)
+        threads_storage = storage.sub_storage(self._threads_dir)
+        logger = con.force_fetch(LoggerItf)
+        return StorageThreads(storage=threads_storage, logger=logger)
+
+
+class WorkspaceThreadsProvider(Provider[Threads]):
+
+    def __init__(self, namespace: str = "threads"):
+        self._namespace = namespace
+
+    def singleton(self) -> bool:
+        return True
+
+    def contract(self) -> Type[Threads]:
+        return Threads
+
+    def factory(self, con: Container) -> Optional[Threads]:
+        workspace = con.force_fetch(Workspace)
+        logger = con.force_fetch(LoggerItf)
+        threads_storage = workspace.runtime().sub_storage(self._namespace)
+        return StorageThreads(storage=threads_storage, logger=logger)

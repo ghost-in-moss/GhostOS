@@ -12,12 +12,12 @@ from ghostos.framework.operators.on_events import (
     # 上游相关事件. 
     OnUpstreamEventOperator,
     OnInputOperator,
-    OnCancelOperator,
+    OnCancelingOperator,
     OnCreatedOperator,
 
     # 自身的事件. 
     OnSelfEventOperator,
-    OnThinkOperator,
+    OnObserveOperator,
 
     # 下游的 callback 事件. 
     OnCallbackEventOperator,

@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Type, Iterable
 from ghostos.container import Provider, Container, ABSTRACT
-from ghostos.core.llms import Chat
+from ghostos.core.llms import Chat, ChatPreparer
+from ghostos.core.ghosts.actions import Action
 from ghostos.abc import Identifiable
 
 __all__ = ['Shell', 'ShellProvider']
@@ -25,7 +26,7 @@ class Env(Identifiable, ABC):
         pass
 
 
-class Shell(ABC):
+class Shell(ChatPreparer, ABC):
     """
     Shell 是对端侧能力的抽象.
     这些能力不是在 Ghost 里预定义的, 而是端侧可能动态变更的.
@@ -38,10 +39,17 @@ class Shell(ABC):
         pass
 
     @abstractmethod
-    def update_chat(self, chat: Chat) -> Chat:
+    def shell_prompt(self) -> str:
         """
         将端侧的信息注入到 Chat 中.
         这些讯息应该包含对自身和环境的感知信息.
+        """
+        pass
+
+    @abstractmethod
+    def actions(self) -> Iterable[Action]:
+        """
+        actions from the shell
         """
         pass
 

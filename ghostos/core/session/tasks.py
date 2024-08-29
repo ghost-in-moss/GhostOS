@@ -346,13 +346,9 @@ class Tasks(ABC):
     """
 
     @abstractmethod
-    def with_namespace(self, namespace: str) -> "Tasks":
-        pass
-
-    @abstractmethod
     def save_task(self, *tasks: Task) -> None:
         """
-        保存一个 task.
+        保存一个或者多个 task.
         """
         pass
 

@@ -1,6 +1,6 @@
 from typing import Optional, TYPE_CHECKING, List, Tuple
 from abc import ABC, abstractmethod
-from ghostos.entity import Entity, EntityMeta
+from ghostos.entity import Entity, EntityMeta, EntityFactory
 from ghostos.container import Container
 from ghostos.abc import Identifiable, Identifier
 from ghostos.contracts.logger import LoggerItf
@@ -9,7 +9,6 @@ from ghostos.contracts.storage import Storage
 from ghostos.core.session import Session, Event
 from ghostos.core.messages import Message, Caller, Role
 from ghostos.core.moss import MossCompiler
-from ghostos.core.llms import Chat
 from ghostos.helpers import generate_import_path
 from pydantic import BaseModel, Field
 
@@ -17,11 +16,12 @@ if TYPE_CHECKING:
     # 避免 python 文件管理风格导致的循环依赖.
     from ghostos.core.ghosts.utils import Utils
     from ghostos.core.ghosts.shells import Shell
-    from ghostos.core.ghosts.thoughts import Thoughts, Thought
+    from ghostos.core.ghosts.thoughts import Mindset, Thought
     from ghostos.core.ghosts.schedulers import MultiTask, Taskflow
     from ghostos.core.ghosts.operators import Operator
+    from ghostos.core.ghosts.workspace import Workspace
 
-__all__ = ['Ghost', 'Inputs']
+__all__ = ['Ghost', 'Inputs', 'GhostConf']
 
 
 class Inputs(BaseModel):
@@ -119,17 +119,16 @@ class Ghost(Identifiable, ABC):
 
     @abstractmethod
     def init_operator(self, event: "Event") -> Tuple["Operator", int]:
+        """
+        :param event: the initialize event
+        :return: the operator and max_operator_count
+        """
         pass
 
     @abstractmethod
-    def update_chat(self, chat: Chat) -> Chat:
+    def meta_prompt(self) -> str:
         """
-        将 Ghost 的 meta prompt 注入到 Chat 里.
-        update_chat 应该包含:
-        1. 注入 ghost 的自我认知.
-        2. 注入 ghost 的元指令.
-        3. 注入 shell 的描述.
-        4. 注入 thought 无关的通用工具.
+        Ghost 的 meta prompt, 自我认知的相关讯息.
         """
         pass
 
@@ -157,7 +156,7 @@ class Ghost(Identifiable, ABC):
         pass
 
     @abstractmethod
-    def thoughts(self) -> "Thoughts":
+    def mindset(self) -> "Mindset":
         """
         thoughts 管理所有的 Thoughts, 仍可以用来召回.
         """
@@ -175,6 +174,13 @@ class Ghost(Identifiable, ABC):
         """
         基于 modules 可以管理所有类库.
         通过预加载, 可以搜索存在的类库.
+        """
+        pass
+
+    @abstractmethod
+    def entity_factory(self) -> EntityFactory:
+        """
+        A factory that can make entity instances.
         """
         pass
 
@@ -211,7 +217,7 @@ class Ghost(Identifiable, ABC):
         pass
 
     @abstractmethod
-    def workspace(self) -> Storage:
+    def workspace(self) -> "Workspace":
         """
         返回 Ghost 所持有的文件空间.
         这里面的文件都是 Ghost 可以管理的.

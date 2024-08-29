@@ -1,12 +1,16 @@
-from typing import Optional, List, TypeVar, ClassVar, Generic, Type, Tuple
+from typing import Optional, TypeVar, Generic, Type, Iterable
 from abc import ABC, abstractmethod
 from ghostos.entity import Entity, EntityMeta, EntityFactory
+from ghostos.core.session import Event, thread_to_chat
+from ghostos.core.llms import LLMApi, prepare_chat, ChatPreparer, Chat
+from ghostos.core.messages import Role
 from ghostos.core.ghosts.ghost import Ghost
-from ghostos.core.session.events import Event
 from ghostos.core.ghosts.operators import Operator
-from ghostos.core.ghosts.runner import NewRunner
-from ghostos.abc import Identifiable, Identifier, IdentifiableClass
-from ghostos.helpers import uuid, generate_import_path
+from ghostos.core.ghosts.actions import Action
+from ghostos.abc import Identifiable, Identifier
+from ghostos.helpers import uuid
+
+__all__ = ['Thought', 'ThoughtDriver', 'LLMThoughtDriver', "Mindset"]
 
 
 class Thought(Identifiable, ABC):
@@ -18,49 +22,48 @@ class Thought(Identifiable, ABC):
     只要继承自 Thought 类, 就可以驱动思维.
     """
 
-    """
-    tips:
-    从工程设计的角度看, Thought 不要用继承的方式定义使用, 而应该用组合的方式.
-    每个 Thought 都应该是完备的 BaseModel. 不要使用继承. 
-    这样可以最好地自解释.
-    对于复杂度比较高的 Thought, 可以用函数来实现一些子封装. 
-    """
+    # tips:
+    # 从工程设计的角度看, Thought 不要用继承的方式定义使用, 而应该用组合的方式.
+    # 每个 Thought 都应该是完备的 BaseModel. 不要使用继承.
+    # 这样可以最好地自解释.
+    # 对于复杂度比较高的 Thought, 可以用函数来实现一些子封装.
 
-    __thought_entity__: ClassVar[Optional[Type["ThoughtEntity"]]] = None
+    __thought_driver__: Optional[Type["ThoughtDriver"]] = None
     """
     定义 Thought 类的Driver.
-    依照约定优先于配置, driver 为 None 时, 系统默认从 Thought 所属模块取 Thought.__name__ + 'Driver' 的类作为 Driver. 
+    依照约定优先于配置, driver 为 None 时, 系统默认从 Thought 所属模块取 Thought.__qualname__ + 'Driver' 的类作为 Driver. 
     """
 
     @abstractmethod
     def identifier(self) -> Identifier:
         """
-        生成一个 Identifier 的实例用来描述 Thought 的实例.
+        生成一个 Identifier 的实例用来描述 Thought 的状态.
         """
         pass
 
-    def to_entity(self) -> "ThoughtEntity":
+    @classmethod
+    def default_driver_type(cls) -> Type["ThoughtDriver"]:
         """
-        根据约定, 将 Thought 类封装到 Entity 对象里.
+        根据约定, 将 Thought 类封装到 Driver 对象里.
         :return:
         """
-        cls = self.__thought_entity__
-        if cls is None:
-            thought_cls = self.__class__
+        driver_type = cls.__thought_driver__
+        if driver_type is None:
+            thought_cls = cls
             name = thought_cls.__name__
-            expect_name = f"{name}Entity"
+            expect_name = f"{name}Driver"
             import inspect
             module = inspect.getmodule(thought_cls)
             if module is None or expect_name not in module.__dict__:
                 raise NotImplementedError(f"{expect_name} does not exists in {thought_cls.__module__}")
-            cls = module.__dict__[expect_name]
-        return cls(self)
+            driver_type = module.__dict__[expect_name]
+        return driver_type
 
 
 T = TypeVar("T", bound=Thought)
 
 
-class ThoughtEntity(Generic[T], Entity, IdentifiableClass, ABC):
+class ThoughtDriver(Generic[T], Entity, ABC):
     """
     ThoughtEntity 是 Thought 运行时生成的实例.
     实际上就是把 Python 的 Class 拆成了 Model (数据结构) + Driver (各种 methods)
@@ -77,25 +80,8 @@ class ThoughtEntity(Generic[T], Entity, IdentifiableClass, ABC):
         """
         self.thought: T = thought
 
-    @classmethod
     @abstractmethod
-    def class_identifier(cls) -> Identifier:
-        """
-        这里是 Driver 对自身的描述.
-        可以用来召回某种类型的 thought 类.
-        """
-        pass
-
-    @classmethod
-    def entity_type(cls) -> str:
-        """
-        ThoughtEntity 可以生成 EntityMeta, 这个方法返回它固定的 entity_type
-        用来反查 Driver.
-        """
-        return generate_import_path(cls)
-
-    @abstractmethod
-    def to_entity_meta(self) -> EntityMeta:
+    def to_entity_data(self) -> dict:
         """
         将 Thought 来生成 EntityMeta 对象.
         """
@@ -103,11 +89,12 @@ class ThoughtEntity(Generic[T], Entity, IdentifiableClass, ABC):
 
     @classmethod
     @abstractmethod
-    def from_entity_meta(cls, factory: EntityFactory, meta: EntityMeta) -> "ThoughtEntity":
+    def from_entity_meta(cls, factory: EntityFactory, meta: EntityMeta) -> "ThoughtDriver":
         """
         结合 Factory, 将一个 EntityMeta 反解成 ThoughtInstance.
         :param factory: 支持递归的生成 Thought 实例.
         :param meta: 原始数据.
+        :return: 自身的实例.
         """
         pass
 
@@ -130,7 +117,13 @@ class ThoughtEntity(Generic[T], Entity, IdentifiableClass, ABC):
         return None
 
 
-class BasicThoughtEntity(ThoughtEntity, ABC):
+class BasicThoughtDriver(ThoughtDriver, ABC):
+    @abstractmethod
+    def think(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        开始一轮思考.
+        """
+        pass
 
     def new_task_id(self, g: Ghost) -> str:
         # 如果生成的 task id 是不变的, 则在同一个 process 里是一个单例. 但要考虑互相污染的问题.
@@ -141,98 +134,174 @@ class BasicThoughtEntity(ThoughtEntity, ABC):
         基于 Thought 创建了 Task 时触发的事件.
         可以根据事件做必要的初始化.
         """
-        #  默认没有任何动作的话, 会执行 g.taskflow().observe()
-        return None
+        op = self.think(g, e)
+        if op is None:
+            op = g.taskflow().awaits()
+        return op
 
-    def on_finished(self, g: Ghost, e: Event) -> Optional[Operator]:
+    def on_canceling(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
-        当前 Thought 所生成的 task 结束之后, 会回调的事件.
-        可以用于反思.
+        当前任务被取消时. 如果返回非 None 的动作, 会取消默认的逻辑.
+        :param g:
+        :param e:
+        :return:
         """
-        # 默认没有任何动作.
         return None
 
     def on_input(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         接受到一个外部事件后执行的逻辑.
         """
-        return self._run_event(g, e)
+        op = self.think(g, e)
+        if op is None:
+            op = g.taskflow().awaits()
+        return op
+
+    def on_observe(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        自己触发的观察动作.
+        """
+        op = self.think(g, e)
+        if op is None:
+            op = g.taskflow().awaits()
+        return op
+
+    def on_finished(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        当前 Thought 所生成的 task 结束之后, 回调自己的反思逻辑.
+        """
+        return None
+
+    def on_failed(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        回调自己的反思逻辑.
+        """
+        return None
+
+    def on_finish_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        接受到了下游任务完成的回调.
+        """
+        return self.think(g, e)
+
+    def on_failure_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        接受到了下游任务失败的回调.
+        """
+        return self.think(g, e)
+
+    def on_wait_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        接受到了下游任务的提问, 需要回答.
+        """
+        return self.think(g, e)
+
+    def on_notify_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
+        """
+        一个下游的通知, 不需要做任何操作.
+        """
+        return None
+
+
+class LLMThoughtDriver(BasicThoughtDriver, ABC):
 
     @abstractmethod
-    def runner(self, g: Ghost, e: Event) -> NewRunner:
+    def get_llmapi(self, g: Ghost) -> LLMApi:
         """
-        生成一个 Runner 实例, 用来拆分最核心的可单测单元.
-        这样整个 ThoughtEntity 用来处理事件的加工逻辑, 而 Runner 真正运行大模型相关逻辑.
-        :param g: 拿到外部的 Ghost, 从而拿到包括 container 在内的核心 api
-        :param e: 可以根据具体的事件获得不同的 Runner.
+        get llm api from ghost
+
+        maybe:
+        llms = g.container.force_fetch(LLMs)
+        return llms.get_api(api_name)
         """
         pass
 
-    def _run_event(self, g: Ghost, e: Event) -> Optional[Operator]:
-        runner = self.runner(g, e)
+    @abstractmethod
+    def chat_preparers(self, g: Ghost, e: Event) -> Iterable[ChatPreparer]:
+        """
+        return chat preparers that filter chat messages by many rules.
+        """
+        pass
+
+    @abstractmethod
+    def actions(self, g: Ghost, e: Event) -> Iterable[Action]:
+        """
+        return actions that predefined in the thought driver.
+        """
+        pass
+
+    @abstractmethod
+    def instruction(self, g: Ghost, e: Event) -> str:
+        """
+        return thought instruction.
+        """
+        pass
+
+    def initialize_chat(self, g: Ghost, e: Event) -> Chat:
         session = g.session()
         thread = session.thread()
-        # thread 更新消息体.
-        thread.inputs = e.messages
-        # 执行 runner.
-        op = runner.run(g.container(), session)
-        return op
+        meta_prompt = g.meta_prompt()
+        shell_prompt = g.shell().shell_prompt()
+        thought_instruction = self.instruction(g, e)
+        content = "\n\n".join([meta_prompt, shell_prompt, thought_instruction])
+        # system prompt from thought
+        system_messages = [Role.SYSTEM.new(content=content)]
+        chat = thread_to_chat(e.id, system_messages, thread)
+        return chat
 
-    def on_finish_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
-        session = g.session
-        task = session.task()
-        awaiting = task.depending_tasks()
-        if e.from_task_id not in awaiting:
-            # todo: log
-            return None
-        # 添加消息.
-        messenger = g.messenger()
-        thread = session.thread()
-        thread.inputs = e.messages
+    def think(self, g: Ghost, e: Event) -> Optional[Operator]:
+        session = g.session()
+        container = g.container()
+        logger = g.logger()
 
-        fulfilled = task.update_awaits(e.from_task_id)
-        session.update_task(task)
+        # initialize chat
+        chat = self.initialize_chat(g, e)
 
-        op = None
-        if fulfilled:
-            runner = self.runner(g, e)
-            thread, op = runner.on_inputs(g.container, messenger, thread)
-        session.update_thread(thread)
-        return op
+        # prepare chat, filter messages.
+        preparers = self.chat_preparers(g, e)
+        chat = prepare_chat(chat, preparers)
 
-    def on_failure_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
-        return self._run_event(g, e)
+        # prepare actions
+        actions = list(g.shell().actions())
+        thought_actions = list(self.actions(g, e))
+        if thought_actions:
+            actions.extend(thought_actions)
+        action_map = {action.identifier().name: action for action in actions}
 
-    def on_wait_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
-        return self._run_event(g, e)
+        # prepare chat by actions
+        for action in actions:
+            chat = action.prepare_chat(chat)
+
+        # prepare llm api
+        llm_api = self.get_llmapi(g)
+
+        # prepare messenger
+        messenger = session.messenger()
+
+        # run llms
+        logger.info(f"start llm thinking")  # todo: logger
+        llm_api.deliver_chat_completion(chat, messenger)
+        messages, callers = messenger.flush()
+
+        # callback actions
+        for caller in callers:
+            if caller.name in action_map:
+                logger.info(f"llm response caller `{caller.name}` match action")
+                action = action_map[caller.name]
+                op = action.act(container, session, caller)
+                if op is not None:
+                    return op
+        return None
 
 
-class Thoughts(ABC):
+class Mindset(ABC):
     """
-    思维集合, 用来管理所有可以使用的 Thought 实例.
+    思维集合, 用来管理所有可以使用的 Thought 类.
     是一个可持续学习, 召回的记忆空间.
     """
 
     @abstractmethod
-    def make_thought_instance(self, meta: EntityMeta) -> Optional[ThoughtEntity]:
-        """
-        使用 meta 来获取一个 ThoughtEntity 实例. 其中也包含了 Thought 数据的实例.
-        :param meta: thought 生成的可序列化数据.
-        :return:
-        """
-        pass
-
-    def force_make_thought(self, meta: EntityMeta) -> ThoughtEntity:
-        """
-        语法糖.
-        """
-        instance = self.make_thought_instance(meta)
-        if instance is None:
-            raise ModuleNotFoundError(f'No Thoughts found for {meta}')
-        return instance
-
-    @abstractmethod
-    def register_thought_type(self, cls: Type[Thought], driver: Optional[Type[ThoughtEntity]] = None) -> None:
+    def register_thought_type(self, cls: Type[Thought], driver: Optional[Type[ThoughtDriver]] = None) -> None:
         """
         注册一个 thought class, 还可以替换它的 driver.
 
@@ -250,36 +319,26 @@ class Thoughts(ABC):
         """
         pass
 
-    @abstractmethod
-    def get_driver(self, cls: Type[Thought]) -> ThoughtEntity:
+    def get_thought_driver(self, thought: Thought) -> ThoughtDriver:
         """
         使用 Thought 的类反查 Driver.
-        :param cls:
+        """
+        driver_type = self.get_thought_driver_type(type(thought))
+        return driver_type(thought)
+
+    @abstractmethod
+    def get_thought_driver_type(self, thought_type: Type[Thought]) -> Type[ThoughtDriver]:
+        """
+        返回与 Thought 类型对应的 ThoughtDriver 类型.
+        :param thought_type:
         :return:
         """
         pass
 
     @abstractmethod
-    def recall_thought_type(
-            self,
-            # path: str,
-            # name: str,
-            # description: str,
-            recollection: str,
-            limit: int, offset: int = 0,
-    ) -> List[Tuple[Type[Thought], Identifier]]:
+    def thought_types(self) -> Iterable[Type[Thought]]:
         """
-        召回已经注册过的 thought 类, 和它对应 Driver 的 Identifier.
-        """
-        pass
-
-    @abstractmethod
-    def recall_thought_instance(self, description: str, limit: int, offset: int = 0) -> List[Thought]:
-        """
-        召回一个 Thought 的实例.
-        :param description:
-        :param limit:
-        :param offset:
+        遍历所有注册的 thought types.
         :return:
         """
         pass

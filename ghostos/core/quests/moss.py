@@ -90,7 +90,7 @@ class MossQuestAction(QuestAction):
         message = Role.SYSTEM.new(content="moss std output:\n" + content)
         thread.append()
         thread.new_turn(
-            DefaultEventType.THINK.new(
+            DefaultEventType.OBSERVE.new(
                 task_id=thread.id,
                 from_task_id=thread.id,
                 messages=[message],

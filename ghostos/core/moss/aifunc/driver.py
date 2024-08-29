@@ -185,7 +185,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                 messages = []
             pycontext = executed.pycontext
             thread.new_turn(
-                event=DefaultEventType.THINK.new(
+                event=DefaultEventType.OBSERVE.new(
                     messages=messages,
                     task_id=thread.id,
                     from_task_id=thread.id,
@@ -199,7 +199,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                 content=f"moss executed main, exception occurs: \n{exe_info}"
             )
             thread.new_turn(
-                event=DefaultEventType.THINK.new(
+                event=DefaultEventType.OBSERVE.new(
                     messages=[output_message],
                     task_id=thread.id,
                     from_task_id=thread.id,

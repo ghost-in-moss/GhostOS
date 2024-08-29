@@ -1,25 +1,35 @@
 from typing import Optional, List
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
-from ghostos.core.ghosts.thoughts import Thought
+from ghostos.core.ghosts.thoughts import Thought, ThoughtDriver
 from ghostos.core.session import (
-    Event, DefaultEventType, WaitGroup,
+    Event, DefaultEventType,
     Task, TaskState, Tasks,
 )
 
 from ghostos.core.messages import (
     MessageKind,
     MessageKindParser,
-    Message,
     Role,
 )
+from ghostos.entity import EntityMeta
 
 
 class Utils:
     def __init__(self, ghost: Ghost):
         self.ghost = ghost
 
+    def get_thought_entity_meta(self, thought: Thought) -> EntityMeta:
+        driver = self.get_thought_driver(thought)
+        return driver.to_entity_meta()
+
+    def get_thought_driver(self, thought: Thought) -> ThoughtDriver:
+        return self.ghost.mindset().get_thought_driver(thought)
+
     def initialize(self) -> Optional["Event"]:
+        """
+        initialize ghost
+        """
         session = self.ghost.session()
         process = session.process()
         if process.initialized:
@@ -27,13 +37,14 @@ class Utils:
         task_id = process.main_task_id
         root_thought = self.ghost.root_thought()
         identifier = root_thought.identifier()
+        meta = self.get_thought_entity_meta(root_thought)
         task = Task.new(
             task_id=task_id,
             session_id=session.id(),
             process_id=process.id,
             name=identifier.name,
             description=identifier.description,
-            meta=root_thought.to_entity().to_entity_meta(),
+            meta=meta,
             parent_task_id=None,
         )
         process.initialized = True
@@ -43,6 +54,10 @@ class Utils:
             task_id=task_id,
             messages=[],
         )
+
+    def fetch_thought_from_task(self, task: "Task") -> ThoughtDriver:
+        thought_driver = self.ghost.entity_factory().force_new_entity(task.meta, ThoughtDriver)
+        return thought_driver
 
     def handle_event(self, e: "Event") -> Optional["Operator"]:
         """
@@ -55,12 +70,11 @@ class Utils:
             raise AttributeError(f"event {e.task_id} does not belong to Task {task.task_id}")
 
         # regenerate the thought from meta
-        thoughts = self.ghost.thoughts()
-        thought_entity = thoughts.force_make_thought(task.meta)
+        thought_driver = self.fetch_thought_from_task(task)
         # handle event
-        op = thought_entity.on_event(self.ghost, e)
+        op = thought_driver.on_event(self.ghost, e)
         # update the task.meta from the thought that may be changed
-        task.meta = thought_entity.to_entity_meta()
+        task.meta = thought_driver.to_entity_meta()
         session.update_task(task, None, False)
         # return the operator that could be None (use default operator outside)
         return op
@@ -88,10 +102,10 @@ class Utils:
         parent_task_id = current_task.task_id
         children = []
         for thought in thoughts:
-            entity = thought.to_entity()
-            meta = entity.to_entity_meta()
+            driver = self.get_thought_driver(thought)
+            meta = driver.to_entity_meta()
             identifier = thought.identifier()
-            task_id = entity.new_task_id(self.ghost)
+            task_id = driver.new_task_id(self.ghost)
             child = current_task.add_child(
                 task_id=task_id,
                 name=identifier.name,
