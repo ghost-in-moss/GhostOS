@@ -5,6 +5,13 @@ from ghostos.core.moss import Moss
 from pydantic import Field
 
 
+class WeatherAIFunc(AIFunc):
+    """
+    tell about weather
+    """
+    pass
+
+
 class WeatherAIFuncResult(AIFuncResult):
     """
     weather result
@@ -22,18 +29,5 @@ class WeatherAIFuncResult(AIFuncResult):
 # <moss>
 
 
-class WeatherAIFunc(AIFunc):
-    """
-    tell about weather
-    """
-    request: str = Field(description="user's request about the weather.")
-
-
-def __aifunc_instruction__(fn: WeatherAIFunc) -> str:
-    return (
-        f"your request is: {fn.request}."
-    )
-
-
-example = WeatherAIFunc(request="北京明天究竟是什么天气哈？")
+example = WeatherAIFunc()
 # </moss>

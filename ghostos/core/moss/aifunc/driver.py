@@ -19,9 +19,9 @@ __all__ = [
 DEFAULT_AI_FUNC_PROMPT = """
 # Who Are You 
 
-You are an AIFunc named `{aifunc_name}`.
+You are an AIFunc named `{aifunc_class}`.
 AIFunc is a LLM-driven function that could complete request by multi-turns thinking,
-And your purpose is to generate AIFuncResult `{aifunc_result_type_name}` as final result.
+And your purpose is to generate AIFuncResult `{aifunc_result_class}` as final result.
 
 ## MOSS
 
@@ -35,15 +35,15 @@ The `PYTHON CONTEXT` that MOSS already provide to you are below:
 ```
 
 You shall generate a single block of Python code, 
-and in the code you shall defines a main function like: `def main(moss):`.
+and in the code you shall defines a main function like: 
+`def main(moss: Moss, fn: {aifunc_class}):`
 
-about the main function params and returns:
-:param moss: A Moss instance.
-:return: Tuple(result, ok) . 
-
-`result` shall be a instance of `__result_type__` or `None`;
-`ok` is boolean, True means you returned the result, 
-otherwise means you need to observe the output that you print in the function, and think another round.
+about the params and returns:
+:param moss: A Moss instance
+:param fn: An instance of {aifunc_class}
+:return: tuple[result, ok]
+If ok is False, means you need to observe the output that you print in the function, and think another round.
+If ok is True, means you finish the request and return a final result.
 
 The MOSS will automatically execute the main function you generated with the instance of class Moss, 
 take next step based on the returns. 
@@ -64,37 +64,43 @@ DEFAULT_NOTICES = """
 
 def default_aifunc_prompt(
         *,
-        aifunc_name: str,
-        aifunc_result_type_name: str,
+        aifunc_class: str,
+        aifunc_result_class: str,
         moss_code: str,
 ) -> str:
     return DEFAULT_AI_FUNC_PROMPT.format(
-        aifunc_name=aifunc_name,
-        aifunc_result_type_name=aifunc_result_type_name,
+        aifunc_class=aifunc_class,
+        aifunc_result_class=aifunc_result_class,
         moss_code=moss_code,
     )
 
 
 class DefaultAIFuncDriverImpl(AIFuncDriver):
 
-    def __init__(self, fn: AIFunc):
+    def __init__(self, fn: AIFunc, quest: str):
         self.error_times = 0
         self.max_error_times = 3
-        super().__init__(fn)
+        super().__init__(fn, quest)
 
     def name(self) -> str:
         return self.aifunc.__class__.__name__
 
     def initialize(self) -> MsgThread:
-        instruction = get_aifunc_instruction(self.aifunc)
         pycontext = get_aifunc_pycontext(self.aifunc)
-        system_message = Role.SYSTEM.new(
-            content=instruction,
-        )
-        event = DefaultEventType.THINK.new(
+        messages = []
+        instruction = get_aifunc_instruction(self.aifunc)
+        if instruction:
+            system_message = Role.SYSTEM.new(
+                content=instruction,
+            )
+            messages.append(system_message)
+        if self.quest:
+            messages.append(Role.USER.new(content=self.quest))
+
+        event = DefaultEventType.INPUT.new(
             task_id="",
             from_task_id="",
-            messages=[system_message],
+            messages=messages,
         )
         thread = MsgThread.new(
             event=event,
@@ -104,13 +110,13 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
     def generate_system_messages(self, runtime: MossRuntime) -> List[Message]:
         aifunc_cls = self.aifunc.__class__
-        aifunc_name = aifunc_cls.__name__
+        aifunc_class = aifunc_cls.__name__
         aifunc_result_type = get_aifunc_result_type(aifunc_cls)
-        aifunc_result_type_name = aifunc_result_type.__name__
+        aifunc_result_class = aifunc_result_type.__name__
         moss_code = runtime.prompter().dump_context_prompt()
         prompt = default_aifunc_prompt(
-            aifunc_name=aifunc_name,
-            aifunc_result_type_name=aifunc_result_type_name,
+            aifunc_class=aifunc_class,
+            aifunc_result_class=aifunc_result_class,
             moss_code=moss_code,
         )
         message = Role.SYSTEM.new(content=prompt)
@@ -164,7 +170,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         result = None
         # 运行 moss.
         try:
-            executed = runtime.execute(code=code, target='main', args=['moss'])
+            executed = runtime.execute(code=code, target='main', local_args=['moss'], kwargs={"fn": self.aifunc})
             result, finish = executed.returns
             if not isinstance(finish, bool):
                 raise RuntimeError(f"Result from main function {finish} is not boolean")

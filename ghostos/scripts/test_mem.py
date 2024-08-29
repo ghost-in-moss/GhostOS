@@ -39,7 +39,7 @@ def test_mem_exec():
     prompter = runtime.prompter()
     assert prompter is not None
 
-    result = runtime.execute(target="test_main", args=["moss"])
+    result = runtime.execute(target="test_main", local_args=["moss"])
     console = Console()
     for item in result:
         if isinstance(item, str):

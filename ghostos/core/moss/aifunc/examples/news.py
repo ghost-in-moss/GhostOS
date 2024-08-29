@@ -4,6 +4,13 @@ from pydantic import BaseModel, Field
 from ghostos.core.moss import Moss
 
 
+class NewsAIFunc(AIFunc):
+    """
+    search news
+    """
+    limit: int = Field(default=5, description="how many news you want.")
+
+
 class NewsAIFuncResult(AIFuncResult):
     """
     news result
@@ -18,23 +25,13 @@ class NewsAIFuncResult(AIFuncResult):
     results: List[News] = Field(default_factory=list)
 
 
-__result_type__ = NewsAIFuncResult
-
-
 # <moss>
-
-class NewsAIFunc(AIFunc):
-    """
-    search news
-    """
-    request: str = Field(description="user's request about the news he want.")
-    limit: int = Field(default=5, description="how many news you want.")
 
 
 def __aifunc_instruction__(fn: NewsAIFunc) -> str:
     return (
-        "Your task is **MOCK** a fake result from the function arguments, make it seems real."
-        f"your request is: {fn.request}, limit is {fn.limit}"
+        "Your task is **MOCKING** a result from the function arguments, make it seems real."
+        f"the limit of fn is {fn.limit}"
     )
 
 
