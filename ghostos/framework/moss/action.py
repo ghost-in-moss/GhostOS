@@ -95,7 +95,7 @@ Here is the context provided to you in this turn:
             name="moss",
         )
 
-    def update_chat(self, chat: Chat) -> Chat:
+    def prepare_chat(self, chat: Chat) -> Chat:
         # update functional tokens
         function_token = self._functional_token
         chat.functional_tokens.append(function_token)

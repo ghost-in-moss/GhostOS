@@ -14,12 +14,12 @@ __all__ = [
     # 上游相关事件.
     'OnUpstreamEventOperator',
     'OnInputOperator',
-    'OnCancelOperator',
+    'OnCancelingOperator',
     'OnCreatedOperator',
 
     # 自身的事件.
     'OnSelfEventOperator',
-    'OnThinkOperator',
+    'OnObserveOperator',
 
     # 下游的 callback 事件.
     'OnCallbackEventOperator',
@@ -42,7 +42,7 @@ class OnEventOperator(EventOperator):
             op = get_event_operator(
                 {
                     "": OnSelfEventOperator,
-                    OnThinkOperator.event_type: OnThinkOperator,
+                    OnObserveOperator.event_type: OnObserveOperator,
                 },
                 self.event,
             )
@@ -63,7 +63,7 @@ class OnEventOperator(EventOperator):
             op = get_event_operator(
                 {
                     "": OnUpstreamEventOperator,
-                    OnCancelOperator.event_type: OnCancelOperator,
+                    OnCancelingOperator.event_type: OnCancelingOperator,
                     OnInputOperator.event_type: OnInputOperator,
                     OnCreatedOperator.event_type: OnCreatedOperator,
                 },
@@ -95,7 +95,7 @@ class OnUpstreamEventOperator(EventOperator):
         task = session.task()
         # 默认 await.
         task.state = self.default_state
-        session.update_task(task, update_history=True)
+        session.update_task(task, None, update_history=True)
         return None
 
     def run(self, g: "Ghost") -> Optional["Operator"]:
@@ -192,7 +192,7 @@ class OnCreatedOperator(OnUpstreamEventOperator):
     default_state: ClassVar[str] = TaskState.WAITING.value
 
 
-class OnCancelOperator(OnUpstreamEventOperator):
+class OnCancelingOperator(OnUpstreamEventOperator):
     event_type = DefaultEventType.CANCELING.value
     default_state: ClassVar[str] = TaskState.CANCELLED.value
 
@@ -218,8 +218,8 @@ class OnCancelOperator(OnUpstreamEventOperator):
 
 # --- self event operators --- #
 
-class OnThinkOperator(OnSelfEventOperator):
-    event_type: ClassVar[str] = DefaultEventType.THINK.value
+class OnObserveOperator(OnSelfEventOperator):
+    event_type: ClassVar[str] = DefaultEventType.OBSERVE.value
     default_state: ClassVar[str] = TaskState.WAITING.value
 
 

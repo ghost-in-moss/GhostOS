@@ -74,7 +74,7 @@ class MossRunner(LLMRunner):
         actions = self.actions(container, thread)
         result_actions = []
         for action in actions:
-            chat = action.update_chat(chat)
+            chat = action.prepare_chat(chat)
             result_actions.append(action)
         # 进行一些消息级别的加工.
         filters = self.filters()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union
+from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable
 
 __all__ = [
     "Container", "IoCContainer",
@@ -82,6 +82,13 @@ class IoCContainer(metaclass=ABCMeta):
     def bound(self, contract: Type[ABSTRACT]) -> bool:
         """
         return whether contract is bound.
+        """
+        pass
+
+    @abstractmethod
+    def contracts(self, recursively: bool = True) -> Iterable[Type[ABSTRACT]]:
+        """
+        yield from bound contracts
         """
         pass
 
@@ -236,6 +243,17 @@ class Container(IoCContainer):
         """
         self._bind_contract(abstract)
         self._instances[abstract] = instance
+
+    def contracts(self, recursively: bool = True) -> Iterable[Type[ABSTRACT]]:
+        done = set()
+        for contract in self._bound:
+            done.add(contract)
+            yield contract
+        if recursively and self.parent is not None:
+            for contract in self.parent.contracts():
+                if contract not in done:
+                    done.add(contract)
+                    yield contract
 
     def destroy(self) -> None:
         """

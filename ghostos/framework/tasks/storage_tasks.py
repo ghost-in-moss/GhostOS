@@ -1,13 +1,13 @@
 from typing import Optional, List, Iterable, Dict, Type
 import yaml
-from ghostos.core.session import TaskState, TaskBrief, Task
-from ghostos.core.session.tasks import Tasks
+from ghostos.core.session import TaskState, TaskBrief, Task, Tasks
+from ghostos.core.ghosts import Workspace
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage
 from ghostos.container import Provider, Container
 from ghostos.helpers import uuid
 
-__all__ = ['StorageTasksImpl', 'StorageTasksImplProvider']
+__all__ = ['StorageTasksImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
 
 
 class StorageTasksImpl(Tasks):
@@ -96,4 +96,23 @@ class StorageTasksImplProvider(Provider[Tasks]):
         logger = con.force_fetch(LoggerItf)
         storage = con.force_fetch(Storage)
         tasks_storage = storage.sub_storage(self.tasks_dir)
+        return StorageTasksImpl(tasks_storage, logger)
+
+
+class WorkspaceTasksProvider(Provider[Tasks]):
+
+    def __init__(self, namespace: str = "tasks"):
+        self.namespace = namespace
+
+    def singleton(self) -> bool:
+        return True
+
+    def contract(self) -> Type[Tasks]:
+        return Tasks
+
+    def factory(self, con: Container) -> Optional[Tasks]:
+        workspace = con.force_fetch(Workspace)
+        runtime_storage = workspace.runtime()
+        tasks_storage = runtime_storage.sub_storage(self.namespace)
+        logger = con.force_fetch(LoggerItf)
         return StorageTasksImpl(tasks_storage, logger)

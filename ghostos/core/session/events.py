@@ -1,20 +1,19 @@
 from typing import List, Optional, Dict
 from abc import ABC, abstractmethod
 from enum import Enum
-from ghostos.entity import EntityMeta, Entity, EntityFactory
 from pydantic import BaseModel, Field
 from ghostos.core.messages.message import Message
 from ghostos.helpers import uuid
 from contextlib import contextmanager
 
 __all__ = [
-    'Event', 'EventFactory', 'EventBus', 'DefaultEventType',
+    'Event', 'EventBus', 'DefaultEventType',
 ]
 
 EVENT_ENTITY_TYPE = "ghostos.core.session.events.Event"
 
 
-class Event(BaseModel, Entity):
+class Event(BaseModel):
     """
     Tasks communicate each others by Event.
     Event shall dispatch by EventBus.
@@ -73,18 +72,8 @@ class Event(BaseModel, Entity):
     def no_reason_or_instruction(self) -> bool:
         return not self.reason and not self.instruction
 
-    def event_type(self) -> str:
-        return self.type
-
     def default_handler(self) -> str:
         return f"on_{self.event_type()}"
-
-    def to_entity_meta(self) -> EntityMeta:
-        return EntityMeta(
-            id=self.id,
-            type=EVENT_ENTITY_TYPE,
-            data=self.model_dump(exclude={'id'}, exclude_defaults=True)
-        )
 
     @classmethod
     def new(
@@ -123,7 +112,7 @@ class DefaultEventType(str, Enum):
     INPUT = "input"
     """外部对当前 task 的输入. """
 
-    THINK = "think"
+    OBSERVE = "observe"
     """自我驱动的思考"""
 
     CANCELING = "cancelling"
@@ -173,27 +162,6 @@ class DefaultEventType(str, Enum):
             eid=eid,
             payloads=payloads,
         )
-
-
-class EventFactory(EntityFactory):
-    """
-    使用 entity meta 反向生成 Event 实例.
-    """
-
-    def new_entity(self, meta_data: EntityMeta) -> Optional[Event]:
-        type_ = meta_data['type']
-        if type_ != EVENT_ENTITY_TYPE:
-            return None
-        id_ = meta_data['id']
-        data = meta_data['data']
-        data['id'] = id_
-        return Event(**data)
-
-    def force_new_event(self, meta_data: EntityMeta) -> Event:
-        e = self.new_entity(meta_data)
-        if e is None:
-            raise ValueError(f"Could not create event for {meta_data}")
-        return e
 
 
 class EventBus(ABC):

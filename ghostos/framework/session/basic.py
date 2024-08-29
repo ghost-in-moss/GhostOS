@@ -183,7 +183,7 @@ class BasicSession(Session):
             content=f"async call `{name}` with id `{future_id}`, wait for future callback.",
         )
         self.send_messages(system)
-        event = DefaultEventType.THINK.new(
+        event = DefaultEventType.OBSERVE.new(
             task_id=self._task.task_id,
             from_task_id=self._task.task_id,
             messages=[],

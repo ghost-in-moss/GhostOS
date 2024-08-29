@@ -1,18 +1,23 @@
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict, Any
 from abc import ABC, abstractmethod
 
 from ghostos.abc import Identifier
-from ghostos.container import Container, provide
+from ghostos.container import Container, provide, Provider
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.logger import LoggerItf
 from ghostos.core.ghosts import (
-    Ghost, Operator, Inputs, Shell, Thoughts, Thought,
-    MultiTask, Taskflow, Utils
+    Ghost, Operator, Inputs, Shell, Mindset, Thought,
+    MultiTask, Taskflow, Utils, Workspace
 )
+from ghostos.core.llms import LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.messages import Caller
-from ghostos.core.session import Session, Event, DefaultEventType
+from ghostos.core.session import (
+    Session, Event, DefaultEventType,
+    EventBus, Tasks, Processes, Threads, Messenger,
+)
+from ghostos.entity import EntityFactory, EntityFactoryImpl
 from ghostos.framework.operators import OnEventOperator
 from ghostos.framework.multitasks import MultiTaskBasicImpl
 from ghostos.framework.taskflow import TaskflowBasicImpl
@@ -31,7 +36,36 @@ class InputsPipe:
 
 
 class BasicGhost(Ghost, ABC):
+    """
+    Basic ghost implementation.
+    """
+
     inputs_pipes: List[InputsPipe] = []
+    """inputs pipes that can intercept inputs"""
+
+    providers: List[Provider] = []
+    """ providers that ghost container shall register"""
+
+    default_contracts: List[Any] = [
+        Session,
+        Shell,
+        LoggerItf,
+        Ghost,
+        Mindset,
+        Modules,
+        MultiTask,
+        Taskflow,
+        MossCompiler,
+        Utils,
+        Tasks,
+        Processes,
+        EventBus,
+        Messenger,
+        Threads,
+        LLMs,
+        EntityFactory,
+    ]
+    """default contracts that ghost container shall validate before start."""
 
     def __init__(
             self,
@@ -48,30 +82,23 @@ class BasicGhost(Ghost, ABC):
         self._shell = shell
         self._session = session
         self._root_thought = root_thought
+        self._entity_factory = None
         # 日志的加工.
         logger = container.force_fetch(LoggerItf)
         trace = self._make_trace(session, shell)
         ghost_logger = logger.with_trace(trace)
         self._logger = ghost_logger
         # 初始化 container 的相关绑定.
-        self._bootstrap_self_container()
-
-    def _bootstrap_self_container(self):
-        self._container.set(Ghost, self)
-        self._container.set(Shell, self._shell)
-        self._container.set(Session, self._session)
-        self._container.set(LoggerItf, self._logger)
-        self._container.register(provide(Thoughts, True)(lambda c: self.thoughts()))
-
-    def identifier(self) -> Identifier:
-        return self._identifier
+        self._bootstrap_ghost_container()
+        # 检查所有必须绑定的对象.
+        self._validate_default_contracts()
 
     @abstractmethod
     def meta_prompt(self) -> str:
         pass
 
     @abstractmethod
-    def thoughts(self) -> "Thoughts":
+    def mindset(self) -> "Mindset":
         pass
 
     @abstractmethod
@@ -79,8 +106,63 @@ class BasicGhost(Ghost, ABC):
         pass
 
     @abstractmethod
-    def workspace(self) -> Storage:
+    def workspace(self) -> Workspace:
         pass
+
+    def entity_factory(self) -> EntityFactory:
+        if self._entity_factory is None:
+            modules = self.modules()
+            self._entity_factory = EntityFactoryImpl(modules.import_module)
+        return self._entity_factory
+
+    def _bootstrap_ghost_container(self):
+        self._container.set(Ghost, self)
+        self._container.set(Shell, self._shell)
+        self._container.set(Session, self._session)
+        self._container.set(LoggerItf, self._logger)
+        # register ghost self modules.
+        self_function_providers = {
+            Mindset: self.mindset,
+            Modules: self.modules,
+            MultiTask: self.multitasks,
+            Taskflow: self.taskflow,
+            MossCompiler: self.moss,
+            Utils: self.utils,
+            EntityFactory: self.entity_factory,
+        }
+        for contract, maker in self_function_providers.items():
+            provider = provide(contract, False)(lambda c: maker())
+            self._container.register(provider)
+
+        # register session drivers:
+        session_function_providers = {
+            Tasks: self._session.tasks,
+            Processes: self._session.processes,
+            Messenger: self._session.messenger,
+            Threads: self._session.threads,
+            EventBus: self._session.eventbus,
+        }
+        for contract, maker in session_function_providers.items():
+            provider = provide(contract, False)(lambda c: maker())
+            self._container.register(provider)
+
+        # register shell drivers
+        for driver in self._shell.drivers():
+            provider = provide(driver, False)(lambda c: self._shell.get_driver(driver))
+            self._container.register(provider)
+
+        # register ghost providers
+        for provider in self.providers:
+            self._container.register(provider)
+        self._container.bootstrap()
+
+    def _validate_default_contracts(self):
+        for contract in self.default_contracts:
+            if not self._container.bound(contract):
+                raise NotImplementedError(f"Contract {contract} not bound to ghost container")
+
+    def identifier(self) -> Identifier:
+        return self._identifier
 
     def on_inputs(self, inputs: Inputs) -> Optional["Event"]:
         for pipe in self.inputs_pipes:

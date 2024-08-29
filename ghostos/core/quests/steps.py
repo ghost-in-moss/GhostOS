@@ -22,7 +22,7 @@ class ObserveOperator(QuestOperator):
             thread: MsgThread,
     ) -> Tuple[MsgThread, Optional["QuestOperator"]]:
         thread = thread.update_history()
-        thread.new_turn(DefaultEventType.THINK.new(
+        thread.new_turn(DefaultEventType.OBSERVE.new(
             task_id=thread.id,
             from_task_id=thread.id,
             messages=self.messages,

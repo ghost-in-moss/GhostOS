@@ -21,6 +21,9 @@ class Stream(ABC):
 
     @abstractmethod
     def is_streaming(self) -> bool:
+        """
+        if not streaming, only receive tail message
+        """
         pass
 
     @abstractmethod

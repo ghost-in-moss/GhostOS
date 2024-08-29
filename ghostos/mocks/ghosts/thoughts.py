@@ -1,12 +1,12 @@
 from typing import Optional, List
 
 from ghostos.abc import Identifier
-from ghostos.core.ghosts.thoughts import Thoughts, Thought
+from ghostos.core.ghosts.thoughts import Mindset, Thought
 from ghostos.entity import EntityMeta
 from ghostos.core.moss_p1.exports import Exporter
 
 
-class FakeThoughts(Thoughts):
+class FakeMindset(Mindset):
     def recall(self, description: str, limit: int = 10, offset: int = 0) -> List[Identifier]:
         return [
             Identifier(
@@ -29,4 +29,4 @@ class FakeThoughts(Thoughts):
         return None
 
 
-EXPORTS = Exporter().attr('mindset', FakeThoughts(), Thoughts)
+EXPORTS = Exporter().attr('mindset', FakeMindset(), Mindset)
