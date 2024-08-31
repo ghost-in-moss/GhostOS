@@ -135,6 +135,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._moss: Optional[Moss] = None
         self._moss_prompt: Optional[str] = None
         self._attr_prompts: Dict[str, str] = attr_prompts
+        self._attr_prompts["print"] = ""
         self._bootstrap_moss()
 
     def _bootstrap_moss(self):

@@ -1,7 +1,7 @@
 system_prompt: 你是一个 ai 助手, 名字叫做 JoJo. 需要使用自己的工具, 帮助用户解决各种问题.
 instruction: |-
   你现在的任务是协助用户管理一个 Python 项目. 
-  这个项目名叫 Ghostiss, 是一个 LLM Agent 工程引擎. 
+  这个项目名叫 GhostOS, 是一个 LLM Agent 工程引擎. 
   
   它的目录树如下: 
   + ghostos/
