@@ -1,0 +1,137 @@
+modulename: __main__
+filename: /Users/BrightRed/Develop/github.com/ghost-in-moss/GhostOS/ghostos/prototypes/ghostfunc/examples/plus.py.ghost_func.yml
+threads:
+  plus:
+    id: a236fb6e-da82-4507-bb89-df55c342d424
+    on_created:
+      turn_id: 4fd24a61-7e37-4eff-9f59-2d1e623e2c0c
+      event:
+        task_id: ''
+        type: observe
+        id: 4fd24a61-7e37-4eff-9f59-2d1e623e2c0c
+        from_task_id: ''
+        messages:
+        - msg_id: cd12b7de-823b-4d0d-b93b-6530a2cf96ea
+          created: 1725212996.5952
+          pack: false
+          role: system
+          content: |2-
+
+            # Instruction
+
+            You are a ghost function that produce dynamic python code in the runtime,
+            to fulfill a target function or method in the certain python context.
+
+            The python context is from module `__main__`, code details are below:
+            ```python
+
+
+
+            """
+
+            # information about values above:
+            @cls_source_code()
+            class Moss(ABC):
+                \"""
+                Language Model-oriented Operating System Simulation.
+                Full python code interface for large language models in multi-turns chat or thinking.
+                The property with SerializeType will persist during multi-turns.
+                SerializeType means: int, float, str, None, list, dict, BaseModel, TypedDict
+                You can edit them if you need.
+                \"""
+                pass
+
+
+            # value 'print':
+            def print(self, *args, **kwargs):
+                pass
+
+
+            # <func name='plus' path='ghostos.prototypes.ghostfunc.decorator:GhostFunc.decorator.<locals>.decorator.<locals>.wrapped'>
+            def plus(*args, **kwargs):
+                pass
+            # </func>
+
+            """
+
+            # Notice: type, method and values defined in the code above are immutable in multi-turns chat or thought.
+            # You are equipped with a MOSS interface below, which can inject module or define attributes in multi-turns.
+
+            ```
+
+            The target's `__qualname__` is `plus`, the definition is:
+
+            ```python
+            @ghost_func.decorator()
+            def plus(a: int, b: int) -> int:
+                """
+                :return: a + b
+                """
+                pass
+
+            ```
+
+            This function `plus` is the one you shall implements, but you shall not redefine it.
+            You need to generate a `__main__(args, kwargs)` function which will be automatic executed
+            in the outside system to fulfill the `plus`.
+            The arguments and returns of `__main__` are:
+            '''
+            :param args: the arguments list of the target function
+            :param kwargs: the keyword arguments of the target function
+            :return: tuple(result: any, ok: bool). result is defined by the target function.
+            If ok is True, means the result is the target function result, task completed.
+            If ok if False, result shall be None, and means you need to observe the printed std-output for observation.
+
+            The args, kwargs and result must be the same types as the target function defined.
+            '''
+
+            0. The code you generated shall start with `<moss>` and end with `</moss>`, the outside system will automatically execute the code between the mark.
+            1. You should try observation at least once to see the code you generated is correct. That means first time ok shall be False.
+            2. You shall only raise exceptions that defined in the the doc of the target function, otherwise you shall catch it and make an observation.
+            3. Once you feel your code is correct, generate a new one without any observation and return ok = True.
+            4. Cause you are in a runtime system that don't act like in a chat. Generate the code only please.
+            5. Remember you can observe the result first if you printed some values, and returns ok = True
+      pycontext:
+        generated: |2-
+
+          def __main__(args, kwargs):
+              try:
+                  a = args[0]
+                  b = args[1]
+                  return (a + b, True)
+              except Exception as e:
+                  print("Error:", e)
+                  return (None, False)
+        executed: true
+      created: 1725212996.5953
+    current:
+      turn_id: 81adedc7-5acb-4e83-b82f-d7fe8d366f22
+      generates:
+      - msg_id: 7ef63fb3-665d-4b5a-bd8a-318fd75a260f
+        type: chat_completion
+        created: 1725213003.6718
+        pack: false
+        content: |-
+          <moss>
+          def __main__(args, kwargs):
+              try:
+                  a = args[0]
+                  b = args[1]
+                  return (a + b, True)
+              except Exception as e:
+                  print("Error:", e)
+                  return (None, False)
+          </moss>
+      pycontext:
+        generated: |2-
+
+          def __main__(args, kwargs):
+              try:
+                  a = args[0]
+                  b = args[1]
+                  return (a + b, True)
+              except Exception as e:
+                  print("Error:", e)
+                  return (None, False)
+        executed: true
+      created: 1725213008.7625

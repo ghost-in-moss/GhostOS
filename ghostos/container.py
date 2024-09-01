@@ -167,9 +167,8 @@ class Container(IoCContainer):
 
         - params 感觉不需要.
         """
-        if not self._bootstrapped:
-            # 进行初始化.
-            self.bootstrap()
+        # 进行初始化.
+        self.bootstrap()
 
         if isinstance(abstract, Provider):
             return abstract.factory(self)

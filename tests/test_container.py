@@ -85,3 +85,14 @@ def test_sub_container():
     # 验证父子互不污染.
     assert container.force_fetch(Foo).foo == 1
     assert sub.force_fetch(Foo).foo == 2
+
+
+def test_boostrap():
+    container = Container()
+
+    class Foo:
+        foo: int = 1
+
+    container.set(Foo, Foo())
+    container.bootstrap()
+    assert container.force_fetch(Foo).foo == 1

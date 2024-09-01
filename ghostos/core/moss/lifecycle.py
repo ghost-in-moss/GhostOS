@@ -134,7 +134,7 @@ def __moss_exec__(
     target_module_attr = local_values.get(target, None)
 
     # 如果定义了参数, 就必须是 callable 方法.
-    has_args = local_args is not None or local_kwargs is not None
+    has_args = local_args is not None or local_kwargs is not None or args is not None or kwargs is not None
     if isinstance(target_module_attr, Callable):
         real_args = []
         real_kwargs = {}

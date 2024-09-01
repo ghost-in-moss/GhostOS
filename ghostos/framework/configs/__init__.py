@@ -1,0 +1,1 @@
+from ghostos.contracts.configs import ConfigsByStorageProvider
