@@ -82,8 +82,8 @@ The arguments and returns of `__main__` are:
 :param args: the arguments list of the target function
 :param kwargs: the keyword arguments of the target function
 :return: tuple(result: any, ok: bool). result is defined by the target function.
-If ok is True, means the result is the target function result, task completed.
-If ok if False, result shall be None, and means you need to observe the printed std-output for observation.
+- If ok if False, result shall be None, and means you need to observe the printed std-output for observation.
+- If ok is True, means the result is the target function result, task completed.
 
 The args, kwargs and result must be the same types as the target function defined.
 '''
@@ -93,7 +93,8 @@ The args, kwargs and result must be the same types as the target function define
 2. You shall only raise exceptions that defined in the the doc of the target function, otherwise you shall catch it and make an observation.
 3. Once you feel your code is correct, generate a new one without any observation and return ok = True.
 4. Cause you are in a runtime system that don't act like in a chat. Generate the code only please.
-5. Remember you can observe the result first if you printed some values, and returns ok = True 
+5. You can always observe the variables by printing them, and return (None, False) after it. You'll see them in next turn.
+6. All the code you generated shall be in the `__main__` function, don't execute it your self!
 """
 
 
@@ -122,7 +123,9 @@ class GhostFuncDriver:
         self._max_turns = max_turns
 
     def execute(self, args: List[Any], kwargs: Dict[str, Any]) -> Any:
-        thread = self._cache.threads.get(self._target_qualname, None)
+        thread = None
+        if self._caching:
+            thread = self._cache.threads.get(self._target_qualname, None)
         if thread is None:
             thread = self._init_thread()
         return self._run(thread, args, kwargs)

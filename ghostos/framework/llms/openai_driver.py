@@ -180,6 +180,7 @@ class OpenAIDriver(LLMDriver):
         return OPENAI_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
+        # todo: 不能这么 hack.
         if service.name in ("anthropic", "deepseek"):
             return LitellmAdapter(service, model, self._parser)
 

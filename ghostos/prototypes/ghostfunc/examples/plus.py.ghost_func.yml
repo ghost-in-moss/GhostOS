@@ -135,3 +135,266 @@ threads:
                   return (None, False)
         executed: true
       created: 1725213008.7625
+  get_weather:
+    id: dfb6825a-1847-43f6-839e-f235896b540b
+    on_created:
+      turn_id: f876b8c0-dd0d-40ec-9c00-a540802dd89e
+      event:
+        task_id: ''
+        type: observe
+        id: f876b8c0-dd0d-40ec-9c00-a540802dd89e
+        from_task_id: ''
+        messages:
+        - msg_id: 4c5aabbb-3fa8-4d02-abef-f4d407ce9a37
+          created: 1725216074.1322
+          pack: false
+          role: system
+          content: |2-
+
+            # Instruction
+
+            You are a ghost function that produce dynamic python code in the runtime,
+            to fulfill a target function or method in the certain python context.
+
+            The python context is from module `__main__`, code details are below:
+            ```python
+
+
+
+            """
+
+            # information about values above:
+            @cls_source_code()
+            class Moss(ABC):
+                \"""
+                Language Model-oriented Operating System Simulation.
+                Full python code interface for large language models in multi-turns chat or thinking.
+                The property with SerializeType will persist during multi-turns.
+                SerializeType means: int, float, str, None, list, dict, BaseModel, TypedDict
+                You can edit them if you need.
+                \"""
+                pass
+
+
+            # value 'print':
+            def print(self, *args, **kwargs):
+                pass
+
+
+            # <func name='plus' path='ghostos.prototypes.ghostfunc.decorator:GhostFunc.decorator.<locals>.decorator.<locals>.wrapped'>
+            def plus(*args, **kwargs):
+                pass
+            # </func>
+
+
+            # <func name='get_weather' path='ghostos.prototypes.ghostfunc.decorator:GhostFunc.decorator.<locals>.decorator.<locals>.wrapped'>
+            def get_weather(*args, **kwargs):
+                pass
+            # </func>
+
+            """
+
+            # Notice: type, method and values defined in the code above are immutable in multi-turns chat or thought.
+            # You are equipped with a MOSS interface below, which can inject module or define attributes in multi-turns.
+
+            ```
+
+            The target's `__qualname__` is `get_weather`, the definition is:
+
+            ```python
+            @ghost_func.decorator(caching=False)
+            def get_weather(city: str, date: str) -> str:
+                """
+                搜寻一个城市在给定日期的天气.
+                :param city: 城市名
+                :param date: 日期
+                :return: 关于天气的自然语言描述
+                """
+                # 你的任务是, 先观察用户输入的 city, date 是什么, 确定了它的值, 再输出真正的函数.
+                # 然后 mock 一个自然语言的天气描述结果, 用自然语言返回. 你使用的语言必须要和入参语种一致.
+                pass
+
+            ```
+
+            This function `get_weather` is the one you shall implements, but you shall not redefine it.
+            You need to generate a `__main__(args, kwargs)` function which will be automatic executed
+            in the outside system to fulfill the `get_weather`.
+            The arguments and returns of `__main__` are:
+            '''
+            :param args: the arguments list of the target function
+            :param kwargs: the keyword arguments of the target function
+            :return: tuple(result: any, ok: bool). result is defined by the target function.
+            - If ok if False, result shall be None, and means you need to observe the printed std-output for observation.
+            - If ok is True, means the result is the target function result, task completed.
+
+            The args, kwargs and result must be the same types as the target function defined.
+            '''
+
+            0. The code you generated shall start with `<moss>` and end with `</moss>`, the outside system will automatically execute the code between the mark.
+            1. You should try observation at least once to see the code you generated is correct. That means first time ok shall be False.
+            2. You shall only raise exceptions that defined in the the doc of the target function, otherwise you shall catch it and make an observation.
+            3. Once you feel your code is correct, generate a new one without any observation and return ok = True.
+            4. Cause you are in a runtime system that don't act like in a chat. Generate the code only please.
+            5. You can always observe the variables by printing them, and return (None, False) after it. You'll see them in next turn.
+            6. All the code you generated shall be in the `__main__` function, don't execute it your self!
+      pycontext:
+        generated: |2-
+
+          def __main__(args, kwargs):
+              city = kwargs.get('city', None)
+              date = kwargs.get('date', None)
+
+              if city is None and len(args) > 0:
+                  city = args[0]
+              if date is None and len(args) > 1:
+                  date = args[1]
+
+              # Mock weather description in natural language (assuming Chinese language input)
+              weather_description = f"{city}在{date}的天气是晴天，温度大约在25摄氏度左右。"
+
+              return (weather_description, True)
+        executed: true
+      created: 1725216074.1322
+    history:
+    - turn_id: 974fd5b1-e49c-445a-866b-59047c195116
+      generates:
+      - msg_id: 6ea10d8c-93fa-41c8-8d42-40d2efaed703
+        type: chat_completion
+        created: 1725216087.5566
+        pack: false
+        content: |-
+          ```python
+          <moss>
+          def __main__(args, kwargs):
+              city = kwargs.get('city', None)
+              date = kwargs.get('date', None)
+
+              print(f"city: {city}, date: {date}")
+
+              return (None, False)
+          </moss>
+          ```
+      pycontext:
+        generated: |2-
+
+          def __main__(args, kwargs):
+              city = kwargs.get('city', None)
+              date = kwargs.get('date', None)
+
+              if city is None and len(args) > 0:
+                  city = args[0]
+              if date is None and len(args) > 1:
+                  date = args[1]
+
+              # Mock weather description in natural language (assuming Chinese language input)
+              weather_description = f"{city}在{date}的天气是晴天，温度大约在25摄氏度左右。"
+
+              return (weather_description, True)
+        executed: true
+      created: 1725216087.557
+    - turn_id: 2ad38ff4-4819-4c91-9374-3982ec7c12d0
+      event:
+        task_id: ''
+        type: observe
+        id: 2ad38ff4-4819-4c91-9374-3982ec7c12d0
+        from_task_id: ''
+        messages:
+        - msg_id: a515a4de-3cc0-4950-a5e4-576421c3e01d
+          created: 1725216099.6951
+          pack: false
+          role: system
+          content: 'city: None, date: None'
+      generates:
+      - msg_id: f6a4875e-ac1b-469d-a13c-faaef16d5f06
+        type: chat_completion
+        created: 1725216102.9182
+        pack: false
+        content: |-
+          ```python
+          <moss>
+          def __main__(args, kwargs):
+              city = kwargs.get('city', None)
+              date = kwargs.get('date', None)
+
+              if city is None and len(args) > 0:
+                  city = args[0]
+              if date is None and len(args) > 1:
+                  date = args[1]
+
+              print(f"city: {city}, date: {date}")
+
+              return (None, False)
+          </moss>
+          ```
+      pycontext:
+        generated: |2-
+
+          def __main__(args, kwargs):
+              city = kwargs.get('city', None)
+              date = kwargs.get('date', None)
+
+              if city is None and len(args) > 0:
+                  city = args[0]
+              if date is None and len(args) > 1:
+                  date = args[1]
+
+              # Mock weather description in natural language (assuming Chinese language input)
+              weather_description = f"{city}在{date}的天气是晴天，温度大约在25摄氏度左右。"
+
+              return (weather_description, True)
+        executed: true
+      created: 1725216099.6952
+    current:
+      turn_id: 4ce815ad-c562-4e41-b801-24e284a3f2aa
+      event:
+        task_id: ''
+        type: observe
+        id: 4ce815ad-c562-4e41-b801-24e284a3f2aa
+        from_task_id: ''
+        messages:
+        - msg_id: cdf87f7b-7c24-4cc2-9563-fcff2183542c
+          created: 1725216134.934
+          pack: false
+          role: system
+          content: 'city: 长沙, date: 后天'
+      generates:
+      - msg_id: 6e537746-9288-4a87-8ef0-49300f6fb514
+        type: chat_completion
+        created: 1725216139.1454
+        pack: false
+        content: |-
+          ```python
+          <moss>
+          def __main__(args, kwargs):
+              city = kwargs.get('city', None)
+              date = kwargs.get('date', None)
+
+              if city is None and len(args) > 0:
+                  city = args[0]
+              if date is None and len(args) > 1:
+                  date = args[1]
+
+              # Mock weather description in natural language (assuming Chinese language input)
+              weather_description = f"{city}在{date}的天气是晴天，温度大约在25摄氏度左右。"
+
+              return (weather_description, True)
+          </moss>
+          ```
+      pycontext:
+        generated: |2-
+
+          def __main__(args, kwargs):
+              city = kwargs.get('city', None)
+              date = kwargs.get('date', None)
+
+              if city is None and len(args) > 0:
+                  city = args[0]
+              if date is None and len(args) > 1:
+                  date = args[1]
+
+              # Mock weather description in natural language (assuming Chinese language input)
+              weather_description = f"{city}在{date}的天气是晴天，温度大约在25摄氏度左右。"
+
+              return (weather_description, True)
+        executed: true
+      created: 1725216134.9343
