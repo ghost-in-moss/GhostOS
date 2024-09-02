@@ -37,6 +37,16 @@ class PyContext(BaseModel):
         description="在上下文中定义的变量. 会注入到 MOSS 上. 修改后也会保存到 pycontext 里. ",
     )
 
+    generated: Optional[str] = Field(
+        default=None,
+        description="the generated python code on this context",
+    )
+
+    executed: bool = Field(
+        default=False,
+        description="if the generated code is executed",
+    )
+
     def inject(self, injected: "Injection") -> None:
         self.injections[injected.import_from] = injected
 

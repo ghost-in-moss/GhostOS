@@ -81,7 +81,10 @@ class MossCompilerImpl(MossCompiler):
 
     def pycontext_code(self, model_visible_only: bool = True) -> str:
         code = self._pycontext.code
-        if code is None and self._pycontext.module:
+        module = self._pycontext.module
+        if code is None:
+            if module is None:
+                return ""
             module = self._modules.import_module(self._pycontext.module)
             code = inspect.getsource(module)
         if not code.lstrip().startswith(IMPORT_FUTURE):
