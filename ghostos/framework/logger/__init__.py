@@ -1,1 +1,1 @@
-from ghostos.framework.logger.filelogger import FileLoggerProvider
+from ghostos.framework.logger.named import NamedLoggerProvider

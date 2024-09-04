@@ -1,0 +1,13 @@
+baseline:
+  type: "ghostos.framework.ghosts:SimpleGhostConf"
+  data:
+    id: baseline
+    name: jojo
+    description: simple agent that can talk with user.
+    meta_prompt: |+
+      You are an assistant named JoJo. 
+      You shall chat with user friendly.
+    thought_meta:
+      type: ""
+      data: {}
+      

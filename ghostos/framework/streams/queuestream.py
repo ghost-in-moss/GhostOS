@@ -3,6 +3,8 @@ from typing import Iterable
 from ghostos.core.messages import Stream, Message, DefaultMessageTypes
 from queue import Queue
 
+__all__ = ["QueueStream"]
+
 
 class QueueStream(Stream):
 
@@ -21,7 +23,8 @@ class QueueStream(Stream):
                 self._queue.put(pack, block=True)
             return True
         elif self._streaming and not pack.is_tail():
-            return False
+            # 不发送间包, 只发送尾包.
+            return True
         else:
             self._queue.put(pack, block=True)
             return True
@@ -38,6 +41,3 @@ class QueueStream(Stream):
 
     def stopped(self) -> bool:
         return self._stopped
-
-
-

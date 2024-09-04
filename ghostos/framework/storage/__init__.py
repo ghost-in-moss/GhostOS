@@ -1,1 +1,1 @@
-from ghostos.framework.storage.filestorage import FileStorageProvider
+from ghostos.framework.storage.filestorage import FileStorageProvider, FileStorage
