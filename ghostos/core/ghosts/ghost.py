@@ -1,15 +1,15 @@
-from typing import Optional, TYPE_CHECKING, List, Tuple
+from typing import Optional, TYPE_CHECKING, List, Tuple, Dict
 from abc import ABC, abstractmethod
-from ghostos.entity import Entity, EntityMeta, EntityFactory
+from ghostos.entity import ModelEntity, EntityMeta, EntityFactory
 from ghostos.container import Container
 from ghostos.abc import Identifiable, Identifier
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.modules import Modules
-from ghostos.contracts.storage import Storage
+from ghostos.contracts.configs import Configs
 from ghostos.core.session import Session, Event
 from ghostos.core.messages import Message, Caller, Role
 from ghostos.core.moss import MossCompiler
-from ghostos.helpers import generate_import_path
+from ghostos.core.llms import LLMs
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from ghostos.core.ghosts.schedulers import MultiTask, Taskflow
     from ghostos.core.ghosts.operators import Operator
     from ghostos.core.ghosts.workspace import Workspace
+    from ghostos.core.ghosts.actions import Action
 
 __all__ = ['Ghost', 'Inputs', 'GhostConf']
 
@@ -29,7 +30,7 @@ class Inputs(BaseModel):
     定义一个标准的请求协议.
     """
 
-    trace: str = Field(
+    trace_id: str = Field(
         default="",
         description="inputs 的 trace id, 应该记录到日志中, 贯穿整个流程.",
     )
@@ -37,14 +38,13 @@ class Inputs(BaseModel):
         description="session id",
     )
 
-    ghost_meta: EntityMeta = Field(
-        description="ghost 的配置信息. 指定了响应请求的 Ghost.",
+    ghost_id: str = Field(
+        description="ghost id",
     )
 
     messages: List[Message] = Field(
         description="本轮请求真正的输入数据. 不应该为空. "
     )
-
     process_id: Optional[str] = Field(
         default=None,
         description="指定响应时进程的 id. 如果目标进程存在, 则用它响应. ",
@@ -53,59 +53,40 @@ class Inputs(BaseModel):
         default=None,
         description="指定响应的 task id. 如果目标 task 存在, 则用它来响应. ",
     )
-    thought_meta: Optional[str] = Field(
-        default=None,
-        description="",
-    )
 
 
-class GhostConf(BaseModel, Entity, ABC):
-
-    def ghost_id(self) -> str:
-        pass
-
-    def to_entity_meta(self) -> EntityMeta:
-        id_ = self.ghost_id()
-        type_ = generate_import_path(self.__class__)
-        return EntityMeta(
-            id=id_,
-            type=type_,
-            data=self.model_dump(exclude_defaults=True),
-        )
+class GhostConf(ModelEntity, Identifiable, ABC):
+    """
+    configuration of the ghost
+    """
 
     @abstractmethod
-    def make_ghost(self, container: Container, session: Session) -> "Ghost":
-        """
-        实例化 Ghost.
-        :param container: 需要传入的外部容器.
-        :param session: Session 优先于 Ghost 生成.
-        :return:
-        """
+    def root_thought_meta(self) -> EntityMeta:
         pass
 
-    def instance_ghost(self, container: Container, session: Session) -> "Ghost":
-        """
-        实例化 Ghost.
-        :param container:
-        :param session:
-        """
-        ghost = self.make_ghost(container, session)
-        identifier = ghost.identifier()
-        session.with_ghost(name=identifier.name, role=ghost.role())
-        return ghost
 
-
-class Ghost(Identifiable, ABC):
+class Ghost(ABC):
 
     @abstractmethod
-    def identifier(self) -> Identifier:
+    def conf(self) -> GhostConf:
         """
-        Ghost 的自我描述. 可能用来生成 prompt.
+        get conf instance.
         """
         pass
 
-    def role(self) -> str:
+    @staticmethod
+    def role() -> str:
+        """
+        role of this ghost instance.
+        """
         return Role.ASSISTANT.value
+
+    @abstractmethod
+    def trace(self) -> Dict[str, str]:
+        """
+        trance of the current ghost instance.
+        """
+        pass
 
     @abstractmethod
     def on_inputs(self, inputs: Inputs) -> Optional["Event"]:
@@ -131,6 +112,24 @@ class Ghost(Identifiable, ABC):
         Ghost 的 meta prompt, 自我认知的相关讯息.
         """
         pass
+
+    def system_prompt(self) -> str:
+        """
+        system prompt of the ghost.
+        """
+        meta_prompt = self.meta_prompt()
+        shell_prompt = self.shell().shell_prompt()
+        content = "\n\n".join([meta_prompt, shell_prompt])
+        return content.strip()
+
+    def actions(self) -> List["Action"]:
+        """
+        ghost default actions
+        """
+        session = self.session()
+        if session.task().task_id == session.process().main_task_id:
+            return list(self.shell().actions())
+        return []
 
     @abstractmethod
     def container(self) -> Container:
@@ -175,6 +174,10 @@ class Ghost(Identifiable, ABC):
         基于 modules 可以管理所有类库.
         通过预加载, 可以搜索存在的类库.
         """
+        pass
+
+    @abstractmethod
+    def llms(self) -> LLMs:
         pass
 
     @abstractmethod
@@ -225,6 +228,13 @@ class Ghost(Identifiable, ABC):
         pass
 
     @abstractmethod
+    def configs(self) -> Configs:
+        """
+        Configs
+        """
+        pass
+
+    @abstractmethod
     def utils(self) -> "Utils":
         """
         Ghost 的
@@ -241,10 +251,14 @@ class Ghost(Identifiable, ABC):
         pass
 
     @abstractmethod
-    def done(self) -> None:
+    def save(self) -> None:
         """
         Ghost 完成运行.
         """
+        pass
+
+    @abstractmethod
+    def done(self) -> None:
         pass
 
     @abstractmethod

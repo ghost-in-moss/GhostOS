@@ -205,6 +205,10 @@ class EventBus(ABC):
         """
         pass
 
+    @abstractmethod
+    def clear_task(self, task_id: str) -> None:
+        pass
+
     @contextmanager
     def transaction(self):
         yield
