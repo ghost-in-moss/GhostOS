@@ -259,6 +259,11 @@ class Ghost(ABC):
 
     @abstractmethod
     def done(self) -> None:
+        """
+        1. save session.
+        2. unlock task
+        3. send final pack
+        """
         pass
 
     @abstractmethod

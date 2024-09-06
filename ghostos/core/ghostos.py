@@ -2,8 +2,8 @@ from typing import Optional
 from abc import ABC, abstractmethod
 from ghostos.entity import EntityMeta
 from ghostos.core.messages import Stream
-from ghostos.core.session import EventBus, Event, Tasks, Task, Process, Processes
-from ghostos.core.ghosts import Ghost, Inputs
+from ghostos.core.session import EventBus, Event, Tasks, Task, Process, Processes, DefaultEventType
+from ghostos.core.ghosts import Ghost, GhostConf, Inputs
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.shutdown import Shutdown
 from ghostos.container import Container
@@ -18,6 +18,21 @@ class GhostOS(ABC):
     def container(self) -> Container:
         """
         global default container.
+        """
+        pass
+
+    @abstractmethod
+    def register(self, ghost_conf: GhostConf) -> None:
+        """
+        register a ghost_conf into the container.
+        :param ghost_conf: the meta of the ghost conf shall be able to create ghost in this ghost os.
+        """
+        pass
+
+    @abstractmethod
+    def get_ghost_meta(self, ghost_id: str) -> Optional[EntityMeta]:
+        """
+        get ghost meta by ghost id
         """
         pass
 
@@ -40,13 +55,6 @@ class GhostOS(ABC):
         pass
 
     @abstractmethod
-    def get_ghost_meta(self, ghost_id: str) -> Optional[EntityMeta]:
-        """
-        get ghost meta by ghost id
-        """
-        pass
-
-    @abstractmethod
     def make_ghost(
             self, *,
             upstream: Stream,
@@ -64,7 +72,12 @@ class GhostOS(ABC):
         """
         pass
 
-    def on_inputs(self, inputs: Inputs, upstream: Stream, is_async: bool = False) -> None:
+    def on_inputs(
+            self,
+            inputs: Inputs,
+            upstream: Stream,
+            is_async: bool = False,
+    ) -> None:
         """
         handle and inputs by ghostos. GhostOS will:
         1. check the inputs, intercept it if necessary
@@ -81,16 +94,6 @@ class GhostOS(ABC):
     def background_run(self, upstream: Stream) -> None:
         """
         尝试从 EventBus 中获取一个 task 的信号, 并运行它.
-        """
-        pass
-
-    @abstractmethod
-    def background_run_ghost(self, ghost: Ghost) -> None:
-        """
-        run ghost in background:
-        1. pop task event from eventbus in loop
-        2. run until ghost session is not alive. which means upstream is stopped or lock is released.
-        :param ghost: the ghost instance that has a task level session.
         """
         pass
 
@@ -178,14 +181,19 @@ class AbsGhostOS(GhostOS, ABC):
             )
         return proc
 
-    def on_inputs(self, inputs: Inputs, upstream: Stream, is_async: bool = False) -> None:
+    def on_inputs(
+            self,
+            inputs: Inputs,
+            upstream: Stream,
+            is_async: bool = False,
+    ) -> str:
         """
         处理同步请求. deliver 的实现应该在外部.
         这个方法是否异步执行, 也交给外部判断.
         :param inputs: 同步请求的参数.
         :param upstream: 对上游输出的 output
         :param is_async: 是否异步运行.
-        :returns: 返回一个闭包, 执行它会真正运转 ghost. 直到它的返回值为 false.
+        :returns: task_id
         """
         # 获取基本参数.
         session_id = inputs.session_id
@@ -194,7 +202,7 @@ class AbsGhostOS(GhostOS, ABC):
             raise NotImplementedError(f"ghost {inputs.ghost_id} does not defined")
         # 寻找已经存在的进程.
         proc = self.get_or_create_process(
-            ghost_meta=inputs.ghost_meta,
+            ghost_meta=ghost_meta,
             session_id=session_id,
             process_id=inputs.process_id,
             task_id=inputs.task_id,
@@ -206,15 +214,17 @@ class AbsGhostOS(GhostOS, ABC):
             # pre-process input. stateless. if event is None, inputs was intercepted.
             event = ghost.on_inputs(inputs)
             if event is None:
-                return
+                return ""
 
             # 发送事件.
             eventbus = self._eventbus()
-            should_notify = is_async  # only async ghost inputs shall send notification.
-            eventbus.send_event(event, notify=should_notify)
             if not is_async:
-                self.background_run_ghost(ghost)
-            ghost.done()
+                self.handle_ghost_event(ghost=ghost, event=event)
+                ghost.done()
+            else:
+                ghost.done()
+                eventbus.send_event(event, notify=True)
+                return event.task_id
         except Exception as e:
             ghost.fail(e)
             if self.on_error(e):
@@ -222,31 +232,32 @@ class AbsGhostOS(GhostOS, ABC):
         finally:
             ghost.destroy()
 
-    def background_run(self, upstream: Stream) -> None:
+    def background_run(self, upstream: Stream) -> bool:
         """
         尝试从 EventBus 中获取一个 task 的信号, 并运行它.
         """
         try:
-            while not upstream.stopped():
-                # 暂时不传递 timeout.
-                self._background_run(upstream)
+            # 暂时不传递 timeout.
+            return self._background_run(upstream)
         except Exception as e:
             if self.on_error(e):
                 raise
 
-    def _background_run(self, upstream: Stream) -> None:
+    def _background_run(self, upstream: Stream) -> bool:
         """
         尝试从 eventbus 里 pop 一个事件, 然后运行.
         外部系统应该管理所有资源分配, 超时的逻辑.
         """
         eventbus = self._eventbus()
         # at least one success.
-        while not upstream.stopped():
-            task_id = eventbus.pop_task_notification()
-            # 没有读取到任何全局任务.
-            if task_id is None:
-                return
-            self._background_run_task(upstream=upstream, task_id=task_id)
+        task_id = eventbus.pop_task_notification()
+        # 没有读取到任何全局任务.
+        if task_id is None:
+            return False
+        success = self._background_run_task(upstream=upstream, task_id=task_id)
+        if not success:
+            eventbus.notify_task(task_id)
+        return success
 
     def _background_run_task(
             self, *,
@@ -261,6 +272,8 @@ class AbsGhostOS(GhostOS, ABC):
         """
         tasks = self._tasks()
         task = tasks.get_task(task_id, lock=True)
+        if task is None:
+            return False
         lock = task.lock
         locked = lock is not None
         # task 没有抢到锁.
@@ -272,32 +285,25 @@ class AbsGhostOS(GhostOS, ABC):
         # process is quited
         if proc.quited:
             self._eventbus().clear_task(task_id)
-            return False
+            return True
         ghost = self.make_ghost(upstream=upstream, process=proc, task=task)
         try:
-            self.background_run_ghost(ghost)
+            if not ghost.session().refresh_lock():
+                return False
+
+            eventbus = self._eventbus()
+            e = eventbus.pop_task_event(task_id)
+            if e is None:
+                return True
+            self.handle_ghost_event(ghost=ghost, event=e)
             ghost.done()
+            return True
         except Exception as e:
             ghost.fail(e)
             raise
         finally:
             # 任何时间都要解锁.
             ghost.destroy()
-
-    def background_run_ghost(self, ghost: Ghost) -> None:
-        _continue = True
-        eventbus = self._eventbus()
-        task_id = ghost.session().task().task_id
-        while _continue:
-            e = eventbus.pop_task_event(task_id)
-            if e is None:
-                # 中断运行, 并且退出.
-                return
-
-            self.handle_ghost_event(ghost=ghost, event=e)
-            _continue = ghost.session().alive() and ghost.session().refresh_lock()
-        # 保证至少检查一轮.
-        eventbus.notify_task(task_id=task_id)
 
     def handle_ghost_event(self, *, ghost: Ghost, event: Event) -> None:
         """
@@ -307,9 +313,11 @@ class AbsGhostOS(GhostOS, ABC):
         :return:
         """
         # 先按需做初始化.
-        on_ghost_created = ghost.utils().initialize(event.messages)
-        if on_ghost_created is not None:
-            self._handle_ghost_event(ghost=ghost, event=on_ghost_created)
+        if event.type == DefaultEventType.INPUT:
+            on_ghost_created = ghost.utils().initialize(event.messages)
+            if on_ghost_created is not None:
+                self._handle_ghost_event(ghost=ghost, event=on_ghost_created)
+                return
         self._handle_ghost_event(ghost=ghost, event=event)
 
     @staticmethod

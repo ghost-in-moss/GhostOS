@@ -29,7 +29,7 @@ class ActionOperator(Operator):
     3. 如果父任务存在, 向父任务发送消息.
     """
     task_state: ClassVar[str] = TaskState.WAITING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK
+    callback_event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK.value
 
     def __init__(
             self, *,
@@ -93,7 +93,7 @@ class ActionOperator(Operator):
 
 class WaitsOperator(ActionOperator):
     task_state: ClassVar[str] = TaskState.WAITING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK
+    callback_event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK.value
 
     def __init__(self, *, reason: str, messages: List[MessageKind]):
         super().__init__(reason=reason, messages=messages)
@@ -109,7 +109,7 @@ class FailOperator(ActionOperator):
     5. 自己继续执行 on_finished 事件, 可以创建独立的任务去理解.
     """
     task_state: ClassVar[str] = TaskState.FAILED.value
-    callback_event_type: ClassVar[str] = DefaultEventType.FAILURE_CALLBACK
+    callback_event_type: ClassVar[str] = DefaultEventType.FAILURE_CALLBACK.value
 
     def __init__(
             self, *,
@@ -151,7 +151,7 @@ class FinishOperator(ActionOperator):
     5. 自己继续执行 on_finished 事件, 可以创建独立的任务去理解.
     """
     task_state: ClassVar[str] = TaskState.FINISHED.value
-    callback_event_type: ClassVar[str] = DefaultEventType.FINISH_CALLBACK
+    callback_event_type: ClassVar[str] = DefaultEventType.FINISH_CALLBACK.value
 
     def __init__(
             self, *,
@@ -188,7 +188,7 @@ class FinishOperator(ActionOperator):
 
 class WaitOnTasksOperator(ActionOperator):
     task_state: ClassVar[str] = TaskState.RUNNING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK
+    callback_event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK.value
 
     def __init__(
             self, *,
@@ -221,7 +221,7 @@ class ObserveOperator(ActionOperator):
     运行下一轮思考.
     """
     task_state: ClassVar[str] = TaskState.RUNNING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK
+    callback_event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK.value
 
     def __init__(
             self, *,

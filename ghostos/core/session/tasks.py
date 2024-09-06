@@ -124,8 +124,8 @@ The meta data to restore the handler of this task.
     )
 
     # --- state --- #
-    state: TaskState = Field(
-        default=TaskState.NEW,
+    state: str = Field(
+        default=TaskState.NEW.value,
         description="""
 the state of the current task.
 """
@@ -190,7 +190,7 @@ the state of the current task.
             parent_task_id: Optional[str] = None,
     ) -> "Task":
         return Task(
-            id=task_id,
+            task_id=task_id,
             session_id=session_id,
             process_id=process_id,
             thread_id=task_id,
@@ -325,6 +325,7 @@ class TaskBrief(BaseModel, Identifiable):
 
 class TaskPayload(Payload):
     key: ClassVar[str] = "task_info"
+
     task_id: str = Field(description="the id of the task")
     task_name: str = Field(description="the name of the task")
     process_id: str = Field(description="the id of the process")
@@ -334,9 +335,9 @@ class TaskPayload(Payload):
     def from_task(cls, task: Task) -> "TaskPayload":
         return cls(
             task_id=task.task_id,
+            task_name=task.name,
             process_id=task.process_id,
             thread_id=task.thread_id,
-            name=task.name,
         )
 
 
@@ -358,6 +359,7 @@ class Tasks(ABC):
         使用 task id 来获取一个 task.
         :param task_id:
         :param lock: 是否尝试对 task 上锁, 如果要求上锁但没成功, 返回 None.
+        :return: if task is not Exists or locked failed
         """
         pass
 

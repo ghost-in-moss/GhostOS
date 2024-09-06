@@ -2,6 +2,18 @@ import inspect
 from typing import Any, Tuple, Optional, Dict, Callable, Type
 from types import ModuleType
 
+__all__ = [
+    'Importer',
+    'import_from_path',
+    'get_calling_modulename',
+    'get_module_spec',
+    'generate_import_path',
+    'generate_module_spec',
+    'join_import_module_and_spec',
+    'is_method_belongs_to_class',
+    'parse_import_module_and_spec',
+]
+
 Importer = Callable[[str], ModuleType]
 
 
@@ -76,3 +88,18 @@ def is_method_belongs_to_class(method: Callable, cls: Type) -> bool:
     method_qualname = getattr(method, '__qualname__', "")
     cls_qualname = getattr(cls, '__qualname__', "")
     return method_qualname != cls_qualname and method_qualname.startswith(cls_qualname)
+
+
+def get_calling_modulename(skip: int = 0) -> Optional[str]:
+    stack = inspect.stack()
+    start = 0 + skip + 1
+    if len(stack) < start + 1:
+        return None
+    frame = stack[start][0]
+
+    # module and packagename.
+    module_info = inspect.getmodule(frame)
+    if module_info:
+        mod = module_info.__name__
+        return mod
+    return None

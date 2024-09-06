@@ -46,9 +46,10 @@ class StorageTasksImpl(Tasks):
                 return None
             task.lock = uuid()
             self.save_task(task)
+            return task
         else:
             task.lock = None
-        return task
+            return task
 
     def get_tasks(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[Task]:
         states = set(states) if states else None
@@ -63,14 +64,18 @@ class StorageTasksImpl(Tasks):
             yield TaskBrief.from_task(task)
 
     def unlock_task(self, task_id: str, lock: str) -> None:
-        task = self.get_task(task_id, lock=False)
+        task = self._get_task(task_id)
+        if task is None:
+            return
         if task.lock == lock:
             task.lock = None
             self.save_task(task)
 
     def refresh_task_lock(self, task_id: str, lock: str) -> Optional[str]:
         task = self._get_task(task_id)
-        if task.lock == lock:
+        if task is None:
+            return uuid()
+        if task.lock or task.lock == lock:
             lock = uuid()
             task.lock = lock
             self.save_task(task)

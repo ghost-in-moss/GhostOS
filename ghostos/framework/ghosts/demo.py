@@ -12,10 +12,10 @@ from ghostos.entity import EntityMeta, EntityFactory
 from ghostos.helpers import import_from_path
 from pydantic import Field
 
-__all__ = ['SimpleGhost', 'SimpleGhostConf']
+__all__ = ['DemoGhost', 'DemoGhostConf']
 
 
-class SimpleGhostConf(GhostConf):
+class DemoGhostConf(GhostConf):
     """
     configration of simple ghost implementation
     """
@@ -48,14 +48,14 @@ class SimpleGhostConf(GhostConf):
         return self.thought_meta
 
 
-class SimpleGhost(BasicGhost):
+class DemoGhost(BasicGhost):
     """
     simple implementation of a ghost
     """
 
     def __init__(
             self,
-            conf: SimpleGhostConf,
+            conf: DemoGhostConf,
             container: Container,
             entity_factory: EntityFactory,
             workspace: Workspace,
@@ -99,5 +99,5 @@ class SimpleGhost(BasicGhost):
     def meta_prompt(self) -> str:
         return self._conf.meta_prompt
 
-    def conf(self) -> SimpleGhostConf:
+    def conf(self) -> DemoGhostConf:
         return self._conf

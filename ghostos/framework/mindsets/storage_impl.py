@@ -19,10 +19,10 @@ class StorageMindset(Mindset):
         self._storage = storage
         self._cache_file = f"mindsets_{namespace}.cache.yml"
         self._thought_driver_map: Dict[Type[Thought], Type[ThoughtDriver]] = {}
+        self._thought_path_driver_path_map: Dict[str, str] = {}
         if self._storage.exists(self._cache_file):
             content = storage.get(self._cache_file)
             data = yaml.safe_load(content)
-            self._thought_path_driver_path_map: Dict[str, str] = {}
             for key, val in data.items():
                 if not isinstance(key, str) or not isinstance(val, str):
                     continue

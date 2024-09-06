@@ -141,9 +141,10 @@ class DefaultEventType(str, Enum):
         return self not in {}
 
     def new(
-            self, *,
+            self,
             task_id: str,
             messages: List[Message],
+            *,
             from_task_id: Optional[str] = None,
             reason: str = "",
             instruction: str = "",

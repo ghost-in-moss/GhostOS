@@ -7,7 +7,7 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.shutdown import Shutdown
 from ghostos.contracts.pool import Pool
 from ghostos.core.ghosts import (
-    Ghost, GhostConf, Operator, Inputs, Shell, Mindset, Thought, ThoughtDriver,
+    Ghost, GhostConf, Operator, Inputs, Shell, Mindset, Thought,
     MultiTask, Taskflow, Utils, Workspace
 )
 from ghostos.core.llms import LLMs
@@ -16,7 +16,7 @@ from ghostos.core.messages import Caller
 from ghostos.core.session import (
     Session, Event, DefaultEventType,
     EventBus, Tasks, Processes, Threads, Messenger,
-    Process, Task,
+    Process, Task, MsgThread,
 )
 from ghostos.framework.operators import OnEventOperator
 from ghostos.framework.multitasks import MultiTaskBasicImpl
@@ -111,14 +111,9 @@ class BasicGhost(Ghost, ABC):
         self._entity_factory = entity_factory
         # root thought
         root_thought_meta = conf.root_thought_meta()
-        root_thought_driver = entity_factory.force_new_entity(root_thought_meta, ThoughtDriver)
-        root_thought = root_thought_driver.thought
+        root_thought = entity_factory.force_new_entity(root_thought_meta, Thought)
         self._root_thought = root_thought
-        # prepare ghost logger
         logger = container.force_fetch(LoggerItf)
-        trace = self.trace()
-        ghost_logger = logger.with_trace(trace)
-        self._logger = ghost_logger
         # instance session.
         self._session = self.make_session(
             upstream=upstream,
@@ -126,7 +121,12 @@ class BasicGhost(Ghost, ABC):
             process=process,
             task=task,
             task_id=task_id,
+            logger=logger,
         )
+        # prepare ghost logger
+        trace = self.trace()
+        ghost_logger = logger.with_trace(trace)
+        self._logger = ghost_logger
         # 初始化 container 的相关绑定.
         self._bootstrap_ghost_container()
         # 检查所有必须绑定的对象.
@@ -183,6 +183,7 @@ class BasicGhost(Ghost, ABC):
 
     def make_session(
             self,
+            logger: LoggerItf,
             upstream: Stream,
             process: Process,
             root_thought: Thought,
@@ -199,7 +200,7 @@ class BasicGhost(Ghost, ABC):
         # task and thread init.
         if task is None:
             if task_id is not None:
-                task = tasks.get_task(task_id, False)
+                task = tasks.get_task(task_id, True)
                 if not task:
                     raise RuntimeError(f"Task {task_id} not found")
             else:
@@ -207,7 +208,7 @@ class BasicGhost(Ghost, ABC):
                 task = tasks.get_task(task_id, False)
                 if not task:
                     identifier = root_thought.identifier()
-                    meta = self.mindset().get_thought_driver(root_thought).to_entity_meta()
+                    meta = root_thought.to_entity_meta()
                     task = Task.new(
                         task_id=task_id,
                         session_id=process.session_id,
@@ -216,7 +217,17 @@ class BasicGhost(Ghost, ABC):
                         description=identifier.description,
                         meta=meta,
                     )
+                # 生成锁.
+                task.lock = tasks.refresh_task_lock(task.task_id, "")
+        logger = logger.with_trace({
+            "process_id": process.process_id,
+            "session_id": process.session_id,
+            "task_id": task.task_id,
+            "thread_id": task.thread_id,
+        })
         thread = threads.get_thread(task.thread_id)
+        if thread is None:
+            thread = MsgThread.new(None, thread_id=task.thread_id)
         return BasicSession(
             ghost_name=identifier.name,
             ghost_role=self.role(),
@@ -226,7 +237,7 @@ class BasicGhost(Ghost, ABC):
             processes=processes,
             tasks=tasks,
             threads=threads,
-            logger=self._logger,
+            logger=logger,
             process=process,
             task=task,
             thread=thread,
@@ -269,7 +280,7 @@ class BasicGhost(Ghost, ABC):
             if inputs is None:
                 return None
         event = DefaultEventType.INPUT.new(
-            task_id=inputs.task_id,
+            task_id=self.session().task().task_id,
             messages=inputs.messages,
         )
         return event
@@ -330,6 +341,7 @@ class BasicGhost(Ghost, ABC):
 
     def done(self) -> None:
         self._logger.info(f"ghost is done")
+        self._session.save()
         self._session.done()
 
     def fail(self, err: Optional[Exception]) -> None:

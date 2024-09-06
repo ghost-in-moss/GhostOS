@@ -15,6 +15,7 @@ class StorageConfigs(Configs):
 
     def get(self, conf_type: Type[C], file_name: Optional[str] = None) -> C:
         path = conf_type.conf_path()
+        file_name = file_name if file_name else path
         content = self._storage.get(file_name)
         return conf_type.load(content)
 

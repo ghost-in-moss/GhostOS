@@ -287,8 +287,6 @@ class BasicSession(Session):
         del self._pool
 
     def save(self) -> None:
-        if not self.alive():
-            raise RuntimeError("Session is not alive")
         with self._eventbus.transaction():
             with self._tasks.transaction():
                 with self._threads.transaction():
@@ -307,6 +305,7 @@ class BasicSession(Session):
         locked = self._task.lock
         if locked:
             self._tasks.unlock_task(self._task.task_id, locked)
+            self._task.lock = None
         self._upstream.deliver(DefaultMessageTypes.ERROR.new(content=str(err)))
         self._logger.error(err)
 

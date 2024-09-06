@@ -1,5 +1,6 @@
 from __future__ import annotations
 from ghostos.core.ghostos import GhostOS
+import time
 import asyncio
 from typing import Optional, List
 
@@ -17,6 +18,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 
+__all__ = ['ConsolePrototype']
+
 
 class ConsolePrototype:
 
@@ -29,6 +32,7 @@ class ConsolePrototype:
             session_id: Optional[str] = None,
             process_id: Optional[str] = None,
             task_id: Optional[str] = None,
+            background_num: int = 1,
     ):
         self._os = ghostos
         self._ghost_id = ghost_id
@@ -43,15 +47,17 @@ class ConsolePrototype:
         self._queue = Queue()
         self._debug = debug
         self._threads: List[Thread] = []
+        self._background_num = background_num
 
     def run(self):
-        asyncio.run(self._main())
-        background_run_task = Thread(target=self._start_background)
-        background_run_task.start()
+        for i in range(self._background_num):
+            background_run_task = Thread(target=self._start_background)
+            background_run_task.start()
+            self._threads.append(background_run_task)
         print_output_task = Thread(target=self._print_output)
         print_output_task.start()
-        self._threads.append(background_run_task)
         self._threads.append(print_output_task)
+        asyncio.run(self._main())
 
     def _print_output(self):
         while not self._stopped:
@@ -66,7 +72,9 @@ class ConsolePrototype:
     def _start_background(self):
         while not self._stopped:
             stream = self._stream()
-            self._os.background_run(stream)
+            handled = self._os.background_run(stream)
+            if not handled:
+                time.sleep(1)
 
     def _stream(self) -> QueueStream:
         return QueueStream(self._queue, streaming=False)
@@ -88,10 +96,10 @@ class ConsolePrototype:
                 self._console.print(Markdown("\n----\n"))
                 self._on_input(text)
             except (EOFError, KeyboardInterrupt):
-                self._quit()
+                self._exit()
             except Exception:
                 self._console.print_exception()
-                self._quit()
+                self._exit()
 
     def _on_input(self, text: str):
         message = Role.USER.new(
@@ -110,8 +118,8 @@ class ConsolePrototype:
 
     def _intercept_text(self, text: str) -> bool:
         if text == "/exit":
-            self._quit()
-        return True
+            self._exit()
+        return False
 
     @staticmethod
     def _bindings():
@@ -127,13 +135,22 @@ print "/exit" to quit
 ----
 """))
 
-    def _quit(self):
+    def _exit(self):
         self._stopped = True
-        self._os.shutdown()
+        _continue = True
+        self._console.print("start exiting")
+        while _continue:
+            try:
+                self._queue.get_nowait()
+            except Empty:
+                break
+        self._console.print("stop queue")
+        self._console.print("queue closed")
         for t in self._threads:
             t.join()
-        self._queue.task_done()
-        self._queue.join()
+        self._console.print("threads joined")
+        self._os.shutdown()
+        self._console.print("ghostos shutdown")
         self._console.print("Exit, Bye!")
         exit(0)
 
@@ -142,13 +159,15 @@ print "/exit" to quit
             self._console.print_json(
                 message.model_dump_json(indent=2, exclude_defaults=True),
             )
+        if message.is_empty():
+            return
         payload = TaskPayload.read(message)
         title = ""
         if payload is not None:
             title = f"{payload.task_name}: {payload.thread_id}"
         content = message.get_content()
         markdown = self._markdown_output(content)
-        self._console.print(Panel(markdown, title=title))
+        self._console.print(Panel(markdown, title=title, border_style="thin"))
 
     @staticmethod
     def _markdown_output(text: str) -> Markdown:

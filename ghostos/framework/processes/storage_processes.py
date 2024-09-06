@@ -47,7 +47,7 @@ class StorageProcessesImpl(Processes):
 
     def get_session_process(self, session_id: str) -> Optional[Process]:
         m = self._get_session_process_map()
-        process_id = m[session_id]
+        process_id = m.get(session_id, None)
         if process_id is None:
             return None
         return self.get_process(process_id)

@@ -29,6 +29,7 @@ hide-py = "^0.3.0"
 prompt-toolkit = "^3.0.47"
 
 [tool.poetry.scripts]
+demo = "ghostos.scripts.demo:main"
 llm_test = "ghostos.scripts.llm_test:main"
 moss_test = "ghostos.scripts.moss_test:main"
 moss_run = "ghostos.scripts.moss_run:main"

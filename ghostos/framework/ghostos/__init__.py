@@ -1,5 +1,5 @@
 from ghostos.framework.ghostos.basic import BasicGhostOS
-from ghostos.framework.ghostos.demo import DemoGhostOS, DemoGhostConfig
+from ghostos.framework.ghostos.demo import DemoGhostOS, DemoGhostOSConf
 
-demo = DemoGhostOS()
+demo_ghostos = DemoGhostOS()
 """ demo ghost os"""

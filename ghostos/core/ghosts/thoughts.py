@@ -1,19 +1,23 @@
+import inspect
 from typing import Optional, TypeVar, Generic, Type, Iterable
 from abc import ABC, abstractmethod
-from ghostos.entity import Entity, EntityMeta, EntityFactory
-from ghostos.core.session import Event, thread_to_chat
-from ghostos.core.llms import LLMApi, prepare_chat, ChatPreparer, Chat
-from ghostos.core.messages import Role
+from ghostos.entity import Entity, ModelEntity
+from ghostos.core.session import Event
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
-from ghostos.core.ghosts.actions import Action
-from ghostos.abc import Identifiable, Identifier
+from ghostos.abc import Identifiable, Identifier, PromptAbleClass
 from ghostos.helpers import uuid
+from pydantic import Field
 
-__all__ = ['Thought', 'ThoughtDriver', 'LLMThoughtDriver', "Mindset", "get_thought_driver_type"]
+__all__ = ['Thought', 'ModelThought', 'ThoughtDriver', 'BasicThoughtDriver', "Mindset", "get_thought_driver_type", 'T']
 
 
-class Thought(Identifiable, ABC):
+class Thought(Identifiable, Entity, ABC):
+    """
+    The Thought class serves as a fundamental component of AI,
+    adept at initiating a stateful task to address specific inquiries.
+    """
+
     """
     用代码的方式实现的思维链描述, 是 Llm-based Agent 的思维单元.
     可以用来创建并且驱动一个任务.
@@ -41,6 +45,46 @@ class Thought(Identifiable, ABC):
         """
         pass
 
+    @classmethod
+    def __class_prompt__(cls) -> str:
+        if cls is Thought:
+            return '''
+class Thought(ABC):
+    """
+    The Thought class serves as a fundamental component of AI, 
+    adept at initiating a stateful task to address specific inquiries.
+    """
+    pass
+'''
+        return inspect.getsource(cls)
+
+
+class ModelThought(Thought, ModelEntity, PromptAbleClass, ABC):
+    """
+    The abstract model of the thought based by pydantic.BaseModel.
+    """
+    task_name: str = Field(description="name of the thought task")
+    task_desc: str = Field(description="description of the thought task")
+
+    def identifier(self) -> Identifier:
+        return Identifier(
+            name=self.task_name,
+            description=self.task_desc,
+        )
+
+    @classmethod
+    def __class_prompt__(cls) -> str:
+        if cls is ModelThought:
+            return '''
+class ThoughtModel(Thought, BaseModel, ABC):
+    """
+    The abstract type of Thought that based on pydantic.BaseModel. 
+    """
+    task_name: str = Field(description="name of the thought task")
+    task_desc: str = Field(description="description of the thought task")
+'''
+        return inspect.getsource(cls)
+
 
 def get_thought_driver_type(cls: Type[Thought]) -> Type["ThoughtDriver"]:
     """
@@ -63,7 +107,7 @@ def get_thought_driver_type(cls: Type[Thought]) -> Type["ThoughtDriver"]:
 T = TypeVar("T", bound=Thought)
 
 
-class ThoughtDriver(Generic[T], Entity, ABC):
+class ThoughtDriver(Generic[T], ABC):
     """
     ThoughtEntity 是 Thought 运行时生成的实例.
     实际上就是把 Python 的 Class 拆成了 Model (数据结构) + Driver (各种 methods)
@@ -79,24 +123,6 @@ class ThoughtDriver(Generic[T], Entity, ABC):
         实例化 ThoughtEntity, 这个方法入参不要修改. 系统要使用这个方法实例化.
         """
         self.thought: T = thought
-
-    @abstractmethod
-    def to_entity_data(self) -> dict:
-        """
-        将 Thought 来生成 EntityMeta 对象.
-        """
-        pass
-
-    @classmethod
-    @abstractmethod
-    def from_entity_meta(cls, factory: EntityFactory, meta: EntityMeta) -> "ThoughtDriver":
-        """
-        结合 Factory, 将一个 EntityMeta 反解成 ThoughtInstance.
-        :param factory: 支持递归的生成 Thought 实例.
-        :param meta: 原始数据.
-        :return: 自身的实例.
-        """
-        pass
 
     @abstractmethod
     def new_task_id(self, g: Ghost) -> str:
@@ -117,7 +143,7 @@ class ThoughtDriver(Generic[T], Entity, ABC):
         return None
 
 
-class BasicThoughtDriver(ThoughtDriver, ABC):
+class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
     @abstractmethod
     def think(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
@@ -200,93 +226,6 @@ class BasicThoughtDriver(ThoughtDriver, ABC):
         """
         一个下游的通知, 不需要做任何操作.
         """
-        return None
-
-
-class LLMThoughtDriver(BasicThoughtDriver, ABC):
-
-    @abstractmethod
-    def get_llmapi(self, g: Ghost) -> LLMApi:
-        """
-        get llm api from ghost
-
-        maybe:
-        llms = g.container.force_fetch(LLMs)
-        return llms.get_api(api_name)
-        """
-        pass
-
-    @abstractmethod
-    def chat_preparers(self, g: Ghost, e: Event) -> Iterable[ChatPreparer]:
-        """
-        return chat preparers that filter chat messages by many rules.
-        """
-        pass
-
-    @abstractmethod
-    def actions(self, g: Ghost, e: Event) -> Iterable[Action]:
-        """
-        return actions that predefined in the thought driver.
-        """
-        pass
-
-    @abstractmethod
-    def instruction(self, g: Ghost, e: Event) -> str:
-        """
-        return thought instruction.
-        """
-        pass
-
-    def initialize_chat(self, g: Ghost, e: Event) -> Chat:
-        session = g.session()
-        thread = session.thread()
-        system_prompt = g.system_prompt()
-        thought_instruction = self.instruction(g, e)
-        content = "\n\n".join([system_prompt, thought_instruction])
-        # system prompt from thought
-        system_messages = [Role.SYSTEM.new(content=content.strip())]
-        chat = thread_to_chat(e.id, system_messages, thread)
-        return chat
-
-    def think(self, g: Ghost, e: Event) -> Optional[Operator]:
-        session = g.session()
-        container = g.container()
-        logger = g.logger()
-
-        # initialize chat
-        chat = self.initialize_chat(g, e)
-
-        # prepare chat, filter messages.
-        preparers = self.chat_preparers(g, e)
-        chat = prepare_chat(chat, preparers)
-
-        # prepare actions
-        actions = list(self.actions(g, e))
-        action_map = {action.identifier().name: action for action in actions}
-
-        # prepare chat by actions
-        for action in actions:
-            chat = action.prepare_chat(chat)
-
-        # prepare llm api
-        llm_api = self.get_llmapi(g)
-
-        # prepare messenger
-        messenger = session.messenger()
-
-        # run llms
-        logger.info(f"start llm thinking")  # todo: logger
-        llm_api.deliver_chat_completion(chat, messenger)
-        messages, callers = messenger.flush()
-
-        # callback actions
-        for caller in callers:
-            if caller.name in action_map:
-                logger.info(f"llm response caller `{caller.name}` match action")
-                action = action_map[caller.name]
-                op = action.act(container, session, caller)
-                if op is not None:
-                    return op
         return None
 
 

@@ -27,6 +27,7 @@ class MemEventBusImpl(EventBus):
             self._task_queues[task_id] = Queue()
         queue = self._task_queues[task_id]
         queue.put(event_id)
+        queue.task_done()
 
     def pop_task_event(self, task_id: str) -> Optional[Event]:
         if task_id not in self._task_queues:
@@ -57,14 +58,9 @@ class MemEventBusImpl(EventBus):
 
     def notify_task(self, task_id: str) -> None:
         self._task_notification_queue.put(task_id)
+        self._task_notification_queue.task_done()
 
     def shutdown(self) -> None:
-        self._task_notification_queue.task_done()
-        for queue in self._task_queues.values():
-            queue.task_done()
-        self._task_notification_queue.join()
-        for queue in self._task_queues.values():
-            queue.join()
         del self._events
         del self._task_notification_queue
         del self._task_queues

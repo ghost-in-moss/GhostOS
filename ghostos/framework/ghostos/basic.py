@@ -23,9 +23,9 @@ from ghostos.contracts.pool import DefaultPoolProvider
 from ghostos.entity import EntityFactory, EntityFactoryImpl
 from ghostos.container import Provider
 
-project_dir = dirname(dirname(dirname(__file__)))
+project_dir = dirname(dirname(dirname(dirname(__file__))))
 demo_dir = join(project_dir, "demo")
-logging_conf_path = join(project_dir, "configs/logging.yml")
+logging_conf_path = join(demo_dir, "configs/logging.yml")
 
 __all__ = ['BasicGhostOS']
 
@@ -43,7 +43,7 @@ class BasicGhostOS(AbsGhostOS, ABC):
             processes_path: str = "processes",
             tasks_path: str = "tasks",
             threads_path: str = "threads",
-            llm_config_path: str = "llms.yml",
+            llm_config_path: str = "llms_conf.yml",
             container: Optional[Container] = None,
     ):
         self._root_dir = root_dir
@@ -69,6 +69,9 @@ class BasicGhostOS(AbsGhostOS, ABC):
 
     @abstractmethod
     def _on_initialized(self):
+        """
+        callback on initialized the ghost os
+        """
         pass
 
     @abstractmethod

@@ -138,9 +138,11 @@ class DefaultMessenger(Messenger, Stream):
 
     def _deliver(self, delivery: Iterable[Message]) -> bool:
         for item in delivery:
-            if (self._thread is not None  # thread exists.
+            if (
+                    self._thread is not None  # thread exists.
                     and not DefaultMessageTypes.is_protocol_type(item)  # not a protocol type message.
-                    and not item.pack):  # is tail package.
+                    and not item.pack
+            ):  # is tail package.
                 # append tail message to thread.
                 self._thread.append(item)
             if self._upstream:
