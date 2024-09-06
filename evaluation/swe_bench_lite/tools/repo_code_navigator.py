@@ -57,7 +57,7 @@ class CodeReference(BaseModel):
 
 
 
-class CodeRepositoryHelper:
+class RepositoryCodeNavigator:
     def __init__(self, repo_path):
         self.parser = _PythonParser
         self.repo_path = os.path.abspath(repo_path)
@@ -128,6 +128,54 @@ class CodeRepositoryHelper:
                             reached_root = True
                             break
         return references
+
+    def find_implementations(self, target_string: str) -> List[CodeLocation]:
+        implementations = []
+        for rel_path, tree in self.file_trees.items():
+            root_node = tree.root_node
+            implementation_nodes = self._find_implementation_nodes(root_node, target_string)
+            
+            if implementation_nodes:
+                file_path = os.path.join(self.repo_path, rel_path)
+                with open(file_path, 'r') as file:
+                    content = file.read()
+                    lines = content.splitlines()
+                
+                for node in implementation_nodes:
+                    start_line = node.start_point[0] + 1
+                    start_column = node.start_point[1] + 1
+                    
+                    context_start = max(0, start_line - 3)
+                    context_end = min(len(lines), start_line + 4)
+                    context = lines[context_start:context_end]
+                    
+                    implementations.append(CodeLocation(
+                        file_path=rel_path,
+                        line_number=start_line,
+                        column_number=start_column,
+                        context=context
+                    ))
+        
+        return implementations
+
+    def _find_implementation_nodes(self, root_node, target_string):
+        implementation_nodes = []
+        cursor = root_node.walk()
+        
+        reached_root = False
+        while not reached_root:
+            if cursor.node.type in ['function_definition', 'class_definition', 'method_definition']:
+                name_node = cursor.node.child_by_field_name('name')
+                if name_node and name_node.text.decode('utf8') == target_string:
+                    implementation_nodes.append(cursor.node)
+            
+            if not cursor.goto_first_child():
+                while not cursor.goto_next_sibling():
+                    if not cursor.goto_parent():
+                        reached_root = True
+                        break
+        
+        return implementation_nodes
 
     def _find_definition_in_file(self, file_path, line_number, target_string):
         with open(file_path, 'r') as file:
@@ -249,7 +297,7 @@ class CodeRepositoryHelper:
 # 使用示例
 if __name__ == "__main__":
     repo_path = '/home/llm/Project/PythonProjects/auto-code-rover'
-    helper = CodeRepositoryHelper(repo_path)
+    helper = RepositoryCodeNavigator(repo_path)
     
     file_path = 'app/api/manage.py'  # Now using relative path
     target_string = 'SearchManager'
