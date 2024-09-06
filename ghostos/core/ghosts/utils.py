@@ -8,7 +8,6 @@ from ghostos.core.session import (
 )
 
 from ghostos.core.messages import (
-    Message,
     MessageKind,
     MessageKindParser,
     Role,
@@ -27,7 +26,7 @@ class Utils:
     def get_thought_driver(self, thought: Thought) -> ThoughtDriver:
         return self.ghost.mindset().get_thought_driver(thought)
 
-    def initialize(self, messages: List[Message]) -> Optional["Event"]:
+    def initialize(self) -> Optional["Event"]:
         """
         initialize ghost
         """
@@ -53,7 +52,7 @@ class Utils:
         session.update_task(task, None, False)
         return DefaultEventType.CREATED.new(
             task_id=task_id,
-            messages=messages,
+            messages=[],
         )
 
     def fetch_thought_from_task(self, task: "Task") -> ThoughtDriver:

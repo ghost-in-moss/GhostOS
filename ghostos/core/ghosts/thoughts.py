@@ -10,7 +10,7 @@ from ghostos.core.ghosts.actions import Action
 from ghostos.abc import Identifiable, Identifier
 from ghostos.helpers import uuid
 
-__all__ = ['Thought', 'ThoughtDriver', 'LLMThoughtDriver', "Mindset", "get_thought_driver_type"]
+__all__ = ['Thought', 'ThoughtDriver', 'LLMThoughtDriver', "Mindset"]
 
 
 class Thought(Identifiable, ABC):
@@ -41,23 +41,23 @@ class Thought(Identifiable, ABC):
         """
         pass
 
-
-def get_thought_driver_type(cls: Type[Thought]) -> Type["ThoughtDriver"]:
-    """
-    根据约定, 将 Thought 类封装到 Driver 对象里.
-    :return:
-    """
-    driver_type = cls.__thought_driver__
-    if driver_type is None:
-        thought_cls = cls
-        name = thought_cls.__name__
-        expect_name = f"{name}Driver"
-        import inspect
-        module = inspect.getmodule(thought_cls)
-        if module is None or expect_name not in module.__dict__:
-            raise NotImplementedError(f"{expect_name} does not exists in {thought_cls.__module__}")
-        driver_type = module.__dict__[expect_name]
-    return driver_type
+    @classmethod
+    def default_driver_type(cls) -> Type["ThoughtDriver"]:
+        """
+        根据约定, 将 Thought 类封装到 Driver 对象里.
+        :return:
+        """
+        driver_type = cls.__thought_driver__
+        if driver_type is None:
+            thought_cls = cls
+            name = thought_cls.__name__
+            expect_name = f"{name}Driver"
+            import inspect
+            module = inspect.getmodule(thought_cls)
+            if module is None or expect_name not in module.__dict__:
+                raise NotImplementedError(f"{expect_name} does not exists in {thought_cls.__module__}")
+            driver_type = module.__dict__[expect_name]
+        return driver_type
 
 
 T = TypeVar("T", bound=Thought)
@@ -240,11 +240,12 @@ class LLMThoughtDriver(BasicThoughtDriver, ABC):
     def initialize_chat(self, g: Ghost, e: Event) -> Chat:
         session = g.session()
         thread = session.thread()
-        system_prompt = g.system_prompt()
+        meta_prompt = g.meta_prompt()
+        shell_prompt = g.shell().shell_prompt()
         thought_instruction = self.instruction(g, e)
-        content = "\n\n".join([system_prompt, thought_instruction])
+        content = "\n\n".join([meta_prompt, shell_prompt, thought_instruction])
         # system prompt from thought
-        system_messages = [Role.SYSTEM.new(content=content.strip())]
+        system_messages = [Role.SYSTEM.new(content=content)]
         chat = thread_to_chat(e.id, system_messages, thread)
         return chat
 
@@ -261,7 +262,10 @@ class LLMThoughtDriver(BasicThoughtDriver, ABC):
         chat = prepare_chat(chat, preparers)
 
         # prepare actions
-        actions = list(self.actions(g, e))
+        actions = list(g.shell().actions())
+        thought_actions = list(self.actions(g, e))
+        if thought_actions:
+            actions.extend(thought_actions)
         action_map = {action.identifier().name: action for action in actions}
 
         # prepare chat by actions

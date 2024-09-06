@@ -32,7 +32,7 @@ class DefaultPool(Pool):
 
 class DefaultPoolProvider(Provider):
 
-    def __init__(self, size: int = 100):
+    def __init__(self, size: int = 10):
         self.size = size
 
     def singleton(self) -> bool:

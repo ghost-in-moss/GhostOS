@@ -36,12 +36,12 @@ class BasicWorkspaceProvider(Provider):
 
     def __init__(
             self,
-            root_dir: str = "",
+            root_path: str = "",
             runtime_path: str = "runtime",
             configs_path="configs",
-            source_path="src",
+            source_path="sources",
     ):
-        self._root_path = root_dir
+        self._root_path = root_path
         self._runtime_path = runtime_path
         self._configs_path = configs_path
         self._source_path = source_path

@@ -1,7 +1,8 @@
 import argparse
 import sys
 import os
-from typing import List
+import yaml
+from typing import List, Dict
 
 from ghostos.core.session import MsgThread
 from ghostos.scripts.logconf import prepare_logger
@@ -9,7 +10,7 @@ from ghostos.core.llms import Chat
 from ghostos.core.messages import Message
 from ghostos.core.moss import test_container
 from ghostos.core.moss.aifunc import DefaultAIFuncManagerImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncManager
-from ghostos.framework.logger import NamedLoggerProvider
+from ghostos.framework.logger import FileLoggerProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
 from ghostos.framework.threads import StorageThreadsProvider
@@ -31,7 +32,7 @@ prepare_logger()
 def prepare_container(root_dir: str) -> Container:
     container = test_container()
     container.register(FileStorageProvider(root_dir))
-    container.register(NamedLoggerProvider(logger_name="debug"))
+    container.register(FileLoggerProvider(logger_name="debug"))
     container.register(StorageThreadsProvider(threads_dir='runtime/threads'))
     container.register(ConfigsByStorageProvider("ghostos/configs"))
     container.register(ConfigBasedLLMsProvider("llms/llms_conf.yaml"))
@@ -43,10 +44,16 @@ def main() -> None:
         description="run swe-evaluation aifunc test cases, show results",
     )
     parser.add_argument(
+        "--case", '-c',
+        help="ghostos aifunc test case name in demo/ghostos/tests/aifunc_tests.yml",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
         "--import_path", '-i',
         help="the import path of the AIFunc instance, such as foo.bar:baz",
         type=str,
-        default="evaluation.swe_bench_lite.localization:example",
+        default="evaluation.swe_bench_lite.debug_localization:example",
     )
     parser.add_argument(
         "--llm_api", '-l',

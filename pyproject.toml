@@ -26,7 +26,6 @@ networkx = "^3.3"
 grep-ast = "^0.3.3"
 litellm = "^1.43.18"
 hide-py = "^0.3.0"
-prompt-toolkit = "^3.0.47"
 
 [tool.poetry.scripts]
 llm_test = "ghostos.scripts.llm_test:main"

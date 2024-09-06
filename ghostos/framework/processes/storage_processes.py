@@ -4,11 +4,10 @@ from ghostos.core.session import Process
 from ghostos.core.session.processes import Processes
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
-from ghostos.core.ghosts.workspace import Workspace
 from threading import Lock
 from ghostos.container import Provider, Container
 
-__all__ = ['StorageProcessesImpl', 'StorageProcessImplProvider', 'WorkspaceProcessesProvider']
+__all__ = ['StorageProcessesImpl', 'StorageProcessImplProvider']
 
 
 class StorageProcessesImpl(Processes):
@@ -78,21 +77,4 @@ class StorageProcessImplProvider(Provider[Processes]):
         storage = con.force_fetch(Storage)
         logger = con.force_fetch(LoggerItf)
         processes_storage = storage.sub_storage(self.process_dir)
-        return StorageProcessesImpl(processes_storage, logger)
-
-
-class WorkspaceProcessesProvider(Provider[Processes]):
-    def __init__(self, process_dir: str = "processes"):
-        self.process_dir = process_dir
-
-    def singleton(self) -> bool:
-        return True
-
-    def contract(self) -> Type[Processes]:
-        return Processes
-
-    def factory(self, con: Container) -> Optional[Processes]:
-        workspace = con.force_fetch(Workspace)
-        logger = con.force_fetch(LoggerItf)
-        processes_storage = workspace.runtime().sub_storage(self.process_dir)
         return StorageProcessesImpl(processes_storage, logger)

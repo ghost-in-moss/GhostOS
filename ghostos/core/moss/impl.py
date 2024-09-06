@@ -64,7 +64,23 @@ class MossCompilerImpl(MossCompiler):
         module.__dict__.update(self._predefined_locals)
         compiled = compile(code, modulename, "exec")
         exec(compiled, module.__dict__)
+        if self._pycontext.module:
+            origin = self._modules.import_module(self._pycontext.module)
+            updating = self._filter_origin(origin)
+            module.__dict__.update(updating)
         return module
+
+    @staticmethod
+    def _filter_origin(origin: ModuleType) -> Dict[str, Any]:
+        result = {}
+        for attr_name, attr_value in origin.__dict__.items():
+            if attr_name.startswith("__"):
+                continue
+            if inspect.isclass(attr_value) or inspect.isfunction(attr_value):
+                if attr_value.__module__ != origin.__name__:
+                    continue
+                result[attr_name] = attr_value
+        return result
 
     def _new_runtime(self, module: ModuleType) -> "MossRuntime":
         attr_prompts = {}

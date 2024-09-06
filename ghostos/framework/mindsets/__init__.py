@@ -1,1 +1,1 @@
-from ghostos.framework.mindsets.storage_impl import StorageMindsetProvider, WorkspaceMindsetProvider
+from ghostos.framework.mindsets.storage_impl import StorageMindsetProvider

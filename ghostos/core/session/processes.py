@@ -45,17 +45,18 @@ The meta data that waken the sleeping ghost in disputed services.
     def new(
             cls, *,
             session_id: str,
+            is_async: bool,
             ghost_meta: EntityMeta,
             process_id: Optional[str] = None,
-            main_task_id: Optional[str] = None,
     ) -> "Process":
         process_id = process_id if process_id else uuid()
-        main_task_id = process_id if main_task_id is None else main_task_id
+        main_task_id = process_id
         return Process(
             session_id=session_id,
             process_id=process_id,
             main_task_id=main_task_id,
             ghost_meta=ghost_meta,
+            asynchronous=is_async,
         )
 
 

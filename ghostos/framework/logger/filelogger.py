@@ -5,10 +5,10 @@ from ghostos.contracts.logger import LoggerItf, LoggerWrapper
 from os.path import join
 import logging
 
-__all__ = ['NamedLoggerProvider']
+__all__ = ['FileLoggerProvider']
 
 
-class NamedLoggerProvider(Provider[LoggerItf]):
+class FileLoggerProvider(Provider[LoggerItf]):
     """
     basic logger
     """

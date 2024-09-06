@@ -37,8 +37,6 @@ class FileStorage(Storage):
             f.write(content)
 
     def sub_storage(self, relative_path: str) -> "Storage":
-        if not relative_path:
-            return self
         dir_path = self._join_file_path(relative_path)
         return FileStorage(dir_path)
 

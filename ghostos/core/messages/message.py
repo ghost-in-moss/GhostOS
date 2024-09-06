@@ -28,17 +28,10 @@ class Role(str, enum.Enum):
     def all(cls) -> Set[str]:
         return set(map(lambda x: x.value, cls))
 
-    def new(
-            self,
-            content: str,
-            memory: Optional[str] = None,
-            name: Optional[str] = None,
-            type_: Optional[str] = None,
-    ) -> "Message":
+    def new(self, content: str, memory: Optional[str] = None, type_: Optional[str] = None) -> "Message":
         return Message.new_tail(
             type_=type_ if type_ else DefaultMessageTypes.DEFAULT.value,
             role=self.value,
-            name=name,
             content=content,
             memory=memory,
         )

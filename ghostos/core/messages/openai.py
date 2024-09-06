@@ -16,10 +16,7 @@ from ghostos.core.messages.message import Message, DefaultMessageTypes, Role, Ca
 from ghostos.container import Provider, Container, ABSTRACT
 from pydantic import BaseModel, Field
 
-__all__ = [
-    "OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider",
-    "CompletionUsagePayload",
-]
+__all__ = ["OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider"]
 
 
 class OpenAIMessageParser(ABC):

@@ -1,1 +1,1 @@
-from ghostos.framework.processes.storage_processes import StorageProcessImplProvider, WorkspaceProcessesProvider
+from ghostos.framework.processes.storage_processes import StorageProcessImplProvider

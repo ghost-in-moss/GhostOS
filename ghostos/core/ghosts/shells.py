@@ -1,32 +1,32 @@
 from abc import ABC, abstractmethod
-from typing import Type, Iterable
-from ghostos.container import ABSTRACT
+from typing import Optional, Type, Iterable
+from ghostos.container import Provider, Container, ABSTRACT
 from ghostos.core.llms import Chat, ChatPreparer
 from ghostos.core.ghosts.actions import Action
 from ghostos.abc import Identifiable
 
-__all__ = ['Shell']
+__all__ = ['Shell', 'ShellProvider']
 
 
-# class Env(Identifiable, ABC):
-#     """
-#     对环境抽象的感知.
-#     """
-#
-#     @abstractmethod
-#     def update_chat(self, chat: Chat) -> Chat:
-#         pass
-#
-#     @abstractmethod
-#     def driver(self) -> Type[ABSTRACT]:
-#         pass
-#
-#     @abstractmethod
-#     def provide(self) -> ABSTRACT:
-#         pass
+class Env(Identifiable, ABC):
+    """
+    对环境抽象的感知.
+    """
+
+    @abstractmethod
+    def update_chat(self, chat: Chat) -> Chat:
+        pass
+
+    @abstractmethod
+    def driver(self) -> Type[ABSTRACT]:
+        pass
+
+    @abstractmethod
+    def provide(self) -> ABSTRACT:
+        pass
 
 
-class Shell(ABC):
+class Shell(ChatPreparer, ABC):
     """
     Shell 是对端侧能力的抽象.
     这些能力不是在 Ghost 里预定义的, 而是端侧可能动态变更的.
@@ -74,3 +74,28 @@ class Shell(ABC):
         """
         pass
 
+
+class ShellProvider(Provider):
+    """
+    通过这个 provider 将 shell 持有的 driver 提供到控制反转容器里.
+    """
+
+    @classmethod
+    def from_shell(cls, shell: Shell) -> Iterable["ShellProvider"]:
+        for driver in shell.drivers():
+            yield ShellProvider(driver)
+
+    def __init__(self, driver: Type[ABSTRACT]):
+        self.driver: Type[ABSTRACT] = driver
+
+    def singleton(self) -> bool:
+        return False
+
+    def contract(self) -> Type[ABSTRACT]:
+        return self.driver
+
+    def factory(self, con: Container) -> Optional[ABSTRACT]:
+        shell = con.force_fetch(Shell)
+        # 返回 shell driver 的实例.
+        # todo: 如果不存在应该抛出特殊的异常.
+        return shell.get_driver(driver=self.driver)

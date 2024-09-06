@@ -153,7 +153,7 @@ class Container(IoCContainer):
         """
         self._bound.add(abstract)
 
-    def bound(self, contract: Type) -> bool:
+    def bound(self, contract: Type[ABSTRACT]) -> bool:
         """
         return whether contract is bound.
         """

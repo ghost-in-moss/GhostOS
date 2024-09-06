@@ -51,15 +51,19 @@ take next step based on the returns.
 So you shall not repeat the exists code that already provide in the `PYTHON CONTEXT`.
 """
 
-DEFAULT_NOTICES = """
+CODE_MARK_LEFT = "<code>"
+CODE_MARK_RIGHT = "</code>"
+
+DEFAULT_NOTICES = f"""
 ## Notices
-- Your code generation will execute immediately in MOSS runtime. Don't suggest any code, you are using them in the real python context provided by MOSS.
+- The code you generated shall start with {CODE_MARK_LEFT} and end with {CODE_MARK_RIGHT}, the outside system will automatically execute the code between the mark.
 - You can import basic python module if you needed. 
 - The variables defined in the main function will not keep in memory during multi-turns thinking. Unless some lib (AIFuncCtx) provide the ability.
 - MOSS will automatic execute the main function so YOU SHOULD NEVER EXECUTE IT YOURSELF.
 - If you are not equipped enough to resolve your quest, you shall admit the it in the result or raise an exception.
 - **You are not Agent, DO NOT TALK ABOUT YOUR THOUGHT, JUST WRITE THE CODES ONLY**
 """
+
 
 
 def default_aifunc_prompt(
@@ -144,7 +148,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         ))
         self.on_system_messages(systems)
         chat = thread_to_chat(thread.id, systems, thread)
-        self.on_chat(chat)
+        self.on_chat(chat) # Whether you want to send chat to llm, let it generate code for you or not
         # todo: log
         # 实例化 llm api
         llms = manager.container().force_fetch(LLMs)
@@ -152,16 +156,17 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         if llm_api is None:
             llm_api = manager.default_llm_api()
         # 调用 llm api
-        logger and logger.info(f"run aifunc with chat :{chat}")
+        # logger and logger.info(f"run aifunc with chat :{chat}")
         ai_generation = llm_api.chat_completion(chat)
         # 插入 ai 生成的消息.
         thread.append(ai_generation)
-        self.on_message(ai_generation)
+        self.on_message(ai_generation) # Whether you want to execute the ai-generated code or not
         code = self.parse_moss_code_in_message(ai_generation)
 
         # code 相关校验:
         if not code:
             thread.append(Role.SYSTEM.new(content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT"))
+            logger.error(f"ai_generation: {repr(ai_generation)}")
             return thread, None, False
         if "main(" not in code:
             thread.append(Role.SYSTEM.new(content="Error! No main function found in your generation!"))
@@ -216,12 +221,15 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
     def parse_moss_code_in_message(self, message: Message) -> str:
         content = message.content
-        splits = content.split('```python\n')
-        if len(splits) > 1:
-            content = splits[1]
-            splits = content.split('```')
-            content = splits[0]
-        return content.strip()
+
+        code_start_index = content.find(CODE_MARK_LEFT)
+        if code_start_index == -1:
+            return ""
+        code_end_index = content.rfind(CODE_MARK_RIGHT)
+        if code_end_index == -1:
+            return ""
+
+        return content[code_start_index + len(CODE_MARK_LEFT): code_end_index].strip()
 
     def on_save(self, manager: AIFuncManager, thread: MsgThread) -> None:
         # 如果 threads 抽象存在, 就保存一下. 还应该做一些日志的工作.

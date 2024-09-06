@@ -42,12 +42,6 @@ class MemEventBusImpl(EventBus):
         except Empty:
             return None
 
-    def clear_task(self, task_id: str) -> None:
-        if task_id in self._task_queues:
-            queue = self._task_queues[task_id]
-            queue.task_done()
-            del self._task_queues[task_id]
-
     def pop_task_notification(self) -> Optional[str]:
         try:
             task_id = self._task_notification_queue.get_nowait()
