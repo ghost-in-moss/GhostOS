@@ -4,12 +4,12 @@ import sys
 # Print sys.path for debugging
 print("sys.path:", sys.path)
 
-from evaluation.swe_bench_lite.tools.code_repo_helper import CodeRepositoryHelper, CodeLocation, CodeReference
+from evaluation.swe_bench_lite.tools.repo_code_navigator import RepositoryCodeNavigator, CodeLocation, CodeReference
 
 def setup_repo_helper():
     # Using the tests directory as the repo path
     repo_path = os.path.dirname(os.path.dirname(__file__))
-    return CodeRepositoryHelper(repo_path)
+    return RepositoryCodeNavigator(repo_path)
 
 def test_go_to_definition():
     repo_helper = setup_repo_helper()

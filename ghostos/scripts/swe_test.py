@@ -1,7 +1,8 @@
 import argparse
 import sys
 import os
-from typing import List
+import yaml
+from typing import List, Dict
 
 from ghostos.core.session import MsgThread
 from ghostos.scripts.logconf import prepare_logger
@@ -43,10 +44,16 @@ def main() -> None:
         description="run swe-evaluation aifunc test cases, show results",
     )
     parser.add_argument(
+        "--case", '-c',
+        help="ghostos aifunc test case name in demo/ghostos/tests/aifunc_tests.yml",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
         "--import_path", '-i',
         help="the import path of the AIFunc instance, such as foo.bar:baz",
         type=str,
-        default="evaluation.swe_bench_lite.localization:example",
+        default="evaluation.swe_bench_lite.debug_localization:example",
     )
     parser.add_argument(
         "--llm_api", '-l',

@@ -4,6 +4,7 @@ import os
 import yaml
 from typing import List, Dict
 
+from ghostos.core.moss.aifunc.driver import CODE_MARK_LEFT, CODE_MARK_RIGHT
 from ghostos.core.session import MsgThread
 from ghostos.scripts.logconf import prepare_logger
 from ghostos.core.llms import Chat
@@ -54,7 +55,8 @@ def main() -> None:
         help="the import path of the AIFunc instance, such as foo.bar:baz",
         type=str,
         # 默认使用专门测试 MossTestSuite 的文件.
-        default="ghostos.core.moss.aifunc.examples.agentic:example",
+        # default="ghostos.core.moss.aifunc.examples.agentic:example",
+        default="evaluation.swe_bench_lite.debug_localization:example",
     )
     parser.add_argument(
         "--quest", '-q',
@@ -74,7 +76,7 @@ def main() -> None:
         help="auto run the test or stop at each generations",
         action="store_true",
         # 默认使用专门测试 MossTestSuite 的文件.
-        default=False,
+        default=True,
     )
 
     parsed = parser.parse_args(sys.argv[1:])

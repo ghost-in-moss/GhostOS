@@ -22,6 +22,6 @@ def get_weather(city: str, date: str) -> str:
     pass
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # compile时记得去掉此__main__ block
     # print(plus(1, 2))
     print(get_weather("长沙", "后天"))
