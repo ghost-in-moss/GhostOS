@@ -167,7 +167,7 @@ print "/exit" to quit
             title = f"{payload.task_name}: {payload.thread_id}"
         content = message.get_content()
         markdown = self._markdown_output(content)
-        self._console.print(Panel(markdown, title=title, border_style="thin"))
+        self._console.print(Panel(markdown, title=title))
 
     @staticmethod
     def _markdown_output(text: str) -> Markdown:
