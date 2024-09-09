@@ -1,3 +1,6 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from typing import Dict, Any, Optional, List, Type
 
 from ghostos.container import Container, Provider, ABSTRACT
@@ -76,10 +79,25 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         return self._default_driver_type(fn, request)
 
     def run(self, key: str, fn: AIFunc, request: str = "") -> AIFuncResult:
-        sub_manager = self.sub_manager()
+        sub_manager = self.sub_manager()  # todo 感知到self.sub_manager (上一层) 的 stack push/pop过程
         result = sub_manager.execute(fn, request)
         self._values[key] = result
         return result
+
+    def parallel_run(self, fn_dict: Dict[str, AIFunc], request: str = "") -> Dict[str, AIFuncResult]:
+        def execute_task(key: str, fn: AIFunc):
+            sub_manager = self.sub_manager()
+            return key, sub_manager.execute(fn, request)
+
+        results = {}
+        with ThreadPoolExecutor(max_workers=len(fn_dict)) as executor:
+            futures = [executor.submit(execute_task, key, fn) for key, fn in fn_dict.items()]
+            for future in as_completed(futures):
+                key, result = future.result()
+                results[key] = result
+                self._values[key] = result
+
+        return results
 
     def get(self, key: str) -> Optional[Any]:
         return self._values.get(key, None)

@@ -95,3 +95,71 @@ def cls_definition(*, doc: Optional[str] = None, force: bool = False) -> CLASS_D
         return cls
 
     return wrapper
+
+
+
+def cls_outline(*, doc: Optional[str] = None, force: bool = False) -> CLASS_DECORATOR:
+    """
+    decorator that add outline as prompt to the class
+    """
+
+    def wrapper(cls: Type):
+        if not inspect.isclass(cls):
+            raise AttributeError(f"cls '{cls}' is not a class")
+        
+        def prompter() -> str:
+            source = inspect.getsource(cls)
+            # get definition, docstring, exported methods(include docstring) of the class
+            # 1. get definition
+            class_definition = make_class_prompt(source=source, doc=doc)
+            # del the pass (last line) in the class definition
+            class_definition = class_definition.split('\n')
+            class_definition = class_definition[:-1]
+            class_definition = '\n'.join(class_definition)
+
+
+            # 2. get docstring
+            class_docstring = inspect.getdoc(cls) or ""
+            # 3. get exported methods(include docstring)
+            methods = []
+            for name, method in inspect.getmembers(cls, predicate=inspect.isfunction):
+                if not name.startswith('_') or name in ['__init__']:
+                    method_source = inspect.getsource(method).split('\n')
+                    method_code = []
+                    in_docstring = False
+                    encountered_def = False
+
+                    for line in method_source:
+                        if not encountered_def:
+                            method_code.append(line)
+                            stripped_line = line.strip()
+                            if stripped_line.startswith("def"):
+                                encountered_def = True
+                        else:
+                            stripped_line = line.strip()
+                            if in_docstring:
+                                method_code.append(line)
+                                if stripped_line.startswith('"""') or stripped_line.startswith("'''"):
+                                    # end the docstring
+                                    in_docstring = False
+                                    break
+                            else:
+                                if len(stripped_line) > 0:
+                                    if stripped_line.startswith('"""') or stripped_line.startswith("'''"):
+                                        # start the docstring
+                                        in_docstring = True
+                                        method_code.append(line)
+                                    else: # encounter the first not-docstring line
+                                        break
+                    method_code = '\n'.join(method_code)
+                    methods.append('\n'+method_code)
+            methods_prompt = "\n".join(methods)
+            # 4. combine them
+            combined_prompt = f"{class_definition}\n    '''\n    {class_docstring}\n    ''' \n" + methods_prompt
+            # 5. return
+            return combined_prompt
+            
+        set_class_prompter(cls, prompter, force)
+        return cls
+    
+    return wrapper

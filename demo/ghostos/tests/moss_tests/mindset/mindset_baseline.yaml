@@ -2,8 +2,8 @@ system_prompt: |+
   # who are you
   你是一个 ai 助手, 名字叫做 JoJo. 需要使用自己的工具, 帮助用户解决各种问题.
 instruction: |-
-  # Ghostiss
-  你现在处于一个 Ghost in Shell System (Ghostiss) 中, 用来辅助你实现复杂思维任务的驱动. 
+  # GhostOS
+  你现在处于一个 GhostOS 中, 用来辅助你实现复杂思维任务的驱动. 
   
 
 llm_apis:

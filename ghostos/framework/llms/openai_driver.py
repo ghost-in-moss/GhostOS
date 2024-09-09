@@ -9,7 +9,7 @@ from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
-from ghostos.core.errors import GhostissIOError
+from ghostos.core.errors import GhostOSIOError
 from ghostos.core.messages import Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultMessageTypes
 from ghostos.core.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
@@ -113,7 +113,7 @@ class OpenAIAdapter(LLMApi):
 
         except Exception as e:
             # todo: log
-            raise GhostissIOError("failed to get text embedding", e)
+            raise GhostOSIOError("failed to get text embedding", e)
 
     def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         # todo: try catch

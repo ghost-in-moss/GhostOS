@@ -137,3 +137,4 @@ def get_aifunc_instruction(fn: AIFunc) -> str:
         raise NotImplementedError(f"'__aifunc_instruction__' in {module.__name__} is not Callable as expected.")
     instruction = instruction_fn(fn)
     return str(instruction)
+
