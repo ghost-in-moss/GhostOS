@@ -19,7 +19,6 @@ from ghostos.core.llms import (
 )
 from ghostos.container import Bootstrapper, Container
 
-
 import litellm
 
 __all__ = ['OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper', 'LitellmAdapter']
@@ -30,17 +29,25 @@ class FunctionalTokenPrompt(str):
     def format_tokens(self, tokens: Iterable[FunctionalToken]) -> str:
         lines = []
         for token in tokens:
-            lines.append(f"`{token.token}`: \n\n {token.description}")
+            start = token.token
+            end = token.end if token.end else ""
+            description_lines = token.description.splitlines()
+            description = "\n".join(['> ' + desc for desc in description_lines])
+            lines.append(f"`{start}{end}`:\n\n{description}")
         return self.format(tokens="\n".join(lines))
 
 
 DEFAULT_FUNCTIONAL_TOKEN_PROMPT = """
 # Functional Token
-You are equipped with `functional tokens` parser when you are outputing.
+You are equipped with `functional tokens` parser to understand your outputs.
 
 A functional token is a set of special tokens that corresponds to a system callback function. 
 When a functional token is present in your response, the subsequent output is treated as input parameters for this 
-callback function until another functional token is encountered. 
+callback function. 
+You shall embrace the parameter tokens by xml pattern. For example:
+* functional token is start with `<moss>` and end with `</moss>`
+* parameter tokens are `print("hello world")`
+* the whole output should be: `say something if necessary...<moss>print("hello world")</moss>`
 
 Below is a list of the functional tokens available for your use:
 
@@ -49,9 +56,9 @@ Below is a list of the functional tokens available for your use:
 **Notices**
 
 0. Your output without functional tokens will send directly.
-1. The existence of functional tokens is unknown to the user. Do not mention their existence.
+1. If the functional tokens is invisible to the user. Do not mention their existence.
 2. Use them only when necessary.
-3. You can only use one functional token at a time.
+3. You can only use each functional token at most once during outputting.
 """
 
 
@@ -94,26 +101,26 @@ class OpenAIAdapter(LLMApi):
     def text_completion(self, prompt: str) -> str:
         raise NotImplemented("text_completion is deprecated, implement it later")
 
-    def get_embeddings(self, texts: List[str]) -> Embeddings:
-        try:
-            model = self._model.model
-            resp = self._client.embeddings.create(
-                input=texts,
-                model=model,
-                # todo: 未来再做更多细节.
-            )
-            result = []
-            for i, text in enumerate(texts):
-                embedding = resp.embeddings[i]
-                result.append(Embedding(
-                    text=text,
-                    embedding=embedding
-                ))
-            return Embeddings(result=result)
-
-        except Exception as e:
-            # todo: log
-            raise GhostOSIOError("failed to get text embedding", e)
+    # def get_embeddings(self, texts: List[str]) -> Embeddings:
+    #     try:
+    #         model = self._model.model
+    #         resp = self._client.embeddings.create(
+    #             input=texts,
+    #             model=model,
+    #             # todo: 未来再做更多细节.
+    #         )
+    #         result = []
+    #         for i, text in enumerate(texts):
+    #             embedding = resp.embeddings[i]
+    #             result.append(Embedding(
+    #                 text=text,
+    #                 embedding=embedding
+    #             ))
+    #         return Embeddings(result=result)
+    #
+    #     except Exception as e:
+    #         # todo: log
+    #         raise GhostOSIOError("failed to get text embedding", e)
 
     def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         # todo: try catch
@@ -194,72 +201,22 @@ class OpenAIDriverBootstrapper(Bootstrapper):
         llms.register_driver(OpenAIDriver())
 
 
-class LitellmAdapter(LLMApi):
+class LitellmAdapter(OpenAIAdapter):
     """
     adapter class wrap openai api to ghostos.blueprint.kernel.llms.LLMApi
     """
 
-    def __init__(
-            self,
-            service_conf: ServiceConf,
-            model_conf: ModelConf,
-            parser: OpenAIMessageParser,
-            functional_token_prompt: Optional[str] = None,
-    ):
-        self._service = service_conf
-        self._model = model_conf
-        # 现阶段litellm在流式场景并不支持自定义client
-        # http_client = None
-        # if service_conf.proxy:
-        #     transport = SyncProxyTransport.from_url(service_conf.proxy)
-        #     http_client = Client(transport=transport)
-        # self._client = HTTPHandler(timeout=self._model.timeout, concurrent_limit=1000, client=http_client)
-        self._parser = parser
-        if not functional_token_prompt:
-            functional_token_prompt = DEFAULT_FUNCTIONAL_TOKEN_PROMPT
-        self._functional_token_prompt = functional_token_prompt
-
-    def get_service(self) -> ServiceConf:
-        return self._service
-
-    def get_model(self) -> ModelConf:
-        return self._model
-
-    def parse_chat(self, chat: Chat) -> Chat:
-        if not chat.functional_tokens:
-            return chat
-        prompt = FunctionalTokenPrompt(self._functional_token_prompt)
-        content = prompt.format_tokens(chat.functional_tokens)
-        if len(chat.system) == 0:
-            chat.system = [DefaultMessageTypes.DEFAULT.new_system(content=content)]
-        else:
-            chat.system[-1].content += "\n\n" + content
-        return chat
-
-    def text_completion(self, prompt: str) -> str:
-        raise NotImplemented("text_completion is deprecated, implement it later")
-
-    def chat_completion(self, chat: Chat) -> Message:
-        chat = self.parse_chat(chat)
+    def _chat_completion(self, chat: Chat, stream: bool) -> ChatCompletion:
         messages = chat.get_messages()
-        messages = list(self._parser.parse_message_list(messages))
-        response = litellm.completion(model=self._model.model, messages=messages, timeout=self._model.timeout,
-                                      temperature=self._model.temperature, n=self._model.n, stream=False, api_key=self._service.token)
-
-        return self._parser.from_chat_completion(response.choices[0].message)
-
-    def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
-        chat = self.parse_chat(chat)
-        messages = chat.get_messages()
-        messages = list(self._parser.parse_message_list(messages))
-        chunks = litellm.completion(model=self._model.model, messages=messages, timeout=self._model.timeout,
-                                      temperature=self._model.temperature, n=self._model.n, stream=True, api_key=self._service.token)
-
-        messages = self._parser.from_chat_completion_chunks(chunks)
-        first = True
-        for chunk in messages:
-            if first:
-                self._model.set(chunk)
-                first = False
-            yield chunk
-
+        messages = self._parser.parse_message_list(messages)
+        response = litellm.completion(
+            model=self._model.model,
+            messages=list(messages),
+            timeout=self._model.timeout,
+            temperature=self._model.temperature,
+            n=self._model.n,
+            # not support stream yet
+            stream=False,
+            api_key=self._service.token,
+        )
+        return response.choices[0].message
