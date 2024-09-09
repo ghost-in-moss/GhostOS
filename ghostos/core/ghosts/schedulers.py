@@ -1,11 +1,11 @@
-from typing import Dict, Any
+from typing import Dict, Any, TypedDict, Required
 from abc import ABC, abstractmethod
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought
 from ghostos.core.messages.message import MessageKind
 
 __all__ = [
-    'MultiTask', 'Taskflow',
+    'MultiTask', 'Taskflow', 'NewTask',
 ]
 
 
@@ -55,6 +55,23 @@ class Taskflow(ABC):
         pass
 
 
+class NewTask(TypedDict):
+    """
+    useful to create a child task
+    """
+    task_name: Required[str]
+    """task specific name that you can identify this task in future"""
+
+    task_desc: str
+    """task description that why you create this task"""
+
+    thought: Required[Thought]
+    """Thought instance that dispatched to run this task"""
+
+    instruction: str
+    """the instruction to the task thought. could be empty"""
+
+
 class MultiTask(ABC):
     """
     You are equipped with this MultiTasks Library that can execute thought in an asynchronous task.
@@ -64,17 +81,15 @@ class MultiTask(ABC):
     """
 
     @abstractmethod
-    def wait_on_tasks(self, *thoughts: Thought, reason: str = "", instruction: str = "") -> Operator:
+    def wait_on_tasks(self, *new_tasks: NewTask) -> Operator:
         """
         使用 Thought 创建多个任务, 同时等待这些任务返回结果. 当结果返回时会触发下一轮思考.
-        :param thoughts: 每个 Thought 会创建出一个子任务.
-        :param reason: if given, will log why create the tasks to the current task.
-        :param instruction: if given, will notice the instruction for you when receive callback from the tasks.
+        :param new_tasks: the information to create a child task
         """
         pass
 
     @abstractmethod
-    def run_tasks(self, *thoughts: Thought) -> None:
+    def run_tasks(self, *new_tasks: NewTask) -> None:
         """
         使用 thoughts 动态创建一个或者多个 task 异步运行. 不影响你当前状态.
         """

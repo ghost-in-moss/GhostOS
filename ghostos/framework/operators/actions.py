@@ -1,7 +1,7 @@
 from typing import Optional, List, ClassVar
 
 from ghostos.core.ghosts import (
-    Operator, Ghost, Thought,
+    Operator, Ghost, Thought, Utils, NewTask,
 )
 from ghostos.core.messages import (
     MessageKind, MessageKindParser, Role,
@@ -76,7 +76,7 @@ class ActionOperator(Operator):
         session.update_task(task, thread, True)
 
     def send_children_events(self, g: "Ghost") -> None:
-        pass
+        return
 
     def next_operator(self, g: "Ghost") -> Optional[Operator]:
         return None
@@ -187,32 +187,31 @@ class FinishOperator(ActionOperator):
 
 
 class WaitOnTasksOperator(ActionOperator):
+    """
+    wait on children tasks
+    """
     task_state: ClassVar[str] = TaskState.RUNNING.value
     callback_event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK.value
 
     def __init__(
             self, *,
-            thoughts: List[Thought],
-            reason: str = "",
-            instruction: str = "",
+            new_tasks: List[NewTask],
     ):
-        self.thoughts = thoughts
+        self.new_tasks = new_tasks
         super().__init__(
             messages=[],
-            reason=reason,
-            instruction=instruction,
+            reason="",
+            instruction="",
         )
 
     def send_children_events(self, g: "Ghost") -> None:
         g.utils().create_child_tasks(
             depend=True,
-            thoughts=list(self.thoughts),
-            reason=self.reason,
-            instruction=self.instruction,
+            new_tasks=self.new_tasks,
         )
 
     def destroy(self) -> None:
-        del self.thoughts
+        del self.new_tasks
         del self.messages
 
 

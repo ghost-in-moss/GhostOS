@@ -1,7 +1,8 @@
-from typing import Optional, List
+from typing import Optional, List, NamedTuple
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought, ThoughtDriver
+from ghostos.core.ghosts.schedulers import NewTask
 from ghostos.core.session import (
     Event, DefaultEventType,
     Task, TaskState, Tasks,
@@ -13,7 +14,6 @@ from ghostos.core.messages import (
     MessageKindParser,
     Role,
 )
-from ghostos.entity import EntityMeta
 
 
 class Utils:
@@ -79,42 +79,39 @@ class Utils:
     def create_child_tasks(
             self, *,
             depend: bool,
-            thoughts: List[Thought],
-            reason: str = "",
-            instruction: str = "",
+            new_tasks: List[NewTask],
     ) -> None:
         """
         创建子任务.
         :param depend: 是否要等待这些任务.
-        :param thoughts:
-        :param reason:
-        :param instruction:
+        :param new_tasks:
         :return:
         """
-        if len(thoughts) == 0:
+        if len(new_tasks) == 0:
             raise ValueError("at least one thought must be provided")
         events = []
         session = self.ghost.session()
         current_task = session.task()
         parent_task_id = current_task.task_id
         children = []
-        for thought in thoughts:
+        for new_task in new_tasks:
+            thought = new_task.get('thought')
+            meta = thought.to_entity_meta()
             driver = self.get_thought_driver(thought)
-            meta = driver.to_entity_meta()
-            identifier = thought.identifier()
             task_id = driver.new_task_id(self.ghost)
             child = current_task.add_child(
                 task_id=task_id,
-                name=identifier.name,
-                description=identifier.description,
+                name=new_task.get('task_name'),
+                description=new_task.get('task_desc', ""),
                 meta=meta,
             )
             children.append(child)
             # 准备任务的创建事件. 这个事件的消息应该是目标 Thought 自己生成的. 所以不需要消息.
             e = DefaultEventType.CREATED.new(
                 task_id=task_id,
-                from_task_id=parent_task_id,
                 messages=[],
+                from_task_id=parent_task_id,
+                instruction=new_task.get('instruction', ""),
             )
             events.append(e)
         # 更新 task 状态.
@@ -125,8 +122,6 @@ class Utils:
         if depend:
             current_task.depend_on_tasks(
                 task_ids=[child.task_id for child in children],
-                reason=reason,
-                instruction=instruction,
             )
         session.update_task(current_task, None, False)
 

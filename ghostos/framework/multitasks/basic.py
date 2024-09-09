@@ -1,4 +1,5 @@
-from ghostos.core.ghosts import MultiTask, Operator, Thought, Ghost
+from typing import Iterable
+from ghostos.core.ghosts import MultiTask, Operator, Thought, Ghost, NewTask, Utils
 from ghostos.core.messages import MessageKind
 from ghostos.core.session.events import DefaultEventType
 from ghostos.framework.operators import WaitOnTasksOperator
@@ -9,15 +10,13 @@ class MultiTaskBasicImpl(MultiTask):
     def __init__(self, ghost: Ghost):
         self._ghost = ghost
 
-    def wait_on_tasks(self, *thoughts: Thought, reason: str = "", instruction: str = "") -> Operator:
+    def wait_on_tasks(self, *new_tasks: NewTask) -> Operator:
         return WaitOnTasksOperator(
-            thoughts=list(thoughts),
-            reason=reason,
-            instruction=instruction,
+            new_tasks=list(new_tasks),
         )
 
-    def run_tasks(self, *thoughts: Thought) -> None:
-        self._ghost.utils().create_child_tasks(depend=False, thoughts=list(thoughts))
+    def run_tasks(self, *new_tasks: NewTask) -> None:
+        self._ghost.utils().create_child_tasks(depend=False, new_tasks=list(new_tasks))
 
     def send_task(self, task_name: str, *messages: MessageKind) -> None:
         messages = list(messages)
