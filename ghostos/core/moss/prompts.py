@@ -35,7 +35,7 @@ import inspect
 PROMPT_MAGIC_ATTR = "__prompt__"
 """通过这个属性名来判断一个实例 (module/function/instance of class) 是否有预定义的 prompt. """
 
-CLASS_PROMPT_MAGIC_ATTR = "__class__prompt__"
+CLASS_PROMPT_MAGIC_ATTR = "__class_prompt__"
 
 PromptFn = Callable[[], str]
 """生成 Prompt 的方法. """

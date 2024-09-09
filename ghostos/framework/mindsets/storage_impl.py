@@ -1,11 +1,12 @@
 from typing import Dict, Iterable, Type, Optional
 import yaml
-from ghostos.core.ghosts import Thought, ThoughtDriver
-from ghostos.core.ghosts.thoughts import Mindset
+from ghostos.core.ghosts import Thought, ThoughtDriver, Mindset, Workspace, get_thought_driver_type
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.modules import Modules
 from ghostos.helpers import generate_import_path, import_from_path
 from ghostos.container import Provider, Container
+
+__all__ = ['StorageMindset', 'StorageMindsetProvider', 'WorkspaceMindsetProvider']
 
 
 class StorageMindset(Mindset):
@@ -18,10 +19,10 @@ class StorageMindset(Mindset):
         self._storage = storage
         self._cache_file = f"mindsets_{namespace}.cache.yml"
         self._thought_driver_map: Dict[Type[Thought], Type[ThoughtDriver]] = {}
+        self._thought_path_driver_path_map: Dict[str, str] = {}
         if self._storage.exists(self._cache_file):
             content = storage.get(self._cache_file)
             data = yaml.safe_load(content)
-            self._thought_path_driver_path_map: Dict[str, str] = {}
             for key, val in data.items():
                 if not isinstance(key, str) or not isinstance(val, str):
                     continue
@@ -29,7 +30,7 @@ class StorageMindset(Mindset):
 
     def register_thought_type(self, cls: Type[Thought], driver: Optional[Type[ThoughtDriver]] = None) -> None:
         if driver is None:
-            driver = cls.default_driver_type()
+            driver = get_thought_driver_type(cls)
         self._thought_driver_map[cls] = driver
         thought_type_path = generate_import_path(cls)
         thought_driver_type_path = generate_import_path(driver)
@@ -40,16 +41,16 @@ class StorageMindset(Mindset):
         content = yaml.safe_dump(self._thought_path_driver_path_map)
         self._storage.put(self._cache_file, content.encode('utf-8'))
 
-    def get_thought_driver_type(self, thought_type: Type[Thought]) -> Type[ThoughtDriver]:
-        if thought_type in self._thought_driver_map:
-            return self._thought_driver_map.get(thought_type)
-        thought_type_path = generate_import_path(thought_type)
+    def get_thought_driver_type(self, thought_cls: Type[Thought]) -> Type[ThoughtDriver]:
+        if thought_cls in self._thought_driver_map:
+            return self._thought_driver_map.get(thought_cls)
+        thought_type_path = generate_import_path(thought_cls)
         if thought_type_path in self._thought_path_driver_path_map:
             driver_type_path = self._thought_path_driver_path_map[thought_type_path]
             result = import_from_path(driver_type_path, self._modules.import_module)
             if result is not None:
                 return result
-        return thought_type.default_driver_type()
+        return get_thought_driver_type(thought_cls)
 
     def thought_types(self) -> Iterable[Type[Thought]]:
         done = set()
@@ -83,4 +84,25 @@ class StorageMindsetProvider(Provider):
         storage = con.force_fetch(Storage)
         modules = con.force_fetch(Modules)
         cache_storage = storage.sub_storage(self._relative_path)
+        return StorageMindset(cache_storage, modules, "")
+
+
+class WorkspaceMindsetProvider(Provider[Mindset]):
+    """
+    mindset based by workspace
+    """
+
+    def __init__(self, relative_path: str = "cache"):
+        self._relative_path = relative_path
+
+    def singleton(self) -> bool:
+        return True
+
+    def contract(self) -> Type[Mindset]:
+        return Mindset
+
+    def factory(self, con: Container) -> Optional[Mindset]:
+        workspace = con.force_fetch(Workspace)
+        modules = con.force_fetch(Modules)
+        cache_storage = workspace.runtime().sub_storage(self._relative_path)
         return StorageMindset(cache_storage, modules, "")

@@ -141,9 +141,10 @@ class DefaultEventType(str, Enum):
         return self not in {}
 
     def new(
-            self, *,
+            self,
             task_id: str,
             messages: List[Message],
+            *,
             from_task_id: Optional[str] = None,
             reason: str = "",
             instruction: str = "",
@@ -203,6 +204,10 @@ class EventBus(ABC):
         notify a task to check new events.
         :param task_id: task id
         """
+        pass
+
+    @abstractmethod
+    def clear_task(self, task_id: str) -> None:
         pass
 
     @contextmanager

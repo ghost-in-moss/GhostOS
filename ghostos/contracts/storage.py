@@ -16,7 +16,7 @@ class Storage(ABC):
         pass
 
     @abstractmethod
-    def get(self, file_path: str) -> AnyStr:
+    def get(self, file_path: str) -> bytes:
         """
         获取一个 Storage 路径下一个文件的内容.
         :param file_path: storage 下的一个相对路径.

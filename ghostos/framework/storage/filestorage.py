@@ -10,7 +10,7 @@ class FileStorage(Storage):
     def __init__(self, dir_: str):
         self._dir: str = os.path.abspath(dir_)
 
-    def get(self, file_path: str) -> AnyStr:
+    def get(self, file_path: str) -> bytes:
         file_path = self._join_file_path(file_path)
         with open(file_path, 'rb') as f:
             return f.read()
@@ -37,6 +37,8 @@ class FileStorage(Storage):
             f.write(content)
 
     def sub_storage(self, relative_path: str) -> "Storage":
+        if not relative_path:
+            return self
         dir_path = self._join_file_path(relative_path)
         return FileStorage(dir_path)
 

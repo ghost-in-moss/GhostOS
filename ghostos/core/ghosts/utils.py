@@ -8,6 +8,7 @@ from ghostos.core.session import (
 )
 
 from ghostos.core.messages import (
+    Message,
     MessageKind,
     MessageKindParser,
     Role,
@@ -19,14 +20,10 @@ class Utils:
     def __init__(self, ghost: Ghost):
         self.ghost = ghost
 
-    def get_thought_entity_meta(self, thought: Thought) -> EntityMeta:
-        driver = self.get_thought_driver(thought)
-        return driver.to_entity_meta()
-
     def get_thought_driver(self, thought: Thought) -> ThoughtDriver:
         return self.ghost.mindset().get_thought_driver(thought)
 
-    def initialize(self) -> Optional["Event"]:
+    def initialize(self, messages: List[Message]) -> Optional["Event"]:
         """
         initialize ghost
         """
@@ -37,11 +34,11 @@ class Utils:
         task_id = process.main_task_id
         root_thought = self.ghost.root_thought()
         identifier = root_thought.identifier()
-        meta = self.get_thought_entity_meta(root_thought)
+        meta = root_thought.to_entity_meta()
         task = Task.new(
             task_id=task_id,
             session_id=session.id(),
-            process_id=process.id,
+            process_id=process.process_id,
             name=identifier.name,
             description=identifier.description,
             meta=meta,
@@ -52,12 +49,12 @@ class Utils:
         session.update_task(task, None, False)
         return DefaultEventType.CREATED.new(
             task_id=task_id,
-            messages=[],
+            messages=messages,
         )
 
     def fetch_thought_from_task(self, task: "Task") -> ThoughtDriver:
-        thought_driver = self.ghost.entity_factory().force_new_entity(task.meta, ThoughtDriver)
-        return thought_driver
+        thought = self.ghost.entity_factory().force_new_entity(task.meta, Thought)
+        return self.ghost.mindset().get_thought_driver(thought)
 
     def handle_event(self, e: "Event") -> Optional["Operator"]:
         """
@@ -74,7 +71,7 @@ class Utils:
         # handle event
         op = thought_driver.on_event(self.ghost, e)
         # update the task.meta from the thought that may be changed
-        task.meta = thought_driver.to_entity_meta()
+        task.meta = thought_driver.thought.to_entity_meta()
         session.update_task(task, None, False)
         # return the operator that could be None (use default operator outside)
         return op

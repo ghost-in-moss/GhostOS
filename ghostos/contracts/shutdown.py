@@ -1,6 +1,6 @@
-from typing import Callable, List, Optional, Type
+from typing import Callable, Optional, Type, Set
 from abc import ABC, abstractmethod
-from ghostos.container import Provider, Container, ABSTRACT
+from ghostos.container import Provider, Container
 
 
 class Shutdown(ABC):
@@ -27,15 +27,15 @@ class Shutdown(ABC):
 class ShutdownImpl(Shutdown):
 
     def __init__(self):
-        self._callbacks: List[Callable[[], None]] = []
+        self._callbacks: Set[Callable[[], None]] = set()
 
     def register(self, shutdown: Callable[[], None]) -> None:
-        self._callbacks.append(shutdown)
+        self._callbacks.add(shutdown)
 
     def shutdown(self) -> None:
         for callback in self._callbacks:
             callback()
-        self._callbacks = []
+        del self._callbacks
 
 
 class ShutdownProvider(Provider[Shutdown]):

@@ -40,36 +40,35 @@ class BasicSession(Session):
 
     def __init__(
             self, *,
+            ghost_name: str,
+            ghost_role: str,
             upstream: Stream,
             eventbus: EventBus,
             pool: Pool,
+            processes: Processes,
             tasks: Tasks,
             threads: Threads,
-            processes: Processes,
             logger: LoggerItf,
             # 当前任务信息.
             process: Process,
             task: Task,
             thread: MsgThread,
-            timeout: float = 0.0,
     ):
         self._pool = pool
         self._upstream = upstream
         self._logger = logger
-        self._task: Task = task
         self._tasks: Tasks = tasks
-        self._process: Process = process
         self._processes: Processes = processes
-        self._ghost_name: str = ""
-        self._message_role: str = Role.ASSISTANT.value
-        self._thread: MsgThread = thread
+        self._ghost_name: str = ghost_name
+        self._message_role: str = ghost_role
         self._threads: Threads = threads
-        self._timeleft: Timeleft = Timeleft(timeout)
-        self._firing_events: List[Event] = []
-        self._canceling: List[str] = []
-        self._killing: List[str] = []
-        self._creating: List[Task] = []
         self._eventbus: EventBus = eventbus
+        # 需要管理的状态.
+        self._task: Task = task
+        self._process: Process = process
+        self._creating: List[Task] = []
+        self._thread: MsgThread = thread
+        self._firing_events: List[Event] = []
         self._fetched_task_briefs: Dict[str, TaskBrief] = {}
 
     def id(self) -> str:
@@ -79,20 +78,7 @@ class BasicSession(Session):
         return (
                 not self._upstream.stopped()
                 and self._task.lock is not None
-                and self._timeleft.left() >= 0
         )
-
-    def with_ghost(
-            self,
-            name: str,
-            role: str = Role.ASSISTANT.value,
-            logger: Optional[LoggerItf] = None,
-    ) -> "Session":
-        self._ghost_name = name
-        self._message_role = role
-        if logger is not None:
-            self._logger = logger
-        return self
 
     def refresh_lock(self) -> bool:
         lock = self._task.lock if self._task.lock else ""
@@ -192,22 +178,6 @@ class BasicSession(Session):
         future = Future(future_id, self._eventbus, event)
         self._pool.submit(future.run)
 
-    def done(self) -> None:
-        if not self.alive():
-            raise RuntimeError("Session is not alive")
-        with self._eventbus.transaction():
-            with self._tasks.transaction():
-                with self._threads.transaction():
-                    with self._processes.transaction():
-                        if self._process.quited:
-                            self._do_quit()
-                        else:
-                            self._do_create_tasks()
-                            self._do_finish_task_and_thread()
-                            self._processes.save_process(process=self._process)
-                            self._do_fire_events()
-                        self._upstream.deliver(DefaultMessageTypes.final())
-
     def _do_quit(self) -> None:
         main_task_id = self._process.main_task_id
         task = self._tasks.get_task(main_task_id, False)
@@ -225,6 +195,7 @@ class BasicSession(Session):
     def _do_create_tasks(self) -> None:
         if self._creating:
             self._tasks.save_task(*self._creating)
+            self._creating = []
 
     def _do_fire_events(self) -> None:
         if not self._firing_events:
@@ -236,6 +207,7 @@ class BasicSession(Session):
             # 异步进程需要通知.
             notify = not self._upstream.is_streaming() or e.task_id != main_task_id
             bus.send_event(e, notify)
+        self._firing_events = []
 
     def _do_finish_task_and_thread(self) -> None:
         self._task.thread_id = self._thread.id
@@ -251,6 +223,8 @@ class BasicSession(Session):
                 if child.is_overdue() or TaskState.is_dead(child.task_state):
                     task.remove_child(child.task_id)
         task.update_turn()
+        self._task = task
+        self._fetched_task_briefs = {}
         self._thread = self._thread.update_history()
         self._tasks.save_task(task)
         self._threads.save_thread(self._thread)
@@ -289,14 +263,6 @@ class BasicSession(Session):
     def eventbus(self) -> EventBus:
         return self._eventbus
 
-    def fail(self, err: Optional[Exception]) -> None:
-        # 暂时只做解开锁.
-        locked = self._task.lock
-        if locked:
-            self._tasks.unlock_task(self._task.task_id, locked)
-        self._upstream.deliver(DefaultMessageTypes.ERROR.new(content=str(err)))
-        self._logger.error(err)
-
     def update_process(self, process: "Process") -> None:
         self._process = process
 
@@ -306,10 +272,8 @@ class BasicSession(Session):
                 f"only main task {self._process.main_task_id} is able to quit process, not {self._task.task_id}"
             )
         self._process.quited = True
-        # todo: 要做的事情: 1. 标记 quited 并保存. 2. 从根节点开始, 通知所有的任务取消.
 
     def destroy(self) -> None:
-        del self._pool
         del self._upstream
         del self._logger
         del self._task
@@ -319,103 +283,34 @@ class BasicSession(Session):
         del self._process
         del self._processes
         del self._firing_events
-        del self._canceling
         del self._fetched_task_briefs
+        del self._pool
 
-    @classmethod
-    def create_session(
-            cls, *,
-            container: Container,
-            ghost_meta: EntityMeta,
-            upstream: Stream,
-            session_id: str,
-            is_async: bool,
-            task_id: Optional[str] = None,
-    ) -> Session:
-        process_id = task_id if task_id else uuid()
-        process = Process.new(session_id=session_id, is_async=is_async, process_id=process_id, ghost_meta=ghost_meta)
-        processes = container.force_fetch(Processes)
-        tasks = container.force_fetch(Tasks)
-        task = Task.new(
-            task_id=process.main_task_id, session_id=session_id, process_id=process_id,
-            name="", description="", meta=EntityMeta(type="", data={}),
-        )
-        tasks.save_task(task)
-        threads = container.force_fetch(Threads)
-        thread = threads.get_thread(task.thread_id, create=True)
+    def save(self) -> None:
+        with self._eventbus.transaction():
+            with self._tasks.transaction():
+                with self._threads.transaction():
+                    with self._processes.transaction():
+                        if self._process.quited:
+                            self._do_quit()
+                        else:
+                            self._do_create_tasks()
+                            self._do_finish_task_and_thread()
+                            self._do_fire_events()
+                            if self._process.main_task_id == self._task.task_id:
+                                self._processes.save_process(process=self._process)
 
-        eventbus = container.force_fetch(EventBus)
-        pool = container.force_fetch(Pool)
-        logger = container.force_fetch(LoggerItf)
+    def fail(self, err: Optional[Exception]) -> None:
+        # 暂时只做解开锁.
+        locked = self._task.lock
+        if locked:
+            self._tasks.unlock_task(self._task.task_id, locked)
+            self._task.lock = None
+        self._upstream.deliver(DefaultMessageTypes.ERROR.new(content=str(err)))
+        self._logger.error(err)
 
-        # 初始化创建.
-        processes.save_process(process)
-        threads.save_thread(thread)
-        return cls(
-            upstream=upstream,
-            eventbus=eventbus,
-            pool=pool,
-            logger=logger,
-            task=task,
-            tasks=tasks,
-            process=process,
-            processes=processes,
-            thread=thread,
-            threads=threads,
-        )
-
-    @classmethod
-    def find_session(
-            cls,
-            container: Container,
-            upstream: Stream,
-            session_id: str,
-            task_id: Optional[str] = None,
-            task: Optional[Task] = None,
-    ) -> Optional[Session]:
-        tasks = container.force_fetch(Tasks)
-        if task is None and task_id is not None:
-            task = tasks.get_task(task_id, lock=True)
-            if task is None:
-                # task 不存在.
-                return None
-            elif task.session_id != session_id:
-                # 不合法的查询.
-                return None
-
-        processes = container.force_fetch(Processes)
-        p = processes.get_session_process(session_id)
-        if p is None:
-            # 进程不存在.
-            return None
-
-        if task is None:
-            # 没有传入 task.
-            task_id = p.main_task_id
-            task = tasks.get_task(task_id, lock=True)
-
-        if task is None or task.lock is None:
-            # 没有锁定成功.
-            return None
-
-        threads = container.force_fetch(Threads)
-        thread = threads.get_thread(task.thread_id, create=True)
-        if thread is None:
-            raise RuntimeError(f"No thread {task.thread_id} found for task {task.task_id} and fail to create one")
-
-        pool = container.force_fetch(Pool)
-        logger = container.force_fetch(LoggerItf)
-        eventbus = container.force_fetch(EventBus)
-
-        return cls(
-            upstream=upstream,
-            eventbus=eventbus,
-            pool=pool,
-            logger=logger,
-            task=task,
-            tasks=tasks,
-            process=p,
-            processes=processes,
-            thread=thread,
-            threads=threads,
-        )
+    def done(self) -> None:
+        locked = self._task.lock
+        if locked:
+            self._tasks.unlock_task(self._task.task_id, locked)
+        self._upstream.deliver(DefaultMessageTypes.final())

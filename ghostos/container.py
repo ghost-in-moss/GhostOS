@@ -153,7 +153,7 @@ class Container(IoCContainer):
         """
         self._bound.add(abstract)
 
-    def bound(self, contract: Type[ABSTRACT]) -> bool:
+    def bound(self, contract: Type) -> bool:
         """
         return whether contract is bound.
         """
@@ -303,7 +303,7 @@ class Bootstrapper(metaclass=ABCMeta):
         pass
 
 
-class BootstrappingProvider(Provider, Bootstrapper, metaclass=ABCMeta):
+class BootstrappingProvider(Generic[ABSTRACT], Provider[ABSTRACT], Bootstrapper, metaclass=ABCMeta):
     """
     将 bootstrapper 和 Provider 可以融合在一起.
     """

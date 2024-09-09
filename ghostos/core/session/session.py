@@ -30,21 +30,6 @@ class Session(ABC):
         """
         return self.process().session_id
 
-    def with_ghost(
-            self, *,
-            name: str,
-            role: str = Role.ASSISTANT.value,
-            logger: Optional[LoggerItf] = None,
-    ) -> "Session":
-        """
-        添加 Ghost 相关的信息.
-        :param name: ghost (agent) name
-        :param role: message role.
-        :param logger: logger instance.
-        :return: self
-        """
-        pass
-
     @abstractmethod
     def alive(self) -> bool:
         """
@@ -187,21 +172,6 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def done(self) -> None:
-        """
-        完成 session, 需要清理和真正保存状态.
-        需要做的事情包括:
-        1. 推送 events, events 要考虑 task 允许的栈深问题. 这个可以后续再做.
-        2. 保存 task. task 要对自己的子 task 做垃圾回收. 并且保留一定的子 task 数, 包含 dead task.
-        3. 保存 thread
-        4. 保存 processes.
-        5. 考虑到可能发生异常, 要做 transaction.
-        6. 退出相关的逻辑只能在 finish 里实现.
-        :return:
-        """
-        pass
-
-    @abstractmethod
     def tasks(self) -> Tasks:
         pass
 
@@ -218,12 +188,31 @@ class Session(ABC):
         pass
 
     @abstractmethod
+    def save(self) -> None:
+        """
+        完成 session, 需要清理和真正保存状态.
+        需要做的事情包括:
+        1. 推送 events, events 要考虑 task 允许的栈深问题. 这个可以后续再做.
+        2. 保存 task. task 要对自己的子 task 做垃圾回收. 并且保留一定的子 task 数, 包含 dead task.
+        3. 保存 thread
+        4. 保存 processes.
+        5. 考虑到可能发生异常, 要做 transaction.
+        6. 退出相关的逻辑只能在 finish 里实现.
+        :return:
+        """
+        pass
+
+    @abstractmethod
     def fail(self, err: Optional[Exception]) -> None:
         """
         任务执行异常的处理. 需要判断任务是致命的, 还是可以恢复.
         :param err:
         :return:
         """
+        pass
+
+    @abstractmethod
+    def done(self) -> None:
         pass
 
     @abstractmethod
