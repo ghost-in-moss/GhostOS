@@ -61,30 +61,18 @@ class Turn(BaseModel):
         event = self.event
         if event is None:
             return []
-        if event.from_self() and not event.no_reason_or_instruction():
-            # todo: 将 event 和历史消息的关联建立起来. 类似 tool id 的方式.
-            contents = [
-                f"receive self event `{event.type}`",
-                f"\n- reason: {event.reason}" if event.reason else "",
-                f"\n- instruction: {event.instruction}" if event.instruction else "",
-            ]
-            content = "".join(contents)
-            # 暂时考虑用系统消息来标记事件.
-            yield DefaultMessageTypes.DEFAULT.new_system(content=content)
-        elif not event.from_self() and event.from_task_id is not None:
-            # todo: 考虑未来应该怎么优化. task_id 如果是 uuid 的话, 多少有一些问题.
-            contents = [
-                f"from task {event.from_task_id} receive event `{event.type}`.",
-                f"\n- reason: {event.reason}" if event.reason else "",
-                f"\n- instruction: {event.instruction}" if event.instruction else "",
-            ]
-            content = "".join(contents)
-            # 暂时考虑用系统消息来标记事件.
-            yield DefaultMessageTypes.DEFAULT.new_system(content=content)
+        # reason is first
+        if event.reason:
+            yield DefaultMessageTypes.DEFAULT.new_system(content=event.reason)
 
-        # 携带的消息体.
-        for message in self.event.messages:
-            yield message
+        # messages in middle
+        if event.messages:
+            for message in self.event.messages:
+                yield message
+
+        # instruction after messages.
+        if event.instruction:
+            yield DefaultMessageTypes.DEFAULT.new_system(content=event.instruction)
 
     def messages(self) -> Iterable[Message]:
         yield from self.event_messages()
