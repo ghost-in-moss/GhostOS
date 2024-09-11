@@ -1,11 +1,11 @@
-from ghostos.framework.operators.actions import (
+from ghostos.framework.operators.action_ops import (
     WaitsOperator,
     FailOperator,
     FinishOperator,
     ObserveOperator,
     WaitOnTasksOperator,
 )
-from ghostos.framework.operators.on_events import (
+from ghostos.framework.operators.event_ops import (
     # 统一的事件状态机.
     OnEventOperator,
 

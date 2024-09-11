@@ -44,15 +44,16 @@ class Event(BaseModel):
     )
     reason: str = Field(
         default="",
-        description="reason of the event.",
+        description="reason of the event, wrapped by system type message before the messages",
     )
-    instruction: str = Field(
-        default="",
-        description="instruction from the event telling what to do.",
-    )
+
     messages: List[Message] = Field(
         default_factory=list,
         description="list of messages sent by this event",
+    )
+    instruction: str = Field(
+        default="",
+        description="instruction from the event telling what to do. wrapped by system type message after the messages",
     )
     payloads: Dict[str, Dict] = Field(
         default_factory=dict,

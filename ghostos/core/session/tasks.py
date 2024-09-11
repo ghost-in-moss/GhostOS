@@ -51,8 +51,6 @@ class WaitGroup(BaseModel):
     """
     await group of children tasks that will wake up the task.
     """
-    reason: str = Field(description="why to create the group")
-    instruction: str = Field(description="prompt when waiting tasks are done")
     tasks: Dict[str, bool] = Field(description="children task ids to wait")
 
     def is_done(self) -> bool:
@@ -255,10 +253,8 @@ the state of the current task.
                 result.add(task)
         return result
 
-    def depend_on_tasks(self, task_ids: List[str], reason: str, instruction: str) -> None:
+    def depend_on_tasks(self, task_ids: List[str]) -> None:
         group = WaitGroup(
-            reason=reason,
-            instruction=instruction,
             tasks={task_id: False for task_id in task_ids},
         )
         self.depending.append(group)

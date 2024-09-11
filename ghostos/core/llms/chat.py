@@ -12,7 +12,7 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from pydantic import BaseModel, Field
 from ghostos.abc import Identifiable, Identifier
 from ghostos import helpers
-from ghostos.core.messages import Message, DefaultMessageTypes, Caller
+from ghostos.core.messages import Message, Role, Caller
 
 __all__ = [
     'LLMTool', 'FunctionalToken',
@@ -24,6 +24,11 @@ __all__ = [
 # ---- tool and function ---- #
 
 class LLMTool(BaseModel):
+    """
+    a common wrapper for JSONSchema LLM tool.
+    Compatible to OpenAI Tool.
+    We need this because OpenAI Tool definition is too dynamic, we need strong typehints.
+    """
     id: Optional[str] = Field(default=None, description="The id of the LLM tool.")
     name: str = Field(description="function name")
     description: str = Field(default="", description="function description")
@@ -57,16 +62,22 @@ class FunctionalTokenMode(str, Enum):
 
 class FunctionalToken(Identifiable, BaseModel):
     """
-    定义特殊的 token, 用来在流式输出中生成 caller.
+    functional token means to provide function ability to LLM not by JsonSchema, but by token.
+    LLM generates special tokens (such as XML marks) to indicate further tokens are the content of the function.
+    LLMDriver shall define which way to prompt the functional token usage such as xml.
     """
 
-    token: str = Field(description="流式输出中标志 caller 的特殊 token. 比如 :moss>\n ")
-    name: str = Field(description="caller 的名字. ")
-    description: str = Field(description="functional token 的描述")
-    deliver: bool = Field(default=False, description="functional token 后续的信息是否要发送. 可以设置不发送. ")
+    token: str = Field(description="token that start the function content output")
+    end_token: str = Field(default="", description="end token that close the function content output")
+    name: str = Field(description="name of the function")
+    description: str = Field(default="", description="description of the function")
+    visible: bool = Field(default=False, description="if the functional token and the parameters are visible to user")
     parameters: Optional[Dict] = Field(default=None, description="functional token parameters")
 
     def new_caller(self, arguments: str) -> "Caller":
+        """
+        generate new caller by functional token, usually used in tests.
+        """
         return Caller(
             name=self.name,
             arguments=arguments,
@@ -74,12 +85,18 @@ class FunctionalToken(Identifiable, BaseModel):
         )
 
     def identifier(self) -> Identifier:
+        """
+        identifier of the functional token.
+        """
         return Identifier(
             name=self.name,
             description=self.description,
         )
 
     def as_tool(self) -> LLMTool:
+        """
+        all functional token are compatible to a llm tool.
+        """
         return LLMTool.new(name=self.name, desc=self.description, parameters=self.parameters)
 
 
@@ -105,8 +122,13 @@ class Chat(BaseModel):
         返回所有的消息.
         """
         messages = []
+        # combine system messages into one
         if self.system:
-            messages.extend(self.system)
+            contents = []
+            for message in self.system:
+                contents.append(message.get_content())
+            system_message = Role.SYSTEM.new(content="\n\n".join(contents))
+            messages.append(system_message)
         if self.history:
             messages.extend(self.history)
         if self.inputs:

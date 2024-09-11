@@ -1,7 +1,7 @@
 from ghostos.core.ghosts.ghost import Ghost, Inputs, GhostConf
 from ghostos.core.ghosts.actions import Action
 from ghostos.core.ghosts.operators import Operator, EventOperator, get_event_operator
-from ghostos.core.ghosts.schedulers import Taskflow, MultiTask
+from ghostos.core.ghosts.schedulers import Taskflow, MultiTask, NewTask
 from ghostos.core.ghosts.thoughts import (
     Mindset,
     Thought, ThoughtDriver,

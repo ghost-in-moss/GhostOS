@@ -190,3 +190,29 @@ def test_buffer_header_with_payload():
     flushed = buffer.flush()
     assert len(flushed.messages) == 1
     assert flushed.messages[0].content == "hello"
+
+
+def test_buffer_with_xml_functional_token():
+    functional_tokens = [FunctionalToken(
+        token="<moss>",
+        end_token="</moss>",
+        name="moss",
+        description="desc",
+        deliver=False,
+    )]
+
+    buffer = DefaultBuffer(functional_tokens=functional_tokens)
+    contents = ["he", "llo <mo", "ss>w", "orld</", "mos", 's>']
+    content = "".join(contents)
+    for c in contents:
+        msg = Message.new_pack(content=c)
+        buffer.buff(msg)
+    flushed = buffer.flush()
+    assert len(flushed.messages) == 1
+    assert len(list(flushed.callers)) > 0
+    message = flushed.messages[0]
+    assert message.content == "hello "
+    assert message.memory == content
+    caller = flushed.callers[0]
+    assert caller.name == "moss"
+    assert caller.arguments == "world"

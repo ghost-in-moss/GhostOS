@@ -63,13 +63,13 @@ class ModelThought(Thought, ModelEntity, PromptAbleClass, ABC):
     """
     The abstract model of the thought based by pydantic.BaseModel.
     """
-    task_name: str = Field(description="name of the thought task")
-    task_desc: str = Field(description="description of the thought task")
+    name: str = Field(description="name of the thought")
+    description: str = Field(description="description of the thought")
 
     def identifier(self) -> Identifier:
         return Identifier(
-            name=self.task_name,
-            description=self.task_desc,
+            name=self.name,
+            description=self.description,
         )
 
     @classmethod
@@ -80,8 +80,8 @@ class ThoughtModel(Thought, BaseModel, ABC):
     """
     The abstract type of Thought that based on pydantic.BaseModel. 
     """
-    task_name: str = Field(description="name of the thought task")
-    task_desc: str = Field(description="description of the thought task")
+    name: str = Field(description="name of the thought")
+    description: str = Field(description="description of the thought")
 '''
         return inspect.getsource(cls)
 

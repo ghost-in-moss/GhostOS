@@ -40,23 +40,30 @@ class DefaultBuffer(Buffer):
         """过程中 buff 的 caller. """
         self._origin_functional_tokens = functional_tokens
 
-        self._functional_tokens: Dict[str, FunctionalToken] = {}
+        self._functional_token_starts: Dict[str, FunctionalToken] = {}
         """加载 functional tokens. 根据特殊的 token, 生成 caller 对象. """
+
+        self._functional_token_ends: Dict[str, FunctionalToken] = {}
 
         self._functional_token_chars: Dict[int, Set[str]] = {}
         """ functional token 的字符组.. """
 
         if functional_tokens:
             for ft in functional_tokens:
-                self._functional_tokens[ft.token] = ft
+                start = ft.token
+                if not start:
+                    continue
+                end = ft.end_token
+                self._functional_token_starts[start] = ft
                 i = 0
-                for c in ft.token:
-                    if i not in self._functional_token_chars:
-                        self._functional_token_chars[i] = set()
-                    idx_token_chars = self._functional_token_chars[i]
-                    idx_token_chars.add(c)
-                    self._functional_token_chars[i] = idx_token_chars
-                    i += 1
+                for c in start:
+                    i = self._add_functional_token_char(c, i)
+                if not end:
+                    continue
+                self._functional_token_ends[end] = ft
+                i = 0
+                for c in end:
+                    i = self._add_functional_token_char(c, i)
 
         self._current_functional_token: str = ""
         """正在运行中的 functional token"""
@@ -66,6 +73,15 @@ class DefaultBuffer(Buffer):
         """消息体所有缓冲的 content 内容. """
         self._buffering_token: str = ""
         """疑似命中了 functional token 而被 buff 的字符串."""
+
+    def _add_functional_token_char(self, c: str, i: int) -> int:
+        if i not in self._functional_token_chars:
+            self._functional_token_chars[i] = set()
+        idx_token_chars = self._functional_token_chars[i]
+        idx_token_chars.add(c)
+        self._functional_token_chars[i] = idx_token_chars
+        i += 1
+        return i
 
     def match(self, message: Message) -> bool:
         # 默认可以匹配任何一种 message 消息体.
@@ -143,31 +159,57 @@ class DefaultBuffer(Buffer):
             if buffing_token_is_larger_than_any_tokens or c not in self._functional_token_chars[buffed_idx]:
                 # 为当前 functional token 准备好的内容要变长.
                 self._current_functional_token_content += buffering_token
-                functional_token = self._functional_tokens.get(self._current_functional_token, None)
-                if not functional_token or functional_token.deliver:
+                functional_token = self._functional_token_starts.get(self._current_functional_token, None)
+                if not functional_token or functional_token.visible:
                     # 已经 buffering 的内容都准备输出.
                     # 但如果当前的 functional token 禁止对外输出, 则不会将新内容添加到待输出内容里.
                     deliver_content += buffering_token
                 # 清空 buffering content.
                 self._buffering_token = ""
             #  完全匹配到了某个 functional token:
-            elif buffering_token in self._functional_tokens:
+            elif buffering_token in self._functional_token_starts:
+                ft = self._functional_token_starts[buffering_token]
                 # 正在 buffer 某个 functional token 的输出. 就需要生成一次完整的 caller 了.
-                if self._current_functional_token and self._current_functional_token in self._functional_tokens:
+                if (
+                        self._current_functional_token
+                        # functional token only has start
+                        and self._current_functional_token in self._functional_token_starts
+                        and self._current_functional_token not in self._functional_token_ends
+                ):
                     caller = self._generate_current_caller()
                     if caller:
                         # 把 caller 添加到当前 pack 里.
                         caller.add(pack)
                         caller.add(self._buffering_message)
                 # 状态归零.
-                self._current_functional_token = ""
+                self._current_functional_token = buffering_token
                 self._current_functional_token_content = ""
                 # 变换新的 functional token.
-                self._current_functional_token = buffering_token
+                if ft.visible:
+                    deliver_content += buffering_token
                 # 清空 buffering token 信息.
-                # 并不添加 deliver content, 因为 functional token 默认不对外输出.
                 self._buffering_token = ""
             # 仍然有希望通过未来的字符匹配到 token.
+            elif buffering_token in self._functional_token_ends:
+                ft = self._functional_token_ends[buffering_token]
+                if (
+                        self._current_functional_token
+                        # functional token only has start
+                        and self._current_functional_token in self._functional_token_starts
+                ):
+                    caller = self._generate_current_caller()
+                    if caller:
+                        # 把 caller 添加到当前 pack 里.
+                        caller.add(pack)
+                        caller.add(self._buffering_message)
+                # reset states
+                self._current_functional_token = ""
+                self._current_functional_token_content = ""
+                # reset current functional token
+                self._current_functional_token = ""
+                if ft.visible:
+                    deliver_content += buffering_token
+                self._buffering_token = ""
             else:
                 self._buffering_token = buffering_token
         # 输出的消息会缓存到一起.
@@ -282,7 +324,7 @@ class DefaultBuffer(Buffer):
     def _generate_current_caller(self) -> Optional[Caller]:
         if not self._current_functional_token:
             return None
-        functional_token = self._functional_tokens[self._current_functional_token]
+        functional_token = self._functional_token_starts[self._current_functional_token]
         return functional_token.new_caller(self._current_functional_token_content)
 
     def new(self) -> "DefaultBuffer":
