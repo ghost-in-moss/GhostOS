@@ -12,7 +12,7 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from pydantic import BaseModel, Field
 from ghostos.abc import Identifiable, Identifier
 from ghostos import helpers
-from ghostos.core.messages import Message, DefaultMessageTypes, Caller
+from ghostos.core.messages import Message, Role, Caller
 
 __all__ = [
     'LLMTool', 'FunctionalToken',
@@ -122,8 +122,13 @@ class Chat(BaseModel):
         返回所有的消息.
         """
         messages = []
+        # combine system messages into one
         if self.system:
-            messages.extend(self.system)
+            contents = []
+            for message in self.system:
+                contents.append(message.get_content())
+            system_message = Role.SYSTEM.new(content="\n\n".join(contents))
+            messages.append(system_message)
         if self.history:
             messages.extend(self.history)
         if self.inputs:

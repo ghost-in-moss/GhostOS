@@ -22,15 +22,15 @@ MOSS 通过 PyContext 来定义一个可持久化, 可以复原的上下文.
 compiler: MOSSCompiler = container.force_fetch(MOSSCompiler)
 
 # 第二步, compiler 可以预定义 Module 的一些内部方法比如 __import__, 或 join pycontext, 然后 compile
-# 关于 __import__, 默认会使用 moss.libraries.Modules 的实现. 
+# 关于 __import__, 默认会使用 contracts.modules.Modules 的实现. 
 
-runtime: MOSSRuntime = compiler.compile(modulename)
+runtime: MOSSRuntime = compiler.join_pycontext(pycontext).compile(modulename)
 
 # 这个阶段会编译 pycontext.module 到一个临时的 Module 中, 并对生成的 MOSSRuntime 进行初始化. 
 # 如果 pycontext.code 存在, 则使用这个 code. 这是为了支持未来 llm 直接修改上下文, 存一个自己的临时副本. 
 
 # 第三步, 生成 context 的 prompt. 
-prompt = runtime.prompter().moss_context_prompt()
+prompt = runtime.prompter().dump_context_prompt()
 
 # 第四步, 使用 prompt 生成 chat, 调用大模型或人工生成代码. 
 code = llm_runner(prompt)
@@ -317,7 +317,7 @@ class MossPrompter(ABC):
         获取 MOSS 运行时的完整 Python context 的 Prompt.
         这个 Prompt 包含以下几个部分:
         1. predefined_code: 通过 pycontext.module 默认加载的代码 (对大模型可展示的部分).
-        2. code_prompt: 对 predefined code 里各种引用类库的描述 prompt. 会包裹在 `\"""` 中展示.
+        2. pycontext_code_prompt: 对 predefined code 里各种引用类库的描述 prompt. 会包裹在 `\"""` 中展示.
         3. moss_prompt: moss 会注入到当前上下文里, 因此会生成 MOSS Prompt.
         """
         compiled = self.module()
