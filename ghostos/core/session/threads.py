@@ -1,4 +1,4 @@
-from typing import Optional, List, Iterable
+from typing import Optional, List, Iterable, Dict, Any
 import time
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
@@ -10,7 +10,7 @@ from ghostos.helpers import uuid
 from contextlib import contextmanager
 
 __all__ = [
-    'Threads', 'MsgThread',
+    'Threads', 'MsgThread', 'Turn',
     'thread_to_chat',
 ]
 
@@ -39,6 +39,7 @@ class Turn(BaseModel):
     created: float = Field(
         default_factory=lambda: round(time.time(), 4),
     )
+    extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 
     @classmethod
     def new(cls, event: Optional[Event], *, turn_id: Optional[str] = None,
@@ -79,6 +80,9 @@ class Turn(BaseModel):
         if self.generates:
             yield from self.generates
 
+    def is_empty(self) -> bool:
+        return (self.event is None or self.event.is_empty()) and not self.generates
+
 
 class MsgThread(BaseModel):
     """
@@ -89,6 +93,11 @@ class MsgThread(BaseModel):
         default_factory=uuid,
         description="The id of the thread, also a fork id",
     )
+    save_file: Optional[str] = Field(
+        default=None,
+        description="the path to save the thread information, usually for debugging purposes",
+    )
+
     root_id: Optional[str] = Field(
         default=None,
         description="The id of the root thread if the thread is a fork",
@@ -109,6 +118,7 @@ class MsgThread(BaseModel):
         default=None,
         description="the current turn",
     )
+    extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 
     @classmethod
     def new(

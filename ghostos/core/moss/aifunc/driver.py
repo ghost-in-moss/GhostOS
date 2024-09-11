@@ -41,7 +41,7 @@ and in the code you shall defines a main function like:
 about the params and returns:
 :param moss: A Moss instance
 :param fn: An instance of {aifunc_class}
-:return: tuple[result, ok]
+:return: tuple[result:{aifunc_result_class} | None , ok: bool]
 If ok is False, means you need to observe the output that you print in the function, and think another round.
 If ok is True, means you finish the request and return a final result.
 
@@ -63,7 +63,6 @@ DEFAULT_NOTICES = f"""
 - If you are not equipped enough to resolve your quest, you shall admit the it in the result or raise an exception.
 - **You are not Agent, DO NOT TALK ABOUT YOUR THOUGHT, JUST WRITE THE CODES ONLY**
 """
-
 
 
 def default_aifunc_prompt(
@@ -148,7 +147,9 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         ))
         self.on_system_messages(systems)
         chat = thread_to_chat(thread.id, systems, thread)
-        self.on_chat(chat) # Whether you want to send chat to llm, let it generate code for you or not
+        self.on_chat(chat)  # Whether you want to send chat to llm, let it generate code for you or not
+        # log system prompt to thread
+        thread.extra['system_prompt'] = chat.system_prompt()
         # todo: log
         # 实例化 llm api
         llms = manager.container().force_fetch(LLMs)
@@ -160,7 +161,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         ai_generation = llm_api.chat_completion(chat)
         # 插入 ai 生成的消息.
         thread.append(ai_generation)
-        self.on_message(ai_generation) # Whether you want to execute the ai-generated code or not
+        self.on_message(ai_generation)  # Whether you want to execute the ai-generated code or not
         code = self.parse_moss_code_in_message(ai_generation)
 
         # code 相关校验:

@@ -9,7 +9,8 @@ class WeatherAIFunc(AIFunc):
     """
     tell about weather
     """
-    pass
+    city: str = Field(default="", description="the city name that you want weather forecast. empty means local")
+    date: str = Field(default="today", description="the date of weather forecast")
 
 
 class WeatherAIFuncResult(AIFuncResult):

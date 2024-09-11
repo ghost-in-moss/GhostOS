@@ -34,8 +34,8 @@ def prepare_container(root_dir: str) -> Container:
     container.register(FileStorageProvider(root_dir))
     container.register(NamedLoggerProvider(logger_name="debug"))
     container.register(StorageThreadsProvider(threads_dir='runtime/threads'))
-    container.register(ConfigsByStorageProvider("ghostos/configs"))
-    container.register(ConfigBasedLLMsProvider("llms/llms_conf.yaml"))
+    container.register(ConfigsByStorageProvider("configs"))
+    container.register(ConfigBasedLLMsProvider("llms_conf.yml"))
     return container
 
 
@@ -45,9 +45,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--case", '-c',
-        help="ghostos aifunc test case name in demo/ghostos/tests/aifunc_tests.yml",
+        help="ghostos aifunc test case name in demo/tests/aifunc_tests.yml",
         type=str,
-        default="",
+        default="swe_bench_lite",
     )
     parser.add_argument(
         "--import_path", '-i',
@@ -55,7 +55,7 @@ def main() -> None:
         type=str,
         # 默认使用专门测试 MossTestSuite 的文件.
         # default="ghostos.core.moss.aifunc.examples.agentic:example",
-        default="evaluation.swe_bench_lite.debug_localization:example",
+        default="",
     )
     parser.add_argument(
         "--quest", '-q',
@@ -85,9 +85,11 @@ def main() -> None:
     import_path = parsed.import_path
     if parsed.case:
         storage = container.force_fetch(Storage)
-        cases_content_file = storage.get("ghostos/tests/aifunc_tests.yml")
+        cases_content_file = storage.get("tests/aifunc_tests.yml")
         cases: Dict[str, str] = yaml.safe_load(cases_content_file)
         import_path = cases.get(parsed.case, import_path)
+    if not import_path:
+        raise Exception("no aifunc test cases found. use -c or -i to specify aifunc test case")
 
     class TestDriverImpl(DefaultAIFuncDriverImpl):
         console = console
