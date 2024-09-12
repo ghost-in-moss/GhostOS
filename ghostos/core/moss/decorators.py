@@ -9,11 +9,23 @@ from ghostos.core.moss.utils import (
 __all__ = [
     'cls_source_code', 'cls_definition',
     'definition', 'source_code',
+    'no_prompt',
 ]
 
 DECORATOR = Callable[[Any], Any]
 FUNC_DECORATOR = Callable[[Callable], Callable]
 CLASS_DECORATOR = Callable[[Any], Any]
+
+
+def no_prompt(func: Callable) -> Callable:
+    """
+    set empty prompt to a func
+    """
+    func.__prompt__ = ""
+    return func
+
+
+no_prompt.__prompt__ = ""
 
 
 def cls_source_code(*, force: bool = False, doc: Optional[str] = None) -> DECORATOR:
@@ -97,7 +109,6 @@ def cls_definition(*, doc: Optional[str] = None, force: bool = False) -> CLASS_D
     return wrapper
 
 
-
 def cls_outline(*, doc: Optional[str] = None, force: bool = False) -> CLASS_DECORATOR:
     """
     decorator that add outline as prompt to the class
@@ -106,7 +117,7 @@ def cls_outline(*, doc: Optional[str] = None, force: bool = False) -> CLASS_DECO
     def wrapper(cls: Type):
         if not inspect.isclass(cls):
             raise AttributeError(f"cls '{cls}' is not a class")
-        
+
         def prompter() -> str:
             source = inspect.getsource(cls)
             # get definition, docstring, exported methods(include docstring) of the class
@@ -116,7 +127,6 @@ def cls_outline(*, doc: Optional[str] = None, force: bool = False) -> CLASS_DECO
             class_definition = class_definition.split('\n')
             class_definition = class_definition[:-1]
             class_definition = '\n'.join(class_definition)
-
 
             # 2. get docstring
             class_docstring = inspect.getdoc(cls) or ""
@@ -149,17 +159,17 @@ def cls_outline(*, doc: Optional[str] = None, force: bool = False) -> CLASS_DECO
                                         # start the docstring
                                         in_docstring = True
                                         method_code.append(line)
-                                    else: # encounter the first not-docstring line
+                                    else:  # encounter the first not-docstring line
                                         break
                     method_code = '\n'.join(method_code)
-                    methods.append('\n'+method_code)
+                    methods.append('\n' + method_code)
             methods_prompt = "\n".join(methods)
             # 4. combine them
             combined_prompt = f"{class_definition}\n    '''\n    {class_docstring}\n    ''' \n" + methods_prompt
             # 5. return
             return combined_prompt
-            
+
         set_class_prompter(cls, prompter, force)
         return cls
-    
+
     return wrapper
