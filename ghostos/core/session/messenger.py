@@ -1,6 +1,6 @@
 from typing import Optional, Iterable, NamedTuple, List, Tuple
 from abc import ABC, abstractmethod
-from ghostos.core.messages.message import Message, Payload, Attachment, Caller
+from ghostos.core.messages.message import Message, Payload, Attachment, Caller, Role
 from ghostos.core.messages.buffers import Buffer
 from ghostos.core.messages.stream import Stream
 from ghostos.core.session.threads import MsgThread
@@ -47,6 +47,13 @@ class Messenger(Stream, ABC):
         :return: 返回一个新的 messenger.
         """
         pass
+
+    def say(self, content: str):
+        """
+        syntactic sugar
+        """
+        message = Role.ASSISTANT.new(content=content)
+        self.deliver(message)
 
     @abstractmethod
     def flush(self) -> Tuple[List[Message], List[Caller]]:

@@ -17,7 +17,7 @@ def test_default_messenger_baseline():
     assert thread.current.generates[0].content == content
 
 
-def test_messenger_with_moss():
+def test_messenger_with_moss_xml_token():
     functional_tokens = [FunctionalToken(
         token=">moss:",
         name="moss",
@@ -44,3 +44,22 @@ def test_messenger_with_moss():
 
     assert len(thread.current.generates) == 1
     assert len(thread.current.generates[0].callers) == 1
+
+
+def test_messenger_with_single_message():
+    functional_tokens = [FunctionalToken(
+        token="<moss>",
+        end_token="</moss>",
+        name="moss",
+        description="desc",
+        deliver=False,
+    )]
+
+    thread = MsgThread()
+    messenger = DefaultMessenger(thread=thread, functional_tokens=functional_tokens)
+
+    content = "<moss>def main():\n    pass</moss>"
+    messenger.say(content)
+    flushed = messenger.flush()
+    assert flushed.messages[0].content == ""
+    assert len(flushed.callers) == 1
