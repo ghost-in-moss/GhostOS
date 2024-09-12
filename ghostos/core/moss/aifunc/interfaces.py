@@ -19,23 +19,21 @@ class AIFuncCtx(ABC):
     """
 
     @abstractmethod
-    def run(self, key: str, fn: AIFunc, request: str = "") -> AIFuncResult:
+    def run(self, key: str, fn: AIFunc) -> AIFuncResult:
         """
         Run an AIFunc subclass instance, got result and save it into the key.
         :param key: the key that ctx keep the result in multi-turns thinking.
         :param fn: instance of AIFunc that define the task.
-        :param request: the quest you want the AIFunc to do, if arguments are not enough.
         :return: the certain result that match AIFuncResult and is not None
         """
         pass
 
     @abstractmethod
-    def parallel_run(self, fn_dict: Dict[str, AIFunc], request: str = "") -> Dict[str, AIFuncResult]:
+    def parallel_run(self, fn_dict: Dict[str, AIFunc]) -> Dict[str, AIFuncResult]:
         """
         Run multiple AIFunc instances in parallel and save their results.
         
         :param fn_dict: A dictionary where keys are result identifiers and values are AIFunc instances.
-        :param request: An optional string representing a common request for all AIFunc instances.
         :return: A dictionary where keys are the same as in fn_dict and values are the corresponding AIFuncResults.
         
         This method allows for concurrent execution of multiple AIFunc instances, which can improve
@@ -99,7 +97,7 @@ class AIFuncManager(ABC):
         pass
 
     @abstractmethod
-    def execute(self, fn: AIFunc, quest: str) -> AIFuncResult:
+    def execute(self, fn: AIFunc) -> AIFuncResult:
         """
         执行一个 AIFunc, 直到拿到它的返回结果.
         """
@@ -113,7 +111,7 @@ class AIFuncManager(ABC):
         pass
 
     @abstractmethod
-    def get_driver(self, fn: AIFunc, request: str) -> "AIFuncDriver":
+    def get_driver(self, fn: AIFunc) -> "AIFuncDriver":
         """
         根据 AIFunc 实例获取 AIFuncDriver 的实例.
         """
@@ -132,9 +130,8 @@ class AIFuncDriver(ABC):
     the driver that produce multi-turns thinking of an AIFunc.
     """
 
-    def __init__(self, fn: AIFunc, quest: str):
+    def __init__(self, fn: AIFunc):
         self.aifunc = fn
-        self.quest = quest
 
     @abstractmethod
     def initialize(self) -> MsgThread:

@@ -58,12 +58,6 @@ def main() -> None:
         default="",
     )
     parser.add_argument(
-        "--quest", '-q',
-        help="describe the quest that aifunc should do",
-        type=str,
-        default="",
-    )
-    parser.add_argument(
         "--llm_api", '-l',
         help="the llm api name",
         type=str,
@@ -142,7 +136,7 @@ def main() -> None:
     if not isinstance(aifunc, AIFunc):
         raise AttributeError(f'aifunc must be an instance of {AIFunc}, {aifunc} given')
 
-    driver = manager_.get_driver(aifunc, parsed.quest)
+    driver = manager_.get_driver(aifunc)
     # print initialized thread.
     thread_ = driver.initialize()
     thread_content = yaml_pretty_dump(thread_.model_dump(exclude_defaults=True))
@@ -151,7 +145,7 @@ def main() -> None:
         title="initialized thread",
     ))
 
-    result = manager_.execute(aifunc, parsed.quest)
+    result = manager_.execute(aifunc)
     console.print(result)
     manager_.destroy()
 

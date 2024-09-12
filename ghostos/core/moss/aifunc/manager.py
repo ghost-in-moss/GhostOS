@@ -25,7 +25,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             max_step: int = 10,
             depth: int = 0,
             max_depth: int = 10,
-            parent_idx: str = "s",
+            parent_idx: str = "",
             sibling_idx: int = 0,
             aifunc_name: str = "",
             exec_id: str = "",
@@ -44,12 +44,13 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         self._exec_id = exec_id if exec_id else uuid()
         self._parent_idx = parent_idx
         self._sibling_idx = sibling_idx
+        if parent_idx:
+            self._identity_prefix = f"{self._parent_idx}_{self._sibling_idx}"
+        else:
+            self._identity_prefix = "s"
         self._aifunc_name = aifunc_name
         self._parent_aifunc_name = parent_aifunc_name
         self._child_idx = 0
-
-    def _get_bloodline_id(self) -> str:
-        return f"{self._parent_idx}_{self._sibling_idx}"
 
     def sub_manager(self, *, aifunc_name: str = "") -> "AIFuncManager":
         self._child_idx += 1
@@ -60,7 +61,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             max_step=self._max_step,
             depth=self._depth + 1,
             max_depth=self._max_depth,
-            parent_idx=self._get_bloodline_id(),
+            parent_idx=self._identity_prefix,
             sibling_idx=self._child_idx,
             aifunc_name=aifunc_name,
             exec_id=self._exec_id,
@@ -88,11 +89,12 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         thread.extra["parent_aifunc"] = self._parent_aifunc_name
         thread.extra["aifunc_depth"] = self._depth
         aifunc_name = type(aifunc).__name__
-        thread.save_file = f"aifunc_{self._exec_id}/{self._parent_idx}_{self._sibling_idx}_{aifunc_name}.yml"
+        thread.save_file = f"aifunc_{self._exec_id}/{self._identity_prefix}_{aifunc_name}.yml"
         return thread
 
-    def execute(self, fn: AIFunc, quest: str) -> AIFuncResult:
-        driver = self.get_driver(fn, quest)
+    def execute(self, fn: AIFunc) -> AIFuncResult:
+        self._aifunc_name = generate_import_path(type(fn))
+        driver = self.get_driver(fn)
         thread = driver.initialize()
         thread = self.wrap_thread(thread, driver)
         step = 0
@@ -113,24 +115,24 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             raise RuntimeError(f"result is invalid AIFuncResult {type(result)}, expecting {result_type}")
         return result
 
-    def get_driver(self, fn: AIFunc, request: str) -> "AIFuncDriver":
+    def get_driver(self, fn: AIFunc) -> "AIFuncDriver":
         cls = fn.__class__
         if cls.__aifunc_driver__ is not None:
-            return cls.__aifunc_driver__(fn, request)
-        return self._default_driver_type(fn, request)
+            return cls.__aifunc_driver__(fn)
+        return self._default_driver_type(fn)
 
-    def run(self, key: str, fn: AIFunc, request: str = "") -> AIFuncResult:
+    def run(self, key: str, fn: AIFunc) -> AIFuncResult:
         aifunc_name = generate_import_path(type(fn))
         sub_manager = self.sub_manager(aifunc_name=aifunc_name)
-        result = sub_manager.execute(fn, request)
+        result = sub_manager.execute(fn)
         self._values[key] = result
         return result
 
-    def parallel_run(self, fn_dict: Dict[str, AIFunc], request: str = "") -> Dict[str, AIFuncResult]:
+    def parallel_run(self, fn_dict: Dict[str, AIFunc]) -> Dict[str, AIFuncResult]:
         def execute_task(key: str, fn: AIFunc):
             aifunc_name = generate_import_path(type(fn))
             sub_manager = self.sub_manager(aifunc_name=aifunc_name)
-            return key, sub_manager.execute(fn, request)
+            return key, sub_manager.execute(fn)
 
         results = {}
         # todo: get pool from container

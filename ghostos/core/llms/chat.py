@@ -140,7 +140,12 @@ class Chat(BaseModel):
             messages.extend(self.inputs)
         if self.appending:
             messages.extend(self.appending)
-        return messages
+        results = []
+        for message in messages:
+            if message.is_empty():
+                continue
+            results.append(message)
+        return results
 
     def filter_messages(self, filter_: Callable[[Message], Optional[Message]]) -> None:
         self.system = self._filter_messages(self.system, filter_)

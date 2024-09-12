@@ -80,10 +80,10 @@ def default_aifunc_prompt(
 
 class DefaultAIFuncDriverImpl(AIFuncDriver):
 
-    def __init__(self, fn: AIFunc, quest: str):
+    def __init__(self, fn: AIFunc):
         self.error_times = 0
         self.max_error_times = 3
-        super().__init__(fn, quest)
+        super().__init__(fn)
 
     def name(self) -> str:
         return self.aifunc.__class__.__name__
@@ -97,8 +97,6 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                 content=instruction,
             )
             messages.append(system_message)
-        if self.quest:
-            messages.append(Role.USER.new(content=self.quest))
 
         event = DefaultEventType.INPUT.new(
             task_id="",
@@ -148,8 +146,6 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         self.on_system_messages(systems)
         chat = thread_to_chat(thread.id, systems, thread)
         self.on_chat(chat)  # Whether you want to send chat to llm, let it generate code for you or not
-        # log system prompt to thread
-        thread.extra['system_prompt'] = chat.system_prompt()
         # todo: log
         # 实例化 llm api
         llms = manager.container().force_fetch(LLMs)

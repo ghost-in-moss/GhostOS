@@ -93,11 +93,12 @@ class MsgThread(BaseModel):
         default_factory=uuid,
         description="The id of the thread, also a fork id",
     )
+    system_prompt: str = Field(default="", description="record system prompt, for debugging")
+    extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
     save_file: Optional[str] = Field(
         default=None,
         description="the path to save the thread information, usually for debugging purposes",
     )
-
     root_id: Optional[str] = Field(
         default=None,
         description="The id of the root thread if the thread is a fork",
@@ -118,7 +119,6 @@ class MsgThread(BaseModel):
         default=None,
         description="the current turn",
     )
-    extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 
     @classmethod
     def new(
@@ -287,6 +287,8 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: MsgThread) -> Ch
         inputs=copy_messages(inputs),
         appending=copy_messages(appending),
     )
+    # update thread system prompt
+    thread.system_prompt = chat.system_prompt()
     return chat
 
 
