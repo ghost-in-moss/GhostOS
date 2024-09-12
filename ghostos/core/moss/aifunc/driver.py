@@ -180,11 +180,14 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             outputs = executed.std_output
             if outputs:
                 output_message = Role.SYSTEM.new(
-                    content=f"moss executed main, std output is: \n{outputs}"
+                    content=f"## Observation\n\nmoss executed main, std output is: \n{outputs}"
                 )
                 messages = [output_message]
             else:
-                messages = []
+                output_message = Role.SYSTEM.new(
+                    content=f"## Observation\n\nhave not printed anything"
+                )
+                messages = [output_message]
             pycontext = executed.pycontext
             thread.new_turn(
                 event=DefaultEventType.OBSERVE.new(
