@@ -1,6 +1,6 @@
 from typing import Optional
 from ghostos.core.ghosts import Operator
-from ghostos.core.moss import Moss as Parent, attr
+from ghostos.core.moss import Moss as Parent
 
 
 # todo: import necessary libraries and methods
@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     # todo: these libraries are useful for lifecycle functions
-    from ghostos.core.moss import MossCompiler, MossRuntime
+    pass
 
 # todo: can define these OPTIONAL lifecycle hooks
 from ghostos.core.moss.lifecycle import (
@@ -55,7 +55,7 @@ __moss_exec__ = __default_moss_exec__
 """ redefine the moss exec function. not recommended"""
 
 # todo: can define a moss thought in a moss file
-from ghostos.framework.thoughts.moss import MossThought
+from ghostos.thoughts.moss import MossThought
 
 thought = MossThought(
     name="???",

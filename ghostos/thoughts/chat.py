@@ -2,7 +2,7 @@ from typing import Iterable
 
 from ghostos.core.ghosts import Ghost, Action
 from ghostos.core.ghosts.thoughts import ModelThought
-from ghostos.framework.thoughts.basic import LLMThoughtDriver
+from ghostos.thoughts.basic import LLMThoughtDriver
 from pydantic import Field
 
 from ghostos.core.llms import LLMApi

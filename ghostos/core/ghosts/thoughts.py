@@ -16,6 +16,7 @@ class Thought(Identifiable, Entity, ABC):
     """
     The Thought class serves as a fundamental component of AI,
     adept at initiating a stateful task to address specific inquiries.
+    It is a thinking unit of the Agent that can handle a specific type of task.
     """
 
     """

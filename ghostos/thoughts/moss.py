@@ -1,13 +1,16 @@
 from typing import Iterable, Dict, Any, Optional
+from abc import ABC, abstractmethod
 
 from ghostos.core.ghosts import Ghost, Action, ModelThought, Operator
-from ghostos.core.llms import LLMApi, Chat
+from ghostos.core.llms import LLMApi
 from ghostos.core.session import Event, MsgThread
 from ghostos.core.moss import MossCompiler, MossRuntime, PyContext
-from ghostos.framework.thoughts.basic import LLMThoughtDriver
+from ghostos.thoughts.basic import LLMThoughtDriver
 from ghostos.framework.actions import MossAction
 from ghostos.container import Provider
 from pydantic import Field
+
+__all__ = ["MossThought", "BasicMossThoughtDriver", "MossThoughtDriver"]
 
 
 class MossThought(ModelThought):
@@ -22,7 +25,55 @@ class MossThought(ModelThought):
     llm_api_name: str = Field(default="", description="Name of LLM API")
 
 
-class MossThoughtDriver(LLMThoughtDriver[MossThought]):
+class BasicMossThoughtDriver(ABC):
+    """
+    helpful to define other moss thought driver
+    """
+
+    @abstractmethod
+    def init_pycontext(self) -> PyContext:
+        pass
+
+    def providers(self) -> Iterable[Provider]:
+        return []
+
+    def injections(self) -> Dict[str, Any]:
+        return {}
+
+    def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
+        thread = g.session().thread()
+        compiler = g.moss()
+        compiler.bind(MsgThread, thread)
+        pycontext = thread.get_pycontext()
+
+        if not pycontext.module:
+            pycontext = PyContext()
+
+        compiler = compiler.join_context(pycontext)
+        for provider in self.providers():
+            compiler.register(provider)
+
+        injections = self.injections()
+        if injections:
+            compiler.injects(**injections)
+
+        compiler.with_locals(Operator=Operator)
+        return compiler
+
+    def get_moss_runtime(self, g: Ghost) -> MossRuntime:
+        return self.prepare_moss_compiler(g).compile(None)
+
+    def actions(self, g: Ghost, e: Event) -> Iterable[Action]:
+        runtime = self.get_moss_runtime(g)
+        yield MossAction(
+            moss_runtime=runtime,
+        )
+
+
+class MossThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[MossThought]):
+
+    def instruction(self, g: Ghost, e: Event) -> str:
+        return self.thought.instruction
 
     def on_created(self, g: Ghost, e: Event) -> Optional[Operator]:
         session = g.session()
@@ -39,37 +90,3 @@ class MossThoughtDriver(LLMThoughtDriver[MossThought]):
         return PyContext(
             module=self.thought.moss_modulename,
         )
-
-    def providers(self) -> Iterable[Provider]:
-        return []
-
-    def injections(self) -> Dict[str, Any]:
-        return {}
-
-    def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
-        thread = g.session().thread()
-        compiler = g.moss()
-        compiler.bind(MsgThread, thread)
-        pycontext = thread.get_pycontext()
-        if not pycontext.module:
-            pycontext = PyContext()
-        compiler = compiler.join_context(pycontext)
-        for provider in self.providers():
-            compiler.register(provider)
-        injections = self.injections()
-        if injections:
-            compiler.injects(**injections)
-        compiler.with_locals(Operator=Operator)
-        return compiler
-
-    def get_moss_runtime(self, g: Ghost) -> MossRuntime:
-        return self.prepare_moss_compiler(g).compile(None)
-
-    def actions(self, g: Ghost, e: Event) -> Iterable[Action]:
-        runtime = self.get_moss_runtime(g)
-        yield MossAction(
-            moss_runtime=runtime,
-        )
-
-    def instruction(self, g: Ghost, e: Event) -> str:
-        return self.thought.instruction

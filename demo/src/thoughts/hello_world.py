@@ -1,6 +1,4 @@
-from typing import Optional
-from ghostos.core.ghosts import Operator
-from ghostos.core.moss import Moss as Parent, attr
+from ghostos.core.moss import Moss as Parent
 from demo.src.libraries.mocks.speak import Speak
 
 
@@ -13,7 +11,7 @@ class Moss(Parent):
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ghostos.core.moss import MossCompiler, MossRuntime
+    from ghostos.core.moss import MossCompiler
 
 
 def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
@@ -26,7 +24,7 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
 
 
 # todo: can define a moss thought in a moss file
-from ghostos.framework.thoughts.moss import MossThought
+from ghostos.thoughts.moss import MossThought
 from ghostos.prototypes.console import run_demo_thought
 
 thought = MossThought(
