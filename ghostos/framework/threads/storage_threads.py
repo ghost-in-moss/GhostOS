@@ -1,11 +1,12 @@
 from typing import Optional, Type
-from ghostos.core.session import MsgThread, Threads
+from ghostos.core.session import MsgThread, Threads, SimpleMsgThread
 from ghostos.core.ghosts import Workspace
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
 from ghostos.helpers import yaml_pretty_dump
 from ghostos.container import Provider, Container
 import yaml
+import os
 
 __all__ = ['StorageThreads', 'StorageThreadsProvider', 'WorkspaceThreadsProvider']
 
@@ -15,10 +16,12 @@ class StorageThreads(Threads):
     def __init__(
             self, *,
             storage: Storage,
-            logger: LoggerItf
+            logger: LoggerItf,
+            allow_saving_file: bool = True
     ):
         self._storage = storage
         self._logger = logger
+        self._allow_saving_file = allow_saving_file
 
     def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:
         path = self._get_thread_filename(thread_id)
@@ -35,6 +38,21 @@ class StorageThreads(Threads):
         path = self._get_thread_filename(thread.id)
         saving = data_content.encode('utf-8')
         self._storage.put(path, saving)
+        # saving to special file
+        if thread.save_file and self._allow_saving_file:
+            simple = SimpleMsgThread.from_thread(thread)
+            simple_data = simple.model_dump(exclude_defaults=True)
+            content = yaml_pretty_dump(simple_data)
+            if thread.save_file.startswith('/'):
+                # saving to absolute path
+                saving_dir = os.path.dirname(thread.save_file)
+                if not os.path.exists(saving_dir):
+                    os.makedirs(saving_dir)
+                with open(thread.save_file, 'wb') as f:
+                    f.write(content.encode('UTF-8'))
+            else:
+                # saving to relative path
+                self._storage.put(thread.save_file, content.encode('UTF-8'))
 
     @staticmethod
     def _get_thread_filename(thread_id: str) -> str:

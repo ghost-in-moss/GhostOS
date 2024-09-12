@@ -117,6 +117,14 @@ class Chat(BaseModel):
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
 
+    def system_prompt(self) -> str:
+        contents = []
+        if self.system:
+            contents = []
+            for message in self.system:
+                contents.append(message.get_content())
+        return "\n\n".join(contents)
+
     def get_messages(self) -> List[Message]:
         """
         返回所有的消息.
@@ -124,10 +132,7 @@ class Chat(BaseModel):
         messages = []
         # combine system messages into one
         if self.system:
-            contents = []
-            for message in self.system:
-                contents.append(message.get_content())
-            system_message = Role.SYSTEM.new(content="\n\n".join(contents))
+            system_message = Role.SYSTEM.new(content=self.system_prompt())
             messages.append(system_message)
         if self.history:
             messages.extend(self.history)

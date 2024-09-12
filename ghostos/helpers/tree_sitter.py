@@ -13,6 +13,24 @@ def parse(code: str) -> Tree:
     return _PythonParser.parse(code)
 
 
+def get_error_nodes(node: TreeSitterNode) -> Iterable[TreeSitterNode]:
+    def traverse_tree_for_errors(_node: TreeSitterNode):
+        for n in _node.children:
+            if n.type == "ERROR" or n.is_missing:
+                yield n
+            if n.has_error:
+                # there is an error inside this node let's check inside
+                yield from traverse_tree_for_errors(n)
+
+    yield from traverse_tree_for_errors(node)
+
+
+def parse_error(root_node: TreeSitterNode, error_type: str = "SYNTAX_ERROR"):
+    padding = " " * 5
+    lines = []
+    # todo
+
+
 class TreeNodeType(str, Enum):
     IDENTIFIER = 'identifier'
     COLON = ':'

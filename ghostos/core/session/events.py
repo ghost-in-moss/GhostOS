@@ -64,6 +64,9 @@ class Event(BaseModel):
         description="if the event is a callback from child task to parent task.",
     )
 
+    def is_empty(self) -> bool:
+        return not self.reason and not self.instruction and not self.messages
+
     def from_self(self) -> bool:
         """
         通过任务是否是自己触发的, 来判断是否要继续.
