@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from ghostos.core.ghosts import Taskflow, Operator
 from ghostos.core.messages import MessageKind, Caller, DefaultMessageTypes, Role
 from ghostos.framework.operators import (
-    ObserveOperator,
+    ThinkOperator,
     FinishOperator,
     FailOperator,
     WaitsOperator,
@@ -46,7 +46,7 @@ class TaskflowBasicImpl(Taskflow):
                 msg.ref_id = self.caller.id
             observation.append(msg)
 
-        return ObserveOperator(
+        return ThinkOperator(
             observation=observation,
             reason=reason,
             instruction=instruction,
@@ -56,6 +56,13 @@ class TaskflowBasicImpl(Taskflow):
         return FinishOperator(
             messages=list(response),
             reason=log,
+        )
+
+    def think(self, instruction: str = "") -> Operator:
+        return ThinkOperator(
+            reason="",
+            observation=[],
+            instruction=instruction,
         )
 
     def fail(self, reason: str, *messages: MessageKind) -> Operator:

@@ -11,6 +11,13 @@ if TYPE_CHECKING:
 这样一个 Module 要在 MOSS 中运行时, 如果定义了这些方法或类, 就会替换掉默认生命周期里的相关方法. 
 """
 
+__all__ = [
+    '__moss_compile__',
+    '__moss_attr_prompts__',
+    '__moss_prompt__',
+    '__moss_exec__',
+]
+
 
 class MOSS(ABC):
     """
@@ -86,7 +93,6 @@ def __moss_prompt__(prompter: "MossPrompter") -> str:
 
     # 生成完整的 prompt. 预计 MOSS 的描述已经在上下文里了.
     prompt = f"""
-    
 {origin_code}
 \"""
 {code_prompt_part}

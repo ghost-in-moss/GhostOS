@@ -279,10 +279,17 @@ class BasicGhost(Ghost, ABC):
             inputs = pipe.intercept(inputs)
             if inputs is None:
                 return None
-        event = DefaultEventType.INPUT.new(
-            task_id=self.session().task().task_id,
-            messages=inputs.messages,
-        )
+        task = self.session().task()
+        if task.is_new():
+            event = DefaultEventType.CREATED.new(
+                task_id=self.session().task().task_id,
+                messages=inputs.messages,
+            )
+        else:
+            event = DefaultEventType.INPUT.new(
+                task_id=self.session().task().task_id,
+                messages=inputs.messages,
+            )
         return event
 
     def init_operator(self, event: "Event") -> Tuple["Operator", int]:

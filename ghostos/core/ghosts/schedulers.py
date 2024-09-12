@@ -36,6 +36,14 @@ class Taskflow(ABC):
         pass
 
     @abstractmethod
+    def think(self, instruction: str = "") -> Operator:
+        """
+        think another round
+        :param instruction: optional instruction for next round thinking
+        """
+        pass
+
+    @abstractmethod
     def finish(self, log: str, *response: MessageKind) -> Operator:
         """
         结束当前的任务, 返回任务结果.

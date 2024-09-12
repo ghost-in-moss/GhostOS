@@ -65,6 +65,10 @@ class CompletionUsagePayload(CompletionUsage, PayloadItem):
     key: ClassVar[str] = "completion_usage"
 
     @classmethod
+    def from_usage(cls, usage: CompletionUsage) -> "CompletionUsagePayload":
+        return cls(**usage.model_dump(exclude_defaults=True))
+
+    @classmethod
     def from_chunk(cls, message: ChatCompletionChunk) -> Optional["CompletionUsagePayload"]:
         if message.usage is not None:
             return cls(**message.usage.model_dump(exclude_defaults=True))

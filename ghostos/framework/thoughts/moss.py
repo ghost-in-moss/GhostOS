@@ -1,35 +1,75 @@
-from typing import Iterable
+from typing import Iterable, Dict, Any, Optional
 
-from ghostos.core.ghosts import Ghost, Action, ModelThought
-from ghostos.core.llms import LLMApi
+from ghostos.core.ghosts import Ghost, Action, ModelThought, Operator
+from ghostos.core.llms import LLMApi, Chat
 from ghostos.core.session import Event, MsgThread
 from ghostos.core.moss import MossCompiler, MossRuntime, PyContext
 from ghostos.framework.thoughts.basic import LLMThoughtDriver
-from pydantic import BaseModel, Field
+from ghostos.framework.actions import MossAction
+from ghostos.container import Provider
+from pydantic import Field
 
 
 class MossThought(ModelThought):
+    """
+    The basic Thought that use moss to provide python code interface
+    """
+
+    name: str = Field(description="thought name")
+    description: str = Field(description="thought description")
+    instruction: str = Field(description="instruction of the thought")
     moss_modulename: str = Field(description="the modulename for moss pycontext.module")
     llm_api_name: str = Field(default="", description="Name of LLM API")
 
 
-class MossThoughtDriver(LLMThoughtDriver):
+class MossThoughtDriver(LLMThoughtDriver[MossThought]):
+
+    def on_created(self, g: Ghost, e: Event) -> Optional[Operator]:
+        session = g.session()
+        thread = session.thread()
+        pycontext = self.init_pycontext()
+        thread.update_pycontext(pycontext)
+        return super().on_created(g, e)
 
     def get_llmapi(self, g: Ghost) -> LLMApi:
-        pass
+        llm_api_name = self.thought.llm_api_name
+        return g.llms().get_api(llm_api_name)
 
     def init_pycontext(self) -> PyContext:
-        pass
+        return PyContext(
+            module=self.thought.moss_modulename,
+        )
+
+    def providers(self) -> Iterable[Provider]:
+        return []
+
+    def injections(self) -> Dict[str, Any]:
+        return {}
 
     def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
         thread = g.session().thread()
         compiler = g.moss()
         compiler.bind(MsgThread, thread)
-        compiler = compiler.join_context(thread.get_pycontext())
+        pycontext = thread.get_pycontext()
+        if not pycontext.module:
+            pycontext = PyContext()
+        compiler = compiler.join_context(pycontext)
+        for provider in self.providers():
+            compiler.register(provider)
+        injections = self.injections()
+        if injections:
+            compiler.injects(**injections)
+        compiler.with_locals(Operator=Operator)
         return compiler
 
+    def get_moss_runtime(self, g: Ghost) -> MossRuntime:
+        return self.prepare_moss_compiler(g).compile(None)
+
     def actions(self, g: Ghost, e: Event) -> Iterable[Action]:
-        pass
+        runtime = self.get_moss_runtime(g)
+        yield MossAction(
+            moss_runtime=runtime,
+        )
 
     def instruction(self, g: Ghost, e: Event) -> str:
-        pass
+        return self.thought.instruction

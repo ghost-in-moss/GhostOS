@@ -1,8 +1,8 @@
 import json
 
-from ghostos.core.ghosts.actions import Action
 from typing import Optional, ClassVar
 from ghostos.container import Container
+from ghostos.core.ghosts import Action, Ghost
 from ghostos.core.llms import Chat, FunctionalToken
 from ghostos.core.messages import DefaultMessageTypes, Caller
 from ghostos.core.moss.abc import MossRuntime
@@ -49,8 +49,16 @@ class MossAction(Action):
 
 You are equipped with the MOSS (Model-oriented Operating System Simulation) that provides tools and thought directions 
 in python interface.
-With MOSS you shall generate a single block of Python code in which must define a function `{main_func_definition}`, 
+With MOSS you shall generate a single block of Python code,
+in which must define a function `main(moss: Moss) -> Optional[Operator]:`, 
 the MOSS will automatically execute the main function. 
+
+About main function parameters: 
+```
+:param moss: instance of Moss that has been injected with dependencies.
+:return: return Operator by existing library, or return None to take default action. NEVER define it by yourself.
+```
+
 
 **Directives for MOSS**:
 - **Code Generation Only**: Produce a block of Python code for the `main` function. 
@@ -81,7 +89,6 @@ Here is the context provided to you in this turn:
 3. MOSS will automatic execute the main function so you never execute it again.
 4. **Return Operator**: You shall always use method that MOSS provide you to return an Operator from function main. 
 5. In the generated MOSS code, ** YOU SHALL NOT WRITE ANYTHING BUT CODE AND COMMENTS BECAUSE MOSS CODE NEVER SEND TO USER**.
-6. Your generated code must include `{main_func_definition}` method which will be executed following your intention. 
 """
 
     def __init__(
@@ -107,8 +114,7 @@ Here is the context provided to you in this turn:
 
         # update code prompt as system message
         code_prompt = self._moss_runtime.prompter().dump_context_prompt()
-        main_func_definition = "main(moss: Moss) -> Operator:"
-        moss_instruction = self.template.format(code=code_prompt, main_func_definition=main_func_definition)
+        moss_instruction = self.template.format(code=code_prompt)
         moss_prompt = DefaultMessageTypes.DEFAULT.new_system(
             content=moss_instruction,
         )
@@ -138,7 +144,7 @@ Here is the context provided to you in this turn:
             printed = executed.std_output
             content = ""
             if printed:
-                content = f"run moss result: \n {printed}"
+                content = f"printed content: \n {printed}"
             # 生成消息并发送.
             if content:
                 # 理论上对用户不展示的消息.
@@ -150,6 +156,7 @@ Here is the context provided to you in this turn:
             content = f"run moss failed: \n{e} \n\n{format_exc()}"
             message = DefaultMessageTypes.DEFAULT.new_system(content="", memory=content)
             thread.append(message)
+            op = c.force_fetch(Ghost).taskflow().observe()
         finally:
             # 将 moss 清空掉.
             self._moss_runtime.destroy()

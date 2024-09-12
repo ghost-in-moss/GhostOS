@@ -16,7 +16,7 @@ __all__ = [
     'WaitsOperator',
     'FailOperator',
     'FinishOperator',
-    'ObserveOperator',
+    'ThinkOperator',
     'WaitOnTasksOperator',
 ]
 
@@ -215,7 +215,7 @@ class WaitOnTasksOperator(ActionOperator):
         del self.messages
 
 
-class ObserveOperator(ActionOperator):
+class ThinkOperator(ActionOperator):
     """
     运行下一轮思考.
     """

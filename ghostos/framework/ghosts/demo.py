@@ -22,7 +22,7 @@ class DemoGhostConf(GhostConf):
 
     id: str = Field(description="id of the ghost")
     name: str = Field(description="name of the ghost")
-    description: str = Field(description="description of the ghost")
+    description: str = Field(default="", description="description of the ghost")
 
     # prompt
     meta_prompt: str = Field(description="raw meta prompt")

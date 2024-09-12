@@ -5,6 +5,7 @@ from ghostos.core.messages.message import (
 )
 from ghostos.core.messages.openai import (
     OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultOpenAIParserProvider,
+    CompletionUsagePayload,
 )
 from ghostos.core.messages.buffers import Buffer, Flushed
 from ghostos.core.messages.helpers import copy_messages

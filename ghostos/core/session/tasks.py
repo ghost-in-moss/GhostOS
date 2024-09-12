@@ -246,6 +246,9 @@ the state of the current task.
     def is_dead(self) -> bool:
         return TaskState.is_dead(self.state)
 
+    def is_new(self) -> bool:
+        return TaskState.NEW.value == self.state
+
     def depending_tasks(self) -> Set[str]:
         result = set()
         for group in self.depending:

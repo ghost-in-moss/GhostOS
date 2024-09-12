@@ -313,11 +313,7 @@ class AbsGhostOS(GhostOS, ABC):
         :return:
         """
         # 先按需做初始化.
-        if event.type == DefaultEventType.INPUT:
-            on_ghost_created = ghost.utils().initialize(event.messages)
-            if on_ghost_created is not None:
-                self._handle_ghost_event(ghost=ghost, event=on_ghost_created)
-                return
+        ghost.utils().initialize()
         self._handle_ghost_event(ghost=ghost, event=event)
 
     @staticmethod
