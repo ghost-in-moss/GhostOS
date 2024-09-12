@@ -127,6 +127,8 @@ class OpenAIAdapter(LLMApi):
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = chat.get_messages()
         messages = self._parser.parse_message_list(messages)
+        if not messages:
+            raise AttributeError("empty chat!!")
         return self._client.chat.completions.create(
             messages=messages,
             model=self._model.model,

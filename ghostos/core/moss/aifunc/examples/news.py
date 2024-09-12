@@ -8,6 +8,7 @@ class NewsAIFunc(AIFunc):
     """
     search news
     """
+    query: str = Field(description="required news query.")
     limit: int = Field(default=5, description="how many news you want.")
 
 
@@ -35,6 +36,6 @@ def __aifunc_instruction__(fn: NewsAIFunc) -> str:
     )
 
 
-example = NewsAIFunc(request="我想知道黑神话悟空这款游戏的媒体评分。")
+example = NewsAIFunc(query="我想知道黑神话悟空这款游戏的媒体评分。")
 
 # </moss>

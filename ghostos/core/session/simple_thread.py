@@ -34,8 +34,8 @@ class SimpleMessage(BaseModel):
 
 class SimpleTurn(BaseModel):
     idx: int = Field(default=-1)
-    messages: List[SimpleMessage] = Field(default_factory=list)
     extra: Dict[str, Any] = Field(default_factory=dict)
+    messages: List[SimpleMessage] = Field(default_factory=list)
 
     @classmethod
     def from_turn(cls, turn: Turn, idx: int = 0) -> Optional["SimpleTurn"]:
@@ -50,8 +50,9 @@ class SimpleTurn(BaseModel):
 
 class SimpleMsgThread(BaseModel):
     thread_id: str = Field(description="thread id that useful to save & read thread")
-    turns: List[SimpleTurn] = Field(default_factory=list)
     extra: Dict[str, Any] = Field(default_factory=dict)
+    system_prompt: str = Field(defualt="", description="system prompt")
+    turns: List[SimpleTurn] = Field(default_factory=list)
 
     @classmethod
     def from_thread(cls, thread: MsgThread) -> "SimpleMsgThread":
@@ -64,6 +65,7 @@ class SimpleMsgThread(BaseModel):
                 idx += 1
         return cls(
             thread_id=thread.id,
+            system_prompt=thread.system_prompt,
             turns=turns,
             extra=thread.extra,
         )
