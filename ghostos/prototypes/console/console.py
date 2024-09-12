@@ -4,7 +4,7 @@ import time
 import asyncio
 from typing import Optional, List
 
-from ghostos.core.messages import Message, Role
+from ghostos.core.messages import Message, Role, DefaultMessageTypes
 from ghostos.core.ghosts import Inputs
 from ghostos.framework.streams import QueueStream
 from ghostos.framework.messages import TaskPayload
@@ -15,6 +15,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession
 from rich.console import Console
+from rich.json import JSON
 from rich.panel import Panel
 from rich.markdown import Markdown
 
@@ -156,8 +157,12 @@ print "/exit" to quit
 
     def _print_message(self, message: Message):
         if self._debug:
-            self._console.print_json(
-                message.model_dump_json(indent=2, exclude_defaults=True),
+            self._console.print(
+                Panel(
+                    self._json_output(message.model_dump_json(exclude_defaults=True, indent=2)),
+                    title="message debug",
+                    border_style="green",
+                )
             )
         if message.is_empty():
             return
@@ -167,7 +172,22 @@ print "/exit" to quit
             title = f"{payload.task_name}: {payload.thread_id}"
         content = message.get_content()
         markdown = self._markdown_output(content)
-        self._console.print(Panel(markdown, title=title))
+        border_style = "blue"
+        if DefaultMessageTypes.ERROR.match(message):
+            border_style = "red"
+        self._console.print(
+            Panel(
+                markdown,
+                title=title,
+                border_style=border_style,
+            ),
+        )
+
+    @staticmethod
+    def _json_output(json: str) -> Markdown:
+        return Markdown(
+            f"```python\n{json}\n```"
+        )
 
     @staticmethod
     def _markdown_output(text: str) -> Markdown:
