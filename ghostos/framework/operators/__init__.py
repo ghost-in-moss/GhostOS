@@ -2,7 +2,7 @@ from ghostos.framework.operators.action_ops import (
     WaitsOperator,
     FailOperator,
     FinishOperator,
-    ObserveOperator,
+    ThinkOperator,
     WaitOnTasksOperator,
 )
 from ghostos.framework.operators.event_ops import (

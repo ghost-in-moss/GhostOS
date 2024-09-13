@@ -58,7 +58,7 @@ class MossCompilerImpl(MossCompiler):
             modulename = self._pycontext.module
         if not modulename:
             modulename = "__main__"
-        code = self.pycontext_code(model_visible_only=False)
+        code = self.pycontext_code()
         # 创建临时模块.
         module = ModuleType(modulename)
         module.__dict__.update(self._predefined_locals)
@@ -89,13 +89,13 @@ class MossCompilerImpl(MossCompiler):
         return MossRuntimeImpl(
             container=self._container,
             pycontext=self._pycontext.model_copy(deep=True),
-            source_code=self.pycontext_code(model_visible_only=False),
+            source_code=self.pycontext_code(),
             compiled=module,
             injections=self._injections,
             attr_prompts=attr_prompts,
         )
 
-    def pycontext_code(self, model_visible_only: bool = True) -> str:
+    def pycontext_code(self) -> str:
         code = self._pycontext.code
         module = self._pycontext.module
         if code is None:
@@ -105,7 +105,6 @@ class MossCompilerImpl(MossCompiler):
             code = inspect.getsource(module)
         if not code.lstrip().startswith(IMPORT_FUTURE):
             code = IMPORT_FUTURE + "\n\n" + code.lstrip("\n")
-            return code
         return code if code else ""
 
     def destroy(self) -> None:

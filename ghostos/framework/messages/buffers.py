@@ -140,7 +140,7 @@ class DefaultBuffer(Buffer):
         3. buff 后的字符串如果不匹配任何 functional_token, 则一起发送.
         4. buff 后的字符如果完全匹配某个 functional_token, 则后续的字符都认为是这个 functional_token 的后续输出. 除非匹配了新的.
         """
-        if not pack.content:
+        if not pack.content or not self._functional_token_starts:
             yield pack
             return
         content = pack.content
@@ -148,7 +148,7 @@ class DefaultBuffer(Buffer):
         # 逐个字符进行遍历.
         deliver_content = ""
         for c in content:
-            buffed_idx = len(self._buffering_token) if self._buffering_message else 0
+            buffed_idx = len(self._buffering_token) if self._buffering_token else 0
             # 加上当前的字符, 生成的 buffering token.
             buffering_token = self._buffering_token + c
             buffering_token_length = len(buffering_token)
@@ -156,7 +156,8 @@ class DefaultBuffer(Buffer):
             buffing_token_is_larger_than_any_tokens = buffering_token_length > len(self._functional_token_chars)
 
             # 没有希望匹配到一个 token, 则所有 buffering_token 都要输出.
-            if buffing_token_is_larger_than_any_tokens or c not in self._functional_token_chars[buffed_idx]:
+            is_functional_token_char = c in self._functional_token_chars[buffed_idx]
+            if buffing_token_is_larger_than_any_tokens or not is_functional_token_char:
                 # 为当前 functional token 准备好的内容要变长.
                 self._current_functional_token_content += buffering_token
                 functional_token = self._functional_token_starts.get(self._current_functional_token, None)
@@ -180,7 +181,8 @@ class DefaultBuffer(Buffer):
                     if caller:
                         # 把 caller 添加到当前 pack 里.
                         caller.add(pack)
-                        caller.add(self._buffering_message)
+                        if pack is not self._buffering_message:
+                            caller.add(self._buffering_message)
                 # 状态归零.
                 self._current_functional_token = buffering_token
                 self._current_functional_token_content = ""
@@ -201,7 +203,8 @@ class DefaultBuffer(Buffer):
                     if caller:
                         # 把 caller 添加到当前 pack 里.
                         caller.add(pack)
-                        caller.add(self._buffering_message)
+                        if pack is not self._buffering_message:
+                            caller.add(self._buffering_message)
                 # reset states
                 self._current_functional_token = ""
                 self._current_functional_token_content = ""
@@ -224,6 +227,7 @@ class DefaultBuffer(Buffer):
         """
         # 当成首包来加工一下.
         pack = self._wrap_first_pack(pack)
+        # 清理掉上一条 buffering_mesasge.
         if self._buffering_message:
             # 先判断是不是同一个包.
             patched = self._buffering_message.patch(pack)
@@ -232,14 +236,17 @@ class DefaultBuffer(Buffer):
                 # 不做二次加工.
                 self._reset_buffering()
                 yield patched
+                # return from here
                 return
             else:
                 # 发送上一条消息的尾包. 只有这个方法会将消息入队.
                 last_tail = self._clear_tail_pack()
                 if last_tail is not None:
                     yield last_tail
+        self._buffering_message = pack
         # 然后发送当前包.
-        yield pack
+        yield from self._parse_content_by_functional_token(pack)
+        self._buffering_message = None
 
     def _buff_tail_pack(self, tail: Message) -> None:
         # 剥离所有的 callers.

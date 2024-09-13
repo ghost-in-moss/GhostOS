@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional, ClassVar, Dict, Type
 from ghostos.core.session import Event
+from ghostos.core.moss.decorators import cls_definition
 
 if TYPE_CHECKING:
     from ghostos.core.ghosts.ghost import Ghost
@@ -8,8 +9,12 @@ if TYPE_CHECKING:
 __all__ = ['Operator', 'EventOperator', 'get_event_operator']
 
 
+@cls_definition()
 class Operator(ABC):
-    """系统运行时产生的算子, 会在外层运行. 只允许通过已有的系统函数生成, 不应该临时实现."""
+    """
+    Operating the chain of thoughts.
+    You CAN NOT define operator yourself, you shall generate it by given library only.
+    """
 
     @abstractmethod
     def run(self, g: "Ghost") -> Optional["Operator"]:

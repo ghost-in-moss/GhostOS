@@ -2,7 +2,7 @@ from ghostos.core.llms import FunctionalToken
 from ghostos.core.moss.abc import MossPrompter
 from pydantic import BaseModel, Field
 
-__all__ = ['MOSSArgument', 'DEFAULT_MOSS_FUNCTIONAL_TOKEN', 'DEFAULT_MOSS_PROMPT_TEMPLATE']
+__all__ = ['MOSSArgument', 'DEFAULT_MOSS_FUNCTIONAL_TOKEN', 'DEFAULT_MOSS_PROMPT_TEMPLATE', 'get_default_moss_prompt']
 
 
 class MOSSArgument(BaseModel):

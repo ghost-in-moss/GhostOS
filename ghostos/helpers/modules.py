@@ -12,6 +12,8 @@ __all__ = [
     'join_import_module_and_spec',
     'is_method_belongs_to_class',
     'parse_import_module_and_spec',
+    'rewrite_module',
+    'rewrite_module_by_path',
 ]
 
 Importer = Callable[[str], ModuleType]
@@ -103,3 +105,24 @@ def get_calling_modulename(skip: int = 0) -> Optional[str]:
         mod = module_info.__name__
         return mod
     return None
+
+
+def rewrite_module_by_path(module_path: str, code: str) -> None:
+    """
+    rewrite a module from module_path with code
+    :param module_path:
+    :param code:
+    """
+    module = import_from_path(module_path)
+    rewrite_module(module, code)
+
+
+def rewrite_module(module: ModuleType, code: str) -> None:
+    """
+    write code to target module
+    :param module:
+    :param code:
+    """
+    filename = inspect.getfile(module)
+    with open(filename, 'w') as f:
+        f.write(code)

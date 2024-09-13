@@ -9,12 +9,13 @@ from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
-from ghostos.core.errors import GhostOSIOError
-from ghostos.core.messages import Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultMessageTypes
+from ghostos.core.messages import (
+    Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultMessageTypes,
+    CompletionUsagePayload,
+)
 from ghostos.core.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
     Chat,
-    Embedding, Embeddings,
     FunctionalToken,
 )
 from ghostos.container import Bootstrapper, Container
@@ -30,7 +31,7 @@ class FunctionalTokenPrompt(str):
         lines = []
         for token in tokens:
             start = token.token
-            end = token.end if token.end else ""
+            end = token.end_token if token.end_token else ""
             description_lines = token.description.splitlines()
             description = "\n".join(['> ' + desc for desc in description_lines])
             lines.append(f"`{start}{end}`:\n\n{description}")
@@ -148,6 +149,11 @@ class OpenAIAdapter(LLMApi):
         chat = self.parse_chat(chat)
         message: ChatCompletion = self._chat_completion(chat, stream=False)
         pack = self._parser.from_chat_completion(message.choices[0].message)
+        # add completion usage
+        if message.usage:
+            usage = CompletionUsagePayload.from_usage(message.usage)
+            usage.set(pack)
+
         if not pack.is_tail():
             pack.pack = False
         return pack

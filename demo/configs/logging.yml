@@ -11,10 +11,12 @@ formatters:
 handlers:
   debug_file:
     class: logging.FileHandler
+    formatter: default
     filename: debug.log
   console:
     class: logging.StreamHandler
     level: DEBUG
+    formatter: default
     stream: ext://sys.stdout
 
 loggers:

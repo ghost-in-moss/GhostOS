@@ -2,7 +2,7 @@ import inspect
 from typing import Optional, TypeVar, Generic, Type, Iterable
 from abc import ABC, abstractmethod
 from ghostos.entity import Entity, ModelEntity
-from ghostos.core.session import Event
+from ghostos.core.session import Event, MsgThread, Session
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.abc import Identifiable, Identifier, PromptAbleClass
@@ -160,10 +160,19 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
         基于 Thought 创建了 Task 时触发的事件.
         可以根据事件做必要的初始化.
         """
-        op = self.think(g, e)
-        if op is None:
-            op = g.taskflow().awaits()
-        return op
+        session = g.session()
+        thread = session.thread()
+        self.prepare_thread(session, thread)
+        session.update_thread(thread, False)
+
+        return self.think(g, e)
+
+    @staticmethod
+    def prepare_thread(session: Session, thread: MsgThread) -> MsgThread:
+        process_id = session.process().process_id
+        task = session.task()
+        thread.save_file = f"process_{process_id}/task_{task.name}_thread_{thread.id}.yml"
+        return thread
 
     def on_canceling(self, g: Ghost, e: Event) -> Optional[Operator]:
         """

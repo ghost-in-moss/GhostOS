@@ -1,6 +1,7 @@
 from ghostos.container import Container
 from ghostos.core.moss.abc import (
     Moss, MossCompiler, MossRuntime, MossPrompter, MossResult,
+    AttrPrompts,
     MOSS_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
     MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT
 )

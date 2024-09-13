@@ -23,7 +23,7 @@ class Utils:
     def get_thought_driver(self, thought: Thought) -> ThoughtDriver:
         return self.ghost.mindset().get_thought_driver(thought)
 
-    def initialize(self, messages: List[Message]) -> Optional["Event"]:
+    def initialize(self) -> None:
         """
         initialize ghost
         """
@@ -47,10 +47,6 @@ class Utils:
         process.initialized = True
         session.update_process(process)
         session.update_task(task, None, False)
-        return DefaultEventType.CREATED.new(
-            task_id=task_id,
-            messages=messages,
-        )
 
     def fetch_thought_from_task(self, task: "Task") -> ThoughtDriver:
         thought = self.ghost.entity_factory().force_new_entity(task.meta, Thought)
