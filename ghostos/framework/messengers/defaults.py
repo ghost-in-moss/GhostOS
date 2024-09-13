@@ -32,6 +32,7 @@ class DefaultMessenger(Messenger, Stream):
             payloads: Optional[Iterable[Payload]] = None,
             attachments: Optional[Iterable[Attachment]] = None,
             functional_tokens: Optional[Iterable[FunctionalToken]] = None,
+            saving: bool = True,
             logger: Optional["LoggerItf"] = None,
     ):
         """
@@ -52,6 +53,7 @@ class DefaultMessenger(Messenger, Stream):
         self._role = role if role else Role.ASSISTANT.value
         self._upstream: Optional[upstream] = upstream
         self._stopped: bool = False
+        self._saving: bool = saving
         self._payloads: Optional[Iterable[Payload]] = payloads
         """默认的 payloads"""
         self._attachments: Optional[Iterable[Attachment]] = attachments
@@ -139,7 +141,8 @@ class DefaultMessenger(Messenger, Stream):
     def _deliver(self, delivery: Iterable[Message]) -> bool:
         for item in delivery:
             if (
-                    self._thread is not None  # thread exists.
+                    self._saving
+                    and self._thread is not None  # thread exists.
                     and not DefaultMessageTypes.is_protocol_type(item)  # not a protocol type message.
                     and not item.pack
             ):  # is tail package.

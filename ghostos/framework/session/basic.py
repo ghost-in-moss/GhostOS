@@ -100,6 +100,7 @@ class BasicSession(Session):
     def messenger(
             self, *,
             sending: bool = True,
+            saving: bool = True,
             thread: Optional[MsgThread] = None,
             name: Optional[str] = None,
             buffer: Optional[Buffer] = None,
@@ -116,6 +117,7 @@ class BasicSession(Session):
 
         messenger = DefaultMessenger(
             upstream=self._upstream,
+            saving=saving,
             thread=thread,
             buffer=buffer,
             name=name,

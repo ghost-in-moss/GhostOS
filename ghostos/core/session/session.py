@@ -84,6 +84,7 @@ class Session(ABC):
     def messenger(
             self, *,
             sending: bool = True,
+            saving: bool = True,
             thread: Optional[MsgThread] = None,
             name: Optional[str] = None,
             buffer: Optional[Buffer] = None,

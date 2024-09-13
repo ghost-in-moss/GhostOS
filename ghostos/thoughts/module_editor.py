@@ -2,9 +2,10 @@ from typing import Iterable
 from ghostos.core.ghosts import ModelThought, Ghost, Action
 from ghostos.core.llms import LLMApi
 from ghostos.core.moss import PyContext, MossCompiler
-from ghostos.core.session import Event
+from ghostos.core.session import Event, Session, MsgThread
 from ghostos.thoughts.basic import LLMThoughtDriver
 from ghostos.thoughts.moss import BasicMossThoughtDriver
+from ghostos.thoughts import module_editor_tools
 from ghostos.libraries.py_editor import PythonEditorImpl, ModuleEditor
 from pydantic import Field
 from ghostos.helpers import md5
@@ -13,15 +14,17 @@ DEFAULT_PY_MODULE_EDITOR_INSTRUCTION = """
 # Instruction
 
 Your task is helping user to read / understand / edit a python module file. 
-The target module you are handling is {modulename}, the source code with line num at end of each line are: 
+The target module you are handling is `{modulename}`, the source code with line num at end of each line are: 
 
 ```python
 {target_source}
 ```
 
-With ModuleEditor you can read / change it. 
+With ModuleEditor that MOSS provided you can read / change it. 
 Remember to print the result when you call some method of ModuleEditor, check the printed result if anything goes wrong.
 
+You can update `{modulename}` 's code, use the ModuleEditor that MOSS provided to you. 
+ModuleEditor provides multiple methods to update the source code, you need to write your code as a string, and use the methods.
 """
 
 
@@ -30,18 +33,24 @@ class PyModuleEditorThought(ModelThought):
     description: str = Field(default="can read, understand and edit python module")
     target_module: str = Field(description="target modulename")
     llm_api_name: str = Field(default="", description="specific llm api name")
+    debug: bool = Field(default=False, description="debug mode, if true, moss code will send to user")
 
 
-def new_pymodule_editor_thought(target_module: str, llm_api_name: str = "") -> PyModuleEditorThought:
+def new_pymodule_editor_thought(
+        target_module: str,
+        llm_api_name: str = "",
+        debug: bool = True,
+) -> PyModuleEditorThought:
     """
-    instance a
+    instance a pymodule_editor thought.
     :param target_module:
     :param llm_api_name:
-    :return:
+    :param debug: if debug mode is true, moss code will send to user
     """
     return PyModuleEditorThought(
         target_module=target_module,
         llm_api_name=llm_api_name,
+        debug=debug,
     )
 
 
@@ -56,6 +65,23 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         task_id = f"process_{process_id}_task_{self.thought.target_module}"
         # task_id in a same process will always be the same
         return md5(task_id)
+
+    def prepare_thread(self, session: Session, thread: MsgThread) -> MsgThread:
+        """
+        save the thread where I'm convenient to see it
+        :param session:
+        :param thread:
+        :return:
+        """
+        editor = self.module_editor()
+        filepath = editor.filepath()
+        if filepath.endswith(".py"):
+            thread_path = filepath[:-3] + ".thread.yml"
+        else:
+            thread_path = filepath + ".thread.yml"
+        thread.save_file = thread_path
+        thread.update_pycontext(self.init_pycontext())
+        return thread
 
     def instruction(self, g: Ghost, e: Event) -> str:
         editor = self.module_editor()
@@ -77,7 +103,10 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
             self._module_editor = module_editor
         return self._module_editor
 
+    def is_moss_code_delivery(self) -> bool:
+        return self.thought.debug
+
     def init_pycontext(self) -> PyContext:
         return PyContext(
-            module="ghostos.thoughts.module_editor_tools",
+            module=module_editor_tools.__name__,
         )
