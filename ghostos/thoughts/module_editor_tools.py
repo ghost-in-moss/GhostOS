@@ -16,11 +16,19 @@ class Moss(Parent):
 
 
 if __name__ == "__example__":
-    def example_append_code_main(moss: Moss) -> Optional[Operator]:
+    def example_append_code_at_main(moss: Moss) -> Optional[Operator]:
         """
-        this example is about user asking to import os library
+        this example is about you need to add codes to the target module.
         """
-        # add code to line 2 of target module.
-        moss.editor.insert("import os", line_num=2)
+        # write the target code as string variable
+        code = """
+def plus(a, b):
+    return a + b
+"""
+        # using editor api to add code
+        moss.editor.append(code)
         # return none means if print anything, observe them and think again. otherwise do default action awaits.
+        # NEVER CONFUSE the MOSS interface and the target module.
+        # 1. MOSS interface providing you with a python interface to using many libraries, instead of JSON Schema tools.
+        # 2. Target module is what you want to handle.
         return None

@@ -23,6 +23,7 @@ class MossThought(ModelThought):
     instruction: str = Field(description="instruction of the thought")
     moss_modulename: str = Field(description="the modulename for moss pycontext.module")
     llm_api_name: str = Field(default="", description="Name of LLM API")
+    debug: bool = Field(default=False, description="debug mode, if True, moss code will send to user")
 
 
 class BasicMossThoughtDriver(ABC):
@@ -57,16 +58,22 @@ class BasicMossThoughtDriver(ABC):
         if injections:
             compiler.injects(**injections)
 
-        compiler.with_locals(Operator=Operator)
+        # prepare some default injections that main function needed, if not imported
+        compiler.with_locals(Operator=Operator, Optional=Optional)
         return compiler
 
     def get_moss_runtime(self, g: Ghost) -> MossRuntime:
         return self.prepare_moss_compiler(g).compile(None)
 
+    @abstractmethod
+    def is_moss_code_delivery(self) -> bool:
+        pass
+
     def actions(self, g: Ghost, e: Event) -> Iterable[Action]:
         runtime = self.get_moss_runtime(g)
         yield MossAction(
             moss_runtime=runtime,
+            deliver=self.is_moss_code_delivery(),
         )
 
 
@@ -81,6 +88,9 @@ class MossThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[MossThought]):
         pycontext = self.init_pycontext()
         thread.update_pycontext(pycontext)
         return super().on_created(g, e)
+
+    def is_moss_code_delivery(self) -> bool:
+        return self.thought.debug
 
     def get_llmapi(self, g: Ghost) -> LLMApi:
         llm_api_name = self.thought.llm_api_name

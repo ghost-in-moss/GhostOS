@@ -28,6 +28,13 @@ class ModuleEditor(ABC):
     """
 
     @abstractmethod
+    def filepath(self) -> str:
+        """
+        :return: filepath of the target module
+        """
+        pass
+
+    @abstractmethod
     def modulename(self) -> str:
         """
         :return: module name of the module that this editor is editing
@@ -137,6 +144,9 @@ class ModuleEditorImpl(ModuleEditor):
         self._module_file = filename
         self._module_source: Optional[str] = source_code
 
+    def filepath(self) -> str:
+        return self._module_file
+
     def modulename(self) -> str:
         return self._module.__name__
 
@@ -158,6 +168,8 @@ class ModuleEditorImpl(ModuleEditor):
         lines = source.splitlines()
         outputs = []
         line_num = -1
+        max_lines = len(lines)
+        digit = len(str(max_lines))
         for line in lines:
             line_num += 1
             if line_num < start_line:
@@ -166,7 +178,9 @@ class ModuleEditorImpl(ModuleEditor):
                 continue
             handled_line = line
             if show_line_num:
-                handled_line = f"{handled_line} # {line_num}"
+                prefix = str(line_num)
+                prefix = " " * (digit - len(prefix)) + prefix
+                handled_line = prefix + "|" + handled_line
             outputs.append(handled_line)
         return "\n".join(outputs)
 
@@ -183,7 +197,7 @@ class ModuleEditorImpl(ModuleEditor):
     def replace(self, target_str: str, replace_str: str, count=-1) -> bool:
         if target_str not in self._module_source:
             return False
-        source = self._module_source.replace(target_str, replace_str, __count=count)
+        source = self._module_source.replace(target_str, replace_str, count)
         self._save_module_source(source)
         return True
 

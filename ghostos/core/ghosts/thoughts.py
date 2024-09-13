@@ -170,6 +170,9 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
 
     @staticmethod
     def prepare_thread(session: Session, thread: MsgThread) -> MsgThread:
+        """
+        prepare thread usually defining thread id and thread.save_file for debug reason
+        """
         process_id = session.process().process_id
         task = session.task()
         thread.save_file = f"process_{process_id}/task_{task.name}_thread_{thread.id}.yml"

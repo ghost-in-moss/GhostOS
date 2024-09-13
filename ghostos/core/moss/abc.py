@@ -7,6 +7,7 @@ from ghostos.core.moss.prompts import (
     AttrPrompts, reflect_module_locals, PROMPT_MAGIC_ATTR,
     compile_attr_prompts,
 )
+from ghostos.core.messages import Message, Role
 from ghostos.core.moss.decorators import cls_source_code
 
 """
@@ -51,6 +52,7 @@ __all__ = [
     'Moss', 'attr',
     'MossCompiler', 'MossRuntime',
     'MossResult', 'MossPrompter',
+    'moss_message',
     'AttrPrompts',
     'MOSS_COMPILE_EVENT', 'MOSS_PROMPT_EVENT', 'MOSS_EXEC_EVENT', 'MOSS_ATTR_PROMPTS_EVENT',
     'MOSS_TYPE_NAME', 'MOSS_NAME',
@@ -90,6 +92,13 @@ class Moss(ABC):
     You can edit them if you need.
     """
     pass
+
+
+def moss_message(content: str, memory: Optional[str] = None) -> Message:
+    """
+    default message type that MOSS execution generated
+    """
+    return Role.ASSISTANT.new(content=content, memory=memory, name=MOSS_TYPE_NAME)
 
 
 class MossCompiler(ABC):

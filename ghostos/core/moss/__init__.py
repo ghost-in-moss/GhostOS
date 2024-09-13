@@ -3,7 +3,8 @@ from ghostos.core.moss.abc import (
     Moss, MossCompiler, MossRuntime, MossPrompter, MossResult,
     AttrPrompts,
     MOSS_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
-    MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT
+    MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT,
+    moss_message,
 )
 from ghostos.core.moss.impl import TestMOSSProvider
 from ghostos.core.moss.test_suites import MossTestSuite

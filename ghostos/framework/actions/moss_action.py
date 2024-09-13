@@ -5,7 +5,7 @@ from ghostos.container import Container
 from ghostos.core.ghosts import Action, Ghost
 from ghostos.core.llms import Chat, FunctionalToken
 from ghostos.core.messages import DefaultMessageTypes, Caller
-from ghostos.core.moss.abc import MossRuntime
+from ghostos.core.moss import MossRuntime, moss_message
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.session import Session
 from ghostos.abc import Identifier
@@ -34,7 +34,7 @@ Notice:
 - **Never** use ``` to embrace your code.
 - Need not to mention the code you generated to user.
 """.strip(),
-    deliver=False,
+    visible=False,
     parameters=MossArgument.model_json_schema(),
 )
 
@@ -89,16 +89,23 @@ Here is the context provided to you in this turn:
 3. MOSS will automatic execute the main function so you never execute it again.
 4. **Return Operator**: You shall always use method that MOSS provide you to return an Operator from function main. 
 5. In the generated MOSS code, ** YOU SHALL NOT WRITE ANYTHING BUT CODE AND COMMENTS BECAUSE MOSS CODE NEVER SEND TO USER**.
+
+**About Coding Jobs**: 
+Sometimes you are handling coding task, the MOSS provides you code interface to handle your job.
+But the MOSS code you generated is not the target code you are coding. DO NOT CONFUSE THE Them!
+At these scenarios you shall write target code as string, and using the libraries MOSS providing to you to handle them.
 """
 
     def __init__(
             self,
             moss_runtime: MossRuntime,
             functional_token: Optional[FunctionalToken] = None,
+            deliver: bool = False,
     ):
         self._moss_runtime = moss_runtime
         if functional_token is None:
             functional_token = DEFAULT_MOSS_FUNCTIONAL_TOKEN.model_copy(deep=True)
+        functional_token.visible = deliver
         self._functional_token = functional_token
 
     def identifier(self) -> Identifier:
@@ -131,6 +138,7 @@ Here is the context provided to you in this turn:
             argument = MossArgument(**unmarshal)
             code = argument.code
 
+        messenger = session.messenger(thread=thread)
         code = code.rstrip().replace("```python", "").replace("```", "")
         try:
             executed = self._moss_runtime.execute(code=code, target="main", local_args=["moss"])
@@ -144,18 +152,20 @@ Here is the context provided to you in this turn:
             printed = executed.std_output
             content = ""
             if printed:
-                content = f"printed content: \n {printed}"
+                content = f"printed content (only visible to you): \n {printed}"
             # 生成消息并发送.
             if content:
                 # 理论上对用户不展示的消息.
-                message = DefaultMessageTypes.DEFAULT.new_assistant(content="", memory=content)
+                message = moss_message(content="", memory=content)
+                messenger.deliver(message)
                 thread.update_pycontext(pycontext)
-                thread.append(message)
+            if content and op is None:
+                op = c.force_fetch(Ghost).taskflow().think()
         except Exception as e:
             # 将异常作为消息. todo: 完善消息.
             content = f"run moss failed: \n{e} \n\n{format_exc()}"
-            message = DefaultMessageTypes.DEFAULT.new_system(content="", memory=content)
-            thread.append(message)
+            message = moss_message(content="", memory=content)
+            messenger.deliver(message)
             op = c.force_fetch(Ghost).taskflow().think()
         finally:
             # 将 moss 清空掉.

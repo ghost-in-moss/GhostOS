@@ -34,4 +34,4 @@ if __name__ == '__main__':
     from ghostos.prototypes.console import run_demo_thought
     from ghostos.thoughts import new_pymodule_editor_thought
 
-    run_demo_thought(new_pymodule_editor_thought(__name__))
+    run_demo_thought(new_pymodule_editor_thought(__name__), debug=True)
