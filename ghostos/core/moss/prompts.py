@@ -9,9 +9,12 @@ from ghostos.core.moss.utils import (
     get_callable_definition,
     add_source_indent,
 )
+from ghostos.core.moss.exports import Exporter
 from ghostos.abc import PromptAble, PromptAbleClass
 from ghostos.helpers import generate_import_path
 import inspect
+
+# todo: I really dislike this module and hope for a more systematic and rule-based implementation to replace it.
 
 """
 将上下文引用的 变量/方法/类型 反射出 Prompt 的机制. 
@@ -192,8 +195,9 @@ def default_reflect_local_value_prompt(
     :param _prompter: 其它类型.
     :return:
     """
-    # 如果是 module 类型.
-    if is_typing(value):
+    if isinstance(value, Exporter):
+        return value.gene_prompt(name)
+    elif is_typing(value):
         if not _typing:
             return None
         if value.__module__ == "typing":

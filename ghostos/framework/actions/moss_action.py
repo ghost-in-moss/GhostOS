@@ -156,7 +156,7 @@ Here is the context provided to you in this turn:
             content = f"run moss failed: \n{e} \n\n{format_exc()}"
             message = DefaultMessageTypes.DEFAULT.new_system(content="", memory=content)
             thread.append(message)
-            op = c.force_fetch(Ghost).taskflow().observe()
+            op = c.force_fetch(Ghost).taskflow().think()
         finally:
             # 将 moss 清空掉.
             self._moss_runtime.destroy()
