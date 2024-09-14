@@ -25,7 +25,6 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
 
 # todo: can define a moss thought in a moss file
 from ghostos.thoughts.moss import MossThought
-from ghostos.prototypes.console import run_demo_thought
 
 thought = MossThought(
     name="helloworld_test",
@@ -36,6 +35,8 @@ thought = MossThought(
 )
 
 if __name__ == "__main__":
-    run_demo_thought(thought, debug=True)
+    from ghostos.prototypes.console import new_console_app
+
+    new_console_app(__file__, 4).run_thought(thought, debug=True)
 
 # </moss>

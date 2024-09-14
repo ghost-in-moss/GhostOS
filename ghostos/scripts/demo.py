@@ -1,6 +1,6 @@
 import argparse
 import sys
-from ghostos.prototypes.console import run_demo_console
+from ghostos.prototypes.console import demo_console_app
 
 
 def main() -> None:
@@ -32,7 +32,7 @@ def main() -> None:
         default=None,
     )
     parsed = parser.parse_args(sys.argv[1:])
-    run_demo_console(
+    demo_console_app.run_console(
         ghost_id=parsed.ghost_id,
         debug=parsed.debug,
         username=parsed.username,
