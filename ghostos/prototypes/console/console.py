@@ -30,6 +30,7 @@ class ConsolePrototype:
             ghost_id: str,
             username: str,
             debug: bool = False,
+            on_create_message: Optional[str] = None,
             session_id: Optional[str] = None,
             process_id: Optional[str] = None,
             task_id: Optional[str] = None,
@@ -37,6 +38,7 @@ class ConsolePrototype:
     ):
         self._os = ghostos
         self._ghost_id = ghost_id
+        self._on_create_message = on_create_message
         self._username = username
         self._process_id = process_id
         self._task_id = task_id
@@ -82,6 +84,13 @@ class ConsolePrototype:
 
     async def _main(self):
         self._welcome()
+        if self._on_create_message:
+            self._on_input(self._on_create_message)
+        else:
+            message = Role.new_assistant_system(
+                "the conversation is going to begin, please welcome user and introduce your self",
+            )
+            self._on_message_input(message)
         with patch_stdout(raw=True):
             await self._loop()
             self._console.print("Quitting event loop. Bye.")
@@ -107,6 +116,9 @@ class ConsolePrototype:
             content=text,
             name=self._username,
         )
+        return self._on_message_input(message)
+
+    def _on_message_input(self, message: Message):
         inputs_ = Inputs(
             session_id=self._session_id,
             ghost_id=self._ghost_id,

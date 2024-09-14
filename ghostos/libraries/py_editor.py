@@ -246,5 +246,6 @@ class PythonEditorImpl(PythonEditor):
         with open(filename, "r") as f:
             source = f.read()
             temp_module = ModuleType(target.__name__)
+            temp_module.__dict__['__file__'] = filename
             exec(source, temp_module.__dict__)
             return ModuleEditorImpl(temp_module, target.__file__, source)

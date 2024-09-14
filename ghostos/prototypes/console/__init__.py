@@ -74,12 +74,14 @@ class ConsoleApp:
             ghost_id: str,
             *,
             username: str = "BrightRed",
+            on_create_message: Optional[str] = None,
             debug: bool = False,
             session_id: Optional[str] = None,
     ):
         """
         :param ghost_id: should exist in configs/ghosts.yml
         :param username: the username, default is my name haha.
+        :param on_create_message: the message to send to the assistant as default.
         :param debug: if debug is True, render more verbosely.
         :param session_id: if given, the console will start in the same session by the id.
         """
@@ -92,6 +94,7 @@ class ConsoleApp:
             ghost_id=ghost_id,
             username=username,
             debug=debug,
+            on_create_message=on_create_message,
             session_id=session_id,
         )
         console_impl.run()
@@ -101,6 +104,7 @@ class ConsoleApp:
             self,
             thought: Thought,
             *,
+            instruction: Optional[str] = None,
             username: str = "BrightRed",
             ghost_name: str = "GhostOSDemo",
             debug: bool = False,
@@ -110,6 +114,7 @@ class ConsoleApp:
         """
         Run a thought instead of run a defined Ghost.
         :param thought: root thought of the ghost
+        :param instruction: the init instruction send to assistant
         :param username: name of the console's user. default is my name hahaha.
         :param ghost_name: ghost name
         :param debug: if debug is True, render more verbosely.
@@ -139,6 +144,7 @@ class ConsoleApp:
             ghostos=self._ghostos,
             ghost_id=ghost_id,
             username=username,
+            on_create_message=instruction,
             debug=debug,
             session_id=session_id,
         )
@@ -154,6 +160,8 @@ demo_console_app = ConsoleApp.new_demo(
 )
 """ default app instance for testing convenient"""
 
+__app__ = None
+
 
 def new_console_app(
         current_file: str,
@@ -162,15 +170,20 @@ def new_console_app(
         **kwargs,
 ) -> ConsoleApp:
     """
-    syntactic suger
+    quick to create a console app based on root_dir. only once shall be called globally.
     :param current_file: current file name, usually __file__
     :param depth: depth from current_file to root dir
     :param logging_conf:
     :return:
     """
+    global __app__
+    if __app__ is not None:
+        return __app__
     root_dir = current_file
     for i in range(depth):
         root_dir = dirname(root_dir)
 
     logger_conf_path = join(root_dir, logging_conf)
-    return ConsoleApp.new_demo(root_dir=root_dir, logger_conf_path=logger_conf_path, **kwargs)
+    app = ConsoleApp.new_demo(root_dir=root_dir, logger_conf_path=logger_conf_path, **kwargs)
+    __app__ = app
+    return app

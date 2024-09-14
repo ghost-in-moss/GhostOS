@@ -2,7 +2,7 @@ from typing import Optional, List, Iterable, Dict, Any
 import time
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.core.messages import Message, copy_messages, DefaultMessageTypes
+from ghostos.core.messages import Message, copy_messages, DefaultMessageTypes, Role
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Chat
 from ghostos.core.session.events import Event
@@ -64,7 +64,7 @@ class Turn(BaseModel):
             return []
         # reason is first
         if event.reason:
-            yield DefaultMessageTypes.DEFAULT.new_system(content=event.reason)
+            yield Role.new_assistant_system(content=event.reason)
 
         # messages in middle
         if event.messages:
@@ -73,7 +73,7 @@ class Turn(BaseModel):
 
         # instruction after messages.
         if event.instruction:
-            yield DefaultMessageTypes.DEFAULT.new_system(content=event.instruction)
+            yield Role.new_assistant_system(content=event.instruction)
 
     def messages(self) -> Iterable[Message]:
         yield from self.event_messages()
