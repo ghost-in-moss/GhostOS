@@ -5,7 +5,7 @@ from ghostos.core.moss import PyContext, MossCompiler
 from ghostos.core.session import Event, Session, MsgThread
 from ghostos.thoughts.basic import LLMThoughtDriver
 from ghostos.thoughts.moss import BasicMossThoughtDriver
-from ghostos.thoughts import module_editor_tools
+from ghostos.thoughts import module_editor_moss
 from ghostos.libraries.py_editor import PythonEditorImpl, ModuleEditor
 from pydantic import Field
 from ghostos.helpers import md5
@@ -80,14 +80,16 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         else:
             thread_path = filepath + ".thread.yml"
         thread.save_file = thread_path
-        thread.update_pycontext(self.init_pycontext())
         return thread
 
     def instruction(self, g: Ghost, e: Event) -> str:
         editor = self.module_editor()
+        target_source = editor.read_source(show_line_num=True)
+        splits = target_source.split("\nif __name__ == ")
+        target_source = splits[0]
         return DEFAULT_PY_MODULE_EDITOR_INSTRUCTION.format(
             modulename=self.thought.target_module,
-            target_source=editor.read_source(show_line_num=True),
+            target_source=target_source,
         )
 
     def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
@@ -108,5 +110,5 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
 
     def init_pycontext(self) -> PyContext:
         return PyContext(
-            module=module_editor_tools.__name__,
+            module=module_editor_moss.__name__,
         )

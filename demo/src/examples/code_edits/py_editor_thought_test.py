@@ -31,7 +31,7 @@ class MockCache(Cache):
 
 
 if __name__ == '__main__':
-    from ghostos.prototypes.console import run_demo_thought
+    from ghostos.prototypes.console import new_console_app
     from ghostos.thoughts import new_pymodule_editor_thought
-
-    run_demo_thought(new_pymodule_editor_thought(__name__), debug=True)
+    app = new_console_app(__file__, 4)
+    app.run_thought(new_pymodule_editor_thought(__name__), debug=True)

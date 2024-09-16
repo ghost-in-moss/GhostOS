@@ -98,7 +98,7 @@ def moss_message(content: str, memory: Optional[str] = None) -> Message:
     """
     default message type that MOSS execution generated
     """
-    return Role.ASSISTANT.new(content=content, memory=memory, name=MOSS_TYPE_NAME)
+    return Role.ASSISTANT.new(content=content, memory=memory, name="__moss__")
 
 
 class MossCompiler(ABC):

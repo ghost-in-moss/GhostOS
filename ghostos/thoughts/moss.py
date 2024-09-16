@@ -44,13 +44,15 @@ class BasicMossThoughtDriver(ABC):
     def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
         thread = g.session().thread()
         compiler = g.moss()
+        # init default pycontext
+        default_pycontext = self.init_pycontext()
+        compiler = compiler.join_context(default_pycontext)
+        # bind msg thread
         compiler.bind(MsgThread, thread)
+        # join thread
         pycontext = thread.get_pycontext()
-
-        if not pycontext.module:
-            pycontext = PyContext()
-
         compiler = compiler.join_context(pycontext)
+        # bind providers
         for provider in self.providers():
             compiler.register(provider)
 

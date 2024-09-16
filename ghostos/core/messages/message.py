@@ -28,6 +28,14 @@ class Role(str, enum.Enum):
     def all(cls) -> Set[str]:
         return set(map(lambda x: x.value, cls))
 
+    @classmethod
+    def new_assistant_system(
+            cls,
+            content: str,
+            memory: Optional[str] = None,
+    ):
+        return cls.ASSISTANT.new(content, memory=memory, name="__system__")
+
     def new(
             self,
             content: str,

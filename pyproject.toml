@@ -27,6 +27,7 @@ grep-ast = "^0.3.3"
 litellm = "^1.43.18"
 hide-py = "^0.3.0"
 prompt-toolkit = "^3.0.47"
+arxiv = "^2.1.3"
 
 [tool.poetry.scripts]
 demo = "ghostos.scripts.demo:main"
