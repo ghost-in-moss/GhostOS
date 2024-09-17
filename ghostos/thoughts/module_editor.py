@@ -1,5 +1,6 @@
-from typing import Iterable
-from ghostos.core.ghosts import ModelThought, Ghost, Action
+import inspect
+from typing import Dict, Optional
+from ghostos.core.ghosts import ModelThought, Ghost
 from ghostos.core.llms import LLMApi
 from ghostos.core.moss import PyContext, MossCompiler
 from ghostos.core.session import Event, Session, MsgThread
@@ -8,7 +9,7 @@ from ghostos.thoughts.moss import BasicMossThoughtDriver
 from ghostos.thoughts import module_editor_moss
 from ghostos.libraries.py_editor import PythonEditorImpl, ModuleEditor
 from pydantic import Field
-from ghostos.helpers import md5
+from ghostos.helpers import md5, import_from_path
 
 DEFAULT_PY_MODULE_EDITOR_INSTRUCTION = """
 # Instruction
@@ -32,6 +33,10 @@ class PyModuleEditorThought(ModelThought):
     name: str = Field(default="PyModuleEditor")
     description: str = Field(default="can read, understand and edit python module")
     target_module: str = Field(description="target modulename")
+    referencing: Dict = Field(
+        default_factory=dict,
+        description="references for python editor, key is import path, value is the prompt about it"
+    )
     llm_api_name: str = Field(default="", description="specific llm api name")
     debug: bool = Field(default=False, description="debug mode, if true, moss code will send to user")
 
@@ -39,6 +44,7 @@ class PyModuleEditorThought(ModelThought):
 def new_pymodule_editor_thought(
         target_module: str,
         llm_api_name: str = "",
+        referencing: Optional[Dict] = None,
         debug: bool = True,
 ) -> PyModuleEditorThought:
     """
@@ -46,11 +52,14 @@ def new_pymodule_editor_thought(
     :param target_module:
     :param llm_api_name:
     :param debug: if debug mode is true, moss code will send to user
+    :param referencing:
     """
+    referencing = referencing or {}
     return PyModuleEditorThought(
         target_module=target_module,
         llm_api_name=llm_api_name,
         debug=debug,
+        referencing=referencing,
     )
 
 
@@ -87,10 +96,28 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         target_source = editor.read_source(show_line_num=True)
         splits = target_source.split("\nif __name__ == ")
         target_source = splits[0]
-        return DEFAULT_PY_MODULE_EDITOR_INSTRUCTION.format(
+        content = DEFAULT_PY_MODULE_EDITOR_INSTRUCTION.format(
             modulename=self.thought.target_module,
             target_source=target_source,
         )
+        if self.thought.referencing:
+            referencing = "\n\n# referencing\n\nThere are some references for you:"
+            for import_path, prompt in self.thought.referencing.items():
+                target = import_from_path(import_path)
+                source = inspect.getsource(target)
+                referencing += f"""
+                
+## {import_path}
+
+the code is:
+```python
+{source}
+```
+
+{prompt}
+"""
+            content += referencing
+        return content
 
     def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
         compiler = super().prepare_moss_compiler(g)
@@ -112,3 +139,5 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         return PyContext(
             module=module_editor_moss.__name__,
         )
+
+

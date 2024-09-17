@@ -85,6 +85,13 @@ class ConsolePrototype:
     async def _main(self):
         self._welcome()
         if self._on_create_message:
+            self._console.print(
+                Panel(
+                    Markdown(self._on_create_message),
+                    title="on_created instruction",
+                    border_style="green",
+                )
+            )
             self._on_input(self._on_create_message)
         else:
             message = Role.new_assistant_system(

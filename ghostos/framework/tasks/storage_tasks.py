@@ -37,6 +37,10 @@ class StorageTasksImpl(Tasks):
         task = Task(**data)
         return task
 
+    def exists(self, task_id: str) -> bool:
+        filename = self._get_task_filename(task_id)
+        return self._storage.exists(filename)
+
     def get_task(self, task_id: str, lock: bool) -> Optional[Task]:
         task = self._get_task(task_id)
         if task is None:

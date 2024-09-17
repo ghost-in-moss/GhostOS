@@ -112,7 +112,7 @@ class BasicSession(Session):
         if payloads is None:
             payloads = []
         payloads.append(payload)
-        name = name if name else self._ghost_name
+        name = name if name else self._assistant_name()
         thread = thread if thread else self._thread
 
         messenger = DefaultMessenger(
@@ -128,6 +128,11 @@ class BasicSession(Session):
             functional_tokens=functional_tokens,
         )
         return messenger
+
+    def _assistant_name(self) -> str:
+        if self._task.assistant:
+            return self._task.assistant.name
+        return self._ghost_name
 
     def send_messages(self, *messages: MessageKind, role: str = Role.ASSISTANT.value) -> None:
         parser = MessageKindParser(self._message_role)

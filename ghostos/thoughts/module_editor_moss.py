@@ -1,10 +1,7 @@
 from typing import Optional
-from ghostos.core.ghosts import Operator
+from ghostos.core.ghosts import Operator, Replier
 from ghostos.core.moss import Moss as Parent
 from ghostos.libraries.py_editor import ModuleEditor
-
-
-# todo: import necessary libraries and methods
 
 
 class Moss(Parent):
@@ -13,6 +10,9 @@ class Moss(Parent):
     """
     editor: ModuleEditor
     """ the editor about target module """
+
+    replier: Replier
+    """ with replier you can send reply in main function"""
 
 
 if __name__ == "__example__":

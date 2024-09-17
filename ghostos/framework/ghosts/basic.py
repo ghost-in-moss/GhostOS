@@ -10,6 +10,7 @@ from ghostos.core.ghosts import (
     Ghost, GhostConf, Operator, Inputs, Shell, Mindset, Thought,
     MultiTask, Taskflow, Utils, Workspace
 )
+from ghostos.core.ghosts.schedulers import Replier
 from ghostos.core.llms import LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.messages import Caller
@@ -21,6 +22,7 @@ from ghostos.core.session import (
 from ghostos.framework.operators import OnEventOperator
 from ghostos.framework.multitasks import MultiTaskBasicImpl
 from ghostos.framework.taskflow import TaskflowBasicImpl
+from ghostos.framework.repliers import ReplierImpl
 from ghostos.framework.session import BasicSession
 from ghostos.core.moss.impl import MossCompilerImpl
 from ghostos.contracts.modules import Modules
@@ -75,6 +77,7 @@ class BasicGhost(Ghost, ABC):
         EntityFactory,
         MultiTask,
         Taskflow,
+        Replier,
         Workspace,
         MossCompiler,
         Utils,
@@ -131,6 +134,7 @@ class BasicGhost(Ghost, ABC):
         self._bootstrap_ghost_container()
         # 检查所有必须绑定的对象.
         self._validate_default_contracts()
+        self._origin_event: Optional[Event] = None
 
     def _bootstrap_ghost_container(self):
         # init shell
@@ -152,6 +156,7 @@ class BasicGhost(Ghost, ABC):
         self_function_providers = {
             MultiTask: self.multitasks,
             Taskflow: self.taskflow,
+            Replier: self.replier,
             MossCompiler: self.moss,
             Utils: self.utils,
         }
@@ -293,7 +298,12 @@ class BasicGhost(Ghost, ABC):
         return event
 
     def init_operator(self, event: "Event") -> Tuple["Operator", int]:
+        # set origin event
+        self._origin_event = event
         return OnEventOperator(event), self._max_operator_runs
+
+    def init_event(self) -> Optional["Event"]:
+        return self._origin_event
 
     def container(self) -> Container:
         return self._container
@@ -316,8 +326,13 @@ class BasicGhost(Ghost, ABC):
     def multitasks(self) -> "MultiTask":
         return MultiTaskBasicImpl(self)
 
-    def taskflow(self, caller: Optional[Caller] = None) -> "Taskflow":
-        return TaskflowBasicImpl(caller)
+    def taskflow(self) -> "Taskflow":
+        return TaskflowBasicImpl()
+
+    def replier(self) -> "Replier":
+        e = self.init_event()
+        callback_task_id = e.from_task_id if e else None
+        return ReplierImpl(callback_task_id)
 
     def moss(self) -> "MossCompiler":
         return MossCompilerImpl(container=self._container)

@@ -9,6 +9,7 @@ from ghostos.core.messages import (
 from ghostos.core.session import (
     DefaultEventType,
     TaskState,
+    Task,
 )
 
 __all__ = [
@@ -36,41 +37,44 @@ class ActionOperator(Operator):
             messages: List[MessageKind],
             reason: str = "",
             instruction: str = "",
+            callback_task_id: Optional[str] = None,
     ):
         self.reason = reason
         self.instruction = instruction
         self.messages = messages
+        self.callback_task_id = callback_task_id
 
     def send_replies(self, g: "Ghost") -> None:
         session = g.session()
         if self.messages:
             session.send_messages(*self.messages)
 
+    def get_callback_task_id(self, task: Task) -> Optional[str]:
+        if self.callback_task_id is not None:
+            return self.callback_task_id
+        return task.parent
+
     def change_task_state(self, g: "Ghost") -> None:
         session = g.session()
         task = session.task()
+        thread = session.thread()
         task.state = self.task_state
         if self.reason:
             task.logs.append(f"{self.task_state}: {self.reason}")
         # 状态判断.
-        thread = session.thread()
-        generates = thread.get_generates()
         # 消息不为空的时候才发送.
-        if generates and task.parent:
-            callbacks = []
-            for message in generates:
-                if message.get_content().strip():
-                    callbacks.append(message)
-            if callbacks:
-                utils = g.utils()
-                # 发送消息给父任务.
-                utils.send_task_event(
-                    task_id=task.parent,
-                    event_type=self.callback_event_type,
-                    messages=generates,
-                    reason=self.reason,
-                    self_task=task,
-                )
+        callbacks = self.messages
+        callback_task_id = self.get_callback_task_id(task)
+        if callback_task_id and callbacks:
+            utils = g.utils()
+            # 发送消息给父任务.
+            utils.send_task_event(
+                task_id=task.parent,
+                event_type=self.callback_event_type,
+                messages=callbacks,
+                reason=self.reason,
+                self_task=task,
+            )
 
         # 更新当前 session, 主要更新 thread 的状态.
         session.update_task(task, thread, True)
@@ -95,8 +99,8 @@ class WaitsOperator(ActionOperator):
     task_state: ClassVar[str] = TaskState.WAITING.value
     callback_event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK.value
 
-    def __init__(self, *, reason: str, messages: List[MessageKind]):
-        super().__init__(reason=reason, messages=messages)
+    def __init__(self, *, reason: str, messages: List[MessageKind], callback_task_id: Optional[str] = None):
+        super().__init__(reason=reason, messages=messages, callback_task_id=callback_task_id)
 
 
 class FailOperator(ActionOperator):
@@ -115,8 +119,9 @@ class FailOperator(ActionOperator):
             self, *,
             reason: str,
             messages: List[MessageKind],
+            callback_task_id: Optional[str] = None,
     ):
-        super().__init__(reason=reason, messages=messages)
+        super().__init__(reason=reason, messages=messages, callback_task_id=callback_task_id)
 
     def format_cancel_children_reason(self) -> str:
         if not self.reason:

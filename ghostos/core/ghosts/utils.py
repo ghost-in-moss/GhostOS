@@ -7,9 +7,7 @@ from ghostos.core.session import (
     Event, DefaultEventType,
     Task, TaskState, Tasks,
 )
-
 from ghostos.core.messages import (
-    Message,
     MessageKind,
     MessageKindParser,
     Role,
@@ -100,6 +98,7 @@ class Utils:
                 name=new_task.get('task_name'),
                 description=new_task.get('task_desc', ""),
                 meta=meta,
+                assistant=current_task.assistant,
             )
             children.append(child)
             # 准备任务的创建事件. 这个事件的消息应该是目标 Thought 自己生成的. 所以不需要消息.

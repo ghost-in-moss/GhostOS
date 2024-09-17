@@ -21,7 +21,7 @@ from ghostos.framework.llms import ConfigBasedLLMsProvider
 from ghostos.framework.eventbuses import MemEventBusImplProvider
 from ghostos.contracts.pool import DefaultPoolProvider
 from ghostos.entity import EntityFactory, EntityFactoryImpl
-from ghostos.container import Provider
+from ghostos.container import Provider, Bootstrapper
 
 project_dir = dirname(dirname(dirname(dirname(__file__))))
 demo_dir = join(project_dir, "demo")
@@ -45,6 +45,8 @@ class BasicGhostOS(AbsGhostOS, ABC):
             threads_path: str = "threads",
             llm_config_path: str = "llms_conf.yml",
             container: Optional[Container] = None,
+            providers: Optional[List[Provider]] = None,
+            bootstrapper: Optional[List[Bootstrapper]] = None,
     ):
         self._root_dir = root_dir
         self._processes_path = processes_path
@@ -58,7 +60,7 @@ class BasicGhostOS(AbsGhostOS, ABC):
         # container
         self._container = container if container else Container()
         self._prepare_logger(logger_conf_path, logger_name)
-        self._prepare_container()
+        self._prepare_container(providers, bootstrapper)
 
         modules = self._container.force_fetch(Modules)
         # register entity factory
@@ -108,10 +110,23 @@ class BasicGhostOS(AbsGhostOS, ABC):
             ShutdownProvider(),
         ]
 
-    def _prepare_container(self):
+    def _prepare_container(
+            self,
+            providers: Optional[List[Provider]] = None,
+            bootstrapper: Optional[List[Bootstrapper]] = None,
+    ):
+        if providers:
+            for provider in providers:
+                self._container.register(provider)
+        if bootstrapper:
+            for b in bootstrapper:
+                self._container.add_bootstrapper(b)
         # register default providers.
         for provider in self._default_providers():
-            self._container.register(provider)
+            contract = provider.contract()
+            # 只有未绑定的, 才会使用默认的去绑定.
+            if not self._container.bound(contract):
+                self._container.register(provider)
 
     def _prepare_logger(self, logger_conf_path: str, logger_name: str):
         with open(logger_conf_path, "rb") as f:
