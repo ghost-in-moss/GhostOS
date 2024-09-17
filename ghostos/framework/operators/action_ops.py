@@ -45,8 +45,8 @@ class ActionOperator(Operator):
         self.callback_task_id = callback_task_id
 
     def send_replies(self, g: "Ghost") -> None:
-        session = g.session()
         if self.messages:
+            session = g.session()
             session.send_messages(*self.messages)
 
     def get_callback_task_id(self, task: Task) -> Optional[str]:
@@ -86,6 +86,7 @@ class ActionOperator(Operator):
         return None
 
     def run(self, g: "Ghost") -> Optional["Operator"]:
+        self.send_replies(g)
         self.send_children_events(g)
         self.change_task_state(g)
         self.send_children_events(g)

@@ -139,7 +139,8 @@ class BasicSession(Session):
         outputs = parser.parse(messages)
         messenger = self.messenger()
         messenger.send(outputs)
-        messenger.flush()
+        sent, callers = messenger.flush()
+        self._logger.info(f"send message by session [send_messages], sent: {len(sent)}, callers: {len(callers)}")
 
     def update_task(self, task: "Task", thread: Optional["MsgThread"], update_history: bool) -> None:
         self._task = task

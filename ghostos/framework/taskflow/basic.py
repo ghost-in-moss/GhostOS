@@ -14,7 +14,7 @@ __all__ = ['TaskflowBasicImpl']
 
 class TaskflowBasicImpl(Taskflow):
 
-    def awaits(self, reply: str, log: str = "") -> Operator:
+    def awaits(self, reply: str = "", log: str = "") -> Operator:
         return WaitsOperator(
             messages=list(reply),
             reason=log,

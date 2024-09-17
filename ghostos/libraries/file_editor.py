@@ -59,7 +59,7 @@ class FileEditor(ABC):
     @abstractmethod
     def filepath(self) -> str:
         """
-        the path of the current editing file
+        the full path of the current editing file
         """
         pass
 
@@ -86,13 +86,12 @@ class FileEditor(ABC):
         pass
 
     @abstractmethod
-    def replace(self, origin: str, replace: str, count: int = -1) -> int:
+    def replace(self, origin: str, replace: str, count: int = -1) -> None:
         """
         replace a curtain content of the file
         :param origin: old content
         :param replace: new content
         :param count: times that shall be replaced. if negative, replace all times
-        :return: replaced count
         """
         pass
 
@@ -131,28 +130,27 @@ class FileEditorImpl(FileEditor):
         digit = len(str(len(lines)))
         for i, line in enumerate(lines, start=start_line):
             idx = str(i)
-            prefix = ' ' * (digit - len(idx)) + idx
+            prefix = ' ' * (digit - len(idx)) + idx + "|"
             new_lines.append(prefix + line)
-        return '\n'.join(new_lines)
+        return ''.join(new_lines)
 
     def replace_block(self, replacement: str, start_line: int = 0, end_line: int = -1) -> str:
         with open(self._filepath, 'r') as file:
             lines = file.readlines()
         if end_line < 0:
             end_line = len(lines) + end_line
-        original = '\n'.join(lines[start_line:end_line + 1])
+        original = ''.join(lines[start_line:end_line + 1])
         lines[start_line:end_line + 1] = replacement.splitlines(keepends=True)
         with open(self._filepath, 'w') as file:
             file.writelines(lines)
         return original
 
-    def replace(self, origin: str, replace: str, count: int = -1) -> int:
+    def replace(self, origin: str, replace: str, count: int = -1) -> None:
         with open(self._filepath, 'r') as file:
             content = file.read()
-        new_content, num_replaced = content.replace(origin, replace, count)
+        new_content = content.replace(origin, replace, count)
         with open(self._filepath, 'w') as file:
             file.write(new_content)
-        return num_replaced
 
     def append(self, content: str) -> None:
         with open(self._filepath, 'a') as file:
@@ -243,7 +241,7 @@ class DirectoryEditorImpl(DirectoryEditor):
         return False
 
 
-# generated FileEditorImpl by ModuleEditThought (model is moonshot):
+# generated FileEditorImpl by ModuleEditThought (model is gpt-4o):
 #
 # if __name__ == "__main__":
 #     from ghostos.thoughts.module_editor import new_pymodule_editor_thought
@@ -255,7 +253,7 @@ class DirectoryEditorImpl(DirectoryEditor):
 #     )
 # fixed the line number prefix alignment.
 
-# generated DirectoryEditorImpl by ModuleEditThought (model is moonshot):
+# generated DirectoryEditorImpl by ModuleEditThought (model is gpt-4o):
 # if __name__ == "__main__":
 #     from ghostos.thoughts.module_editor import new_pymodule_editor_thought
 #     from ghostos.prototypes.console import demo_console_app

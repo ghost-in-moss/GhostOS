@@ -6,7 +6,7 @@ from ghostos.core.session import Event, MsgThread, Session
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.abc import Identifiable, Identifier, PromptAbleClass
-from ghostos.helpers import uuid
+from ghostos.helpers import uuid, generate_import_path
 from pydantic import Field
 
 __all__ = ['Thought', 'ModelThought', 'ThoughtDriver', 'BasicThoughtDriver', "Mindset", "get_thought_driver_type", 'T']
@@ -64,13 +64,13 @@ class ModelThought(Thought, ModelEntity, PromptAbleClass, ABC):
     """
     The abstract model of the thought based by pydantic.BaseModel.
     """
-    name: str = Field(description="name of the thought")
-    description: str = Field(description="description of the thought")
 
     def identifier(self) -> Identifier:
+        cls = self.__class__
+        import_path = generate_import_path(cls)
         return Identifier(
-            name=self.name,
-            description=self.description,
+            name=import_path,
+            description=str(cls.__doc__),
         )
 
     @classmethod

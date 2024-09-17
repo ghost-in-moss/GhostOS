@@ -161,7 +161,7 @@ At these scenarios you shall write target code as string, and using the librarie
             printed = executed.std_output
             content = ""
             if printed:
-                content = f"printed content (only visible to you): \n {printed}"
+                content = f"printed content (only visible to you):\n\n```\n{printed}\n```"
             # 生成消息并发送.
             if content:
                 # 理论上对用户不展示的消息.

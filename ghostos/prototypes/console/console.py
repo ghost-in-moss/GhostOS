@@ -78,6 +78,8 @@ class ConsolePrototype:
             handled = self._os.background_run(stream)
             if not handled:
                 time.sleep(1)
+            else:
+                self._console.print(f"handled event task_id: {handled.task_id}; event_id: {handled.id}")
 
     def _stream(self) -> QueueStream:
         return QueueStream(self._queue, streaming=False)
@@ -127,6 +129,7 @@ class ConsolePrototype:
 
     def _on_message_input(self, message: Message):
         inputs_ = Inputs(
+            trace_id=uuid(),
             session_id=self._session_id,
             ghost_id=self._ghost_id,
             messages=[message],
@@ -134,6 +137,7 @@ class ConsolePrototype:
             task_id=self._task_id,
         )
         stream = self._stream()
+        self._console.print(f"push input event id: {inputs_.trace_id}")
         self._os.on_inputs(inputs_, stream, is_async=True)
 
     def _intercept_text(self, text: str) -> bool:
@@ -185,11 +189,18 @@ print "/exit" to quit
             )
         if message.is_empty():
             return
+        content = message.content
+        # some message is not visible to user
+        if not content:
+            return
         payload = TaskPayload.read(message)
         title = ""
         if payload is not None:
             title = f"{payload.task_name}: {payload.thread_id}"
-        content = message.get_content()
+        if "<moss>" in content:
+            content.replace("<moss>", "\n```python\n# <moss>\n", 1)
+        if "</moss>" in content:
+            content.replace("</moss>", "\n# </moss>\n```\n", 1)
         markdown = self._markdown_output(content)
         border_style = "blue"
         if DefaultMessageTypes.ERROR.match(message):

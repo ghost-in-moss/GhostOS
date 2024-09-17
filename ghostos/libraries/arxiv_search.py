@@ -59,7 +59,7 @@ if __name__ == '__main__':
     print(lib.get_arxiv_article_information("new articles about openai o1 model"))
 
 """
-This file is the first code that ghostos generated for me. 
+This file is the first code that ghostos generated for me by gpt-4o. 
 I talk to ModuleEditThought, give it instruction to start code completion, 
 and review the code generation then suggest it to modify result structure.
 

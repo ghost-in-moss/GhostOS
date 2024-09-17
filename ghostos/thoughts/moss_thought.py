@@ -10,7 +10,7 @@ from ghostos.framework.actions import MossAction
 from ghostos.container import Provider
 from pydantic import Field
 
-__all__ = ["MossThought", "BasicMossThoughtDriver", "MossThoughtDriver"]
+__all__ = ["MossThought", "BasicMossThoughtDriver", "MossThoughtDriver", "LLMThoughtDriver"]
 
 
 class MossThought(ModelThought):
@@ -18,8 +18,6 @@ class MossThought(ModelThought):
     The basic Thought that use moss to provide python code interface
     """
 
-    name: str = Field(description="thought name")
-    description: str = Field(description="thought description")
     instruction: str = Field(description="instruction of the thought")
     moss_modulename: str = Field(description="the modulename for moss pycontext.module")
     llm_api_name: str = Field(default="", description="Name of LLM API")
