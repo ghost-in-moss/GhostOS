@@ -158,6 +158,7 @@ class ModuleEditorImpl(ModuleEditor):
     def _save_module_source(self, source: str) -> None:
         self._module_source = source
         new_module = ModuleType(self._module.__name__)
+        new_module.__dict__['__file__'] = self._module_file
         exec(source, new_module.__dict__)
         self._module = new_module
         with open(self._module_file, "w") as f:

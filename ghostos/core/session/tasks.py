@@ -60,6 +60,13 @@ class WaitGroup(BaseModel):
         return True
 
 
+class AssistantInfo(Identifier, BaseModel):
+    id: str = Field(description="id of the assistant")
+    name: str = Field(description="name of the assistant")
+    description: str = Field(description="description of the assistant")
+    meta_prompt: str = Field(description="meta prompt of the assistant")
+
+
 class Task(BaseModel):
     # -- scope --- #
     session_id: str = Field(
@@ -98,6 +105,13 @@ Parent task id of the task.
     priority: float = Field(
         default=0.0,
         description="The priority of the task",
+    )
+
+    # --- assistant info --- #
+
+    assistant: Optional[AssistantInfo] = Field(
+        default=None,
+        description="the assistant information, if given, took it as the message sender",
     )
 
     # --- relations --- #
@@ -186,6 +200,7 @@ the state of the current task.
             description: str,
             meta: EntityMeta,
             parent_task_id: Optional[str] = None,
+            assistant: Optional[Identifier] = None,
     ) -> "Task":
         return Task(
             task_id=task_id,
@@ -196,6 +211,7 @@ the state of the current task.
             meta=meta,
             name=name,
             description=description,
+            assistant=assistant,
         )
 
     def add_child(
@@ -204,6 +220,7 @@ the state of the current task.
             name: str,
             description: str,
             meta: EntityMeta,
+            assistant: Optional[Identifier] = None,
     ) -> "Task":
         self.children.append(task_id)
         return self.new(
@@ -214,6 +231,7 @@ the state of the current task.
             description=description,
             meta=meta,
             parent_task_id=self.task_id,
+            assistant=assistant,
         )
 
     def think_too_much(self) -> bool:
@@ -359,6 +377,15 @@ class Tasks(ABC):
         :param task_id:
         :param lock: 是否尝试对 task 上锁, 如果要求上锁但没成功, 返回 None.
         :return: if task is not Exists or locked failed
+        """
+        pass
+
+    @abstractmethod
+    def exists(self, task_id: str) -> bool:
+        """
+        if task exists
+        :param task_id:
+        :return:
         """
         pass
 

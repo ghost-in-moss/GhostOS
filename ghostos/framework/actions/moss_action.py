@@ -1,9 +1,10 @@
+import inspect
 import json
 
 from typing import Optional, ClassVar
 from ghostos.container import Container
 from ghostos.core.ghosts import Action, Ghost
-from ghostos.core.llms import Chat, FunctionalToken
+from ghostos.core.llms import Chat, FunctionalToken, ChatPreparer
 from ghostos.core.messages import DefaultMessageTypes, Caller
 from ghostos.core.moss import MossRuntime, moss_message
 from ghostos.core.ghosts.operators import Operator
@@ -126,6 +127,14 @@ At these scenarios you shall write target code as string, and using the librarie
             content=moss_instruction,
         )
         chat.system.append(moss_prompt)
+        # !!! chat preparer in the moss instance will auto update chat
+        moss_instance = self._moss_runtime.moss()
+        for name, member in inspect.getmembers(moss_instance):
+            if name.startswith("_"):
+                continue
+            if isinstance(member, ChatPreparer):
+                member.prepare_chat(chat)
+
         return chat
 
     def act(self, c: "Container", session: Session, caller: Caller) -> Optional["Operator"]:

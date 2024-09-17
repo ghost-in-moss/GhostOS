@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from ghostos.core.ghosts.utils import Utils
     from ghostos.core.ghosts.shells import Shell
     from ghostos.core.ghosts.thoughts import Mindset, Thought
-    from ghostos.core.ghosts.schedulers import MultiTask, Taskflow
+    from ghostos.core.ghosts.schedulers import MultiTask, Taskflow, Replier
     from ghostos.core.ghosts.operators import Operator
     from ghostos.core.ghosts.workspace import Workspace
     from ghostos.core.ghosts.actions import Action
@@ -81,6 +81,12 @@ class Ghost(ABC):
         """
         return Role.ASSISTANT.value
 
+    def identifier(self) -> Identifier:
+        task = self.session().task()
+        if task.assistant:
+            return task.assistant
+        return self.conf().identifier()
+
     @abstractmethod
     def trace(self) -> Dict[str, str]:
         """
@@ -101,15 +107,23 @@ class Ghost(ABC):
     @abstractmethod
     def init_operator(self, event: "Event") -> Tuple["Operator", int]:
         """
-        :param event: the initialize event
+        :param event: the initialize event. should set the event to ghost container.
         :return: the operator and max_operator_count
+        """
+        pass
+
+    @abstractmethod
+    def init_event(self) -> Optional["Event"]:
+        """
+        the origin event from init_operator
         """
         pass
 
     @abstractmethod
     def meta_prompt(self) -> str:
         """
-        Ghost 的 meta prompt, 自我认知的相关讯息.
+        meta prompt of the ghost
+        return: prompt string
         """
         pass
 
@@ -117,6 +131,11 @@ class Ghost(ABC):
         """
         system prompt of the ghost.
         """
+        task = self.session().task()
+        # task assistant meta prompt is higher priority
+        if task.assistant:
+            meta_prompt = task.assistant.meta_prompt
+            return meta_prompt
         meta_prompt = self.meta_prompt()
         shell_prompt = self.shell().shell_prompt()
         content = "\n\n".join([meta_prompt, shell_prompt])
@@ -204,11 +223,17 @@ class Ghost(ABC):
         pass
 
     @abstractmethod
-    def taskflow(self, caller: Optional[Caller] = None) -> "Taskflow":
+    def taskflow(self) -> "Taskflow":
         """
         对当前 Task 自身的状态管理器.
         提供原语管理自身的任务调度.
-        :param caller: 如果在 llm caller 中运行 taskflow, 可以将 caller 带上, 用来生成 function 类型的消息.
+        """
+        pass
+
+    @abstractmethod
+    def replier(self) -> "Replier":
+        """
+        a simple replier to reply the origin event
         """
         pass
 

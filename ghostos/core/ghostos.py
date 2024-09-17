@@ -314,6 +314,7 @@ class AbsGhostOS(GhostOS, ABC):
         """
         # 先按需做初始化.
         ghost.utils().initialize()
+        # bind origin event
         self._handle_ghost_event(ghost=ghost, event=event)
 
     @staticmethod

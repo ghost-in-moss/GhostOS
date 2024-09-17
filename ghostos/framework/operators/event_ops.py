@@ -132,7 +132,7 @@ class OnSelfEventOperator(EventOperator):
         task = session.task()
         # 默认 await.
         task.state = self.default_state
-        session.update_task(task, update_history=True)
+        session.update_task(task, None, update_history=True)
         return None
 
     def run(self, g: "Ghost") -> Optional["Operator"]:

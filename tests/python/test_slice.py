@@ -36,3 +36,9 @@ def test_thread_safe_append():
         t.join()
     # 测试没有线程的报错.
     assert len(target) == 0
+
+
+def test_array_insert_more_than_pointed():
+    a = [1, 2, 3, 4]
+    a[1:3] = [5, 6, 7, 8]
+    assert a == [1, 5, 6, 7, 8, 4]

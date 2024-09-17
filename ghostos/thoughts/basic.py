@@ -25,7 +25,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         """
         return chat preparers that filter chat messages by many rules.
         """
-        assistant_name = g.conf().identifier().name
+        assistant_name = g.identifier().name
         yield OtherAgentOrTaskPreparer(
             assistant_name=assistant_name,
             task_id=g.session().task().task_id,

@@ -1,11 +1,12 @@
-from typing import Dict, Any, TypedDict, Required
+from typing import Dict, Any, TypedDict, Required, Optional
 from abc import ABC, abstractmethod
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought
+from ghostos.core.ghosts.assistants import Assistant
 from ghostos.core.messages.message import MessageKind
 
 __all__ = [
-    'MultiTask', 'Taskflow', 'NewTask',
+    'MultiTask', 'Taskflow', 'NewTask', 'Replier',
 ]
 
 
@@ -16,10 +17,10 @@ class Taskflow(ABC):
     """
 
     @abstractmethod
-    def awaits(self, *replies: MessageKind, log: str = "") -> Operator:
+    def awaits(self, reply: str = "", log: str = "") -> Operator:
         """
         当前任务挂起, 等待下一轮输入.
-        :param replies: 可以发送回复, 或者主动提出问题或要求. 并不是必要的.
+        :param reply: 可以发送回复, 或者主动提出问题或要求. 并不是必要的.
         :param log: 如果不为空, 会更新当前任务的日志. 只需要记录对任务进行有意义而且非常简介的讯息.
         """
         pass
@@ -44,7 +45,7 @@ class Taskflow(ABC):
         pass
 
     @abstractmethod
-    def finish(self, log: str, *response: MessageKind) -> Operator:
+    def finish(self, log: str, response: str) -> Operator:
         """
         结束当前的任务, 返回任务结果.
         如果当前任务是持续的, 还要等待更多用户输入, 请使用 awaits.
@@ -54,11 +55,11 @@ class Taskflow(ABC):
         pass
 
     @abstractmethod
-    def fail(self, reason: str, *messages: MessageKind) -> Operator:
+    def fail(self, reason: str, reply: str) -> Operator:
         """
         标记当前任务失败
         :param reason: 记录当前任务失败的原因.
-        :param messages: 发送给用户或者父任务的消息. 如果为空的话, 把 log 作为讯息传递.
+        :param reply: 发送给用户或者父任务的消息. 如果为空的话, 把 log 作为讯息传递.
         """
         pass
 
@@ -118,5 +119,65 @@ class MultiTask(ABC):
         取消一个已经存在的 task.
         :param task_name: 目标 task 的名称.
         :param reason: 取消的理由.
+        """
+        pass
+
+
+# simple and sync version of taskflow
+class Replier(ABC):
+    """
+    reply to the input message
+    """
+
+    @abstractmethod
+    def reply(self, content: str) -> Operator:
+        """
+        reply to the input message
+        :param content: content of the reply
+        :return: wait for further input
+        """
+        pass
+
+    @abstractmethod
+    def ask_clarification(self, question: str) -> Operator:
+        """
+        the input query is not clear enough, ask clarification.
+        :param question: the question will send back
+        :return: wait for clarification input
+        """
+        pass
+
+    @abstractmethod
+    def fail(self, reply: str) -> Operator:
+        """
+        fail to handle request, and reply
+        :param reply: content of the reply
+        :return: wait for further input
+        """
+        pass
+
+    @abstractmethod
+    def think(
+            self,
+            observations: Optional[Dict[str, Any]] = None,
+            instruction: Optional[str] = None,
+    ) -> Operator:
+        """
+        think another round with printed values or observations
+        :param observations: print the observations as message
+        :param instruction: tell self what to do next
+        :return: think another round
+        """
+        pass
+
+
+class MultiAssistant(ABC):
+
+    @abstractmethod
+    def ask_assistant(self, assistant: Assistant, query: str) -> None:
+        """
+        ask an assistant to do something or reply some information.
+        :param assistant: the assistant instance
+        :param query: query to the assistant.
         """
         pass
