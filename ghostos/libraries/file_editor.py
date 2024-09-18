@@ -64,10 +64,11 @@ class FileEditor(ABC):
         pass
 
     @abstractmethod
-    def read(self, show_line_num: bool = True, start_line: int = 0, end_line: int = -1) -> str:
+    def read(self, show_line_num: bool = False, start_line: int = 0, end_line: int = -1) -> str:
         """
         read the content of the file
-        :param show_line_num: if True, each line will start with line number and `|`
+        :param show_line_num: if True, each line will start with line number and `|`.
+               With show_line_num True is easy to see line number, but not the origin content. don't mixed up.
         :param start_line: start line
         :param end_line: end line number. if negative, means length + end_line
         :return: content of the file
@@ -117,7 +118,7 @@ class FileEditorImpl(FileEditor):
     def filepath(self) -> str:
         return self._filepath
 
-    def read(self, show_line_num: bool = True, start_line: int = 0, end_line: int = -1) -> str:
+    def read(self, show_line_num: bool = False, start_line: int = 0, end_line: int = -1) -> str:
         with open(self._filepath, 'r') as file:
             lines = file.readlines()
         if end_line < 0:

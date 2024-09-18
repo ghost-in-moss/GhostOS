@@ -3,6 +3,10 @@ import argparse
 import sys
 import os
 
+"""
+this script is used to clear the local file cache in runtime directory
+"""
+
 demo_dir = dirname(dirname(__file__))
 runtime_dir = join(demo_dir, "runtime")
 

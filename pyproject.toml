@@ -32,6 +32,7 @@ llama-index-core = "^0.11.9"
 llama-index-llms-openai = "^0.2.7"
 
 [tool.poetry.scripts]
+init = "ghostos.scripts.init:main"
 demo = "ghostos.demo.scripts.demo:main"
 llm_test = "ghostos.demo.scripts.llm_test:main"
 clear_runtime = "ghostos.demo.scripts.clear_runtime:main"
