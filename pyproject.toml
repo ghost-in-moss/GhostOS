@@ -34,6 +34,7 @@ llama-index-llms-openai = "^0.2.7"
 [tool.poetry.scripts]
 demo = "ghostos.demo.scripts.demo:main"
 llm_test = "ghostos.demo.scripts.llm_test:main"
+clear_runtime = "ghostos.demo.scripts.clear_runtime:main"
 moss_test = "ghostos.scripts.moss_test:main"
 moss_run = "ghostos.scripts.moss_run:main"
 aifunc_test = "ghostos.scripts.aifunc_test:main"
