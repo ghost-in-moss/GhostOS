@@ -1,4 +1,4 @@
-from os.path import join, dirname, abspath
+from os.path import join, dirname
 from typing import Optional, List
 from ghostos.core import GhostOS
 from ghostos.framework.ghostos import demo_ghostos, DemoGhostOS
@@ -6,7 +6,6 @@ from ghostos.framework.ghosts.demo import DemoGhostConf
 from ghostos.prototypes.console.console import ConsolePrototype
 from ghostos.core.ghosts import Thought
 from ghostos.helpers import get_calling_modulename, import_from_path, md5, uuid
-from ghostos.core.moss.decorators import no_prompt
 from ghostos.container import Provider
 
 __all__ = [
@@ -152,7 +151,7 @@ class ConsoleApp:
         self._ran_thought = False
 
 
-demo_dir = join(dirname(dirname(dirname(dirname(__file__)))), "demo")
+demo_dir = join(dirname(dirname(dirname(__file__))), "demo")
 
 demo_console_app = ConsoleApp.new_demo(
     root_dir=demo_dir,
