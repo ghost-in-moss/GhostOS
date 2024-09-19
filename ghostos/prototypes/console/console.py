@@ -202,9 +202,9 @@ print "/exit" to quit
         if payload is not None:
             title = f"{payload.task_name}: {payload.thread_id}"
         if "<moss>" in content:
-            content.replace("<moss>", "\n```python\n# <moss>\n", )
+            content = content.replace("<moss>", "\n```python\n# <moss>\n", )
         if "</moss>" in content:
-            content.replace("</moss>", "\n# </moss>\n```\n", )
+            content = content.replace("</moss>", "\n# </moss>\n```\n", )
         markdown = self._markdown_output(content)
         border_style = "blue"
         if DefaultMessageTypes.ERROR.match(message):

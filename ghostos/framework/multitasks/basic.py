@@ -26,7 +26,7 @@ You are equipped with MultiTask library. You have created the async tasks below:
 """
         data = []
         for task in children:
-            data.append(task.model_dump(exclude_defaults=True))
+            data.append(task.model_dump(exclude_defaults=True, exclude={"task_id"}))
         tasks = yaml_pretty_dump(data)
         content = prompt.format(tasks=tasks)
         chat.system.append(Role.SYSTEM.new(content=content))

@@ -10,5 +10,5 @@ if __name__ == '__main__':
             debug=True,
         ),
         instruction="please help me to read the .py files in code_edits directory, "
-                    "and replace the chinese code comment to english.",
+                    "and replace the chinese code comments you found to english.",
     )

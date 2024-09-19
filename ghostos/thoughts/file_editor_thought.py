@@ -14,11 +14,11 @@ __all__ = ['FileEditorThought', 'new_file_editor_thought']
 
 class FileEditorThought(ModelThought):
     """
-    Useful to understand and modify a file.
+    Useful to read, understand and modify a file with any request.
     """
     filepath: str = Field(description="absolute filepath the thought shall edit on")
     debug: bool = Field(default=False, description="if debug mode, show moss output")
-    llm_api_name: str = Field(default="", description="llm api name")
+    llm_api_name: str = Field(default="", description="llm model name, if you don't know what you want, keep empty")
 
 
 def new_file_editor_thought(

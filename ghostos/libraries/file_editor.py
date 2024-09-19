@@ -53,6 +53,7 @@ class DirectoryEditor(ABC):
             list_dir: bool = True,
             list_file: bool = True,
             pattern: str = "*",
+            absolute: bool = False,
             ignores: Optional[str] = None,
             formated: bool = True,
             summary: bool = True,
@@ -64,15 +65,16 @@ class DirectoryEditor(ABC):
         :param list_dir: if True, list the directories. if False, will not list recursively
         :param list_file: if True, list the files.
         :param pattern: regex pattern to filter files, not directories.
+        :param absolute: if True, list the files in absolute path, otherwise relative path.
         :param ignores: regex pattern to ignore files. None means default ignore rules.
         :param formated: if True, list result will be formatted as a  list tree in markdown,
-               '+' means directory, '-' means file. and the filename is relative.
-               If False, display absolute file path.
+               '+' means directory, '-' means file.
+               if false, result will be list of string.
 
         :param summary: if True, each file will be followed with its summary.
         :return: list of the files and directories. you can use "\n".join(listed) to display them.
 
-        if you want raw filenames, you shall set formated and summary False.
+        if you want raw filenames, you shall set formated and summary False, and absolute True
         """
         pass
 
@@ -325,6 +327,7 @@ class DirectoryEditorImpl(DirectoryEditor):
             list_dir: bool = True,
             list_file: bool = True,
             pattern: str = "*",
+            absolute: bool = False,
             ignores: Optional[List[str]] = None,
             formated: bool = True,
             summary: bool = True,
@@ -353,7 +356,7 @@ class DirectoryEditorImpl(DirectoryEditor):
                 # ignore the dir_index file
                 if dir_index.is_cache_file(path_item):
                     continue
-                if formated:
+                if not absolute:
                     # remove prefix.
                     path_item = path_item.replace(dir_path, "")
                 if item.is_dir() and list_dir and not self._match_pattern(item, self._ignores):
