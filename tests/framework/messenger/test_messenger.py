@@ -62,4 +62,5 @@ def test_messenger_with_single_message():
     messenger.say(content)
     flushed = messenger.flush()
     assert flushed.messages[0].content == ""
+    assert flushed.messages[0].memory == content
     assert len(flushed.callers) == 1
