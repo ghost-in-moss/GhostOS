@@ -36,7 +36,9 @@ def clear_directory(directory: str, recursive=True) -> int:
         if not recursive:
             break
         for dir_path in dirs:
-            os.remove(dir_path)
+            real_dir_path = os.path.join(root, dir_path)
+            clear_directory(real_dir_path, recursive=recursive)
+            os.rmdir(real_dir_path)
 
     return cleared_files_count
 

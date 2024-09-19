@@ -1,0 +1,4 @@
+files:
+  file_editor.py:
+    summary: defines FileEditor and DirectoryEditor abstract class with implementations
+    filename: file_editor.py

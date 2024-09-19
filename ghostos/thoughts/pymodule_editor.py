@@ -117,8 +117,7 @@ the code is:
             content += referencing
         return content
 
-    def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
-        compiler = super().prepare_moss_compiler(g)
+    def prepare_moss_compiler(self, g: Ghost, compiler: MossCompiler) -> MossCompiler:
         module_editor = self.module_editor()
         compiler.injects(editor=module_editor)
         return compiler

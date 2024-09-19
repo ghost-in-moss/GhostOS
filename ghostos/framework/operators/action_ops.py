@@ -1,7 +1,7 @@
 from typing import Optional, List, ClassVar
 
 from ghostos.core.ghosts import (
-    Operator, Ghost, Thought, Utils, NewTask,
+    Operator, Ghost, NewTask,
 )
 from ghostos.core.messages import (
     MessageKind, MessageKindParser, Role,
@@ -69,7 +69,7 @@ class ActionOperator(Operator):
             utils = g.utils()
             # 发送消息给父任务.
             utils.send_task_event(
-                task_id=task.parent,
+                task_id=callback_task_id,
                 event_type=self.callback_event_type,
                 messages=callbacks,
                 reason=self.reason,
@@ -203,6 +203,9 @@ class WaitOnTasksOperator(ActionOperator):
             self, *,
             new_tasks: List[NewTask],
     ):
+        for item in new_tasks:
+            if not isinstance(item, NewTask):
+                raise TypeError(f'new_tasks must be a NewTask instance, got {type(item)}')
         self.new_tasks = new_tasks
         super().__init__(
             messages=[],

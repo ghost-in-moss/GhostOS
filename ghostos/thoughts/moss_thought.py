@@ -28,6 +28,7 @@ class BasicMossThoughtDriver(ABC):
     """
     helpful to define other moss thought driver
     """
+    moss_runtime: Optional[MossRuntime] = None
 
     @abstractmethod
     def init_pycontext(self) -> PyContext:
@@ -39,7 +40,13 @@ class BasicMossThoughtDriver(ABC):
     def injections(self) -> Dict[str, Any]:
         return {}
 
-    def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
+    def prepare_moss_compiler(self, g: Ghost, compiler: MossCompiler) -> MossCompiler:
+        return compiler
+
+    def get_moss_runtime(self, g: Ghost) -> MossRuntime:
+        if self.moss_runtime is not None:
+            return self.moss_runtime
+
         thread = g.session().thread()
         compiler = g.moss()
         # init default pycontext
@@ -60,10 +67,12 @@ class BasicMossThoughtDriver(ABC):
 
         # prepare some default injections that main function needed, if not imported
         compiler.with_locals(Operator=Operator, Optional=Optional)
-        return compiler
-
-    def get_moss_runtime(self, g: Ghost) -> MossRuntime:
-        return self.prepare_moss_compiler(g).compile(None)
+        # callback prepare
+        compiler = self.prepare_moss_compiler(g, compiler)
+        # compile
+        runtime = compiler.compile(None)
+        self.moss_runtime = runtime
+        return runtime
 
     @abstractmethod
     def is_moss_code_delivery(self) -> bool:

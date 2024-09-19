@@ -15,7 +15,6 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession
 from rich.console import Console
-from rich.json import JSON
 from rich.panel import Panel
 from rich.markdown import Markdown
 
@@ -35,6 +34,7 @@ class ConsolePrototype:
             process_id: Optional[str] = None,
             task_id: Optional[str] = None,
             background_num: int = 1,
+            welcome_user_message: Optional[str] = None,
     ):
         self._os = ghostos
         self._ghost_id = ghost_id
@@ -51,6 +51,9 @@ class ConsolePrototype:
         self._debug = debug
         self._threads: List[Thread] = []
         self._background_num = background_num
+        if not welcome_user_message:
+            welcome_user_message = "the conversation is going to begin, please welcome user and introduce your self"
+        self._welcome_user_message = welcome_user_message
 
     def run(self):
         for i in range(self._background_num):
@@ -96,8 +99,9 @@ class ConsolePrototype:
             )
             self._on_input(self._on_create_message)
         else:
+            self._console.print("waiting for agent say hi...")
             message = Role.new_assistant_system(
-                "the conversation is going to begin, please welcome user and introduce your self",
+                self._welcome_user_message,
             )
             self._on_message_input(message)
         with patch_stdout(raw=True):
@@ -198,9 +202,9 @@ print "/exit" to quit
         if payload is not None:
             title = f"{payload.task_name}: {payload.thread_id}"
         if "<moss>" in content:
-            content.replace("<moss>", "\n```python\n# <moss>\n", 1)
+            content.replace("<moss>", "\n```python\n# <moss>\n", )
         if "</moss>" in content:
-            content.replace("</moss>", "\n# </moss>\n```\n", 1)
+            content.replace("</moss>", "\n# </moss>\n```\n", )
         markdown = self._markdown_output(content)
         border_style = "blue"
         if DefaultMessageTypes.ERROR.match(message):

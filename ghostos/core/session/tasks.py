@@ -302,27 +302,10 @@ the state of the current task.
 
 
 class TaskBrief(BaseModel, Identifiable):
-    task_id: str = Field(description="the id of the task")
     name: str = Field(description="the name of the task")
     description: str = Field(description="the description of the task")
-    task_state: TaskState = Field(description="the state of the task")
+    state: TaskState = Field(description="the state of the task")
     logs: List[str] = Field(description="the logs of the task")
-    created: float = Field(
-        default_factory=lambda: round(time.time(), 4),
-        description="The time the task was created.",
-    )
-    updated: float = Field(
-        default_factory=lambda: round(time.time(), 4),
-        description="The time the task was updated.",
-    )
-    overdue: float = Field(
-        default=0.0,
-        description="The time in seconds that the task will overdue.",
-    )
-    timeout: float = Field(
-        default=0.0,
-        description="timeout for each round of the task execution",
-    )
 
     def is_overdue(self) -> bool:
         now = time.time()
