@@ -17,7 +17,7 @@ class FileEditorThought(ModelThought):
     Useful to read, understand and modify a file with any request.
     """
     filepath: str = Field(description="absolute filepath the thought shall edit on")
-    debug: bool = Field(default=False, description="if debug mode, show moss output")
+    debug: bool = Field(default=False, description="if debug mode, generate relative thread file for debugging")
     llm_api_name: str = Field(default="", description="llm model name, if you don't know what you want, keep empty")
 
 

@@ -133,7 +133,8 @@ class LoggerWrapper(LoggerItf):
         return self.logger.log(level, msg, *args, **kwargs)
 
     def with_trace(self, trace: Dict) -> "LoggerItf":
-        return LoggerWrapper(LoggerAdapter(self.logger, trace))
+        # todo: add trace
+        return LoggerWrapper(LoggerAdapter(self.logger, extra=dict(trace=trace)))
 
 
 def get_logger(logger_name: str) -> LoggerItf:

@@ -114,6 +114,11 @@ The files and subdirectories are listed below:
 ```
 
 You shall use dir_editor and FileEditorThought to fulfill the user's request. 
+
+**Notices**
+* the best way to handle single file is to use FileEditThought which will see the detail of the file.
+* once you list absolute filepaths, do not join it with some directory prefix.
+* do not imagine the content of the files.
 """
     instruction = temp.format(
         current_dir=thought.directory,

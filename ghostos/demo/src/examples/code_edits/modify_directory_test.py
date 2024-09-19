@@ -9,6 +9,6 @@ if __name__ == '__main__':
             directory=dirname(dirname(__file__)),
             debug=True,
         ),
-        instruction="please help me to read the .py files in code_edits directory, "
-                    "and replace the chinese code comments you found to english.",
+        instruction="please checkout content of the `.py` files in code_edits directory, "
+                    "and translate the comments in  chinese into english if you found them in the code.",
     )

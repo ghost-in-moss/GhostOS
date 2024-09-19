@@ -130,6 +130,7 @@ class Utils:
                 task_id=task_id,
                 messages=[],
                 from_task_id=parent_task_id,
+                from_task_name=current_task.name,
                 instruction=new_task.instruction,
             )
             events.append(e)
@@ -181,6 +182,7 @@ class Utils:
                 event = DefaultEventType.CANCELING.new(
                     task_id=t.task_id,
                     from_task_id=self_task.task_id,
+                    from_task_name=self_task.name,
                     reason=reason,
                     instruction=instruction,
                     messages=[]

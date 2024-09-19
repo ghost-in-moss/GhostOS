@@ -74,7 +74,7 @@ class DirectoryEditor(ABC):
         :param summary: if True, each file will be followed with its summary.
         :return: list of the files and directories. you can use "\n".join(listed) to display them.
 
-        if you want raw filenames, you shall set formated and summary False, and absolute True
+        if you want raw absolute filenames, you shall set formated and summary False, and absolute True
         """
         pass
 
@@ -109,6 +109,9 @@ class FileEditor(ABC):
         :param start_line: start line
         :param end_line: end line number. if negative, means length + end_line
         :return: content of the file
+
+        If you want origin content of the file, remember show_line_num shall be False,
+        otherwise you get line numbers before each line.
         """
         pass
 

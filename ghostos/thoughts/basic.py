@@ -80,7 +80,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         llm_api = self.get_llmapi(g)
 
         # run llms
-        logger.info(f"start llm thinking")  # todo: logger
+        logger.info("start llm thinking")  # todo: logger
         # prepare messenger
         messenger = session.messenger(functional_tokens=chat.functional_tokens)
         llm_api.deliver_chat_completion(chat, messenger)
