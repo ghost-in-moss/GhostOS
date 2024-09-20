@@ -441,5 +441,5 @@ if __name__ == "__main__":
     file_path = "libraries/arxiv_search.py"
     print("\n".join(dir_editor.list(depth=3, formated=True)))
     file_editor = dir_editor.edit_file(file_path)
-    content = file_editor.read()
-    print(content)
+    _content = file_editor.read()
+    print(_content)

@@ -30,6 +30,9 @@ ModuleEditor provides multiple methods to update the source code, you need to wr
 
 
 class PyModuleEditorThought(ModelThought):
+    """
+    Useful to edit a python module file.
+    """
     target_module: str = Field(description="target modulename")
     referencing: Dict = Field(
         default_factory=dict,
