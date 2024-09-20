@@ -5,8 +5,8 @@ from ghostos.core.llms import LLMApi
 from ghostos.core.moss import PyContext, MossCompiler
 from ghostos.core.session import Event, Session, MsgThread
 from ghostos.thoughts.basic import LLMThoughtDriver
-from ghostos.thoughts.moss import BasicMossThoughtDriver
-from ghostos.thoughts import module_editor_moss
+from ghostos.thoughts.moss_thought import BasicMossThoughtDriver
+from ghostos.thoughts import pymodule_editor_moss
 from ghostos.libraries.py_editor import PythonEditorImpl, ModuleEditor
 from pydantic import Field
 from ghostos.helpers import md5, import_from_path
@@ -15,7 +15,7 @@ DEFAULT_PY_MODULE_EDITOR_INSTRUCTION = """
 # Instruction
 
 Your task is helping user to read / understand / edit a python module file. 
-The target module you are handling is `{modulename}`, the source code with line num at end of each line are: 
+The target module you are handling is `{modulename}`, the source code with line num are: 
 
 ```python
 {target_source}
@@ -30,8 +30,9 @@ ModuleEditor provides multiple methods to update the source code, you need to wr
 
 
 class PyModuleEditorThought(ModelThought):
-    name: str = Field(default="PyModuleEditor")
-    description: str = Field(default="can read, understand and edit python module")
+    """
+    Useful to edit a python module file.
+    """
     target_module: str = Field(description="target modulename")
     referencing: Dict = Field(
         default_factory=dict,
@@ -119,8 +120,7 @@ the code is:
             content += referencing
         return content
 
-    def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
-        compiler = super().prepare_moss_compiler(g)
+    def prepare_moss_compiler(self, g: Ghost, compiler: MossCompiler) -> MossCompiler:
         module_editor = self.module_editor()
         compiler.injects(editor=module_editor)
         return compiler
@@ -137,7 +137,5 @@ the code is:
 
     def init_pycontext(self) -> PyContext:
         return PyContext(
-            module=module_editor_moss.__name__,
+            module=pymodule_editor_moss.__name__,
         )
-
-

@@ -23,7 +23,7 @@ from ghostos.contracts.pool import DefaultPoolProvider
 from ghostos.entity import EntityFactory, EntityFactoryImpl
 from ghostos.container import Provider, Bootstrapper
 
-project_dir = dirname(dirname(dirname(dirname(__file__))))
+project_dir = dirname(dirname(dirname(__file__)))
 demo_dir = join(project_dir, "demo")
 logging_conf_path = join(demo_dir, "configs/logging.yml")
 

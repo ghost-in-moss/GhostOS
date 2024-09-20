@@ -2,7 +2,7 @@ from typing import Optional
 from abc import ABC, abstractmethod
 from ghostos.entity import EntityMeta
 from ghostos.core.messages import Stream
-from ghostos.core.session import EventBus, Event, Tasks, Task, Process, Processes, DefaultEventType
+from ghostos.core.session import EventBus, Event, Tasks, Task, Process, Processes
 from ghostos.core.ghosts import Ghost, GhostConf, Inputs
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.shutdown import Shutdown
@@ -77,7 +77,7 @@ class GhostOS(ABC):
             inputs: Inputs,
             upstream: Stream,
             is_async: bool = False,
-    ) -> None:
+    ) -> str:
         """
         handle and inputs by ghostos. GhostOS will:
         1. check the inputs, intercept it if necessary
@@ -88,10 +88,11 @@ class GhostOS(ABC):
         :param inputs: inputs to a ghost instance.
         :param upstream: the stream that ghost sending messages to.
         :param is_async: if is_async, ghost would not run, but send event only.
+        :return: main task id
         """
         pass
 
-    def background_run(self, upstream: Stream) -> None:
+    def background_run(self, upstream: Stream) -> Optional[Event]:
         """
         尝试从 EventBus 中获取一个 task 的信号, 并运行它.
         """
@@ -232,7 +233,7 @@ class AbsGhostOS(GhostOS, ABC):
         finally:
             ghost.destroy()
 
-    def background_run(self, upstream: Stream) -> bool:
+    def background_run(self, upstream: Stream) -> Optional[Event]:
         """
         尝试从 EventBus 中获取一个 task 的信号, 并运行它.
         """
@@ -243,7 +244,7 @@ class AbsGhostOS(GhostOS, ABC):
             if self.on_error(e):
                 raise
 
-    def _background_run(self, upstream: Stream) -> bool:
+    def _background_run(self, upstream: Stream) -> Optional[Event]:
         """
         尝试从 eventbus 里 pop 一个事件, 然后运行.
         外部系统应该管理所有资源分配, 超时的逻辑.
@@ -253,17 +254,14 @@ class AbsGhostOS(GhostOS, ABC):
         task_id = eventbus.pop_task_notification()
         # 没有读取到任何全局任务.
         if task_id is None:
-            return False
-        success = self._background_run_task(upstream=upstream, task_id=task_id)
-        if not success:
-            eventbus.notify_task(task_id)
-        return success
+            return None
+        return self._background_run_task(upstream=upstream, task_id=task_id)
 
     def _background_run_task(
             self, *,
             upstream: Stream,
             task_id: str,
-    ) -> bool:
+    ) -> Optional[Event]:
         """
         指定一个 task id, 尝试运行它的事件.
         :param upstream:
@@ -271,35 +269,38 @@ class AbsGhostOS(GhostOS, ABC):
         :return: continue?
         """
         tasks = self._tasks()
+        eventbus = self._eventbus()
         task = tasks.get_task(task_id, lock=True)
         if task is None:
-            return False
+            return None
         lock = task.lock
         locked = lock is not None
         # task 没有抢到锁.
         if not locked:
-            return False
+            eventbus.notify_task(task_id)
+            return None
         # 先创建 session.
         processes = self._processes()
         proc = processes.get_process(task.process_id)
         # process is quited
         if proc.quited:
             self._eventbus().clear_task(task_id)
-            return True
+            return None
         ghost = self.make_ghost(upstream=upstream, process=proc, task=task)
         try:
             if not ghost.session().refresh_lock():
-                return False
+                return None
 
-            eventbus = self._eventbus()
             e = eventbus.pop_task_event(task_id)
             if e is None:
-                return True
+                return None
             self.handle_ghost_event(ghost=ghost, event=e)
             ghost.done()
-            return True
-        except Exception as e:
-            ghost.fail(e)
+            eventbus.notify_task(task_id)
+            return e
+        except Exception as err:
+            ghost.fail(err)
+            eventbus.notify_task(task_id)
             raise
         finally:
             # 任何时间都要解锁.

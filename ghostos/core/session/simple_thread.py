@@ -16,19 +16,17 @@ class SimpleMessage(BaseModel):
     name: Optional[str] = Field(None)
     role: str = Field(description="role of the message")
     content: str = Field(description="content of the message")
-    payloads: Dict = Field(default_factory=dict, description="payloads of the message")
-    attachments: Dict[str, List] = Field(default_factory=dict, description="attachments of the message")
-    callers: List[Dict] = Field(default_factory=list, description="callers of the message")
+    memory: Optional[str] = Field(default=None, description="memory of the message")
+    payloads: Dict = Field(description="payloads of the message")
 
     @classmethod
     def from_message(cls, msg: Message) -> "SimpleMessage":
         return cls(
             name=msg.name,
             role=msg.role,
-            content=msg.get_content(),
+            content=msg.content,
+            memory=msg.memory,
             payloads=msg.payloads,
-            attachments=msg.attachments,
-            callers=[caller.model_dump(exclude_defaults=True) for caller in msg.callers],
         )
 
 
@@ -51,7 +49,7 @@ class SimpleTurn(BaseModel):
 class SimpleMsgThread(BaseModel):
     thread_id: str = Field(description="thread id that useful to save & read thread")
     extra: Dict[str, Any] = Field(default_factory=dict)
-    system_prompt: str = Field(defualt="", description="system prompt")
+    last_turn_system_prompt: str = Field(defualt="", description="system prompt")
     turns: List[SimpleTurn] = Field(default_factory=list)
 
     @classmethod
@@ -65,7 +63,7 @@ class SimpleMsgThread(BaseModel):
                 idx += 1
         return cls(
             thread_id=thread.id,
-            system_prompt=thread.system_prompt,
-            turns=turns,
             extra=thread.extra,
+            last_turn_system_prompt=thread.system_prompt,
+            turns=turns,
         )

@@ -1,7 +1,7 @@
 from typing import Optional, Callable, List, Iterable, Dict
 from ghostos.core.messages import (
     MessageKind, Role, Stream, MessageKindParser, DefaultMessageTypes,
-    Buffer, Payload, Attachment,
+    Buffer, Payload, Attachment, Message,
 )
 from ghostos.core.session import (
     Session,
@@ -14,11 +14,9 @@ from ghostos.core.session import (
 )
 from ghostos.core.llms import FunctionalToken
 from ghostos.framework.messengers import DefaultMessenger
-from ghostos.helpers import Timeleft, uuid
+from ghostos.helpers import uuid
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.pool import Pool
-from ghostos.container import Container
-from ghostos.entity import EntityMeta
 
 
 class Future:
@@ -134,12 +132,14 @@ class BasicSession(Session):
             return self._task.assistant.name
         return self._ghost_name
 
-    def send_messages(self, *messages: MessageKind, role: str = Role.ASSISTANT.value) -> None:
+    def send_messages(self, *messages: MessageKind, role: str = Role.ASSISTANT.value) -> List[Message]:
         parser = MessageKindParser(self._message_role)
         outputs = parser.parse(messages)
         messenger = self.messenger()
         messenger.send(outputs)
-        messenger.flush()
+        sent, callers = messenger.flush()
+        self._logger.info(f"send message by session [send_messages], sent: {len(sent)}, callers: {len(callers)}")
+        return sent
 
     def update_task(self, task: "Task", thread: Optional["MsgThread"], update_history: bool) -> None:
         self._task = task
@@ -213,6 +213,7 @@ class BasicSession(Session):
         for e in self._firing_events:
             # 异步进程需要通知.
             notify = not self._upstream.is_streaming() or e.task_id != main_task_id
+            self._logger.info(f"fire event {e.type}: eid {e.id}; task_id {e.task_id}")
             bus.send_event(e, notify)
         self._firing_events = []
 

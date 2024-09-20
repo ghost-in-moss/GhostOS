@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import inspect
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable
 
@@ -8,6 +8,7 @@ __all__ = [
     "Provider", "Factory", "Bootstrapper",
     "ABSTRACT",
     "ProviderAdapter", 'provide',
+    'get_caller_info',
 ]
 
 INSTRUCTION = """
@@ -191,6 +192,20 @@ class Container(IoCContainer):
             return self.parent.get(abstract)
         return None
 
+    def register_maker(
+            self,
+            contract: Type[ABSTRACT],
+            maker: Callable[[], ABSTRACT],
+            singleton: bool = False,
+    ):
+        lineinfo = get_caller_info(2)
+
+        def _maker(c):
+            return maker()
+
+        provider = provide(contract, singleton=singleton, lineinfo=lineinfo)(_maker)
+        self.register(provider)
+
     def register(self, provider: Provider) -> None:
         """
         register factory of the contract by provider
@@ -319,11 +334,13 @@ class ProviderAdapter(Provider):
             self,
             contract_type: Type[ABSTRACT],
             factory: Callable[[Container], Optional[ABSTRACT]],
-            singleton: bool = True
+            singleton: bool = True,
+            lineinfo: str = "",
     ):
         self._contract_type = contract_type
         self._factory = factory
         self._singleton = singleton
+        self._lineinfo = lineinfo
 
     def singleton(self) -> bool:
         return self._singleton
@@ -334,14 +351,34 @@ class ProviderAdapter(Provider):
     def factory(self, con: Container) -> Optional[ABSTRACT]:
         return self._factory(con)
 
+    def __repr__(self):
+        if self._lineinfo:
+            return f" <ghostos.container.ProviderAdapter for {self.contract()} at {self._lineinfo}>"
+        return f" <ghostos.container.ProviderAdapter for {self.contract()}>"
 
-def provide(abstract: Type[ABSTRACT], singleton: bool = True) -> Callable[[Factory], Provider]:
+
+def get_caller_info(backtrace: int = 1) -> str:
+    stack = inspect.stack()
+    # 获取调用者的上下文信息
+    caller_frame_record = stack[backtrace]
+    frame = caller_frame_record[0]
+    info = inspect.getframeinfo(frame)
+    return f"{info.filename}:{info.lineno}"
+
+
+def provide(
+        abstract: Type[ABSTRACT],
+        singleton: bool = True,
+        lineinfo: str = "",
+) -> Callable[[Factory], Provider]:
     """
     helper function to generate provider with factory.
     can be used as a decorator.
     """
+    if not lineinfo:
+        lineinfo = get_caller_info(2)
 
     def wrapper(factory: Factory) -> Provider:
-        return ProviderAdapter(abstract, factory, singleton)
+        return ProviderAdapter(abstract, factory, singleton, lineinfo=lineinfo)
 
     return wrapper

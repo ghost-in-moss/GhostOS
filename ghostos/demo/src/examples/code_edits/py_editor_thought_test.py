@@ -4,6 +4,9 @@ from ghostos.contracts.cache import Cache
 
 
 class MockCache(Cache):
+    """
+    Mock for cache, expected to be implemented using files.
+    """
 
     def lock(self, key: str, overdue: int = 0) -> bool:
         pass

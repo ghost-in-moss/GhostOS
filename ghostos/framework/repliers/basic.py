@@ -3,16 +3,30 @@ from typing import Optional, Dict, Any
 from ghostos.core.ghosts import Operator
 from ghostos.core.ghosts.schedulers import Replier
 from ghostos.core.messages import Role
-from ghostos.framework.operators import WaitsOperator, ThinkOperator
+from ghostos.core.session import Task
+from ghostos.framework.operators import WaitsOperator, ThinkOperator, FinishOperator
 from ghostos.helpers import yaml_pretty_dump
 
 
 class ReplierImpl(Replier):
 
-    def __init__(self, callback_task_id: Optional[str] = None):
+    def __init__(self, task: Task, event_from_task: Optional[str] = None):
+        callback_task_id = task.parent
+        if event_from_task and event_from_task != task.task_id:
+            callback_task_id = event_from_task
         self.callback_task_id = callback_task_id
 
+    def finish(self, reply: str) -> Operator:
+        if not reply:
+            raise AttributeError(f'finish reply shall not be empty ')
+        return FinishOperator(
+            reason="",
+            messages=[reply],
+        )
+
     def reply(self, content: str) -> Operator:
+        if not content:
+            raise ValueError("reply Content cannot be empty")
         return WaitsOperator(
             reason="",
             messages=[content],
@@ -20,6 +34,8 @@ class ReplierImpl(Replier):
         )
 
     def ask_clarification(self, question: str) -> Operator:
+        if not question:
+            raise ValueError("ask clarification question cannot be empty")
         return WaitsOperator(
             reason="",
             messages=[question],
@@ -27,6 +43,8 @@ class ReplierImpl(Replier):
         )
 
     def fail(self, reply: str) -> Operator:
+        if not reply:
+            raise ValueError("fail reply cannot be empty")
         return WaitsOperator(
             reason="",
             messages=[reply],

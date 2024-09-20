@@ -1,7 +1,7 @@
 from typing import Optional, List, ClassVar
 
 from ghostos.core.ghosts import (
-    Operator, Ghost, Thought, Utils, NewTask,
+    Operator, Ghost, NewTask,
 )
 from ghostos.core.messages import (
     MessageKind, MessageKindParser, Role,
@@ -45,9 +45,9 @@ class ActionOperator(Operator):
         self.callback_task_id = callback_task_id
 
     def send_replies(self, g: "Ghost") -> None:
-        session = g.session()
         if self.messages:
-            session.send_messages(*self.messages)
+            session = g.session()
+            self.messages = session.send_messages(*self.messages)
 
     def get_callback_task_id(self, task: Task) -> Optional[str]:
         if self.callback_task_id is not None:
@@ -65,11 +65,11 @@ class ActionOperator(Operator):
         # 消息不为空的时候才发送.
         callbacks = self.messages
         callback_task_id = self.get_callback_task_id(task)
-        if callback_task_id and callbacks:
+        if callback_task_id:
             utils = g.utils()
             # 发送消息给父任务.
             utils.send_task_event(
-                task_id=task.parent,
+                task_id=callback_task_id,
                 event_type=self.callback_event_type,
                 messages=callbacks,
                 reason=self.reason,
@@ -86,6 +86,7 @@ class ActionOperator(Operator):
         return None
 
     def run(self, g: "Ghost") -> Optional["Operator"]:
+        self.send_replies(g)
         self.send_children_events(g)
         self.change_task_state(g)
         self.send_children_events(g)
@@ -108,7 +109,7 @@ class FailOperator(ActionOperator):
     结束当前任务.
     1. 通过 session 发送消息, 同时消息保存到 Thread 里.
     2. 变更当前 Task 的状态, 并保存.
-    3. 反馈 finish_callback 事件给父 task, 如果存在的话.
+    3. 反馈 fail_callback 事件给父 task, 如果存在的话.
     4. 取消未完成的子任务. 向它们发送取消事件.
     5. 自己继续执行 on_finished 事件, 可以创建独立的任务去理解.
     """
@@ -202,6 +203,9 @@ class WaitOnTasksOperator(ActionOperator):
             self, *,
             new_tasks: List[NewTask],
     ):
+        for item in new_tasks:
+            if not isinstance(item, NewTask):
+                raise TypeError(f'new_tasks must be a NewTask instance, got {type(item)}')
         self.new_tasks = new_tasks
         super().__init__(
             messages=[],

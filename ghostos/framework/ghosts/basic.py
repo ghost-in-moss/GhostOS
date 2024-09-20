@@ -103,6 +103,8 @@ class BasicGhost(Ghost, ABC):
         self._validate_parent_container_contracts(container)
         container = Container(parent=container)
         self._container = container
+        # other properties
+        self._origin_event: Optional[Event] = None
         # workspace
         self._workspace = workspace
         # config
@@ -134,7 +136,6 @@ class BasicGhost(Ghost, ABC):
         self._bootstrap_ghost_container()
         # 检查所有必须绑定的对象.
         self._validate_default_contracts()
-        self._origin_event: Optional[Event] = None
 
     def _bootstrap_ghost_container(self):
         # init shell
@@ -153,16 +154,16 @@ class BasicGhost(Ghost, ABC):
         self._container.set(EntityFactory, self._entity_factory)
 
         # register ghost self modules.
-        self_function_providers = {
+        ghost_function_providers = {
             MultiTask: self.multitasks,
             Taskflow: self.taskflow,
             Replier: self.replier,
             MossCompiler: self.moss,
             Utils: self.utils,
         }
-        for contract, maker in self_function_providers.items():
-            provider = provide(contract, False)(lambda c: maker())
-            self._container.register(provider)
+        for contract, maker in ghost_function_providers.items():
+            _maker = maker
+            self._container.register_maker(contract, _maker)
 
         # register session drivers:
         session_function_providers = {
@@ -173,12 +174,17 @@ class BasicGhost(Ghost, ABC):
             EventBus: self._session.eventbus,
         }
         for contract, maker in session_function_providers.items():
-            provider = provide(contract, False)(lambda c: maker())
-            self._container.register(provider)
+            _maker = maker
+            self._container.register_maker(contract, _maker)
 
         # register shell drivers
         for driver in self._shell.drivers():
-            provider = provide(driver, False)(lambda c: self._shell.get_driver(driver))
+            _driver = driver
+
+            def maker(c):
+                return self._shell.get_driver(_driver)
+
+            provider = provide(driver, False)(maker)
             self._container.register(provider)
 
         # register ghost providers
@@ -331,8 +337,9 @@ class BasicGhost(Ghost, ABC):
 
     def replier(self) -> "Replier":
         e = self.init_event()
-        callback_task_id = e.from_task_id if e else None
-        return ReplierImpl(callback_task_id)
+        event_from_task = e.from_task_id if e else None
+        task = self.session().task()
+        return ReplierImpl(task, event_from_task)
 
     def moss(self) -> "MossCompiler":
         return MossCompilerImpl(container=self._container)

@@ -55,11 +55,9 @@ __moss_exec__ = __default_moss_exec__
 """ redefine the moss exec function. not recommended"""
 
 # todo: can define a moss thought in a moss file
-from ghostos.thoughts.moss import MossThought
+from ghostos.thoughts.moss_thought import MossThought
 
 thought = MossThought(
-    name="???",
-    description="???",
     instruction="???",
     moss_modulename=__name__,
     llm_api_name="",

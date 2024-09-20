@@ -368,7 +368,7 @@ class MessageClass(ABC):
     """
 
     @abstractmethod
-    def to_messages(self) -> Message:
+    def to_message(self) -> Message:
         pass
 
     @classmethod
@@ -392,17 +392,25 @@ class MessageKindParser:
 
     def parse(self, messages: Iterable[MessageKind]) -> Iterable[Message]:
         for item in messages:
-            if self.ref_id is not None:
-                item.ref_id = self.ref_id
             if isinstance(item, Message):
-                yield item
+                yield self._with_ref(item)
             if isinstance(item, MessageClass):
-                yield from item.to_messages()
+                msg= item.to_message()
+                yield self._with_ref(msg)
             if isinstance(item, str):
-                yield Message.new_tail(content=item, role=self.role)
+                if not item:
+                    # exclude empty message
+                    continue
+                msg = Message.new_tail(content=item, role=self.role)
+                yield self._with_ref(msg)
             else:
                 # todo: 需要日志?
                 pass
+
+    def _with_ref(self, item: Message) -> Message:
+        if self.ref_id is not None:
+            item.ref_id = self.ref_id
+        return item
 
     def unknown(self, item) -> None:
         """

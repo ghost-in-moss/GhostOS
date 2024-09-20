@@ -1,4 +1,4 @@
-from os.path import join, dirname, abspath
+from os.path import join, dirname
 from typing import Optional, List
 from ghostos.core import GhostOS
 from ghostos.framework.ghostos import demo_ghostos, DemoGhostOS
@@ -6,7 +6,6 @@ from ghostos.framework.ghosts.demo import DemoGhostConf
 from ghostos.prototypes.console.console import ConsolePrototype
 from ghostos.core.ghosts import Thought
 from ghostos.helpers import get_calling_modulename, import_from_path, md5, uuid
-from ghostos.core.moss.decorators import no_prompt
 from ghostos.container import Provider
 
 __all__ = [
@@ -77,6 +76,7 @@ class ConsoleApp:
             on_create_message: Optional[str] = None,
             debug: bool = False,
             session_id: Optional[str] = None,
+            welcome_user_message: Optional[str] = None,
     ):
         """
         :param ghost_id: should exist in configs/ghosts.yml
@@ -84,6 +84,7 @@ class ConsoleApp:
         :param on_create_message: the message to send to the assistant as default.
         :param debug: if debug is True, render more verbosely.
         :param session_id: if given, the console will start in the same session by the id.
+        :param welcome_user_message: if on_create_message is None, use welcome_user_message let agent welcome first
         """
         if self._ran_console:
             return
@@ -96,6 +97,7 @@ class ConsoleApp:
             debug=debug,
             on_create_message=on_create_message,
             session_id=session_id,
+            welcome_user_message=welcome_user_message,
         )
         console_impl.run()
         self._ran_console = False
@@ -110,6 +112,7 @@ class ConsoleApp:
             debug: bool = False,
             meta_prompt: str = "",
             long_term_session: bool = False,
+            welcome_user_message: Optional[str] = None,
     ):
         """
         Run a thought instead of run a defined Ghost.
@@ -120,6 +123,7 @@ class ConsoleApp:
         :param debug: if debug is True, render more verbosely.
         :param meta_prompt: define the meta prompt of the ghost. I leave it empty.
         :param long_term_session: if true, session id is always related to the calling module.
+        :param welcome_user_message: if on_create_message is None, use welcome_user_message let agent welcome first
         :return:
         """
         if self._ran_thought:
@@ -147,12 +151,13 @@ class ConsoleApp:
             on_create_message=instruction,
             debug=debug,
             session_id=session_id,
+            welcome_user_message=welcome_user_message,
         )
         console_impl.run()
         self._ran_thought = False
 
 
-demo_dir = join(dirname(dirname(dirname(dirname(__file__)))), "demo")
+demo_dir = join(dirname(dirname(dirname(__file__))), "demo")
 
 demo_console_app = ConsoleApp.new_demo(
     root_dir=demo_dir,

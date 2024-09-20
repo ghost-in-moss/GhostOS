@@ -5,7 +5,7 @@ version: 1
 formatters:
   default:
     format: "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
-  context_formatter:
+  ghost:
     format: "%(asctime)s - %(name)s - %(levelname)s: %(message)s - %(trace)s"
 
 handlers:

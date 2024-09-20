@@ -1,12 +1,14 @@
-from typing import Dict, Any, TypedDict, Required, Optional
+from typing import Dict, Any, TypedDict, Required, Optional, Tuple
 from abc import ABC, abstractmethod
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought
 from ghostos.core.ghosts.assistants import Assistant
 from ghostos.core.messages.message import MessageKind
+from ghostos.core.llms import ChatPreparer
+from dataclasses import dataclass
 
 __all__ = [
-    'MultiTask', 'Taskflow', 'NewTask', 'Replier',
+    'MultiTask', 'Taskflow', 'Replier',
 ]
 
 
@@ -64,24 +66,7 @@ class Taskflow(ABC):
         pass
 
 
-class NewTask(TypedDict):
-    """
-    useful to create a child task
-    """
-    task_name: Required[str]
-    """task specific name that you can identify this task in future"""
-
-    task_desc: str
-    """task description that why you create this task"""
-
-    thought: Required[Thought]
-    """Thought instance that dispatched to run this task"""
-
-    instruction: str
-    """the instruction to the task thought. could be empty"""
-
-
-class MultiTask(ABC):
+class MultiTask(ChatPreparer, ABC):
     """
     You are equipped with this MultiTasks Library that can execute thought in an asynchronous task.
     A thought is a mind-machine usually driven by LLM, can resolve certain type of task in multi-turns chain of thought.
@@ -90,26 +75,30 @@ class MultiTask(ABC):
     """
 
     @abstractmethod
-    def wait_on_tasks(self, *new_tasks: NewTask) -> Operator:
+    def wait_on_tasks(self, *new_tasks: Tuple[str, str, Thought, str]) -> Operator:
         """
-        使用 Thought 创建多个任务, 同时等待这些任务返回结果. 当结果返回时会触发下一轮思考.
-        :param new_tasks: the information to create a child task
-        """
-        pass
-
-    @abstractmethod
-    def run_tasks(self, *new_tasks: NewTask) -> None:
-        """
-        使用 thoughts 动态创建一个或者多个 task 异步运行. 不影响你当前状态.
+        create multiple task by thought, and wait for the tasks to finish.
+        when the task finished, you will receive the message and think.
+        :param new_tasks: (task_name, task_desc, thought, instruction)
         """
         pass
 
     @abstractmethod
-    def send_task(self, task_name: str, *messages: MessageKind) -> None:
+    def run_tasks(self, *new_tasks: Tuple[str, str, Thought, str]) -> None:
         """
-        主动向一个指定的 task 进行通讯.
+        create
+        Cause the tasks are executed asynchronously,
+        you can do other things until you got messages that them done.
+        :param new_tasks: (task_name, task_desc, thought, instruction)
+        """
+        pass
+
+    @abstractmethod
+    def send_task(self, task_name: str, *messages: str) -> None:
+        """
+        send a message to the task by name
         :param task_name: task 的名称
-        :param messages: 消息会发送给目标 task
+        :param messages: the message content
         """
         pass
 
@@ -135,6 +124,15 @@ class Replier(ABC):
         reply to the input message
         :param content: content of the reply
         :return: wait for further input
+        """
+        pass
+
+    @abstractmethod
+    def finish(self, reply: str) -> Operator:
+        """
+        finish current task and reply the final result
+        :param reply: shall not be empty
+        :return: end the current task
         """
         pass
 

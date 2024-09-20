@@ -6,7 +6,7 @@ from ghostos.core.session import Event, MsgThread, Session
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.abc import Identifiable, Identifier, PromptAbleClass
-from ghostos.helpers import uuid
+from ghostos.helpers import uuid, generate_import_path
 from pydantic import Field
 
 __all__ = ['Thought', 'ModelThought', 'ThoughtDriver', 'BasicThoughtDriver', "Mindset", "get_thought_driver_type", 'T']
@@ -64,13 +64,13 @@ class ModelThought(Thought, ModelEntity, PromptAbleClass, ABC):
     """
     The abstract model of the thought based by pydantic.BaseModel.
     """
-    name: str = Field(description="name of the thought")
-    description: str = Field(description="description of the thought")
 
     def identifier(self) -> Identifier:
+        cls = self.__class__
+        import_path = generate_import_path(cls)
         return Identifier(
-            name=self.name,
-            description=self.description,
+            name=import_path,
+            description=str(cls.__doc__),
         )
 
     @classmethod
@@ -154,16 +154,26 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
 
     def new_task_id(self, g: Ghost) -> str:
         # 如果生成的 task id 是不变的, 则在同一个 process 里是一个单例. 但要考虑互相污染的问题.
-        return uuid()
+        task_id = uuid()
+        g.logger().info(f"ghost create task_id {task_id}")
+        return task_id
 
     def on_created(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         基于 Thought 创建了 Task 时触发的事件.
         可以根据事件做必要的初始化.
         """
+        g.logger().info(f"ghost handle event on_created {e}")
         session = g.session()
         thread = session.thread()
+        task = session.task()
+
+        process_id = session.process().process_id
+        task_name = task.name.replace("/", "_")
+        task_name = task_name.replace(".", "_")
+        thread.save_file = f"process_{process_id}/task_{task_name}_thread_{thread.id}.yml"
         self.prepare_thread(session, thread)
+
         session.update_thread(thread, False)
 
         return self.think(g, e)
@@ -173,9 +183,6 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
         """
         prepare thread usually defining thread id and thread.save_file for debug reason
         """
-        process_id = session.process().process_id
-        task = session.task()
-        thread.save_file = f"process_{process_id}/task_{task.name}_thread_{thread.id}.yml"
         return thread
 
     def on_canceling(self, g: Ghost, e: Event) -> Optional[Operator]:
@@ -185,12 +192,14 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
         :param e:
         :return:
         """
+        g.logger().info(f"ghost handle event on_canceling {e}")
         return None
 
     def on_input(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         接受到一个外部事件后执行的逻辑.
         """
+        g.logger().info(f"ghost handle event on_input {e}")
         op = self.think(g, e)
         if op is None:
             op = g.taskflow().awaits()
@@ -200,6 +209,7 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
         """
         自己触发的观察动作.
         """
+        g.logger().info(f"ghost handle event on_observe {e}")
         op = self.think(g, e)
         if op is None:
             op = g.taskflow().awaits()
@@ -209,36 +219,42 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
         """
         当前 Thought 所生成的 task 结束之后, 回调自己的反思逻辑.
         """
+        g.logger().info(f"ghost handle event on_finished {e}")
         return None
 
     def on_failed(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         回调自己的反思逻辑.
         """
+        g.logger().info(f"ghost handle event on_failed {e}")
         return None
 
     def on_finish_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         接受到了下游任务完成的回调.
         """
+        g.logger().info(f"ghost handle event on_finish callback {e}")
         return self.think(g, e)
 
     def on_failure_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         接受到了下游任务失败的回调.
         """
+        g.logger().info(f"ghost handle event on_failure callback {e}")
         return self.think(g, e)
 
     def on_wait_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         接受到了下游任务的提问, 需要回答.
         """
+        g.logger().info(f"ghost handle event on_wait_callback {e}")
         return self.think(g, e)
 
     def on_notify_callback(self, g: Ghost, e: Event) -> Optional[Operator]:
         """
         一个下游的通知, 不需要做任何操作.
         """
+        g.logger().info(f"ghost handle event on_notify_callback {e}")
         return None
 
 

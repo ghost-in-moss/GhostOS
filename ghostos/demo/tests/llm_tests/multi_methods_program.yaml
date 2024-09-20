@@ -1,0 +1,112 @@
+# conf: ghostos.framework.llms.test_case::ChatCompletionTestCase
+chat:
+  system:
+    - role: system
+      content: |+
+        You are tasked to generate a single block of Python code that defines a function main. 
+        
+        **Directives for Your Task**:
+        - **Code Generation Only**: Produce a block of Python code for the `main` function. The interface, class and abstract methods in context are ALREADY implemented in external system, and passed into main as arguments, DON'T implement them or instantiate them again, just invoke them directly on you need.
+        - **Format Requirement**: Your output must be a single block of Python code enclosed within triple backticks. Do not include any additional text, comments, or explanations outside this code block. Do not invoke main method by yourself.
+        
+        **External System Responsibilities**:
+        - **Execution and Data Fetching**: The external system will concatenate your code with the true context (implemented all abstract methods and interface), execution the main method and wait to fetch the result.
+        - **Result Handling**: The external system will process the results and manage user interactions.
+        
+        Here is the context provided to you in this turn:
+        
+        ```python
+        
+        # from ghostos.scripts.moos_test import Movie
+        class Movie(BaseModel):
+            movie_id: str
+            title: str
+            ratings: float
+        
+        
+        # from ghostos.scripts.moos_test import Cinema
+        class Cinema(BaseModel):
+            cinema_id: str
+            name: str
+            address: str
+            distance: float  # Distance from the user in kilometers
+        
+        
+        # from ghostos.scripts.moos_test import TicketInfo
+        class TicketInfo(BaseModel):
+            movie_title: str
+            cinema_name: str
+            time: str
+            seat: str
+        
+        
+        class MOSS(ABC):
+            """
+            language Model-oriented Operating System Simulation
+            full python code interface for large language models
+            """
+            def get_day_of_week_as_number(time: datetime) -> int:
+                """
+                get the day of week (1 --- 7) when given time
+                """
+                pass
+        
+            def get_current_all_movies() -> List[Movie]:
+                """
+                Return a list of movies currently playing in cinemas.
+                """
+                pass
+        
+            def get_cinemas() -> List[Cinema]:
+                """
+                Return a list of cinemas with their locations.
+                """
+                pass
+        
+            def get_the_most_recommend_movie_for_me(movies: List[Movie]) -> Movie:
+                """
+                Select a movie based on ratings and builtin-personalized information.
+                """
+                pass
+        
+            def find_nearest_cinema(cinemas):
+                """
+                Return the nearest cinema based on distance.
+                """
+                pass
+        
+            def book_ticket(movie: Movie, cinema: Cinema, time: datetime) -> TicketInfo:
+                """
+                Book a ticket for a specified movie at a specified cinema.
+                """
+                pass
+        
+            def imports(self, module: str, *specs: str, **aliases: str) -> Dict[str, Any]:
+                """
+                replace from ... import ... as ...
+                :param module: module name
+                :param specs: module spec
+                :param aliases: alias=module spec
+                :return: values mapped by name to value
+        
+                example:
+                'from module.a import Foo, Bar as bar'
+                could be .imports('module.a', 'Foo', bar='Bar')
+                """
+                pass
+
+        ```
+        Ensure that your output is strictly the code within the triple backticks. It's the def main(m: MOSS) -> TicketInfo. This ensures clarity and usability in the external system's processing and analysis of your code.
+  inputs:
+    - role: user
+      content: |+
+        I want to watch a movie this Sunday (not today) evening at 9 PM. Find the nearest cinema and the best movie for me, then book the movie ticket directly for me.
+apis:
+  - api: moonshot-v1-32k
+  - api: moonshot-v1-128k
+  - api: gpt-3.5-turbo
+  - api: gpt-4-turbo
+  - api: gemma2-27b
+  - api: codestral-22b
+  - api: qwen2-72b
+  - api: llama3-70b

@@ -124,3 +124,17 @@ def test_field_is_none():
     b = Bar()
     assert b.bar == "bar"
 
+
+def test_init_model_with_more_values():
+    class Bar(BaseModel):
+        a: int = 1
+        b: int = 2
+
+    class Baz(Bar):
+        c: int = 3
+
+    baz = Baz()
+    bar = Bar(**baz.model_dump())
+    bar_data = bar.model_dump(exclude_defaults=True)
+    assert len(bar_data) == 0
+    assert not hasattr(bar, 'c')
