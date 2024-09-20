@@ -36,7 +36,7 @@ class Moss(Parent):
 
 
 # <moss>
-# the codes between the moss xml marks is not visible to LLM
+# the codes between the moss xml marks are not visible to LLM
 
 from ghostos.libraries.file_editor import DirectoryEditorImpl
 

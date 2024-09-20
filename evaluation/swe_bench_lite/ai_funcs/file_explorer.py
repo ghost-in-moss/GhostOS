@@ -1,8 +1,8 @@
 from typing import Optional, List, Any
 
-from ghostos.core.moss.aifunc import AIFuncCtx
+from ghostos.core.aifunc import AIFuncCtx
 from ghostos.core.moss import Moss as Parent
-from ghostos.core.moss.aifunc import AIFunc, AIFuncResult
+from ghostos.core.aifunc import AIFunc, AIFuncResult
 from pydantic import BaseModel, Field
 from evaluation.swe_bench_lite.tools.file_content_operations import FileContentOperations
 from evaluation.swe_bench_lite.ai_funcs.swe_task_manager import SWEDebugTaskCtx

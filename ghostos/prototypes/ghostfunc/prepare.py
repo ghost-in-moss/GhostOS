@@ -10,7 +10,7 @@ __all__ = ["init_ghost_func_container"]
 def init_ghost_func_container(
         root_path: str,
         configs_path: str = "configs",
-        llm_conf_path: str = "llms/llms_conf.yaml",
+        llm_conf_path: str = "llms_conf.yml",
 ) -> Container:
     container = test_container()
     container.register(FileStorageProvider(root_path))

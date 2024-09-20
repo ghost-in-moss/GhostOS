@@ -7,9 +7,13 @@ from threading import Thread
 
 
 class MossTestSuite:
+    MAGIC_TEST_CASES_ATTR_NAME = "__moss_test_cases__"
 
     def __init__(self, container: Container):
         self._container = container
+
+    def container(self) -> Container:
+        return self._container
 
     def dump_prompt(
             self,
@@ -30,11 +34,12 @@ class MossTestSuite:
             targets: Optional[str] = None,
     ) -> None:
         """
-        自动运行目标 moss module 里的测试用例. 并逐个返回结果.
+        run the test cases in moss module, and returns each case's result to callback function.
         :param callback: callback on (test_case_name, MossResult)
-        :param modulename: 目标 moss 文件.
-        :param test_modulename: 临时创建的 module 名. 默认是 __test__
-        :param targets: 要测试的函数. 如果为空的话, 会从 moss 文件的 __tests__ 里取值.
+        :param modulename: the target moss module
+        :param test_modulename: the modulename that MossCompiler shall build.
+        :param targets: the target functions that should be tested,
+                        if None, test the func names from `__moss_test_cases__`
         :return:
         """
         compiler = self._container.force_fetch(MossCompiler)
@@ -42,9 +47,9 @@ class MossTestSuite:
         runtime = compiler.compile(test_modulename)
         compiled = runtime.module()
         if not targets:
-            targets: List[str] = compiled.__dict__.get("__tests__")
+            targets: List[str] = compiled.__dict__.get(self.MAGIC_TEST_CASES_ATTR_NAME)
             if not isinstance(targets, List):
-                raise AttributeError(f"Module {modulename} has no __tests__ attribute")
+                raise AttributeError(f"Module {modulename} has no {self.MAGIC_TEST_CASES_ATTR_NAME} attribute")
         if not targets:
             raise AttributeError(f"test cases are empty")
         self.parallel_run_moss_func(

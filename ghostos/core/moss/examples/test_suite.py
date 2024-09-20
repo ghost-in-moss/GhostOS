@@ -24,7 +24,7 @@ if __name__ == '__test__':
         return plus(1, 2)
 
 
-    __tests__ = ['test_1', 'test_2', 'test_3']
+    __moss_test_cases__ = ['test_1', 'test_2', 'test_3']
     """用这个魔术变量, 可以让 MossTestSuit 批量调用三个方法测试. """
 
 # </moss>

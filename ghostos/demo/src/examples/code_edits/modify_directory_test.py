@@ -1,9 +1,9 @@
 if __name__ == '__main__':
-    from ghostos.prototypes.console import new_console_app
+    from ghostos.prototypes.console import quick_new_console_app
     from ghostos.thoughts import DirectoryEditorThought
     from os.path import dirname
 
-    app = new_console_app(__file__, 4)
+    app = quick_new_console_app(__file__, 4)
     app.run_thought(
         DirectoryEditorThought(
             directory=dirname(dirname(__file__)),
