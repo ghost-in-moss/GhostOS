@@ -66,7 +66,7 @@ In this case we ask a agent-like AIFunc to do two things:
 We expect the `AgentFn` will call `WeatherAIFunc` and `NewsAIFunc` to help with subtasks,
 and give a final result to us.
 
-The testing AIFuncs are defined at [ghostos/demo/src/aifuncs]().
+The testing AIFuncs are defined at [aifuncs](ghostos/demo/src/aifuncs).
 
 ### File Editor Agent Test
 
@@ -77,10 +77,10 @@ python ghostos/demo/src/examples/code_edits/file_editor_test.py
 ```
 
 In this case an agent will follow the instruction,
-to replace all the chinese characters in this file [ghostos/demo/src/examples/code_edits/file_editor_test.py]().
+to replace all the chinese characters in this file [file_editor_test.py](ghostos/demo/src/examples/code_edits/file_editor_test.py).
 
-The Agent's Thought is defined at [ghostos/thoughts/file_editor_thought.py](),
-and the python context that provide to it is [ghostos/thoughts/file_editor_moss.py]().
+The Agent's Thought is defined at [file_editor_thought.py](ghostos/thoughts/file_editor_thought.py),
+and the python context that provide to it is [file_editor_moss.py](ghostos/thoughts/file_editor_moss.py).
 
 ### Tool Generation Agent Test
 
@@ -91,10 +91,10 @@ python ghostos/demo/src/examples/code_edits/tool_generation_test.py
 ```
 
 In this case, the agent is told to implements a `MockCache` class from `Cache` abstract class.
-After running the case, the file [ghostos/demo/src/examples/code_edits/tool_generation_test.py]() shall be changed.
+After running the case, the file [tool_generation_test.py](ghostos/demo/src/examples/code_edits/tool_generation_test.py) shall be changed.
 
-The Agent's Thought is defined at [ghostos/thoughts/pymodule_editor.py](),
-and the python context that provide to it is [ghostos/thoughts/pymodule_editor_moss.py]().
+The Agent's Thought is defined at [pymodule_editor.py](ghostos/thoughts/pymodule_editor.py),
+and the python context that provide to it is [pymodule_editor_moss.py](ghostos/thoughts/pymodule_editor_moss.py).
 
 ### Planner Agent with Async Multi-Task scheduler Test
 
@@ -111,7 +111,7 @@ It is supposed to call `MultiTask` library to dispatch several tasks
 to [FileEditThought](ghostos/thoughts/file_editor_thought.py),
 and the tasks will run parallely. After all tasks are finished, the agent will reply the result proactively.
 
-The Agent's Thought and python context are both defined at [ghostos/thoughts/directory_editor_thought.py]()
+The Agent's Thought and python context are both defined at [directory_editor_thought.py](ghostos/thoughts/directory_editor_thought.py)
 
 ### Ghost Func Test
 
@@ -124,7 +124,7 @@ run test case:
 python ghostos/demo/src/examples/ghostfunc/get_weather.py
 ```
 
-See more details in [ghostos/demo/src/examples/ghostfunc/get_weather.py]()
+See more details in [get_weather.py](ghostos/demo/src/examples/ghostfunc/get_weather.py)
 
 
 
