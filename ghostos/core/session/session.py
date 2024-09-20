@@ -6,8 +6,7 @@ from ghostos.core.session.messenger import Messenger
 from ghostos.core.session.processes import Processes, Process
 from ghostos.core.session.tasks import Tasks, Task, TaskBrief
 from ghostos.core.session.threads import Threads, MsgThread
-from ghostos.contracts.logger import LoggerItf
-from ghostos.core.messages import MessageKind, Role, Buffer, Payload, Attachment
+from ghostos.core.messages import MessageKind, Role, Buffer, Payload, Attachment, Message
 from ghostos.core.llms import FunctionalToken
 
 __all__ = ['Session']
@@ -100,7 +99,7 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def send_messages(self, *messages: MessageKind, role: str = Role.ASSISTANT.value) -> None:
+    def send_messages(self, *messages: MessageKind, role: str = Role.ASSISTANT.value) -> List[Message]:
         """
         发送消息.
         :param messages:

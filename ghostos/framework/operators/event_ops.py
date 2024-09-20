@@ -232,32 +232,22 @@ class OnFinishCallbackOperator(OnCallbackEventOperator):
         session = g.session()
         task = session.task()
         from_task_id = self.event.from_task_id
+        group = None
         if from_task_id:
             group = task.on_callback_task(from_task_id)
-            if group is not None:
-                return g.utils().handle_event(self.event)
+        session.update_task(task, None, update_history=False)
+        if group is not None:
+            return g.utils().handle_event(self.event)
         return None
 
 
 class OnFailureCallbackOperator(OnCallbackEventOperator):
     event_type: ClassVar[str] = DefaultEventType.FAILURE_CALLBACK
 
-    def handle_event(self, g: "Ghost") -> Optional["Operator"]:
-        # 好像没有什么额外的逻辑.
-        return super().handle_event(g)
-
 
 class OnWaitCallbackOperator(OnCallbackEventOperator):
     event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK
 
-    def handle_event(self, g: "Ghost") -> Optional["Operator"]:
-        # 好像没有什么额外的逻辑.
-        return super().handle_event(g)
-
 
 class OnNotifyCallbackOperator(OnCallbackEventOperator):
     event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK
-
-    def handle_event(self, g: "Ghost") -> Optional["Operator"]:
-        # 不会执行 event.
-        return None

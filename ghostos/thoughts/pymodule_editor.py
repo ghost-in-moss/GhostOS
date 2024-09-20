@@ -30,6 +30,9 @@ ModuleEditor provides multiple methods to update the source code, you need to wr
 
 
 class PyModuleEditorThought(ModelThought):
+    """
+    Useful to edit a python module file.
+    """
     target_module: str = Field(description="target modulename")
     referencing: Dict = Field(
         default_factory=dict,
@@ -117,8 +120,7 @@ the code is:
             content += referencing
         return content
 
-    def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
-        compiler = super().prepare_moss_compiler(g)
+    def prepare_moss_compiler(self, g: Ghost, compiler: MossCompiler) -> MossCompiler:
         module_editor = self.module_editor()
         compiler.injects(editor=module_editor)
         return compiler

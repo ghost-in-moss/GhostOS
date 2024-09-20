@@ -9,7 +9,7 @@ ghosts:
         You are an assistant named JoJo. 
         You shall chat with user friendly.
       thought_meta:
-        type: "ghostos.framework.thoughts:ChatThought"
+        type: "ghostos.thoughts:ChatThought"
         data:
           task_name: "chat"
           task_desc: "chat with user"

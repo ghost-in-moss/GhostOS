@@ -9,11 +9,16 @@ from pydantic import Field
 from ghostos.helpers import md5
 from ghostos.container import provide
 
+__all__ = ['FileEditorThought', 'new_file_editor_thought']
+
 
 class FileEditorThought(ModelThought):
-    filepath: str = Field(description="filepath the thought shall edit on")
-    debug: bool = Field(default=False, description="if debug mode, show moss output")
-    llm_api_name: str = Field(default="", description="llm api name")
+    """
+    Useful to read, understand and modify a file with any request.
+    """
+    filepath: str = Field(description="absolute filepath the thought shall edit on")
+    debug: bool = Field(default=False, description="if debug mode, generate relative thread file for debugging")
+    llm_api_name: str = Field(default="", description="llm model name, if you don't know what you want, keep empty")
 
 
 def new_file_editor_thought(
@@ -23,7 +28,7 @@ def new_file_editor_thought(
 ) -> FileEditorThought:
     """
     instance a pymodule_editor thought.
-    :param filepath:
+    :param filepath: absolute filepath the thought shall edit on
     :param llm_api_name:
     :param debug: if debug mode is true, moss code will send to user
     """
@@ -71,16 +76,16 @@ class FileEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[FileEdito
     def file_editor(self) -> FileEditorImpl:
         return FileEditorImpl(self.thought.filepath)
 
-    def prepare_moss_compiler(self, g: Ghost) -> MossCompiler:
-        compiler = super().prepare_moss_compiler(g)
+    def prepare_moss_compiler(self, g: Ghost, compiler: MossCompiler) -> MossCompiler:
         # inject dynamic generated file editor instance to moss.
         compiler.register(provide(FileEditor)(lambda c: self.file_editor()))
         return compiler
 
     def prepare_thread(self, session: Session, thread: MsgThread) -> MsgThread:
-        filepath = self.thought.filepath
-        saving_path = filepath + ".thread.yml"
-        thread.save_file = saving_path
+        if self.thought.debug:
+            filepath = self.thought.filepath
+            saving_path = filepath + ".thread.yml"
+            thread.save_file = saving_path
         return thread
 
     def get_llmapi(self, g: Ghost) -> LLMApi:

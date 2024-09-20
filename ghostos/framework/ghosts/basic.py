@@ -337,8 +337,9 @@ class BasicGhost(Ghost, ABC):
 
     def replier(self) -> "Replier":
         e = self.init_event()
-        callback_task_id = e.from_task_id if e else None
-        return ReplierImpl(callback_task_id)
+        event_from_task = e.from_task_id if e else None
+        task = self.session().task()
+        return ReplierImpl(task, event_from_task)
 
     def moss(self) -> "MossCompiler":
         return MossCompilerImpl(container=self._container)

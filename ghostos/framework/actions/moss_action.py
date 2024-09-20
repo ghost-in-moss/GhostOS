@@ -90,6 +90,7 @@ Here is the context provided to you in this turn:
 3. MOSS will automatic execute the main function so you never execute it again.
 4. **Return Operator**: You shall always use method that MOSS provide you to return an Operator from function main. 
 5. In the generated MOSS code, ** YOU SHALL NOT WRITE ANYTHING BUT CODE AND COMMENTS BECAUSE MOSS CODE NEVER SEND TO USER**.
+6. the std output from `print` is only visible for you, no one can see it. print with format will help you to understand the result.
 
 **About Coding Jobs**: 
 Sometimes you are handling coding task, the MOSS provides you code interface to handle your job.

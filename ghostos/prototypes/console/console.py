@@ -15,7 +15,6 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession
 from rich.console import Console
-from rich.json import JSON
 from rich.panel import Panel
 from rich.markdown import Markdown
 
@@ -34,7 +33,8 @@ class ConsolePrototype:
             session_id: Optional[str] = None,
             process_id: Optional[str] = None,
             task_id: Optional[str] = None,
-            background_num: int = 1,
+            background_num: int = 4,
+            welcome_user_message: Optional[str] = None,
     ):
         self._os = ghostos
         self._ghost_id = ghost_id
@@ -47,10 +47,14 @@ class ConsolePrototype:
         self._prompt_session = session
         self._console = Console()
         self._stopped = False
-        self._queue = Queue()
+        self._main_queue = Queue()
         self._debug = debug
         self._threads: List[Thread] = []
         self._background_num = background_num
+        if not welcome_user_message:
+            welcome_user_message = "the conversation is going to begin, please welcome user and introduce your self"
+        self._welcome_user_message = welcome_user_message
+        self._main_task_id = ""
 
     def run(self):
         for i in range(self._background_num):
@@ -65,7 +69,7 @@ class ConsolePrototype:
     def _print_output(self):
         while not self._stopped:
             try:
-                message = self._queue.get(block=True, timeout=1)
+                message = self._main_queue.get(block=True, timeout=1)
                 if not isinstance(message, Message):
                     raise ValueError(f"Expected Message, got {message}")
                 self._print_message(message)
@@ -78,11 +82,17 @@ class ConsolePrototype:
             handled = self._os.background_run(stream)
             if not handled:
                 time.sleep(1)
+            elif not self._debug:
+                self._console.print(f"handled event {handled.type}: task_id {handled.task_id}; event_id {handled.id};")
             else:
-                self._console.print(f"handled event task_id: {handled.task_id}; event_id: {handled.id}")
+                self._console.print(Panel(
+                    Markdown(f"```json\n{handled.model_dump_json(indent=2)}\n```"),
+                    title="handle event",
+                    border_style="yellow",
+                ))
 
     def _stream(self) -> QueueStream:
-        return QueueStream(self._queue, streaming=False)
+        return QueueStream(self._main_queue, streaming=False)
 
     async def _main(self):
         self._welcome()
@@ -94,12 +104,13 @@ class ConsolePrototype:
                     border_style="green",
                 )
             )
-            self._on_input(self._on_create_message)
+            self._main_task_id = self._on_input(self._on_create_message)
         else:
+            self._console.print("waiting for agent say hi...")
             message = Role.new_assistant_system(
-                "the conversation is going to begin, please welcome user and introduce your self",
+                self._welcome_user_message,
             )
-            self._on_message_input(message)
+            self._main_task_id = self._on_message_input(message)
         with patch_stdout(raw=True):
             await self._loop()
             self._console.print("Quitting event loop. Bye.")
@@ -120,14 +131,20 @@ class ConsolePrototype:
                 self._console.print_exception()
                 self._exit()
 
-    def _on_input(self, text: str):
+    def _on_input(self, text: str) -> str:
+        """
+        :return: task_id
+        """
         message = Role.USER.new(
             content=text,
             name=self._username,
         )
         return self._on_message_input(message)
 
-    def _on_message_input(self, message: Message):
+    def _on_message_input(self, message: Message) -> str:
+        """
+        :return: task_id
+        """
         inputs_ = Inputs(
             trace_id=uuid(),
             session_id=self._session_id,
@@ -137,8 +154,15 @@ class ConsolePrototype:
             task_id=self._task_id,
         )
         stream = self._stream()
-        self._console.print(f"push input event id: {inputs_.trace_id}")
-        self._os.on_inputs(inputs_, stream, is_async=True)
+        if not self._debug:
+            self._console.print(f"push input event id: {inputs_.trace_id}")
+        else:
+            self._console.print(Panel(
+                Markdown(f"```json\n{inputs_.model_dump_json(indent=2)}\n```"),
+                title="push input event",
+                border_style="yellow",
+            ))
+        return self._os.on_inputs(inputs_, stream, is_async=True)
 
     def _intercept_text(self, text: str) -> bool:
         if text == "/exit":
@@ -165,7 +189,7 @@ print "/exit" to quit
         self._console.print("start exiting")
         while _continue:
             try:
-                self._queue.get_nowait()
+                self._main_queue.get_nowait()
             except Empty:
                 break
         self._console.print("stop queue")
@@ -194,17 +218,29 @@ print "/exit" to quit
         if not content:
             return
         payload = TaskPayload.read(message)
-        title = ""
+        title = "receive message"
+        # markdown content
+        prefix = ""
         if payload is not None:
-            title = f"{payload.task_name}: {payload.thread_id}"
+            prefix = "\n>\n".join([
+                f"> task_id: {payload.task_id}",
+                f"> thread_id: {payload.thread_id}",
+                f"> task_name: {payload.task_name}\n\n",
+            ])
         if "<moss>" in content:
-            content.replace("<moss>", "\n```python\n# <moss>\n", 1)
+            content = content.replace("<moss>", "\n```python\n# <moss>\n", )
         if "</moss>" in content:
-            content.replace("</moss>", "\n# </moss>\n```\n", 1)
-        markdown = self._markdown_output(content)
-        border_style = "blue"
+            content = content.replace("</moss>", "\n# </moss>\n```\n", )
+        markdown = self._markdown_output(prefix + content)
+        # border style
         if DefaultMessageTypes.ERROR.match(message):
             border_style = "red"
+        elif payload is not None and payload.task_id == self._main_task_id:
+            border_style = "blue"
+        else:
+            border_style = "yellow"
+            title = "receive async message"
+        # print
         self._console.print(
             Panel(
                 markdown,

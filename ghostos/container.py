@@ -8,6 +8,7 @@ __all__ = [
     "Provider", "Factory", "Bootstrapper",
     "ABSTRACT",
     "ProviderAdapter", 'provide',
+    'get_caller_info',
 ]
 
 INSTRUCTION = """

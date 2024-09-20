@@ -2,10 +2,10 @@ from typing import Optional, List, Iterable, Dict, Any
 import time
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.core.messages import Message, copy_messages, DefaultMessageTypes, Role
+from ghostos.core.messages import Message, copy_messages, Role
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Chat
-from ghostos.core.session.events import Event
+from ghostos.core.session.events import Event, DefaultEventType
 from ghostos.helpers import uuid
 from contextlib import contextmanager
 
@@ -62,9 +62,13 @@ class Turn(BaseModel):
         event = self.event
         if event is None:
             return []
-        # reason is first
-        if event.reason:
-            yield Role.new_assistant_system(content=event.reason)
+
+        if DefaultEventType.CREATED.value != event.type and event.from_task_name and not event.from_self():
+            reason = ""
+            if event.reason:
+                reason = f" Reason: {event.reason}"
+            yield Role.new_assistant_system(
+                content=f"receive event {event.type} from task `{event.from_task_name}`.{reason}")
 
         # messages in middle
         if event.messages:

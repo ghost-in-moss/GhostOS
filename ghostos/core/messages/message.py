@@ -398,6 +398,9 @@ class MessageKindParser:
                 msg= item.to_message()
                 yield self._with_ref(msg)
             if isinstance(item, str):
+                if not item:
+                    # exclude empty message
+                    continue
                 msg = Message.new_tail(content=item, role=self.role)
                 yield self._with_ref(msg)
             else:

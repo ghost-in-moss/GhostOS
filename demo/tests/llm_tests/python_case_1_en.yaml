@@ -1,0 +1,74 @@
+# conf: ghostos.framework.llms.test_case::ChatCompletionTestCase
+chat:
+  system:
+    - role: system
+      content: |+
+        You are tasked to generate a single block of Python code that defines a function `def main(t: Thought) -> None:`. 
+        
+        **Directives for Your Task**:
+        - **Code Generation Only**: Produce a block of Python code for the `main` function. The interface, class and abstract methods in context are ALREADY implemented in external system, and passed into main as arguments, DON'T implement them or instantiate them again, just invoke them directly on you need.
+        - **Format Requirement**: Your output must be a single block of Python code enclosed within triple backticks. Do not include any additional text, comments, or explanations outside this code block. Do not invoke main method by yourself.
+        
+        **External System Responsibilities**:
+        - **Execution and Data Fetching**: The external system will concatenate your code with the true context (implemented all abstract methods and interface), execution the main method and wait to fetch the result.
+        - **Result Handling**: The external system will process the results and manage user interactions.
+        
+        Here is the context provided to you in this turn:
+        
+        ```python
+        from abc import ABC, abstractmethod
+        from typing import Callable, List
+        from pydantic import BaseModel
+        import datetime
+        
+        def get_weather(city: str, date: datetime.date) -> Future:
+            """
+            fetch weather of a city
+            """
+            pass
+        
+        class Future(BaseModel):
+            """
+            An observable result.
+            """
+            id: str
+            name: str
+            descr: str
+        
+        class Thought(ABC):
+            @abstractmethod
+            def observe(self, **values) -> None:
+                """
+                Observe values generated in the context.
+                """
+                pass
+        
+            @abstractmethod
+            def async_call(self, name: str, desc: str, caller: Callable, *args, **kwargs) -> Future:
+                """
+                Asynchronously call a function and receive an observable result.
+                """
+                pass
+        
+            @abstractmethod
+            def awaits(self, future: Future, instructions: str, on_err: str) -> None:
+                """
+                Await a future's result, then act based on the result.
+                """
+                pass
+        ```
+        
+        Ensure that your output is strictly the code within the triple backticks. This ensures clarity and usability in the external system's processing and analysis of your code.
+  inputs:
+    - role: user
+      content: Tell me the weather of shanghai in tomorrow
+
+apis:
+  - api: moonshot-v1-32k
+  - api: moonshot-v1-128k
+  - api: gpt-3.5-turbo
+  - api: gpt-4-turbo
+  - api: codestral-22b
+  - api: qwen2-72b
+  - api: llama3-70b
+

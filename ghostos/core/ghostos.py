@@ -77,7 +77,7 @@ class GhostOS(ABC):
             inputs: Inputs,
             upstream: Stream,
             is_async: bool = False,
-    ) -> None:
+    ) -> str:
         """
         handle and inputs by ghostos. GhostOS will:
         1. check the inputs, intercept it if necessary
@@ -88,6 +88,7 @@ class GhostOS(ABC):
         :param inputs: inputs to a ghost instance.
         :param upstream: the stream that ghost sending messages to.
         :param is_async: if is_async, ghost would not run, but send event only.
+        :return: main task id
         """
         pass
 

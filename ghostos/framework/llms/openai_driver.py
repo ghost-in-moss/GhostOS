@@ -125,6 +125,7 @@ class OpenAIAdapter(LLMApi):
 
     def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         # todo: try catch
+        chat = self.parse_chat(chat)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = chat.get_messages()
         messages = self._parser.parse_message_list(messages)
@@ -146,7 +147,6 @@ class OpenAIAdapter(LLMApi):
         )
 
     def chat_completion(self, chat: Chat) -> Message:
-        chat = self.parse_chat(chat)
         message: ChatCompletion = self._chat_completion(chat, stream=False)
         pack = self._parser.from_chat_completion(message.choices[0].message)
         # add completion usage
@@ -159,7 +159,6 @@ class OpenAIAdapter(LLMApi):
         return pack
 
     def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
-        chat = self.parse_chat(chat)
         chunks: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
         messages = self._parser.from_chat_completion_chunks(chunks)
         first = True
@@ -174,10 +173,8 @@ class OpenAIAdapter(LLMApi):
             return chat
         prompt = FunctionalTokenPrompt(self._functional_token_prompt)
         content = prompt.format_tokens(chat.functional_tokens)
-        if len(chat.system) == 0:
-            chat.system = [DefaultMessageTypes.DEFAULT.new_system(content=content)]
-        else:
-            chat.system[-1].content += "\n\n" + content
+        message = DefaultMessageTypes.DEFAULT.new_system(content=content)
+        chat.system.append(message)
         return chat
 
 
@@ -202,13 +199,6 @@ class OpenAIDriver(LLMDriver):
         return OpenAIAdapter(service, model, self._parser)
 
 
-class OpenAIDriverBootstrapper(Bootstrapper):
-
-    def bootstrap(self, container: Container) -> None:
-        llms = container.force_fetch(LLMs)
-        llms.register_driver(OpenAIDriver())
-
-
 class LitellmAdapter(OpenAIAdapter):
     """
     adapter class wrap openai api to ghostos.blueprint.kernel.llms.LLMApi
@@ -228,3 +218,10 @@ class LitellmAdapter(OpenAIAdapter):
             api_key=self._service.token,
         )
         return response.choices[0].message
+
+
+class OpenAIDriverBootstrapper(Bootstrapper):
+
+    def bootstrap(self, container: Container) -> None:
+        llms = container.force_fetch(LLMs)
+        llms.register_driver(OpenAIDriver())
