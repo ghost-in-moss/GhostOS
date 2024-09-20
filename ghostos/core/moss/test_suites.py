@@ -7,9 +7,13 @@ from threading import Thread
 
 
 class MossTestSuite:
+    MAGIC_TEST_CASES_ATTR_NAME = "__moss_test_cases__"
 
     def __init__(self, container: Container):
         self._container = container
+
+    def container(self) -> Container:
+        return self._container
 
     def dump_prompt(
             self,
@@ -42,9 +46,9 @@ class MossTestSuite:
         runtime = compiler.compile(test_modulename)
         compiled = runtime.module()
         if not targets:
-            targets: List[str] = compiled.__dict__.get("__tests__")
+            targets: List[str] = compiled.__dict__.get(self.MAGIC_TEST_CASES_ATTR_NAME)
             if not isinstance(targets, List):
-                raise AttributeError(f"Module {modulename} has no __tests__ attribute")
+                raise AttributeError(f"Module {modulename} has no {self.MAGIC_TEST_CASES_ATTR_NAME} attribute")
         if not targets:
             raise AttributeError(f"test cases are empty")
         self.parallel_run_moss_func(
