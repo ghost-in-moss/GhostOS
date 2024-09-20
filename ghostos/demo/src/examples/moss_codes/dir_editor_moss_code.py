@@ -6,7 +6,7 @@ from ghostos.libraries.file_editor import FileEditor, DirectoryEditor
 
 class Moss(Parent):
     """
-    Moss that equipped with ModuleEditor
+    Moss that equipped with DirectoryEditor
     """
     dir_editor: DirectoryEditor
     """ the editor managing the current file """
@@ -20,6 +20,9 @@ if __name__ == '__test__':
 
 
     def test_list_only_files(moss: Moss) -> Optional[Operator]:
+        """
+        this case shows how to use list method of dir_editor and test it
+        """
         files = moss.dir_editor.list(depth=0, list_file=True, list_dir=False, formated=False, absolute=False)
 
         assert "dir_editor_moss_code.py" in files, files

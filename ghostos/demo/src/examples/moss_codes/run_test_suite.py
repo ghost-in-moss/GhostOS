@@ -22,7 +22,10 @@ if __name__ == '__main__':
     suite.container().set(DirectoryEditor, DirectoryEditorImpl(dirname(__file__)))
 
     suite.run_module_tests(
+        # point the moss file modulename
         modulename=dir_editor_moss_code.__name__,
+        # register test callback
         callback=show_test_result,
+        # the real modulename that moss compiled
         test_modulename="__test__",
     )

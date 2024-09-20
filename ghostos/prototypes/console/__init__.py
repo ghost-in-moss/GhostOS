@@ -3,7 +3,7 @@ from typing import Optional, List
 from ghostos.core import GhostOS
 from ghostos.framework.ghostos import demo_ghostos, DemoGhostOS
 from ghostos.framework.ghosts.demo import DemoGhostConf
-from ghostos.prototypes.console.console import ConsolePrototype
+from ghostos.prototypes.console.app import ConsolePrototype
 from ghostos.core.ghosts import Thought
 from ghostos.helpers import get_calling_modulename, import_from_path, md5, uuid
 from ghostos.container import Provider
@@ -11,7 +11,7 @@ from ghostos.container import Provider
 __all__ = [
     'ConsoleApp',
     'ConsolePrototype',
-    'new_console_app',
+    'quick_new_console_app',
     'demo_console_app',
 ]
 
@@ -168,16 +168,16 @@ demo_console_app = ConsoleApp.new_demo(
 __app__ = None
 
 
-def new_console_app(
+def quick_new_console_app(
         current_file: str,
-        depth: int,
+        dirname_times: int = 0,
         logging_conf: str = "configs/logging.yml",
         **kwargs,
 ) -> ConsoleApp:
     """
     quick to create a console app based on root_dir. only once shall be called globally.
     :param current_file: current file name, usually __file__
-    :param depth: depth from current_file to root dir
+    :param dirname_times: depth from current_file to root dir
     :param logging_conf:
     :return:
     """
@@ -185,7 +185,7 @@ def new_console_app(
     if __app__ is not None:
         return __app__
     root_dir = current_file
-    for i in range(depth):
+    for i in range(dirname_times):
         root_dir = dirname(root_dir)
 
     logger_conf_path = join(root_dir, logging_conf)

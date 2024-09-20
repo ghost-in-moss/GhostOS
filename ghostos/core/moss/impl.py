@@ -62,6 +62,7 @@ class MossCompilerImpl(MossCompiler):
         # 创建临时模块.
         module = ModuleType(modulename)
         module.__dict__.update(self._predefined_locals)
+        module.__dict__['__file__'] = "<moss_temp_module>"
         compiled = compile(code, modulename, "exec")
         exec(compiled, module.__dict__)
         if self._pycontext.module:

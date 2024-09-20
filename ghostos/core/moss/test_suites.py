@@ -34,11 +34,12 @@ class MossTestSuite:
             targets: Optional[str] = None,
     ) -> None:
         """
-        自动运行目标 moss module 里的测试用例. 并逐个返回结果.
+        run the test cases in moss module, and returns each case's result to callback function.
         :param callback: callback on (test_case_name, MossResult)
-        :param modulename: 目标 moss 文件.
-        :param test_modulename: 临时创建的 module 名. 默认是 __test__
-        :param targets: 要测试的函数. 如果为空的话, 会从 moss 文件的 __tests__ 里取值.
+        :param modulename: the target moss module
+        :param test_modulename: the modulename that MossCompiler shall build.
+        :param targets: the target functions that should be tested,
+                        if None, test the func names from `__moss_test_cases__`
         :return:
         """
         compiler = self._container.force_fetch(MossCompiler)

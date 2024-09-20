@@ -1,6 +1,8 @@
 from typing import Optional
 from ghostos.core.aifunc import AIFunc, AIFuncResult, AIFuncCtx
 from ghostos.core.moss import Moss as Parent
+from ghostos.demo.src.aifuncs.weather import WeatherAIFunc
+from ghostos.demo.src.aifuncs.news import NewsAIFunc
 from pydantic import Field
 
 
@@ -29,10 +31,5 @@ class Moss(Parent):
 
 def __aifunc_instruction__(fn: AgentFn) -> str:
     return fn.request
-
-
-example = AgentFn(
-    request="请告诉我北京明天什么天气, 然后黑神话悟空这个游戏媒体评分如何?",
-)
 
 # </moss>

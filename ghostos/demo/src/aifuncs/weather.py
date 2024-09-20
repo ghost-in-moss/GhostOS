@@ -1,5 +1,6 @@
 from typing import Optional
 from ghostos.core.aifunc import AIFunc, AIFuncResult
+from ghostos.demo.src.aifuncs.utils import get_weather
 from pydantic import Field
 
 
@@ -26,6 +27,11 @@ class WeatherAIFuncResult(AIFuncResult):
 
 
 # <moss>
+
+def __aifunc_instruction__(fn: WeatherAIFunc) -> str:
+    return "Your task is using get_weather function to get weather information fit the input"
+
+
 
 
 example = WeatherAIFunc()

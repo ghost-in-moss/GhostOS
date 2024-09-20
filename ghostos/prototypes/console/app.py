@@ -179,7 +179,9 @@ class ConsolePrototype:
 ----
 # Console Demo
 
-print "/exit" to quit
+This demo provide a console interface to communicate with an agent. 
+
+- print "/exit" to quit
 ----
 """))
 
@@ -221,7 +223,7 @@ print "/exit" to quit
         title = "receive message"
         # markdown content
         prefix = ""
-        if payload is not None:
+        if payload is not None and self._debug:
             prefix = "\n>\n".join([
                 f"> task_id: {payload.task_id}",
                 f"> thread_id: {payload.thread_id}",
