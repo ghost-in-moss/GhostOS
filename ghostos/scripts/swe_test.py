@@ -16,7 +16,7 @@ from ghostos.framework.llms import ConfigBasedLLMsProvider
 from ghostos.framework.threads import StorageThreadsProvider
 from ghostos.container import Container
 from ghostos.contracts.modules import Modules
-from ghostos.contracts.configs import ConfigsByStorageProvider
+from ghostos.framework.configs import ConfigsByStorageProvider
 from ghostos.helpers import import_from_path, yaml_pretty_dump
 from rich.console import Console
 from rich.panel import Panel

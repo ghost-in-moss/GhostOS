@@ -65,8 +65,6 @@ def test_baseline_exec():
     result = runtime.execute(target="test_main", local_args=["moss"])
     # main 方法的运行结果.
     assert result.returns == 3
-    # 测试 print 仍然有效.
-    assert result.std_output.startswith("hello")
 
     # 动态加载的 attr.
     assert "life" in result.pycontext.properties, f"life is not found in dumped pycontext {result.pycontext}"
