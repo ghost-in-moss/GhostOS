@@ -11,7 +11,7 @@ from ghostos.core.moss.pycontext import PyContext
 import inspect
 
 if TYPE_CHECKING:
-    from ghostos.core.moss.aifunc.interfaces import AIFuncDriver
+    from ghostos.core.aifunc.interfaces import AIFuncDriver
 
 __all__ = [
     'AIFunc', 'AIFuncResult',

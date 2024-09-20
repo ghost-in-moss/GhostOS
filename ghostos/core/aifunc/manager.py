@@ -6,9 +6,9 @@ from typing import Dict, Any, Optional, List, Type
 from ghostos.container import Container, Provider, ABSTRACT
 from ghostos.core.llms import LLMApi, LLMs
 from ghostos.core.moss import MossCompiler
-from ghostos.core.moss.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
-from ghostos.core.moss.aifunc.interfaces import AIFuncManager, AIFuncCtx, AIFuncDriver
-from ghostos.core.moss.aifunc.driver import DefaultAIFuncDriverImpl
+from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
+from ghostos.core.aifunc.interfaces import AIFuncManager, AIFuncCtx, AIFuncDriver
+from ghostos.core.aifunc.driver import DefaultAIFuncDriverImpl
 from ghostos.core.session import MsgThread
 from ghostos.helpers import generate_import_path, uuid
 

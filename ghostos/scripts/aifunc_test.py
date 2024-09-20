@@ -9,7 +9,7 @@ from ghostos.scripts.logconf import prepare_logger
 from ghostos.core.llms import Chat
 from ghostos.core.messages import Message
 from ghostos.core.moss import test_container
-from ghostos.core.moss.aifunc import DefaultAIFuncManagerImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncManager
+from ghostos.core.aifunc import DefaultAIFuncManagerImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncManager
 from ghostos.framework.logger import NamedLoggerProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
@@ -54,7 +54,7 @@ def main() -> None:
         help="the import path of the AIFunc instance, such as foo.bar:baz",
         type=str,
         # 默认使用专门测试 MossTestSuite 的文件.
-        # default="ghostos.core.moss.aifunc.examples.agentic:example",
+        # default="ghostos.core.aifunc.examples.agentic:example",
         default="",
     )
     parser.add_argument(

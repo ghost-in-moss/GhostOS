@@ -1,7 +1,5 @@
 from typing import Optional
-from ghostos.core.moss.aifunc import AIFunc, AIFuncResult
-from ghostos.core.moss.aifunc.examples.utils import get_weather
-from ghostos.core.moss import Moss
+from ghostos.core.aifunc import AIFunc, AIFuncResult
 from pydantic import Field
 
 

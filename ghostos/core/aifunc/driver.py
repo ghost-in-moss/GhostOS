@@ -1,8 +1,8 @@
 import traceback
 from typing import Tuple, List, Optional, Any
 
-from ghostos.core.moss.aifunc.interfaces import AIFuncDriver, AIFuncManager
-from ghostos.core.moss.aifunc.func import (
+from ghostos.core.aifunc.interfaces import AIFuncDriver, AIFuncManager
+from ghostos.core.aifunc.func import (
     AIFunc,
     get_aifunc_instruction, get_aifunc_result_type, get_aifunc_pycontext, get_aifunc_llmapi,
 )

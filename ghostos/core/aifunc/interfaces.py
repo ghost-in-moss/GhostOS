@@ -1,6 +1,6 @@
 from typing import Any, Optional, Tuple, Dict
 from abc import ABC, abstractmethod
-from ghostos.core.moss.aifunc.func import AIFunc, AIFuncResult
+from ghostos.core.aifunc.func import AIFunc, AIFuncResult
 from ghostos.core.moss.decorators import cls_source_code
 from ghostos.core.moss.abc import MossCompiler
 from ghostos.core.llms import LLMApi
@@ -8,6 +8,7 @@ from ghostos.core.session import MsgThread
 from ghostos.container import Container
 
 __all__ = [
+    'AIFunc', 'AIFuncResult',
     'AIFuncManager', 'AIFuncCtx', 'AIFuncDriver'
 ]
 

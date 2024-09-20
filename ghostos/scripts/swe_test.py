@@ -9,7 +9,7 @@ from ghostos.scripts.logconf import prepare_logger
 from ghostos.core.llms import Chat
 from ghostos.core.messages import Message
 from ghostos.core.moss import test_container
-from ghostos.core.moss.aifunc import DefaultAIFuncManagerImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncManager
+from ghostos.core.aifunc import DefaultAIFuncManagerImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncManager
 from ghostos.framework.logger import NamedLoggerProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider

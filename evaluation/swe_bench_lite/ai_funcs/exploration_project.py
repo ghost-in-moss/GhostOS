@@ -1,6 +1,6 @@
 from typing import Optional, List, Any
 
-from ghostos.core.moss.aifunc import AIFunc, AIFuncResult
+from ghostos.core.aifunc import AIFunc, AIFuncResult
 from pydantic import BaseModel, Field
 from evaluation.swe_bench_lite.tools.file_reader import FileReader
 from evaluation.swe_bench_lite.ai_funcs.swe_task import SWEDebugTaskCtx

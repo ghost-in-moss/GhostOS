@@ -1,5 +1,5 @@
 from typing import Optional, List
-from ghostos.core.moss.aifunc import AIFunc, AIFuncResult
+from ghostos.core.aifunc import AIFunc, AIFuncResult
 from pydantic import BaseModel, Field
 from ghostos.core.moss import Moss
 

@@ -1,5 +1,5 @@
 from typing import Optional, List
-from ghostos.core.moss.aifunc import AIFunc, AIFuncResult, AIFuncCtx
+from ghostos.core.aifunc import AIFunc, AIFuncResult, AIFuncCtx
 from ghostos.core.moss import Moss as Parent
 from pydantic import Field
 from evaluation.swe_bench_lite.ai_funcs.swe_task import SWETaskAIFunc, SWETaskAIFuncResult, SWEDebugTaskCtx
