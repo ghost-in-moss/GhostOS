@@ -26,9 +26,7 @@ You are welcome to play with the early showcases:
 
 ### Prepare
 
-1. make sure you've installed python > 3.12
-
-clone the project
+First make sure you've installed python > 3.12, then clone the project
 
 ```bash
 # clone the repository
@@ -77,10 +75,10 @@ python ghostos/demo/src/examples/code_edits/file_editor_test.py
 ```
 
 In this case an agent will follow the instruction,
-to replace all the chinese characters in this file [file_editor_test.py](ghostos/demo/src/examples/code_edits/file_editor_test.py).
+to replace all the chinese characters in the file: [file_editor_test.py](ghostos/demo/src/examples/code_edits/file_editor_test.py).
 
 The Agent's Thought is defined at [file_editor_thought.py](ghostos/thoughts/file_editor_thought.py),
-and the python context that provide to it is [file_editor_moss.py](ghostos/thoughts/file_editor_moss.py).
+and the python context of it is [file_editor_moss.py](ghostos/thoughts/file_editor_moss.py).
 
 ### Tool Generation Agent Test
 
@@ -94,7 +92,7 @@ In this case, the agent is told to implements a `MockCache` class from `Cache` a
 After running the case, the file [tool_generation_test.py](ghostos/demo/src/examples/code_edits/tool_generation_test.py) shall be changed.
 
 The Agent's Thought is defined at [pymodule_editor.py](ghostos/thoughts/pymodule_editor.py),
-and the python context that provide to it is [pymodule_editor_moss.py](ghostos/thoughts/pymodule_editor_moss.py).
+and the python context of it is [pymodule_editor_moss.py](ghostos/thoughts/pymodule_editor_moss.py).
 
 ### Planner Agent with Async Multi-Task scheduler Test
 
