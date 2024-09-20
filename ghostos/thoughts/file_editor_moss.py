@@ -6,7 +6,7 @@ from ghostos.libraries.file_editor import FileEditor
 
 class Moss(Parent):
     """
-    Moss that equipped with ModuleEditor
+    Moss that equipped with FileEditor
     """
     editor: FileEditor
     """ the editor managing the current file """
