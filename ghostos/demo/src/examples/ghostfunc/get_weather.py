@@ -1,12 +1,8 @@
-from ghostos.prototypes.ghostfunc import ghost_func
+from ghostos.prototypes.ghostfunc import init_ghost_func
+from os.path import dirname
 
-
-@ghost_func.decorator()
-def plus(a: int, b: int) -> int:
-    """
-    :return: a + b
-    """
-    pass
+root = dirname(dirname(dirname(dirname(__file__))))
+ghost_func = init_ghost_func(root)
 
 
 @ghost_func.decorator(caching=False)
@@ -22,6 +18,5 @@ def get_weather(city: str, date: str) -> str:
     pass
 
 
-if __name__ == "__main__": # compile时记得去掉此__main__ block
-    # print(plus(1, 2))
-    print(get_weather("长沙", "后天"))
+if __name__ == "__main__":
+    print(get_weather("beijing", "today"))
