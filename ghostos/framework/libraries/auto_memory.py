@@ -5,8 +5,6 @@ from typing import List, Dict
 
 from pydantic import BaseModel, Field
 
-from mem0 import Memory
-
 
 class DBConfig(BaseModel):
     path: str = Field(description="Path to the database file", default="memory.db")
@@ -141,4 +139,3 @@ class TextMemory(ABC):
         Clear the memory store.
         """
         pass
-

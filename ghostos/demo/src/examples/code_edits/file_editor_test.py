@@ -13,9 +13,9 @@ class Caller(BaseModel):
 
 
 if __name__ == '__main__':
-    from ghostos.prototypes.console import new_console_app
+    from ghostos.prototypes.console import quick_new_console_app
     from ghostos.thoughts import new_file_editor_thought
-    app = new_console_app(__file__, 4)
+    app = quick_new_console_app(__file__, 4)
     app.run_thought(
         new_file_editor_thought(filepath=__file__),
         instruction="help me to replace all the chinese in this file into english please!"

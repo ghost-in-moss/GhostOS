@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ghostos"
 version = "0.0.1"
-description = "model-oriented operation system"
+description = "An agent framework offering agents and meta-agents a Python code interface to operate everything."
 authors = ["zhuming <thirdgerb@gmail.com>", "Nile Zhou <nilezhou123@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -17,11 +17,9 @@ httpx-socks = "^0.9.1"
 restrictedpython = "^7.1"
 datasets = "^2.20.0"
 anthropic = "^0.31.2"
-pillow = "^10.4.0"
 sympy = "^1.13.1"
 tree-sitter = "0.21.3"
 tree-sitter-languages = "^1.10.2"
-mem0ai = "^0.0.20"
 networkx = "^3.3"
 grep-ast = "^0.3.3"
 litellm = "^1.43.18"
@@ -36,10 +34,6 @@ init = "ghostos.scripts.init:main"
 demo = "ghostos.demo.scripts.demo:main"
 llm_test = "ghostos.demo.scripts.llm_test:main"
 clear_runtime = "ghostos.demo.scripts.clear_runtime:main"
-moss_test = "ghostos.scripts.moss_test:main"
-moss_run = "ghostos.scripts.moss_run:main"
-aifunc_test = "ghostos.scripts.aifunc_test:main"
-swe_test = "ghostos.scripts.swe_test:main"
 
 [build-system]
 requires = ["poetry-core"]

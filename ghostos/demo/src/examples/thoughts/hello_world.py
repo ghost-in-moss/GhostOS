@@ -19,8 +19,12 @@ thought = MossThought(
 )
 
 if __name__ == "__main__":
-    from ghostos.prototypes.console import new_console_app
+    from ghostos.prototypes.console import quick_new_console_app
 
-    new_console_app(__file__, 4).run_thought(thought, debug=True)
+    quick_new_console_app(__file__, 4).run_thought(
+        thought,
+        debug=False,
+        instruction="say hello world",
+    )
 
 # </moss>

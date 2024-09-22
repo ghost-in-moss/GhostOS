@@ -354,33 +354,35 @@ class DirectoryEditorImpl(DirectoryEditor):
             sorted_items = sorted(path.iterdir())
 
             for item in sorted_items:
-                path_item = str(item)
-                item_name = item.name
-                # ignore the dir_index file
-                if dir_index.is_cache_file(path_item):
-                    continue
+                absolute_item = str(item)
+                parsed_item = absolute_item
+                relative_item = item.name
                 if not absolute:
                     # remove prefix.
-                    path_item = path_item.replace(dir_path, "")
+                    parsed_item = relative_item
+                # ignore the dir_index file
+                if dir_index.is_cache_file(parsed_item):
+                    continue
+
                 if item.is_dir() and list_dir and not self._match_pattern(item, self._ignores):
                     sub_directories_lines, sub_dir_index = _list_dir(item, current_depth + 1)
                     _summary = sub_dir_index.summary
                     _summary = " : " + _summary if summary and _summary else ""
                     if formated:
-                        line = ' ' * current_depth * 2 + f"+ {path_item.strip('/')}/" + _summary
+                        line = ' ' * current_depth * 2 + f"+ {parsed_item.strip('/')}/" + _summary
                     else:
-                        line = str(item).rstrip('/') + '/' + _summary
+                        line = parsed_item.rstrip('/') + '/' + _summary
                     directories.append(line)
                     directories.extend(sub_directories_lines)
-                    dir_index.add_dir(item_name, sub_dir_index.model_dump(exclude_defaults=True))
+                    dir_index.add_dir(relative_item, sub_dir_index.model_dump(exclude_defaults=True))
                 elif item.is_file() and list_file and item.match(pattern) and not self._match_pattern(item, ignores):
-                    _summary = dir_index.get_file_summary(item_name)
+                    _summary = dir_index.get_file_summary(relative_item)
                     _summary = " : " + _summary if summary and _summary else ""
                     if formated:
-                        line = ' ' * current_depth * 2 + f"- {path_item.strip('/')}" + _summary
+                        line = ' ' * current_depth * 2 + f"- {parsed_item.strip('/')}" + _summary
                     else:
-                        line = str(item) + _summary
-                    dir_index.add_file(FileInfo(filename=item_name), False)
+                        line = parsed_item + _summary
+                    dir_index.add_file(FileInfo(filename=relative_item), False)
                     files.append(line)
             items.extend(directories)
             items.extend(files)
