@@ -12,10 +12,14 @@ __all__ = [
 
 
 class LLMApi(ABC):
+    """
+    uniform interface for large language models in GhostOS.
+    """
 
     @abstractmethod
     def get_service(self) -> ServiceConf:
         """
+        get the service configuration of this API
         """
         pass
 
@@ -74,8 +78,8 @@ class LLMApi(ABC):
 
 class LLMDriver(ABC):
     """
-    LLM 的驱动. 比如 OpenAI 基本都使用 OpenAI 库作为驱动.
-    但是其它的一些大模型, 比如文心一言, 有独立的 API 设计.
+    LLMDriver is the adapter class to wrap the large language models API to LLMApi.
+    The basic LLMDriver shall be openai driver, compatible to all the llms fit the openai message protocol.
     """
 
     @abstractmethod
@@ -88,42 +92,69 @@ class LLMDriver(ABC):
 
 
 class LLMs(ABC):
+    """
+    The repository of LLMApis.
+    """
 
     @abstractmethod
     def register_driver(self, driver: LLMDriver) -> None:
+        """
+        register a driver for a server.
+        """
         pass
 
     @abstractmethod
     def register_service(self, service: ServiceConf) -> None:
+        """
+        register a service by config
+        """
         pass
 
     @abstractmethod
     def register_model(self, name: str, model_conf: ModelConf) -> None:
+        """
+        register a model conf, and it's service shall already exist.
+        """
         pass
 
     @abstractmethod
     def services(self) -> List[ServiceConf]:
+        """
+        iterate all configured services.
+        """
         pass
 
     @abstractmethod
     def get_service(self, name: str) -> Optional[ServiceConf]:
+        """
+        get service instance by name.
+        """
         pass
 
     @abstractmethod
     def each_api_conf(self) -> Iterable[Tuple[ServiceConf, ModelConf]]:
+        """
+        iterate all configured api confs.
+        """
         pass
 
     @abstractmethod
     def new_api(self, service_conf: ServiceConf, api_conf: ModelConf) -> LLMApi:
+        """
+        instance a LLMApi by configs.
+        """
         pass
 
     @abstractmethod
     def get_api(self, api_name: str) -> Optional[LLMApi]:
+        """
+        get a defined api by name, which shall be defined in ghostos.core.llms.configs.LLMsConfig .
+        """
         pass
 
     def force_get_api(self, api_name: str) -> LLMApi:
         """
-        sugar
+        sugar, raise exception when api_name is not defined.
         """
         api = self.get_api(api_name)
         if api is None:
