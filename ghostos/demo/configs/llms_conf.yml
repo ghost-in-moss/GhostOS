@@ -1,8 +1,6 @@
-# 详细配置逻辑见 ghostos.framework.llms.llms::LLMsYamlConfig
-# 这个文件是配合单元测试的, 请不要修改.
+# DetailConfigs ghostos.framework.llms.llms::LLMsYamlConfig
 services:
   - name: moonshot
-    # driver: use default
     base_url: https://api.moonshot.cn/v1
     token: $MOONSHOT_API_KEY
   - name: openai
@@ -16,16 +14,15 @@ services:
   - name: deepseek
     token: $DEEPSEEK_API_KEY
     base_url: https://api.deepseek.com/beta
-  - name: local
-    base_url: http://localhost:11434/v1
-    token: ollama
-#    proxy: $OPENAI_PROXY
-# 默认的 api.
+    # proxy: $OPENAI_PROXY
+# Configure default LLM API here.
 default:
   # service: moonshot
   # model: moonshot-v1-32k
   service: openai
   model: gpt-4o
+# The models below can be edited as you want, see details: ghostos.core.llms.configs:ModelConf
+# the key of models is a `llm_api_name`, value is a ModelConf instance.
 models:
   moonshot-v1-8k:
     service: moonshot
@@ -60,43 +57,3 @@ models:
   deepseek-coder: # 128k context window, 8k output window. 1Y/M input, 0.1Y/M cache hit, 2Y/M output
     service: deepseek
     model: deepseek/deepseek-coder
-  qwen2-72b:
-    service: local
-    model: qwen2:72b
-    timeout: 80
-    request_timeout: 40
-    max_tokens: 8192
-  codestral-22b:
-    service: local
-    model: codestral:22b
-    timeout: 80
-    request_timeout: 80
-    max_tokens: 32768
-  llama3-1-70b:
-    service: local
-    model: llama3.1:70b
-    timeout: 80
-    request_timeout: 80
-    max_tokens: 131072
-  llama3-1-8b:
-    service: local
-    model: llama3.1:8b
-    timeout: 80
-    request_timeout: 80
-    max_tokens: 131072
-
-
-#  gemma2-27b:
-#    service: local
-#    model: gemma2:27b
-#    timeout: 80
-#    request_timeout: 80
-#    max_tokens: 8192
-
-#  codegeex4-9b:
-#    service: local
-#    model: codegeex4:9b
-#    timeout: 80
-#    request_timeout: 40
-#    max_tokens: 131072
-

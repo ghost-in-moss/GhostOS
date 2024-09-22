@@ -12,11 +12,13 @@ __all__ = [
 ]
 
 OPENAI_DRIVER_NAME = "ghostos.llms.openai_driver"
+"""default llm driver name for OpenAI llm message protocol """
 
 
 class ModelConf(Payload):
     """
-    模型的配置. 同时可以直接加入到消息体里.
+    the basic configurations for a LLMS model
+    todo: more fields
     """
     key: ClassVar[str] = "model_conf"
 
@@ -37,10 +39,10 @@ class EmbedConf(BaseModel):
 
 class ServiceConf(BaseModel):
     """
-    服务的配置.
+    The service configuration of a llm.
     """
     name: str = Field(description="Service name")
-    driver: str = Field(default=OPENAI_DRIVER_NAME, description="driver name")
+    driver: str = Field(default=OPENAI_DRIVER_NAME, description="the adapter driver name of this service. ")
     base_url: str = Field(description="llm service provider")
     token: str = Field(default="", description="token")
     proxy: Optional[str] = Field(default=None, description="proxy")
@@ -62,21 +64,16 @@ class ServiceConf(BaseModel):
 
 class LLMsConfig(BaseModel):
     """
-    所有的配置项.
-    一种可选的方式.
+    llms configurations for ghostos.core.llms.llm:LLMs default implementation.
     """
     services: List[ServiceConf] = Field(
         default_factory=list,
-        description="定义各种 llm services, 比如 openai 或者 moonshot",
+        description="define llm services, such as openai or moonshot",
     )
     default: ModelConf = Field(
-        description="定义默认的 llm api.",
+        description="define default LLMApi 's model config.",
     )
     models: Dict[str, ModelConf] = Field(
         default_factory=dict,
-        description="定义多个 llm api, key 就是 api name. "
-    )
-    embed_models: Dict[str, EmbedConf] = Field(
-        default_factory=dict,
-        description="定义多个 embed api, key 就是 api name. "
+        description="define llm apis, the key is llm_api_name and value is model config of it.",
     )
