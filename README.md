@@ -1,5 +1,17 @@
 # GhostOS framework
 
+<div align="center">
+  <img src="./assets/logo.png" alt="Logo" width="200">
+  <h1 align="center">GhostOS framework</h1>
+</div>
+
+
+<div align="center">
+  <a href="https://discord.gg/NG6VKwd5jV">Join our Discord community</a>
+  <a href="https://discord.gg/NG6VKwd5jV"><img src="https://img.shields.io/badge/Discord-Join%20Us-purple?logo=discord&logoColor=white&style=for-the-badge" alt="Join our Discord community"></a>
+</div>
+
+
 ## Introduce
 
 `GhostOS` is an LLM-driven Agent framework.
