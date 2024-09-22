@@ -10,7 +10,7 @@ It offers a MOSS (LLM-oriented Operating System Simulation) interface to LLM, wh
 3. Maintain persist python processing context during multiple turns of LLM thinking
 4. Execute the LLM generated codes to use tools, call domain agents, operate mindflow and almost everything.
 
-`GhostOS` provides the LLM Agents a Turning-complete python interface.
+`GhostOS` provides the LLM Agents a Turing-complete python interface.
 And Agents are able to write python code to produce tools (as libraries) and integrate them (import modules or dependency injections) itself;
 Furthermore, the Agent is built from code, and can be called as function by other Agents.
 
