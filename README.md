@@ -75,7 +75,7 @@ export OPENAI_PROXY="xxxx" # OPENAI proxy if you need
 ### Config LLMs API
 
 `GhostOS` use yaml file to configure the [LLMs](ghostos/core/llms/llm.py) library.
-You can edit [ghostos/demo/configs/llm_conf.yaml] as you want,
+You can edit [ghostos/demo/configs/llm_conf.yaml]() as you want,
 the yaml structure follows [LLMConfig](ghostos/core/llms/configs.py)
 
 ### AIFunc Test
@@ -139,7 +139,7 @@ run test case:
 venv/bin/python ghostos/demo/src/examples/code_edits/modify_directory_test.py
 ```
 
-In this case, an agent equipped with [DirectoryEdit](ghostos/libraries/file_editor.py)
+In [this case](ghostos/demo/src/examples/code_edits/modify_directory_test.py), an agent equipped with [DirectoryEdit](ghostos/libraries/file_editor.py)
 and another agent [FileEditThought](ghostos/thoughts/file_editor_thought.py),
 is told to modify all files in the `code_edits` directory.
 It is supposed to call `MultiTask` library to dispatch several tasks
