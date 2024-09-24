@@ -5,19 +5,93 @@
 `GhostOS` is an LLM-driven Agent framework.
 It offers a MOSS (LLM-oriented Operating System Simulation) interface to LLM, which does:
 
-1. Coding is Prompt Engineering: reflects python module's codes to prompt, let the LLM knows its python context. 
+1. Coding is Prompt Engineering: reflects python module's codes to prompt, let the LLM knows its python context.
 2. Injects agent runtime libraries (such as multiple task scheduler) to the python context by IoC Container.
 3. Maintain persist python processing context during multiple turns of LLM thinking
 4. Execute the LLM generated codes to use tools, call domain agents, operate mindflow and almost everything.
 
 `GhostOS` provides the LLM Agents a Turing-complete python interface.
-And Agents are able to write python code to produce tools (as libraries) and integrate them (import modules or dependency injections) itself;
+And Agents are able to write python code to produce tools (as libraries) and integrate them (import modules or
+dependency injections) itself;
 Furthermore, the Agent is built from code, and can be called as function by other Agents.
 
-So the meta-agents are enabled to define or optimize other domain agents, and integrate them during processing (theoretically).
+So the meta-agents are enabled to define or optimize other domain agents, and integrate them during processing (
+theoretically).
 By these methods we are aiming to develop the Self-Evolving Meta-Agent.
 
 Article link: ...
+
+## Example
+
+An agent named `DirectoryEditThought` is equipped with python context like this:
+
+```python
+
+from typing import TYPE_CHECKING
+from ghostos.thoughts.magic_moss_thought import MagicMossThought
+from ghostos.core.ghosts import Replier, MultiTask, NewTask
+from ghostos.core.moss import Moss as Parent
+from ghostos.libraries.file_editor import DirectoryEditor, FileEditor
+from ghostos.thoughts.file_editor_thought import FileEditorThought
+from pydantic import Field
+
+
+class Moss(Parent):
+    """
+    you are equipped with some tools helping you to manage the current directory.
+    and the FileEditorThought are helpful to manage a single file.
+    """
+
+    replier: Replier
+
+    multitask: MultiTask
+    """useful to handle multiple tasks, such as manage several files by FileEditorThought."""
+
+    dir_editor: DirectoryEditor
+    """ 
+    the editor of the current directory.
+    you can read or edit the files by FileEditorThought.
+    so don't make up anything, based on what you informed.
+    """
+```
+
+What we see is what `DirectoryEditThought` get,
+MOSS reflect this module into prompt to the LLM,
+with details of imported values such as `FileEditThought`, `DirectoryEditor` and `MultiTask`.
+`DirectoryEditThought` shall code its plan With these tools:
+
+User Query: `please checkout content of the '.py' files in code_edits directory,
+and translate the comments in  chinese into english if you found them in the code.`
+
+The LLM generation:
+
+```python
+def main(moss: Moss) -> Operator:
+    # List all .py files in the code_edits directory
+    code_edits_files = moss.dir_editor.edit_dir("code_edits").list(pattern="*.py", absolute=True, formated=False,
+                                                                   summary=False)
+
+    # Create tasks for checking out the content of each file
+    tasks = []
+    for file in code_edits_files:
+        task = (
+            f"translate_comments_{file.split('/')[-1]}",
+            f"Translate comments in {file} from Chinese to English",
+            FileEditorThought(filepath=file),
+            "Please read the file content and translate any comments in Chinese to English."
+        )
+        tasks.append(task)
+
+    # Run the tasks
+    return moss.multitask.wait_on_tasks(*tasks)
+```
+
+In this code generation, `DirectoryEditThought` does:
+
+1. know the directories through its prompt.
+2. iterate files in `/code_edits` by `moss.dir_editor`.
+3. create a task for each file by sub-agent `FileEditorThought`.
+4. dispatch the tasks through `MultiTask` scheduler, and operate its thought to wait for the results.
 
 ## Quick Start
 
@@ -27,7 +101,7 @@ You are welcome to play with the demo testcases:
 
 ### Prepare
 
-First make sure you've installed python > 3.12, then:
+First make sure you've installed `python > 3.12`, then:
 
 clone repository:
 
