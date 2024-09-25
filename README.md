@@ -31,7 +31,8 @@ So the meta-agents are enabled to define or optimize other domain agents, and in
 theoretically).
 By these methods we are aiming to develop the Self-Evolving Meta-Agent.
 
-Article link: ...
+Paper list: 
+- [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
 
 ## Example
 
