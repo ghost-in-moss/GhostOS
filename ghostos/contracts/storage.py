@@ -1,7 +1,7 @@
 from typing import Optional, AnyStr, Iterable
 from abc import ABC, abstractmethod
 
-__all__ = ['Storage' ]
+__all__ = ['Storage', 'FileStorage']
 
 
 class Storage(ABC):
@@ -44,5 +44,25 @@ class Storage(ABC):
         :param recursive: 是否递归查找.
         :param patten: 文件的正则规范.
         :return: 多个文件路径名.
+        """
+        pass
+
+
+class FileStorage(Storage, ABC):
+    """
+    Storage Based on FileSystem.
+    """
+
+    @abstractmethod
+    def abspath(self) -> str:
+        """
+        storage root directory's absolute path
+        """
+        pass
+
+    @abstractmethod
+    def sub_storage(self, relative_path: str) -> "FileStorage":
+        """
+        FileStorage's sub storage is still FileStorage
         """
         pass

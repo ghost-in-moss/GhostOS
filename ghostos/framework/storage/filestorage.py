@@ -1,14 +1,17 @@
 import os
 import re
 from typing import Optional, AnyStr, Type, Iterable
-from ghostos.container import Provider, Container
-from ghostos.contracts.storage import Storage
+from ghostos.container import Provider, Container, ABSTRACT
+from ghostos.contracts.storage import Storage, FileStorage
 
 
-class FileStorage(Storage):
+class FileStorageImpl(FileStorage):
 
     def __init__(self, dir_: str):
         self._dir: str = os.path.abspath(dir_)
+
+    def abspath(self) -> str:
+        return self._dir
 
     def get(self, file_path: str) -> bytes:
         file_path = self._join_file_path(file_path)
@@ -36,11 +39,11 @@ class FileStorage(Storage):
         with open(file_path, 'wb') as f:
             f.write(content)
 
-    def sub_storage(self, relative_path: str) -> "Storage":
+    def sub_storage(self, relative_path: str) -> "FileStorage":
         if not relative_path:
             return self
         dir_path = self._join_file_path(relative_path)
-        return FileStorage(dir_path)
+        return FileStorageImpl(dir_path)
 
     def dir(self, prefix_dir: str, recursive: bool, patten: Optional[str] = None) -> Iterable[str]:
         dir_path = self._join_file_path(prefix_dir)
@@ -77,5 +80,8 @@ class FileStorageProvider(Provider[Storage]):
     def contract(self) -> Type[Storage]:
         return Storage
 
+    def additional_contracts(self) -> Iterable[Type[ABSTRACT]]:
+        yield FileStorage
+
     def factory(self, con: Container) -> Optional[Storage]:
-        return FileStorage(self._dir)
+        return FileStorageImpl(self._dir)
