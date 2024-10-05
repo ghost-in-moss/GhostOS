@@ -128,6 +128,7 @@ class Container(IoCContainer):
         self._bound: Set = set()
         self._bootstrapper: List["Bootstrapper"] = []
         self._bootstrapped: bool = False
+        self._aliases: Dict[Any, Any] = {}
 
     def bootstrap(self) -> None:
         """
@@ -187,7 +188,12 @@ class Container(IoCContainer):
                 self._set_instance(abstract, made)
             return made
 
-        # 第三优先级.
+        # search aliases if the real contract exists
+        if abstract in self._aliases:
+            contract = self._aliases[abstract]
+            return self.get(contract)
+
+        # at last
         if self.parent is not None:
             return self.parent.get(abstract)
         return None
@@ -219,9 +225,9 @@ class Container(IoCContainer):
         self._register_provider(contract, provider)
 
         # additional bindings
-        for b in provider.additional_contracts():
+        for b in provider.aliases():
             if b not in self._bound:
-                self._register_provider(contract, provider)
+                self._aliases[b] = contract
 
     def _register_provider(self, contract: Type[ABSTRACT], provider: Provider) -> None:
         # remove singleton instance that already bound
@@ -288,6 +294,7 @@ class Container(IoCContainer):
         del self._bound
         del self._bootstrapper
         del self._bootstrapped
+        del self._aliases
 
 
 Factory = Callable[[Container], Any]
@@ -309,7 +316,7 @@ class Provider(Generic[ABSTRACT], metaclass=ABCMeta):
         """
         pass
 
-    def additional_contracts(self) -> Iterable[Type[ABSTRACT]]:
+    def aliases(self) -> Iterable[Type[ABSTRACT]]:
         """
         additional contracts that shall bind to this provider if the binding contract is not Bound.
         """

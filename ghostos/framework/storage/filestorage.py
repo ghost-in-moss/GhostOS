@@ -78,10 +78,10 @@ class FileStorageProvider(Provider[Storage]):
         return True
 
     def contract(self) -> Type[Storage]:
-        return Storage
+        return FileStorage
 
-    def additional_contracts(self) -> Iterable[Type[ABSTRACT]]:
-        yield FileStorage
+    def aliases(self) -> Iterable[Type[ABSTRACT]]:
+        yield Storage
 
     def factory(self, con: Container) -> Optional[Storage]:
         return FileStorageImpl(self._dir)

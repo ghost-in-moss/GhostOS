@@ -25,6 +25,10 @@ class Storage(ABC):
 
     @abstractmethod
     def exists(self, file_path: str) -> bool:
+        """
+        if the object exists
+        :param file_path: file_path or directory path
+        """
         pass
 
     @abstractmethod
