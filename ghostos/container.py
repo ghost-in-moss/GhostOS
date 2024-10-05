@@ -216,6 +216,15 @@ class Container(IoCContainer):
 
         contract = provider.contract()
         self._bind_contract(contract)
+        self._register_provider(contract, provider)
+
+        # additional bindings
+        for b in provider.additional_contracts():
+            if b not in self._bound:
+                self._register_provider(contract, provider)
+
+    def _register_provider(self, contract: Type[ABSTRACT], provider: Provider) -> None:
+        # remove singleton instance that already bound
         if contract in self._instances:
             del self._instances[contract]
         self._providers[contract] = provider
@@ -299,6 +308,12 @@ class Provider(Generic[ABSTRACT], metaclass=ABCMeta):
         contract for this provider.
         """
         pass
+
+    def additional_contracts(self) -> Iterable[Type[ABSTRACT]]:
+        """
+        additional contracts that shall bind to this provider if the binding contract is not Bound.
+        """
+        return []
 
     @abstractmethod
     def factory(self, con: Container) -> Optional[ABSTRACT]:
