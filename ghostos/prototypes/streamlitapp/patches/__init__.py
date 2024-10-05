@@ -1,0 +1,1 @@
+from ghostos.prototypes.streamlitapp.patches.streamlit_pydantic_patch import streamlit_pydantic

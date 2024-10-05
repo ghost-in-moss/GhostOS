@@ -1,0 +1,28 @@
+# logging_config.yml
+
+version: 1
+
+formatters:
+  default:
+    format: "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
+  ghost:
+    format: "%(asctime)s - %(name)s - %(levelname)s: %(message)s - %(trace)s"
+
+handlers:
+  debug_file:
+    class: logging.FileHandler
+    formatter: default
+    filename: debug.log
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: default
+    stream: ext://sys.stdout
+
+loggers:
+  debug:
+    handlers: [ debug_file ]
+    level: DEBUG
+  console:
+    handlers: [ console ]
+    level: DEBUG

@@ -9,7 +9,7 @@ from ghostos.container import Container
 
 __all__ = [
     'AIFunc', 'AIFuncResult',
-    'AIFuncManager', 'AIFuncCtx', 'AIFuncDriver'
+    'AIFuncManager', 'AIFuncCtx', 'AIFuncDriver',
 ]
 
 
