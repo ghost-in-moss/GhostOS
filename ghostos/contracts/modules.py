@@ -3,7 +3,7 @@ from types import ModuleType
 from importlib import import_module
 from typing import Optional, Type
 
-from ghostos.container import Provider, Container, ABSTRACT
+from ghostos.container import Provider, Container
 
 __all__ = [
     'Modules', 'ImportWrapper', 'DefaultModules', 'DefaultModulesProvider',
@@ -52,12 +52,12 @@ class DefaultModules(Modules):
         return import_module(modulename)
 
 
-class DefaultModulesProvider(Provider):
+class DefaultModulesProvider(Provider[Modules]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[ABSTRACT]:
+    def contract(self) -> Type:
         return Modules
 
-    def factory(self, con: Container) -> Optional[ABSTRACT]:
+    def factory(self, con: Container) -> Optional[Modules]:
         return DefaultModules()

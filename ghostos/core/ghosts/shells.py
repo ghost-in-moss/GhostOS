@@ -1,48 +1,30 @@
 from abc import ABC, abstractmethod
-from typing import Type, Iterable
-from ghostos.container import ABSTRACT
-from ghostos.core.llms import Chat, ChatPreparer
+from typing import Iterable
+from ghostos.container import INSTANCE, ABSTRACT
 from ghostos.core.ghosts.actions import Action
-from ghostos.abc import Identifiable
 
 __all__ = ['Shell']
 
 
-# class Env(Identifiable, ABC):
-#     """
-#     对环境抽象的感知.
-#     """
-#
-#     @abstractmethod
-#     def update_chat(self, chat: Chat) -> Chat:
-#         pass
-#
-#     @abstractmethod
-#     def driver(self) -> Type[ABSTRACT]:
-#         pass
-#
-#     @abstractmethod
-#     def provide(self) -> ABSTRACT:
-#         pass
-
-
 class Shell(ABC):
     """
-    Shell 是对端侧能力的抽象.
-    这些能力不是在 Ghost 里预定义的, 而是端侧可能动态变更的.
-    Shell 通过 Process 里存储的 Meta 数据实例化而来.
-    当 Meta 数据变更时, Shell 的信息也应该同时变更.
+    Shell is the cybernetic body of the Ghost, and this interface is an abstract for the shell.
+    The instance of the Shell may be changed during runtime.
+    The Ghost shall feel and understand the situation of the shell, and use it.
     """
 
     @abstractmethod
     def id(self) -> str:
+        """
+        :return: identity of the shell.
+        """
         pass
 
     @abstractmethod
-    def shell_prompt(self) -> str:
+    def status_description(self) -> str:
         """
-        将端侧的信息注入到 Chat 中.
-        这些讯息应该包含对自身和环境的感知信息.
+        the status description of the shell, for llm ghost.
+        combine this to the LLM instruction, shall prompt the LLM interact with the shell.
         """
         pass
 
@@ -50,27 +32,29 @@ class Shell(ABC):
     def actions(self) -> Iterable[Action]:
         """
         actions from the shell
+        Ghost(LLM) can interact with the shell by these actions.
+        Through function call or functional token protocol.
         """
         pass
 
     @abstractmethod
-    def drivers(self) -> Iterable[Type[ABSTRACT]]:
+    def drivers(self) -> Iterable[ABSTRACT]:
         """
-        当前 Shell 可以供 Moss 调用的抽象.
-        在 Shell 实例化时, 这些抽象就应该通过 Shell Provider 注册到 Container 中.
-        方便对 Moss 进行依赖注入.
+        The drivers that this shell provided to the Ghost.
+        Driver is usually a class interface, not an implementation.
+        Ghost can operate the shell by generate codes in the MOSS to call these drivers.
+        And the Ghost's ai models do not need to know the details of the implementation.
 
-        经常要搭配 Moss 功能设计使用. 举个例子:
-        1. 某个 moss 文件依赖 class MusicPlayer(ABC)
-        2. Shell 包含了 MusicPlayer 的实现, thought 调用 moss 时实际从 Shell 里获取了实例.
-        3. Shell 如果不包含这个实现, 则 thought 应该得到错误信息的提示, 得知这个抽象不存在.
+        The GhostOS will bind the drivers and it's implementations to the Ghost IoCContainer.
+
+        For example, a Thought can play music by calling a driver named MusicPlayer,
+        no matter the shell is a Robot, a Car, or a IM chatbot.
         """
         pass
 
     @abstractmethod
-    def get_driver(self, driver: Type[ABSTRACT]) -> ABSTRACT:
+    def get_driver(self, driver: ABSTRACT) -> INSTANCE:
         """
-        获取某个抽象的实例.
+        get driver's INSTANCE that already bound to the Shell.
         """
         pass
-

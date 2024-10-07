@@ -13,8 +13,7 @@ from openai.types.chat.chat_completion_function_message_param import ChatComplet
 from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 
 from ghostos.core.messages.message import Message, DefaultMessageTypes, Role, Caller, PayloadItem
-from ghostos.container import Provider, Container, ABSTRACT
-from pydantic import BaseModel, Field
+from ghostos.container import Provider, Container, INSTANCE
 
 __all__ = [
     "OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider",
@@ -217,7 +216,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         return pack
 
 
-class DefaultOpenAIParserProvider(Provider):
+class DefaultOpenAIParserProvider(Provider[OpenAIMessageParser]):
     """
     默认的 provider.
     """
@@ -225,8 +224,5 @@ class DefaultOpenAIParserProvider(Provider):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[ABSTRACT]:
-        return OpenAIMessageParser
-
-    def factory(self, con: Container) -> Optional[ABSTRACT]:
+    def factory(self, con: Container) -> Optional[OpenAIMessageParser]:
         return DefaultOpenAIMessageParser()

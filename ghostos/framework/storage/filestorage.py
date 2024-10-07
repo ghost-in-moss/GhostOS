@@ -1,11 +1,15 @@
 import os
 import re
-from typing import Optional, AnyStr, Type, Iterable
+from typing import Optional, Iterable
 from ghostos.container import Provider, Container, ABSTRACT
 from ghostos.contracts.storage import Storage, FileStorage
 
 
 class FileStorageImpl(FileStorage):
+    """
+    FileStorage implementation based on python filesystem.
+    Simplest implementation.
+    """
 
     def __init__(self, dir_: str):
         self._dir: str = os.path.abspath(dir_)
@@ -77,10 +81,7 @@ class FileStorageProvider(Provider[Storage]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Storage]:
-        return FileStorage
-
-    def aliases(self) -> Iterable[Type[ABSTRACT]]:
+    def aliases(self) -> Iterable[ABSTRACT]:
         yield Storage
 
     def factory(self, con: Container) -> Optional[Storage]:

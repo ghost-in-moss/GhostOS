@@ -1,9 +1,8 @@
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from typing import Dict, Any, Optional, List, Type
 
-from ghostos.container import Container, Provider, ABSTRACT
+from ghostos.container import Container, Provider, INSTANCE
 from ghostos.core.llms import LLMApi, LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
@@ -164,7 +163,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         del self._values
 
 
-class DefaultAIFuncManagerProvider(Provider):
+class DefaultAIFuncManagerProvider(Provider[AIFuncManager]):
 
     def __init__(self, llm_api_name: str = ""):
         self._llm_api_name = llm_api_name
@@ -172,10 +171,7 @@ class DefaultAIFuncManagerProvider(Provider):
     def singleton(self) -> bool:
         return False
 
-    def contract(self) -> Type[ABSTRACT]:
-        return AIFuncManager
-
-    def factory(self, con: Container) -> Optional[ABSTRACT]:
+    def factory(self, con: Container) -> Optional[AIFuncManager]:
         return DefaultAIFuncManagerImpl(
             container=con,
             llm_api_name=self._llm_api_name,

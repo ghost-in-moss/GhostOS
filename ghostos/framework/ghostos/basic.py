@@ -94,10 +94,9 @@ class BasicGhostOS(AbsGhostOS, ABC):
         return [
             FileStorageProvider(self._root_dir),
             BasicWorkspaceProvider(
-                root_dir="",
+                workspace_dir="",
                 configs_path=self._config_path,
                 runtime_path=self._runtime_path,
-                source_path=self._source_path,
             ),
             DefaultModulesProvider(),
             WorkspaceConfigsProvider(),

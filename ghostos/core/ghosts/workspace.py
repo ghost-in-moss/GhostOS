@@ -28,9 +28,3 @@ class Workspace(ABC):
         """
         pass
 
-    @abstractmethod
-    def source(self) -> FileStorage:
-        """
-        source code path
-        """
-        pass
