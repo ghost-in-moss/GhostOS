@@ -9,6 +9,8 @@ __all__ = [
     "ABSTRACT",
     "ProviderAdapter", 'provide',
     'get_caller_info',
+    'get_container',
+    'set_container',
 ]
 
 INSTRUCTION = """
@@ -404,3 +406,22 @@ def provide(
         return ProviderAdapter(abstract, factory, singleton, lineinfo=lineinfo)
 
     return wrapper
+
+
+__container = Container()
+
+
+def get_container() -> Container:
+    """
+    get global static container
+    """
+    return __container
+
+
+def set_container(container: Container) -> None:
+    """
+    change global static container
+    may cause unexpected behavior.
+    """
+    global __container
+    __container = container
