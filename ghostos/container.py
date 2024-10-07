@@ -9,6 +9,7 @@ __all__ = [
     "Provider", "Factory", "Bootstrapper",
     "INSTANCE", "ABSTRACT",
     "ProviderAdapter", 'provide',
+    'Contracts',
     'get_caller_info',
     'get_container',
     'set_container',
@@ -37,7 +38,7 @@ class IoCContainer(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def register(self, provider: Provider) -> None:
+    def register(self, *providers: Provider) -> None:
         """
         register factory of the contract by provider
         """
@@ -61,10 +62,19 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get(self, abstract: Union[ABSTRACT, Factory, Provider]) -> Optional[INSTANCE]:
+    def get(self, abstract: ABSTRACT) -> Optional[INSTANCE]:
         """
         get bound instance or initialize one from registered abstract, or generate one by factory or provider.
         :return: None if no bound instance.
+        """
+        pass
+
+    @abstractmethod
+    def get_bound(self, abstract: ABSTRACT) -> Union[INSTANCE, Provider]:
+        """
+        get bound of an abstract
+        useful to debug
+        :return: instance or provider
         """
         pass
 
@@ -179,9 +189,6 @@ class Container(IoCContainer):
         # 进行初始化.
         self.bootstrap()
 
-        if isinstance(abstract, Provider):
-            return abstract.factory(self)
-
         # get bound instance
         got = self._instances.get(abstract, None)
         if got is not None:
@@ -205,6 +212,22 @@ class Container(IoCContainer):
             return self.parent.get(abstract)
         return None
 
+    def get_bound(self, abstract: ABSTRACT) -> Union[INSTANCE, Provider]:
+        """
+        get bound of an abstract
+        :return: instance or provider
+        """
+        if abstract in self._instances:
+            return self._instances[abstract]
+        elif abstract in self._providers:
+            return self._providers[abstract]
+        elif abstract in self._aliases:
+            alias = self._aliases[abstract]
+            return self.get_bound(alias)
+        elif self.parent is not None:
+            return self.parent.get_bound(abstract)
+        return None
+
     def register_maker(
             self,
             contract: ABSTRACT,
@@ -219,10 +242,14 @@ class Container(IoCContainer):
         provider = provide(contract, singleton=singleton, lineinfo=lineinfo)(_maker)
         self.register(provider)
 
-    def register(self, provider: Provider) -> None:
+    def register(self, *providers: Provider) -> None:
         """
         register factory of the contract by provider
         """
+        for provider in providers:
+            self._register(provider)
+
+    def _register(self, provider: Provider) -> None:
         if isinstance(provider, Bootstrapper):
             # 添加 bootstrapper.
             self.add_bootstrapper(provider)
@@ -425,6 +452,20 @@ def provide(
         return ProviderAdapter(abstract, factory, singleton, lineinfo=lineinfo)
 
     return wrapper
+
+
+class Contracts:
+    """
+    A contracts validator that both indicate the contract types and validate if they are bound to container
+    """
+
+    def __init__(self, contracts: List[ABSTRACT]):
+        self.contracts = contracts
+
+    def validate(self, container: Container) -> None:
+        for contract in self.contracts:
+            if not container.bound(contract):
+                raise NotImplementedError(f'Contract {contract} not bound to container')
 
 
 __container = Container()
