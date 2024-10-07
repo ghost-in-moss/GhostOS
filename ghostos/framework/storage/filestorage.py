@@ -4,6 +4,8 @@ from typing import Optional, Iterable
 from ghostos.container import Provider, Container, ABSTRACT
 from ghostos.contracts.storage import Storage, FileStorage
 
+__all__ = ["FileStorageProvider", "FileStorageImpl"]
+
 
 class FileStorageImpl(FileStorage):
     """
@@ -73,7 +75,7 @@ class FileStorageImpl(FileStorage):
         return r is not None
 
 
-class FileStorageProvider(Provider[Storage]):
+class FileStorageProvider(Provider[FileStorage]):
 
     def __init__(self, dir_: str):
         self._dir: str = dir_

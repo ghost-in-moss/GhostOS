@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from logging import LoggerAdapter, Logger, getLogger
+from logging.config import dictConfig
 from typing import Union, Dict
+import yaml
 
-__all__ = ['LoggerItf', 'LoggerAdapter', 'LoggerType', 'LoggerWrapper']
+__all__ = ['LoggerItf', 'LoggerAdapter', 'LoggerType', 'LoggerWrapper', 'config_logging']
 
 
 class LoggerItf(ABC):
@@ -139,3 +141,14 @@ class LoggerWrapper(LoggerItf):
 
 def get_logger(logger_name: str) -> LoggerItf:
     return LoggerWrapper(getLogger(logger_name))
+
+
+def config_logging(conf_path: str) -> None:
+    """
+    configurate logging by yaml config
+    :param conf_path: absolute path of yaml config file
+    """
+    with open(conf_path) as f:
+        content = f.read()
+    data = yaml.safe_load(content)
+    dictConfig(data)

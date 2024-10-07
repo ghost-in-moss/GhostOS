@@ -223,7 +223,7 @@ class Container(IoCContainer):
             return self._providers[abstract]
         elif abstract in self._aliases:
             alias = self._aliases[abstract]
-            return self.get_bound(alias)
+            return alias
         elif self.parent is not None:
             return self.parent.get_bound(abstract)
         return None
@@ -259,9 +259,13 @@ class Container(IoCContainer):
         self._register_provider(contract, provider)
 
         # additional bindings
-        for b in provider.aliases():
-            if b not in self._bound:
-                self._aliases[b] = contract
+        for alias in provider.aliases():
+            if alias not in self._bound:
+                self._bind_alias(alias, contract)
+
+    def _bind_alias(self, alias: ABSTRACT, contract: ABSTRACT) -> None:
+        self._aliases[alias] = contract
+        self._bound.add(alias)
 
     def _register_provider(self, contract: ABSTRACT, provider: Provider) -> None:
         # remove singleton instance that already bound

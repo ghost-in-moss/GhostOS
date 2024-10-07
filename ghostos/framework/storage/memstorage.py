@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, AnyStr, Dict
+from typing import Optional, Iterable, Dict
 
 from ghostos.contracts.storage import Storage
 from os.path import join

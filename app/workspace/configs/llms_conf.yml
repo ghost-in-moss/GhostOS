@@ -9,7 +9,7 @@ services:
     proxy: $OPENAI_PROXY
   - name: anthropic
     token: $ANTHROPIC_API_KEY
-    proxy: $OPENAI_PROXY
+    proxy: $ANTHROPIC_PROXY
     base_url: https://api.anthropic.com/v1
   - name: deepseek
     token: $DEEPSEEK_API_KEY
