@@ -1,4 +1,4 @@
-from os.path import join, dirname
+from os.path import join
 import argparse
 import sys
 import os
@@ -7,17 +7,17 @@ import os
 this script is used to clear the local file cache in runtime directory
 """
 
-demo_dir = dirname(dirname(__file__))
-runtime_dir = join(demo_dir, "runtime")
+__all__ = ['clear_directory']
 
 ignore_patterns = ['.gitignore']
 
 
-def clear_directory(directory: str, recursive=True) -> int:
+def clear_directory(directory: str, recursive=True, depth: int = 0) -> int:
     """
     clear all files in directory recursively except the files match any of ignore_patterns
     :param directory: the target directory
     :param recursive: recursively clear all files in directory
+    :param depth: the depth of recursion
     :return: number of files cleared
     """
 
@@ -37,7 +37,7 @@ def clear_directory(directory: str, recursive=True) -> int:
             break
         for dir_path in dirs:
             real_dir_path = os.path.join(root, dir_path)
-            clear_directory(real_dir_path, recursive=recursive)
+            clear_directory(real_dir_path, recursive=recursive, depth=depth + 1)
             os.rmdir(real_dir_path)
 
     return cleared_files_count
@@ -46,6 +46,10 @@ def clear_directory(directory: str, recursive=True) -> int:
 def main():
     parser = argparse.ArgumentParser(
         description="clear temp files in runtime directories",
+    )
+    parser.add_argument(
+        "--all", "-a",
+        action="store_true",
     )
     parser.add_argument(
         "--threads", "-t",
@@ -63,19 +67,31 @@ def main():
         "--cache", "-c",
         action="store_true",
     )
+    from ghostos import application_dir
+    runtime_dir = join(application_dir, "runtime")
     parsed = parser.parse_args(sys.argv[1:])
-    if parsed.tasks:
+    _all = parsed.all
+    print(f"Clearing runtime files in {runtime_dir}")
+    done = 0
+    if _all or parsed.tasks:
         cleared = clear_directory(join(runtime_dir, "tasks"), recursive=True)
+        done += 1
         print(f"clear runtime/tasks files: {cleared}")
-    if parsed.processes:
+    if _all or parsed.processes:
         cleared = clear_directory(join(runtime_dir, "processes"), recursive=True)
+        done += 1
         print(f"clear runtime/processes files: {cleared}")
-    if parsed.threads:
+    if _all or parsed.threads:
         cleared = clear_directory(join(runtime_dir, "threads"), recursive=True)
+        done += 1
         print(f"clear runtime/threads files: {cleared}")
-    if parsed.cache:
+    if _all or parsed.cache:
         cleared = clear_directory(join(runtime_dir, "cache"), recursive=True)
+        done += 1
         print(f"clear runtime/cache files: {cleared}")
+
+    if not done:
+        print(f"no files cleared. please check arguments by '-h' option")
 
 
 # if __name__ == '__main__':

@@ -70,6 +70,7 @@ __all__ = [
     'reset',
 
     # default configuration
+    'application_dir',
     'default_application_contracts',
     'default_application_providers',
 ]
@@ -77,7 +78,7 @@ __all__ = [
 # --- prepare application paths --- #
 
 
-default_app_dir = join(dirname(dirname(__file__)), 'app')
+application_dir = join(dirname(dirname(__file__)), 'app')
 """application root directory path"""
 
 
@@ -188,7 +189,7 @@ def make_app_container(
     # todo: i18n install
 
     if app_providers is None:
-        app_providers = default_application_providers(root_dir=default_app_dir, logger_name=logger_name)
+        app_providers = default_application_providers(root_dir=application_dir, logger_name=logger_name)
     if app_contracts is None:
         app_contracts = default_application_contracts()
 
@@ -200,7 +201,7 @@ def make_app_container(
     return _container
 
 
-container = make_app_container(default_app_dir)
+container = make_app_container(application_dir)
 """ the global static application container. reset it before application usage"""
 
 ghost_func = init_ghost_func(container)
