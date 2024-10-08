@@ -471,6 +471,12 @@ class Contracts:
             if not container.bound(contract):
                 raise NotImplementedError(f'Contract {contract} not bound to container')
 
+    def join(self, target: Contracts) -> Contracts:
+        abstracts = set(self.contracts)
+        for c in target.contracts:
+            abstracts.add(c)
+        return Contracts(list(abstracts))
+
 
 __container = Container()
 

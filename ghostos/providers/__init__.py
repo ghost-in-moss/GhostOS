@@ -1,1 +1,0 @@
-from ghostos.providers.application import default_application_providers, application_contracts

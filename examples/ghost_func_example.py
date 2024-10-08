@@ -2,10 +2,10 @@ import sys
 from os.path import dirname
 
 # I hate python imports
-root_dir = dirname(__file__)
-sys.path.append(root_dir)
+ghostos_project_dir = dirname(dirname(__file__))
+sys.path.append(ghostos_project_dir)
 
-from ghostos_bootstrap import ghost_func
+from ghostos import ghost_func
 
 
 @ghost_func.decorator(caching=False)
@@ -22,4 +22,6 @@ def get_weather(city: str, date: str) -> str:
 
 
 if __name__ == "__main__":
+    # the llms will generate dynamic codes for this function and execute them through Moss
+    # this is a toy for Moss testing, but notice it still cast LLM tokens...
     print(get_weather("beijing", "today"))

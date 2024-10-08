@@ -1,7 +1,7 @@
 from typing import Optional, Type
 
 from ghostos.core.ghosts.workspace import Workspace
-from ghostos.contracts.storage import FileStorage
+from ghostos.framework.storage import FileStorage, FileStorageImpl
 from ghostos.container import Provider, Container, INSTANCE
 
 
@@ -34,7 +34,7 @@ class BasicWorkspaceProvider(Provider):
 
     def __init__(
             self,
-            workspace_dir: str = "",
+            workspace_dir: str,
             runtime_path: str = "runtime",
             configs_path="configs",
     ):
@@ -54,8 +54,7 @@ class BasicWorkspaceProvider(Provider):
         return Workspace
 
     def factory(self, con: Container) -> Optional[INSTANCE]:
-        storage = con.force_fetch(FileStorage)
-        root_storage = storage.sub_storage(self._root_path)
+        root_storage = FileStorageImpl(self._root_path)
         return BasicWorkspace(
             root_storage,
             runtime_path=self._runtime_path,
