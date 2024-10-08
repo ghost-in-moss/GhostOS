@@ -5,7 +5,7 @@ from os.path import dirname
 root_dir = dirname(__file__)
 sys.path.append(root_dir)
 
-from ghostos_apps import ghost_func
+from ghostos_bootstrap import ghost_func
 
 
 @ghost_func.decorator(caching=False)
