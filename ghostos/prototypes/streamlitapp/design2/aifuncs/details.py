@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_react_jsonschema import pydantic_form
 import inspect
-from app.examples.aifuncs.weather import WeatherAIFunc
+from ghostos.demo.aifuncs.weather import WeatherAIFunc
 from ghostos.core.aifunc import get_aifunc_result_type
 
 

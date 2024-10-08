@@ -160,7 +160,7 @@ class Container(IoCContainer):
         for b in self._bootstrapper:
             b.bootstrap(self)
 
-    def set(self, abstract: ABSTRACT, instance: INSTANCE) -> None:
+    def set(self, abstract: Any, instance: INSTANCE) -> None:
         """
         设置一个实例, 不会污染父容器.
         """
@@ -178,7 +178,7 @@ class Container(IoCContainer):
         """
         return contract in self._bound or (self.parent is not None and self.parent.bound(contract))
 
-    def get(self, abstract: ABSTRACT) -> Optional[INSTANCE]:
+    def get(self, abstract: Type[INSTANCE]) -> Optional[INSTANCE]:
         """
         get bound instance or initialize one from registered factory or provider.
 
@@ -263,7 +263,7 @@ class Container(IoCContainer):
             if alias not in self._bound:
                 self._bind_alias(alias, contract)
 
-    def _bind_alias(self, alias: ABSTRACT, contract: ABSTRACT) -> None:
+    def _bind_alias(self, alias: Any, contract: Any) -> None:
         self._aliases[alias] = contract
         self._bound.add(alias)
 
@@ -281,7 +281,7 @@ class Container(IoCContainer):
         """
         self._bootstrapper.append(bootstrapper)
 
-    def fetch(self, abstract: ABSTRACT, strict: bool = False) -> Optional[INSTANCE]:
+    def fetch(self, abstract: Type[INSTANCE], strict: bool = False) -> Optional[INSTANCE]:
         """
         get contract with type check
         :exception: TypeError if instance do not implement abstract
@@ -293,7 +293,7 @@ class Container(IoCContainer):
             return instance
         return None
 
-    def force_fetch(self, contract: ABSTRACT, strict: bool = False) -> INSTANCE:
+    def force_fetch(self, contract: Type[INSTANCE], strict: bool = False) -> INSTANCE:
         """
         if fetch contract failed, raise error.
         :exception: NotImplementedError if contract is not registered.

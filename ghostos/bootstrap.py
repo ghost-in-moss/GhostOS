@@ -51,14 +51,14 @@ __all__ = [
     # The containers nest in multiple levels like a tree:
     # - Application level (global static container that instanced in this file)
     # - GhostOS level (a GhostOS manage as many ghost as it able to)
-    # - Ghost level (a Ghost is a instance frame of the Agent's thought)
+    # - Ghost level (a Ghost is an instance frame of the Agent's thought)
     # - Moss level (each MossCompiler has it own container)
     # <<<
-    'container',
+    'application_container',
     'make_app_container',
 
     # >>> GhostFunc
-    # is a test library, which is able to define dynamic code for a in-complete function.
+    # is a test library, which is able to define dynamic code for an in-complete function.
     # We develop it for early experiments.
     # Check example_ghost_func.py
     # <<<
@@ -90,8 +90,8 @@ def default_application_contracts() -> Contracts:
     Application level contracts
     """
     from ghostos.core.moss import MossCompiler
-    from ghostos.contracts.pool import Pool, DefaultPoolProvider
-    from ghostos.contracts.shutdown import Shutdown, ShutdownProvider
+    from ghostos.contracts.pool import Pool
+    from ghostos.contracts.shutdown import Shutdown
     from ghostos.contracts.modules import Modules
     from ghostos.framework.workspaces import Workspace
     from ghostos.framework.configs import Configs
@@ -201,10 +201,10 @@ def make_app_container(
     return _container
 
 
-container = make_app_container(application_dir)
+application_container = make_app_container(application_dir)
 """ the global static application container. reset it before application usage"""
 
-ghost_func = init_ghost_func(container)
+ghost_func = init_ghost_func(application_container)
 """ the default ghost func on default container"""
 
 
@@ -214,17 +214,22 @@ def reset(con: Container) -> None:
     :param con: a container with application level contract bindings, shall be validated outside.
     :return:
     """
-    global container, ghost_func
+    global application_container, ghost_func
     # reset global container
-    container = con
+    application_container = con
     # reset global ghost func
-    ghost_func = init_ghost_func(container)
+    ghost_func = init_ghost_func(application_container)
 
 
 def reset_at(app_dir: str) -> None:
     """
     reset application with default configuration at specified app directory
+    only run once if app_dir is the same
     """
+    global application_dir
+    if app_dir == application_dir:
+        return
+    application_dir = app_dir
     _container = make_app_container(app_dir)
     reset(_container)
 

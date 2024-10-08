@@ -5,7 +5,7 @@ from os.path import dirname
 ghostos_project_dir = dirname(dirname(__file__))
 sys.path.append(ghostos_project_dir)
 
-from ghostos import ghost_func
+from ghostos.bootstrap import ghost_func
 
 
 @ghost_func.decorator(caching=False)

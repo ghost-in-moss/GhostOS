@@ -67,7 +67,7 @@ def main():
         "--cache", "-c",
         action="store_true",
     )
-    from ghostos import application_dir
+    from ghostos.bootstrap import application_dir
     runtime_dir = join(application_dir, "runtime")
     parsed = parser.parse_args(sys.argv[1:])
     _all = parsed.all
