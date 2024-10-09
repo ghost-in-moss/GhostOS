@@ -3,6 +3,7 @@ import inspect
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable
 from typing import get_args, get_origin
+import warnings
 
 __all__ = [
     "Container", "IoCContainer",
@@ -155,10 +156,13 @@ class Container(IoCContainer):
             return
         # 必须在这里初始化, 否则会循环调用.
         self._bootstrapped = True
-        if not self._bootstrapper:
-            return
-        for b in self._bootstrapper:
-            b.bootstrap(self)
+        if self._bootstrapper:
+            for b in self._bootstrapper:
+                b.bootstrap(self)
+        for provider in self._providers.values():
+            # some bootstrapper provider may be override
+            if isinstance(provider, Bootstrapper):
+                provider.bootstrap(self)
 
     def set(self, abstract: Any, instance: INSTANCE) -> None:
         """
@@ -187,7 +191,9 @@ class Container(IoCContainer):
         - params 感觉不需要.
         """
         # 进行初始化.
-        self.bootstrap()
+        if not self._bootstrapped:
+            warnings.warn("container is not bootstrapped before using")
+            self.bootstrap()
 
         # get bound instance
         got = self._instances.get(abstract, None)
@@ -250,9 +256,9 @@ class Container(IoCContainer):
             self._register(provider)
 
     def _register(self, provider: Provider) -> None:
-        if isinstance(provider, Bootstrapper):
+        if isinstance(provider, Bootstrapper) and self._bootstrapped:
             # 添加 bootstrapper.
-            self.add_bootstrapper(provider)
+            provider.bootstrap(self)
 
         contract = provider.contract()
         self._bind_contract(contract)
@@ -271,6 +277,7 @@ class Container(IoCContainer):
         # remove singleton instance that already bound
         if contract in self._instances:
             del self._instances[contract]
+        # override the existing one
         self._providers[contract] = provider
 
     def add_bootstrapper(self, bootstrapper: Bootstrapper) -> None:
@@ -279,7 +286,8 @@ class Container(IoCContainer):
         :param bootstrapper: 可以定义一些方法, 比如往容器里的某个类里注册一些工具.
         :return:
         """
-        self._bootstrapper.append(bootstrapper)
+        if not self._bootstrapped:
+            self._bootstrapper.append(bootstrapper)
 
     def fetch(self, abstract: Type[INSTANCE], strict: bool = False) -> Optional[INSTANCE]:
         """
