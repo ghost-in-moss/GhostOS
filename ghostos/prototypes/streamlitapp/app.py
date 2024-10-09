@@ -2,7 +2,10 @@ import streamlit as st
 from typing import Callable, List
 from ghostos.container import Container
 from ghostos.prototypes.streamlitapp.utils.session import expect, SingletonContracts, Singleton
-from ghostos.prototypes.streamlitapp.pages.navigation import navigation
+from ghostos.prototypes.streamlitapp.utils.route import Router
+from ghostos.prototypes.streamlitapp.utils.options import BoolOpts
+from ghostos.prototypes.streamlitapp.widgets import application_navigator_menu
+from gettext import gettext as _
 
 __all__ = [
     "SINGLETONS", "BOOTSTRAP", "BOOTSTRAPPED_KEY",
@@ -18,6 +21,7 @@ BOOTSTRAPPED_KEY = "ghostos.streamlit.app.bootstrapped"
 
 contracts = SingletonContracts([
     Container,
+    Router,
 ])
 
 
@@ -53,9 +57,33 @@ def run_ghostos_streamlit_app(bootstrap: BOOTSTRAP) -> None:
     # bootstrap once
     boot(bootstrap)
     # load pages
-    pgs = st.navigation(navigation.pages(), position="hidden")
+    router = Singleton.get(Router, st.session_state)
+    pgs = st.navigation(router.pages(), position="hidden")
     # define sidebar
     with st.sidebar:
-        navigation.render_sidebar_page_links()
+        router.render_homepage()
+        # render page links
+        with st.expander(label=_("Navigator"), expanded=False, icon=":material/menu:"):
+            router.render_navigator(use_container_width=True)
+        # with helper mode toggle
+        # open_navigator = st.button(
+        #     label=_("GhostOS Navigator"),
+        #     help=_("the navigations"),
+        #     icon=":material/menu:",
+        #     use_container_width=True,
+        # )
+        with st.expander(label="Options", expanded=False, icon=":material/settings:"):
+            BoolOpts.HELP_MODE.render_toggle(
+                label=_("Help Mode"),
+                tips=_("switch help mode at every page"),
+            )
+            BoolOpts.DEBUG_MODE.render_toggle(
+                label=_("Debug Mode"),
+                tips=_("switch debug mode at every page"),
+            )
+
+    # global navigator dialog
+    # if open_navigator:
+    #     app_navigator_dialog()
 
     pgs.run()
