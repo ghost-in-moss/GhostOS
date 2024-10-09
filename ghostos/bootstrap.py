@@ -93,6 +93,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.contracts.pool import Pool
     from ghostos.contracts.shutdown import Shutdown
     from ghostos.contracts.modules import Modules
+    from ghostos.entity import EntityFactory
     from ghostos.framework.workspaces import Workspace
     from ghostos.framework.configs import Configs
     from ghostos.framework.processes import Processes
@@ -113,6 +114,7 @@ def default_application_contracts() -> Contracts:
         LLMs,  # LLMs interface
         LoggerItf,  # the logger instance of application
         Modules,  # the import_module proxy
+        EntityFactory,  # wrap and un-wrap Entity class
 
         # moss
         MossCompiler,
@@ -151,6 +153,7 @@ def default_application_providers(
     from ghostos.framework.eventbuses import MemEventBusImplProvider
     from ghostos.framework.llms import ConfigBasedLLMsProvider
     from ghostos.framework.logger import NamedLoggerProvider
+    from ghostos.framework.entities import EntityFactoryProvider
     return [
         BasicWorkspaceProvider(
             workspace_dir=root_dir,
@@ -168,6 +171,7 @@ def default_application_providers(
         ShutdownProvider(),
         NamedLoggerProvider(logger_name),
         DefaultMOSSProvider(),
+        EntityFactoryProvider(),
     ]
 
 
