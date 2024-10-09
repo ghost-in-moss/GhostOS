@@ -1,15 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from typing import Dict, Any, Optional, List, Type
+from typing import Dict, Any, Optional, Type, Callable, Iterable
+from typing_extensions import Self
 
-from ghostos.container import Container, Provider, INSTANCE
+from ghostos.container import Container, Provider, ABSTRACT
 from ghostos.core.llms import LLMApi, LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
-from ghostos.core.aifunc.interfaces import AIFuncManager, AIFuncCtx, AIFuncDriver
+from ghostos.core.aifunc.interfaces import AIFuncManager, AIFuncCtx, AIFuncDriver, ExecFrame, ExecStep
 from ghostos.core.aifunc.driver import DefaultAIFuncDriverImpl
-from ghostos.core.session import MsgThread
-from ghostos.helpers import generate_import_path, uuid
+from ghostos.core.messages import Stream
 
 __all__ = ['DefaultAIFuncManagerImpl', 'DefaultAIFuncManagerProvider']
 
@@ -19,55 +19,44 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
     def __init__(
             self, *,
             container: Container,
+            step: Optional[ExecStep] = None,
+            upstream: Optional[Stream] = None,
             default_driver: Optional[Type[AIFuncDriver]] = None,
             llm_api_name: str = "",
-            max_step: int = 10,
-            depth: int = 0,
             max_depth: int = 10,
-            parent_idx: str = "",
-            sibling_idx: int = 0,
-            aifunc_name: str = "",
-            exec_id: str = "",
-            parent_aifunc_name: str = "",
+            max_step: int = 10,
     ):
-        self._container = Container(parent=container)
+        # manager do not create submanager
+        # but the container of MossCompiler from this manager
+        # get an instance of AIFuncCtx, which is actually submanager of this one.
+        self._container = container
+        self._exec_step = step
+        self._upstream: Stream = upstream
         self._llm_api_name = llm_api_name
         self._values: Dict[str, Any] = {}
-        self._sub_managers: List[AIFuncManager] = []
-        self._max_step = max_step
-        self._depth = depth
         self._max_depth = max_depth
-        if self._depth > self._max_depth:
-            raise RuntimeError(f"AiFunc depth {self._depth} > {self._max_depth}, stackoverflow")
+        self._max_step = max_step
+        if step and step.depth > self._max_depth:
+            raise RuntimeError(f"AiFunc depth {step.depth} > {self._max_depth}, stackoverflow")
         self._default_driver_type = default_driver if default_driver else DefaultAIFuncDriverImpl
-        self._exec_id = exec_id if exec_id else uuid()
-        self._parent_idx = parent_idx
-        self._sibling_idx = sibling_idx
-        if parent_idx:
-            self._identity_prefix = f"{self._parent_idx}_{self._sibling_idx}"
-        else:
-            self._identity_prefix = "s"
-        self._aifunc_name = aifunc_name
-        self._parent_aifunc_name = parent_aifunc_name
-        self._child_idx = 0
+        self._destroyed = False
 
-    def sub_manager(self, *, aifunc_name: str = "") -> "AIFuncManager":
-        self._child_idx += 1
+    def sub_manager(self, step: ExecStep, upstream: Optional[Stream] = None) -> "AIFuncManager":
+        # sub manager's upstream may be None
+        # parent manager do not pass upstream to submanager
         manager = DefaultAIFuncManagerImpl(
             container=self._container,
+            step=step,
+            upstream=upstream,
             default_driver=self._default_driver_type,
             llm_api_name=self._llm_api_name,
-            max_step=self._max_step,
-            depth=self._depth + 1,
             max_depth=self._max_depth,
-            parent_idx=self._identity_prefix,
-            sibling_idx=self._child_idx,
-            aifunc_name=aifunc_name,
-            exec_id=self._exec_id,
-            parent_aifunc_name=self._aifunc_name,
         )
-        self._sub_managers.append(manager)
+        # register submanager, destroy them together
         return manager
+
+    def context(self) -> AIFuncCtx:
+        return self
 
     def container(self) -> Container:
         return self._container
@@ -76,37 +65,48 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         llms = self._container.force_fetch(LLMs)
         return llms.get_api(self._llm_api_name)
 
-    def compiler(self) -> MossCompiler:
+    def compiler(self, step: ExecStep, upstream: Optional[Stream] = None) -> MossCompiler:
         compiler = self._container.force_fetch(MossCompiler)
-        compiler.container().set(AIFuncCtx, self)
+
+        # rebind exec step to moss container, which is a sub container
+        # the exec step will not contaminate self._container
+        maker = self._sub_manager_fn(step, upstream)
+
+        compiler.container().register_maker(
+            contract=AIFuncCtx,
+            maker=maker,
+            singleton=True,
+        )
+        compiler.container().set(ExecStep, step)
         return compiler
 
-    def wrap_thread(self, thread: MsgThread, aifunc_driver: AIFuncDriver) -> MsgThread:
-        aifunc = aifunc_driver.aifunc
-        thread.extra["aifunc"] = generate_import_path(type(aifunc))
-        thread.extra["aifunc_data"] = aifunc.model_dump(exclude_defaults=True)
-        thread.extra["parent_aifunc"] = self._parent_aifunc_name
-        thread.extra["aifunc_depth"] = self._depth
-        aifunc_name = type(aifunc).__name__
-        thread.save_file = f"aifunc_{self._exec_id}/{self._identity_prefix}_{aifunc_name}.yml"
-        return thread
+    def _sub_manager_fn(self, step: ExecStep, upstream: Optional[Stream]) -> Callable[[], Self]:
+        def sub_manager() -> AIFuncManager:
+            return self.sub_manager(step, upstream)
 
-    def execute(self, fn: AIFunc) -> AIFuncResult:
-        self._aifunc_name = generate_import_path(type(fn))
+        return sub_manager
+
+    def execute(
+            self,
+            fn: AIFunc,
+            frame: Optional[ExecFrame] = None,
+            upstream: Optional[Stream] = None,
+    ) -> AIFuncResult:
+        if frame is None:
+            frame = ExecFrame.from_func(fn)
         driver = self.get_driver(fn)
         thread = driver.initialize()
-        thread = self.wrap_thread(thread, driver)
         step = 0
         finished = False
         result = None
         while not finished:
             step += 1
+            # each step generate a new exec step
+            exec_step = frame.new_step()
             if self._max_step != 0 and step > self._max_step:
                 raise RuntimeError(f"exceeded max step {self._max_step}")
-            turn = thread.last_turn()
-            turn.extra["aifunc_step"] = step
-            thread, result, finished = driver.think(self, thread)
-            driver.on_save(manager=self, thread=thread)
+            thread, result, finished = driver.think(self, thread, exec_step, upstream=upstream)
+
             if finished:
                 break
         if result is not None and not isinstance(result, AIFuncResult):
@@ -114,28 +114,40 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
             raise RuntimeError(f"result is invalid AIFuncResult {type(result)}, expecting {result_type}")
         return result
 
-    def get_driver(self, fn: AIFunc) -> "AIFuncDriver":
+    def get_driver(
+            self,
+            fn: AIFunc,
+    ) -> "AIFuncDriver":
         cls = fn.__class__
         if cls.__aifunc_driver__ is not None:
-            return cls.__aifunc_driver__(fn)
-        return self._default_driver_type(fn)
+            driver = cls.__aifunc_driver__
+        else:
+            driver = self._default_driver_type
+        return driver(fn)
 
     def run(self, key: str, fn: AIFunc) -> AIFuncResult:
-        aifunc_name = generate_import_path(type(fn))
-        sub_manager = self.sub_manager(aifunc_name=aifunc_name)
-        result = sub_manager.execute(fn)
-        self._values[key] = result
-        return result
+        if self._exec_step is not None:
+            frame = self._exec_step.new_frame(fn)
+        else:
+            frame = ExecFrame.from_func(fn)
+        sub_step = frame.new_step()
+        sub_manager = self.sub_manager(sub_step)
+        try:
+            result = sub_manager.execute(fn, frame=frame, upstream=self._upstream)
+            # thread safe? python dict is thread safe
+            self._values[key] = result
+            return result
+        finally:
+            # always destroy submanager.
+            # or memory leak as hell
+            sub_manager.destroy()
 
     def parallel_run(self, fn_dict: Dict[str, AIFunc]) -> Dict[str, AIFuncResult]:
         def execute_task(key: str, fn: AIFunc):
-            aifunc_name = generate_import_path(type(fn))
-            sub_manager = self.sub_manager(aifunc_name=aifunc_name)
-            return key, sub_manager.execute(fn)
+            r = self.run(key, fn)
+            return key, r
 
         results = {}
-        # todo: get pool from container
-        # pool = self._container.force_fetch(Pool)
         with ThreadPoolExecutor(max_workers=len(fn_dict)) as executor:
             futures = [executor.submit(execute_task, key, fn) for key, fn in fn_dict.items()]
             for future in as_completed(futures):
@@ -155,21 +167,32 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         return self._values
 
     def destroy(self) -> None:
-        for manager in self._sub_managers:
-            manager.destroy()
-        del self._sub_managers
+        if self._destroyed:
+            # destroy once.
+            # not every submanager is created at self.execute
+            # so they could be destroyed outside already
+            return
         self._container.destroy()
         del self._container
         del self._values
+        del self._exec_step
+        del self._upstream
 
 
 class DefaultAIFuncManagerProvider(Provider[AIFuncManager]):
 
-    def __init__(self, llm_api_name: str = ""):
+    def __init__(
+            self,
+            llm_api_name: str = "",
+    ):
         self._llm_api_name = llm_api_name
 
     def singleton(self) -> bool:
+        # !! AIFuncManager shall not be
         return False
+
+    def aliases(self) -> Iterable[ABSTRACT]:
+        yield AIFuncCtx
 
     def factory(self, con: Container) -> Optional[AIFuncManager]:
         return DefaultAIFuncManagerImpl(

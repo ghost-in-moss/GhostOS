@@ -1,7 +1,7 @@
 import traceback
 from typing import Tuple, List, Optional, Any
 
-from ghostos.core.aifunc.interfaces import AIFuncDriver, AIFuncManager
+from ghostos.core.aifunc.interfaces import AIFuncDriver, AIFuncManager, ExecStep, ExecFrame
 from ghostos.core.aifunc.func import (
     AIFunc,
     get_aifunc_instruction, get_aifunc_result_type, get_aifunc_pycontext, get_aifunc_llmapi,
@@ -9,7 +9,7 @@ from ghostos.core.aifunc.func import (
 from ghostos.core.llms import LLMs, Chat
 from ghostos.core.moss.abc import MossRuntime
 from ghostos.core.session import MsgThread, DefaultEventType, Threads, thread_to_chat
-from ghostos.core.messages import Role, Message
+from ghostos.core.messages import Role, Message, Stream
 from ghostos.contracts.logger import LoggerItf
 
 __all__ = [
@@ -132,9 +132,17 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def on_system_messages(self, messages: List[Message]) -> None:
         pass
 
-    def think(self, manager: AIFuncManager, thread: MsgThread) -> Tuple[MsgThread, Optional[Any], bool]:
+    def think(
+            self,
+            manager: AIFuncManager,
+            thread: MsgThread,
+            step: ExecStep,
+            upstream: Optional[Stream]
+    ) -> Tuple[MsgThread, Optional[Any], bool]:
         logger = manager.container().get(LoggerItf)
-        compiler = manager.compiler()
+        # get compiler by current exec step
+        # the MossCompiler.container().get(AIFuncCtx) will bind this step.
+        compiler = manager.compiler(step, upstream)
         compiler.join_context(thread.get_pycontext())
         compiler.bind(self.aifunc.__class__, self.aifunc)
         runtime = compiler.compile(None)
@@ -143,52 +151,81 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         systems.append(Role.SYSTEM.new(
             content=DEFAULT_NOTICES,
         ))
+
+        # build chat
         self.on_system_messages(systems)
         chat = thread_to_chat(thread.id, systems, thread)
-        self.on_chat(chat)  # Whether you want to send chat to llm, let it generate code for you or not
-        # todo: log
-        # 实例化 llm api
+        step.chat = chat
+        # on_chat hook
+        self.on_chat(chat)
+
+        # instance the llms
         llms = manager.container().force_fetch(LLMs)
         llm_api = get_aifunc_llmapi(self.aifunc, llms)
         if llm_api is None:
             llm_api = manager.default_llm_api()
-        # 调用 llm api
-        # logger and logger.info(f"run aifunc with chat :{chat}")
+
+        # call llm api
         ai_generation = llm_api.chat_completion(chat)
-        # 插入 ai 生成的消息.
+
+        # append ai_generation
         thread.append(ai_generation)
-        self.on_message(ai_generation)  # Whether you want to execute the ai-generated code or not
+        step.messages.append(ai_generation)
+        # on_message hook
+        self.on_message(ai_generation)
+
+        # parse the ai_generation.
         code = self.parse_moss_code_in_message(ai_generation)
 
-        # code 相关校验:
+        error = None
+        # handle code:
         if not code:
-            thread.append(Role.SYSTEM.new(content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT"))
+            error = Role.new_assistant_system(
+                content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT"
+            )
+            # log
             logger.error(f"ai_generation: {repr(ai_generation)}")
-            return thread, None, False
-        if "main(" not in code:
-            thread.append(Role.SYSTEM.new(content="Error! No main function found in your generation!"))
+
+        elif "main(" not in code:
+            error = Role.new_assistant_system(
+                content="Error! No main function found in your generation!"
+            )
+
+        if error is not None:
+            thread.append(error)
+            step.error = error
             return thread, None, False
 
         result = None
         # 运行 moss.
         try:
-            executed = runtime.execute(code=code, target='main', local_args=['moss'], kwargs={"fn": self.aifunc})
+            logger.info(f"executing ai_generation: {code}")
+            executed = runtime.execute(
+                code=code,
+                target='main',
+                local_args=['moss'],
+                kwargs={"fn": self.aifunc},
+            )
+
             result, finish = executed.returns
             if not isinstance(finish, bool):
                 raise RuntimeError(f"Result from main function {finish} is not boolean")
 
-            outputs = executed.std_output
-            if outputs:
-                output_message = Role.SYSTEM.new(
-                    content=f"## Observation\n\nmoss executed main, std output is: \n{outputs}"
+            output = executed.std_output
+            step.std_output = output
+            if output:
+                output_message = Role.new_assistant_system(
+                    content=f"## Observation\n\nmoss executed main, std output is: \n{output}"
                 )
                 messages = [output_message]
             else:
-                output_message = Role.SYSTEM.new(
+                output_message = Role.new_assistant_system(
                     content=f"## Observation\n\nhave not printed anything"
                 )
                 messages = [output_message]
             pycontext = executed.pycontext
+
+            # append the messages.
             thread.new_turn(
                 event=DefaultEventType.OBSERVE.new(
                     messages=messages,
@@ -197,12 +234,17 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                 ),
                 pycontext=pycontext,
             )
+            step.pycontext = pycontext
+            # I think this method is thread-safe
+            step.messages.extend(messages)
+
             self.error_times = 0
         except Exception as e:
             exe_info = "\n".join(traceback.format_exception(e)[-5:])
-            output_message = Role.SYSTEM.new(
+            output_message = Role.new_assistant_system(
                 content=f"moss executed main, exception occurs: \n{exe_info}"
             )
+
             thread.new_turn(
                 event=DefaultEventType.OBSERVE.new(
                     messages=[output_message],
@@ -210,6 +252,8 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                     from_task_id=thread.id,
                 ),
             )
+            step.error = output_message
+
             self.error_times += 1
             if self.error_times >= 3:
                 raise RuntimeError(f"AIFunc `{self.name()}` failed {self.error_times} times, can not fix itself: \n{e}")
