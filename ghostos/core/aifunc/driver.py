@@ -1,7 +1,7 @@
 import traceback
 from typing import Tuple, List, Optional, Any
 
-from ghostos.core.aifunc.interfaces import AIFuncDriver, AIFuncManager, ExecStep, ExecFrame
+from ghostos.core.aifunc.interfaces import AIFuncDriver, AIFuncExecutor, ExecStep, ExecFrame
 from ghostos.core.aifunc.func import (
     AIFunc,
     get_aifunc_instruction, get_aifunc_result_type, get_aifunc_pycontext, get_aifunc_llmapi,
@@ -134,7 +134,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
     def think(
             self,
-            manager: AIFuncManager,
+            manager: AIFuncExecutor,
             thread: MsgThread,
             step: ExecStep,
             upstream: Optional[Stream]
@@ -275,7 +275,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
         return content[code_start_index + len(CODE_MARK_LEFT): code_end_index].strip()
 
-    def on_save(self, manager: AIFuncManager, thread: MsgThread) -> None:
+    def on_save(self, manager: AIFuncExecutor, thread: MsgThread) -> None:
         # 如果 threads 抽象存在, 就保存一下. 还应该做一些日志的工作.
         container = manager.container()
         threads = container.get(Threads)

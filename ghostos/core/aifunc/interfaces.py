@@ -14,7 +14,8 @@ from pydantic import BaseModel, Field
 
 __all__ = [
     'AIFunc', 'AIFuncResult',
-    'AIFuncManager', 'AIFuncCtx', 'AIFuncDriver',
+    'AIFuncExecutor', 'AIFuncCtx', 'AIFuncDriver',
+    'AIFuncRepository',
     'ExecFrame', 'ExecStep',
 ]
 
@@ -122,12 +123,12 @@ class ExecFrame(BaseModel):
         return step
 
 
-class AIFuncManager(ABC):
+class AIFuncExecutor(ABC):
     """
     AIFuncCtx is model-oriented.
-    AIFuncManager is developer (human or meta-agent) oriented
+    AIFuncExecutor is developer (human or meta-agent) oriented
 
-    In other words, an AIFuncCtx is the model-oriented interface of an AIFuncManager Adapter.
+    In other words, an AIFuncCtx is the model-oriented interface of an AIFuncExecutor Adapter.
 
     the core method is `execute`, the method itself is stateless,
     but receive a state object ExecFrame to record states.
@@ -183,13 +184,13 @@ class AIFuncManager(ABC):
         when AiFunc is running, it may generate code in which another AiFuncCtx is called.
         The called AiFuncCtx is actually from a sub manager of this one.
 
-        -- stack    --> AIFuncManager execution --> LLM call AiFuncCtx --> Sub AIFuncManager execution
-        -- actually --> AIFuncManager execution -------------------------> Sub AIFuncManager execution
+        -- stack    --> AIFuncExecutor execution --> LLM call AiFuncCtx --> Sub AIFuncExecutor execution
+        -- actually --> AIFuncExecutor execution -------------------------> Sub AIFuncExecutor execution
         """
         pass
 
     @abstractmethod
-    def sub_manager(self, step: ExecStep, upstream: Optional[Stream] = None) -> "AIFuncManager":
+    def sub_executor(self, step: ExecStep, upstream: Optional[Stream] = None) -> "AIFuncExecutor":
         """
         instance an sub manager to provide AIFuncCtx for sub AIFunc
         """
@@ -219,10 +220,10 @@ class AIFuncRepository(ABC):
     """
 
     @abstractmethod
-    def register(self, fn: Type[AIFunc]) -> None:
+    def register(self, *fns: Type[AIFunc]) -> None:
         """
         register an AIFunc class
-        :param fn: AIFunc class
+        :param fns: AIFunc class
         """
         pass
 
@@ -287,16 +288,16 @@ class AIFuncDriver(ABC):
     @abstractmethod
     def think(
             self,
-            manager: AIFuncManager,
+            manager: AIFuncExecutor,
             thread: MsgThread,
             step: ExecStep,
-            upstream: Stream,
+            upstream: Optional[Stream],
     ) -> Tuple[MsgThread, Optional[Any], bool]:
         """
         think another round based on msg thread.
         each think round must pass a ExecStep to it.
 
-        :param manager: AIFuncManager that provide AIFunc Runtime.
+        :param manager: AIFuncExecutor that provide AIFunc Runtime.
         :param thread: thread that keep multi-turns thinking's history.
         :param step: execution step.
         :param upstream: upstream that can send runtime messages.

@@ -7,14 +7,14 @@ from ghostos.container import Container, Provider, ABSTRACT
 from ghostos.core.llms import LLMApi, LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
-from ghostos.core.aifunc.interfaces import AIFuncManager, AIFuncCtx, AIFuncDriver, ExecFrame, ExecStep
+from ghostos.core.aifunc.interfaces import AIFuncExecutor, AIFuncCtx, AIFuncDriver, ExecFrame, ExecStep
 from ghostos.core.aifunc.driver import DefaultAIFuncDriverImpl
 from ghostos.core.messages import Stream
 
-__all__ = ['DefaultAIFuncManagerImpl', 'DefaultAIFuncManagerProvider']
+__all__ = ['DefaultAIFuncExecutorImpl', 'DefaultAIFuncManagerProvider']
 
 
-class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
+class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
 
     def __init__(
             self, *,
@@ -41,10 +41,10 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         self._default_driver_type = default_driver if default_driver else DefaultAIFuncDriverImpl
         self._destroyed = False
 
-    def sub_manager(self, step: ExecStep, upstream: Optional[Stream] = None) -> "AIFuncManager":
+    def sub_executor(self, step: ExecStep, upstream: Optional[Stream] = None) -> "AIFuncExecutor":
         # sub manager's upstream may be None
         # parent manager do not pass upstream to submanager
-        manager = DefaultAIFuncManagerImpl(
+        manager = DefaultAIFuncExecutorImpl(
             container=self._container,
             step=step,
             upstream=upstream,
@@ -81,8 +81,8 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         return compiler
 
     def _sub_manager_fn(self, step: ExecStep, upstream: Optional[Stream]) -> Callable[[], Self]:
-        def sub_manager() -> AIFuncManager:
-            return self.sub_manager(step, upstream)
+        def sub_manager() -> AIFuncExecutor:
+            return self.sub_executor(step, upstream)
 
         return sub_manager
 
@@ -131,7 +131,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         else:
             frame = ExecFrame.from_func(fn)
         sub_step = frame.new_step()
-        sub_manager = self.sub_manager(sub_step)
+        sub_manager = self.sub_executor(sub_step)
         try:
             result = sub_manager.execute(fn, frame=frame, upstream=self._upstream)
             # thread safe? python dict is thread safe
@@ -179,7 +179,7 @@ class DefaultAIFuncManagerImpl(AIFuncManager, AIFuncCtx):
         del self._upstream
 
 
-class DefaultAIFuncManagerProvider(Provider[AIFuncManager]):
+class DefaultAIFuncManagerProvider(Provider[AIFuncExecutor]):
 
     def __init__(
             self,
@@ -194,8 +194,8 @@ class DefaultAIFuncManagerProvider(Provider[AIFuncManager]):
     def aliases(self) -> Iterable[ABSTRACT]:
         yield AIFuncCtx
 
-    def factory(self, con: Container) -> Optional[AIFuncManager]:
-        return DefaultAIFuncManagerImpl(
+    def factory(self, con: Container) -> Optional[AIFuncExecutor]:
+        return DefaultAIFuncExecutorImpl(
             container=con,
             llm_api_name=self._llm_api_name,
         )
