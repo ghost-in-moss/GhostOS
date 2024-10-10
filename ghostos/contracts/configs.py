@@ -1,7 +1,9 @@
 import yaml
 from abc import ABC, abstractmethod
 from typing import ClassVar, TypeVar, Type, Optional, AnyStr
+from typing_extensions import Self
 from pydantic import BaseModel
+import io
 
 __all__ = ['Config', 'Configs', 'YamlConfig', 'C']
 
@@ -24,10 +26,15 @@ class Config(ABC):
 
     @classmethod
     @abstractmethod
-    def load(cls, content: AnyStr) -> "Config":
+    def unmarshal(cls, content: bytes) -> Self:
         """
         unmarshal the Config instance from content.
-        todo: rename it to unmarshal, and add marshal method.
+        """
+        pass
+
+    def marshal(self) -> bytes:
+        """
+        marshal self to a savable content
         """
         pass
 
@@ -50,6 +57,16 @@ class Configs(ABC):
         :param relative_path: the relative path of the config data, if pass, override the conf_type default path.
         :return: instance of the Config.
         :exception: FileNotFoundError
+        """
+        pass
+
+    @abstractmethod
+    def save(self, conf: Config, relative_path: Optional[str] = None) -> None:
+        """
+        save a Config instance to it source.
+        notice some config shall be immutable
+        :param conf: the conf object
+        :param relative_path: if pass, override the conf_type default path.
         """
         pass
 
@@ -76,8 +93,11 @@ class YamlConfig(Config, BaseModel):
         return cls.relative_path
 
     @classmethod
-    def load(cls, content: str) -> "Config":
+    def unmarshal(cls, content: str) -> "Config":
         value = yaml.safe_load(content)
         return cls(**value)
 
-# todo: toml config
+    def marshal(self) -> bytes:
+        value = self.model_dump(exclude_defaults=True)
+        result = yaml.safe_dump(value)
+        return result.encode()

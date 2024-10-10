@@ -1,23 +1,21 @@
-from typing import Type, Optional
-from ghostos.contracts.configs import Configs, C
+from typing import Optional, Dict
+from ghostos.contracts.configs import Configs
 from ghostos.contracts.storage import Storage
 from ghostos.container import Provider, Container
 from ghostos.core.ghosts import Workspace
+from .basic import BasicConfigs
 
 
-class StorageConfigs(Configs):
-    """
-    A Configs(repository) based on Storage, no matter what the Storage is.
-    """
+class StorageConfigs(BasicConfigs):
 
     def __init__(self, storage: Storage, conf_dir: str):
         self._storage = storage.sub_storage(conf_dir)
 
-    def get(self, conf_type: Type[C], relative_path: Optional[str] = None) -> C:
-        path = conf_type.conf_path()
-        relative_path = relative_path if relative_path else path
-        content = self._storage.get(relative_path)
-        return conf_type.load(content)
+    def _get(self, relative_path: str) -> bytes:
+        return self._storage.get(relative_path)
+
+    def _put(self, relative_path: str, content: bytes) -> None:
+        self._storage.put(relative_path, content)
 
 
 class ConfigsByStorageProvider(Provider[Configs]):
