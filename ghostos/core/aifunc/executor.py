@@ -11,7 +11,7 @@ from ghostos.core.aifunc.interfaces import AIFuncExecutor, AIFuncCtx, AIFuncDriv
 from ghostos.core.aifunc.driver import DefaultAIFuncDriverImpl
 from ghostos.core.messages import Stream
 
-__all__ = ['DefaultAIFuncExecutorImpl', 'DefaultAIFuncManagerProvider']
+__all__ = ['DefaultAIFuncExecutorImpl', 'DefaultAIFuncExecutorProvider']
 
 
 class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
@@ -179,7 +179,7 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
         del self._upstream
 
 
-class DefaultAIFuncManagerProvider(Provider[AIFuncExecutor]):
+class DefaultAIFuncExecutorProvider(Provider[AIFuncExecutor]):
 
     def __init__(
             self,

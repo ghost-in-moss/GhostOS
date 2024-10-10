@@ -2,6 +2,12 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.helpers import generate_import_path
 
+__all__ = [
+    'Descriptive',
+    'Identifier', 'Identifiable', 'IdentifiableClass', 'identify_class', 'identify_class_id',
+    'PromptAble', 'PromptAbleClass'
+]
+
 
 class Descriptive(ABC):
 
@@ -34,7 +40,7 @@ class IdentifiableClass(ABC):
         pass
 
 
-def describe_class(cls: type) -> Identifier:
+def identify_class(cls: type) -> Identifier:
     """
     一个默认的用来描述类的方法.
     :param cls: 目标类.
@@ -42,10 +48,14 @@ def describe_class(cls: type) -> Identifier:
     """
     if issubclass(cls, IdentifiableClass):
         return cls.class_identifier()
-    id_ = generate_import_path(cls)
+    id_ = identify_class_id(cls)
     name = cls.__name__
     desc = cls.__doc__
     return Identifier(id=id_, name=name, description=desc)
+
+
+def identify_class_id(cls: type) -> str:
+    return generate_import_path(cls)
 
 
 class PromptAble(ABC):

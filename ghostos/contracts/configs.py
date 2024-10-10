@@ -1,9 +1,9 @@
 import yaml
 from abc import ABC, abstractmethod
-from typing import ClassVar, TypeVar, Type, Optional, AnyStr
+from typing import ClassVar, TypeVar, Type, Optional
 from typing_extensions import Self
 from pydantic import BaseModel
-import io
+from ghostos.helpers import generate_import_path
 
 __all__ = ['Config', 'Configs', 'YamlConfig', 'C']
 
@@ -99,5 +99,6 @@ class YamlConfig(Config, BaseModel):
 
     def marshal(self) -> bytes:
         value = self.model_dump(exclude_defaults=True)
+        comment = f"# from class: {generate_import_path(self.__class__)}"
         result = yaml.safe_dump(value)
-        return result.encode()
+        return "\n".join([comment, result]).encode()

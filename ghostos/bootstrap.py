@@ -102,6 +102,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.framework.eventbuses import EventBus
     from ghostos.framework.llms import LLMs
     from ghostos.framework.logger import LoggerItf
+    from ghostos.core.aifunc import AIFuncExecutor, AIFuncRepository
 
     return Contracts([
         # workspace contracts
@@ -118,6 +119,10 @@ def default_application_contracts() -> Contracts:
 
         # moss
         MossCompiler,
+
+        # aifunc
+        AIFuncExecutor,
+        AIFuncRepository,
 
         # session contracts
         Processes,  # application processes repository
@@ -154,6 +159,7 @@ def default_application_providers(
     from ghostos.framework.llms import ConfigBasedLLMsProvider
     from ghostos.framework.logger import NamedLoggerProvider
     from ghostos.framework.entities import EntityFactoryProvider
+    from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
     return [
         BasicWorkspaceProvider(
             workspace_dir=root_dir,
@@ -172,6 +178,8 @@ def default_application_providers(
         NamedLoggerProvider(logger_name),
         DefaultMOSSProvider(),
         EntityFactoryProvider(),
+        DefaultAIFuncExecutorProvider(),
+        AIFuncRepoByConfigsProvider(),
     ]
 
 
@@ -202,6 +210,8 @@ def make_app_container(
     _container.register(*app_providers)
     # contracts validation
     app_contracts.validate(_container)
+    # bootstrap.
+    _container.bootstrap()
     return _container
 
 

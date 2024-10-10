@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple, Dict, Type, List
+from typing import Any, Optional, Tuple, Dict, Type, List, Iterable
 from abc import ABC, abstractmethod
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult
 from ghostos.core.moss.decorators import cls_source_code
@@ -83,7 +83,7 @@ class ExecStep(BaseModel):
     messages: List[Message] = Field(default_factory=list, description="list of messages")
     code: str = Field(default="", description="the generated code of the AIFunc")
     std_output: str = Field(default="", description="the std output of the AIFunc step")
-    pycontext: Optional[PyContext] = Field(default=None, default_factory=PyContext)
+    pycontext: Optional[PyContext] = Field(default=None, description="pycontext of the step")
     error: Optional[Message] = Field(description="the error message")
     frames: List = Field(default_factory=list, description="list of ExecFrame")
 
@@ -243,29 +243,28 @@ class AIFuncRepository(ABC):
         )
 
     @abstractmethod
-    def scan(self, module_name: str, recursive: bool) -> List[Identifier]:
+    def scan(self, module_name: str, *, recursive: bool, save: bool) -> List[Identifier]:
         """
         scan a module and find AiFunc
-        :param module_name:
-        :param recursive:
+        :param module_name: the modulename where an AIFunc is located or start point of a recursive search
+        :param recursive: if recursive search
+        :param save: if auto save to the repository
         :return: list of AiFunc identifiers
         """
         pass
 
     @abstractmethod
-    def search(self, query: str, limit: int = 10) -> List[Identifier]:
+    def list(self, offset: int = 0, limit: int = -1) -> Iterable[Identifier]:
         """
-        search AiFuncs matching the query
-        :param query: nature language of the query
-        :param limit: numbers of results to return
-        :return: list of AiFunc identifiers
-        """
-        pass
-
-    @abstractmethod
-    def all(self) -> List[Identifier]:
-        """
+        :param offset: offset of the first item in the list
+        :param limit: limit the list, if limit <= 0 means return all identifiers after offset.
         :return: all the registered AiFunc identifiers
+        """
+        pass
+
+    def validate(self) -> None:
+        """
+        validate the registered AiFunc, remove invalid ones
         """
         pass
 
