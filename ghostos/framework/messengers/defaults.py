@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, TYPE_CHECKING, Type
+from typing import Optional, Iterable, TYPE_CHECKING, Type, Dict, List
 from ghostos.container import Container, Provider
 from ghostos.core.session.messenger import Messenger, Buffed
 from ghostos.core.messages import (
@@ -8,6 +8,8 @@ from ghostos.core.messages import (
 from ghostos.core.session.threads import MsgThread
 from ghostos.core.llms import FunctionalToken
 from ghostos.framework.messages.buffers import DefaultBuffer
+from ghostos.helpers import uuid
+from threading import Lock
 
 if TYPE_CHECKING:
     from ghostos.contracts.logger import LoggerItf
@@ -24,6 +26,7 @@ class DefaultMessenger(Messenger, Stream):
 
     def __init__(
             self, *,
+            depth: int = 0,
             upstream: Optional[Stream] = None,
             thread: Optional["MsgThread"] = None,
             name: Optional[str] = None,
@@ -47,7 +50,9 @@ class DefaultMessenger(Messenger, Stream):
         :param functional_tokens: 是否有需要处理的 functional tokens
         :param logger:
         """
+        self._depth = depth
         self._thread: Optional[MsgThread] = thread
+        # self._streaming_id: str = uuid()
         self._name = name
         self._logger = logger
         self._role = role if role else Role.ASSISTANT.value
@@ -68,78 +73,121 @@ class DefaultMessenger(Messenger, Stream):
                 functional_tokens=self._functional_tokens,
             )
         self._buffer: Buffer = buffer
+        self._accept_chunks = upstream.accept_chunks() if upstream else False
+        # self._sending_stream_id: Optional[str] = None
+        # self._sending_stream_buffer: Dict[str, List[Message]] = {}
+        self._destroyed: bool = False
+        self._locker = Lock()
 
-    def new(
-            self, *,
-            sending: bool = True,
-            thread: Optional[MsgThread] = None,
-            name: Optional[str] = None,
-            buffer: Optional[Buffer] = None,
-            payloads: Optional[Iterable[Payload]] = None,
-            attachments: Optional[Iterable[Attachment]] = None,
-            functional_tokens: Optional[Iterable[FunctionalToken]] = None,
-    ) -> "Messenger":
-        # payloads 完成初始化.
-        _payloads = None
-        if self._payloads is not None or payloads is not None:
-            payloads_map = {}
-            if self._payloads:
-                for payload in self._payloads:
-                    payloads_map[payload.key] = payload
-            if payloads:
-                for payload in payloads:
-                    payloads_map[payload.key] = payload
-            _payloads = payloads_map.values()
+    # def new(
+    #         self, *,
+    #         sending: bool = True,
+    #         thread: Optional[MsgThread] = None,
+    #         name: Optional[str] = None,
+    #         buffer: Optional[Buffer] = None,
+    #         payloads: Optional[Iterable[Payload]] = None,
+    #         attachments: Optional[Iterable[Attachment]] = None,
+    #         functional_tokens: Optional[Iterable[FunctionalToken]] = None,
+    # ) -> "Messenger":
+    #     # payloads 完成初始化.
+    #     # copy
+    #     messenger = DefaultMessenger(
+    #         depth=self._depth + 1,
+    #         upstream=self._upstream,
+    #         thread=thread,
+    #         name=self._name,
+    #         role=self._role,
+    #         # buffer is None to sub manager
+    #         buffer=buffer,
+    #         payloads=payloads,
+    #         attachments=attachments,
+    #         functional_tokens=functional_tokens,
+    #     )
+    #     return messenger
 
-        # attachments 初始化.
-        _attachments = None
-        if self._attachments is not None or attachments is not None:
-            _attachments = []
-            if self._attachments:
-                _attachments.extend(self._attachments)
-            if attachments:
-                _attachments.extend(attachments)
-
-        # 如果能传输数据, 则传递上游的 upstream.
-        upstream = self._upstream if sending else None
-        thread = self._thread
-        functional_tokens = functional_tokens if functional_tokens else self._functional_tokens
-        messenger = DefaultMessenger(
-            upstream=upstream,
-            thread=thread,
-            name=self._name,
-            role=self._role,
-            buffer=buffer,
-            payloads=_payloads,
-            attachments=_attachments,
-            functional_tokens=functional_tokens,
-        )
-        return messenger
-
-    def is_streaming(self) -> bool:
-        if self._upstream is None:
-            return False
-        return self._upstream.is_streaming()
+    def accept_chunks(self) -> bool:
+        return self._accept_chunks
 
     def deliver(self, pack: "Message") -> bool:
         if self.stopped():
             return False
-        if not pack:
-            return False
-        # 下游返回 error, 会导致全链路的 messenger 因为 error 而停止.
-        # 所以 error 类型的消息, 链路里只能有一个.
-        if DefaultMessageTypes.ERROR.match(pack):
-            self._stop(pack)
-            return True
 
-        if DefaultMessageTypes.is_final(pack):
+        elif DefaultMessageTypes.is_final(pack):
             # 下游发送的 final 包, 上游会装作已经发送成功.
             return True
-        delivery = self._buffer.buff(pack)
-        return self._deliver(delivery)
 
-    def _deliver(self, delivery: Iterable[Message]) -> bool:
+        with self._locker:
+            # 下游返回 error, 会导致全链路的 messenger 因为 error 而停止.
+            # 所以 error 类型的消息, 链路里只能有一个.
+            if DefaultMessageTypes.ERROR.match(pack):
+                # receive error pack will stop the current streaming.
+                self._stop(pack)
+                return True
+            # return self._map_or_deliver_by_streaming_id(pack)
+            return self._buff_then_deliver(pack)
+
+    # def _map_or_deliver_by_streaming_id(self, pack: "Message") -> bool:
+    #     """
+    #     use streaming id to buff or reduce messages.
+    #     """
+    #     if self._depth > 0:
+    #         return self._buff_then_deliver(pack)
+    #     if self._sending_stream_id is None:
+    #         self._sending_stream_id = pack.streaming_id
+    #
+    #     if pack.streaming_id not in self._sending_stream_buffer:
+    #         self._sending_stream_buffer[pack.streaming_id] = []
+    #     buffer = self._sending_stream_buffer[pack.streaming_id]
+    #     buffer.append(pack)
+    #     if self._sending_stream_id != pack.streaming_id:
+    #         return True
+    #     else:
+    #         # reduce deliver
+    #         return self._reduce_streaming_items()
+
+    # def _reduce_streaming_items(self) -> bool:
+    #     if self._sending_stream_id is not None:
+    #         items = self._sending_stream_buffer[self._sending_stream_id]
+    #         self._sending_stream_buffer[self._sending_stream_id] = []
+    #         last = None
+    #         for item in items:
+    #             success = self._buff_then_deliver(item)
+    #             if not success:
+    #                 return False
+    #             last = item
+    #         if last and (last.is_complete() or DefaultMessageTypes.is_protocol_type(last)):
+    #             print("\n+++`" + last.content + "`+++\n")
+    #             del self._sending_stream_buffer[self._sending_stream_id]
+    #             self._sending_stream_id = None
+    #             # keep going
+    #             return self._reduce_streaming_items()
+    #         else:
+    #             # still buffering
+    #             return True
+    #     elif len(self._sending_stream_buffer) == 0:
+    #         # all items are sent
+    #         self._sending_stream_id = None
+    #         self._sending_stream_buffer = {}
+    #         return True
+    #     else:
+    #         for key in self._sending_stream_buffer:
+    #             self._sending_stream_id = key
+    #             break
+    #         return self._reduce_streaming_items()
+
+    def _buff_then_deliver(self, pack: "Message") -> bool:
+        delivery = self._buffer.buff(pack)
+        return self._deliver_to_upstream(delivery)
+
+    def _deliver_to_upstream(self, delivery: Iterable[Message]) -> bool:
+        if self._stopped:
+            return False
         for item in delivery:
+            if not DefaultMessageTypes.is_protocol_type(item) and item.chunk and not self._accept_chunks:
+                continue
+            # 如果发送不成功, 直接中断.
+            # if self._depth == 0:
+            #     item.streaming_id = None
             if (
                     self._saving
                     and self._thread is not None  # thread exists.
@@ -148,27 +196,22 @@ class DefaultMessenger(Messenger, Stream):
             ):  # is tail package.
                 # append tail message to thread.
                 self._thread.append(item)
-            if self._upstream:
-                # 如果发送不成功, 直接中断.
+
+            if self._upstream is not None:
                 success = self._upstream.deliver(item)
                 if not success:
+                    # in case check upstream is stopped over and over again.
+                    self._stopped = self._upstream.stopped()
                     return False
         return True
 
-    def send(self, messages: Iterable[Message]) -> bool:
-        for item in messages:
-            success = self.deliver(item)
-            if not success:
-                return False
-        return True
-
-    def flush(self) -> "Buffed":
+    def flush(self) -> Buffed:
         if self._stopped:
             return Buffed(messages=[], callers=[])
-
         buffed = self._buffer.flush()
         if buffed.unsent:
-            self._deliver(buffed.unsent)
+            self._deliver_to_upstream(buffed.unsent)
+        self._stop(None)
         return Buffed(messages=buffed.messages, callers=buffed.callers)
 
     def _stop(self, final: Optional[Message]) -> None:
@@ -176,13 +219,38 @@ class DefaultMessenger(Messenger, Stream):
         停止并且发送指定的 final 包. 如果没有指定, 则发送 DefaultTypes.final()
         """
         self._stopped = True
+        if self._destroyed:
+            return
         if final is None or not DefaultMessageTypes.is_protocol_type(final):
             final = DefaultMessageTypes.final()
-        if self._upstream and not self._upstream.stopped():
-            self._upstream.deliver(final)
+        self._deliver_to_upstream([final])
+        self.destroy()
 
     def stopped(self) -> bool:
-        return self._stopped or (self._upstream is not None and self._upstream.stopped())
+        if self._stopped:
+            return True
+        if self._upstream is None:
+            return False
+        if self._upstream.stopped():
+            self._stopped = True
+        return self._stopped
+
+    def destroy(self) -> None:
+        """
+        I kind of don't trust python gc, let me help some
+        :return:
+        """
+        if self._destroyed:
+            return
+        self._destroyed = True
+        del self._upstream
+        if self._buffer:
+            self._buffer.flush()
+        del self._buffer
+        del self._payloads
+        del self._attachments
+        del self._thread
+        del self._functional_tokens
 
 
 class TestMessengerProvider(Provider[Messenger]):
@@ -198,3 +266,4 @@ class TestMessengerProvider(Provider[Messenger]):
 
     def factory(self, con: Container) -> Messenger:
         return DefaultMessenger()
+

@@ -114,6 +114,7 @@ class AIFuncRepoByConfigsProvider(Provider[AIFuncRepository]):
         configs = con.force_fetch(Configs)
         modules = con.force_fetch(Modules)
         conf = configs.get(AIFuncsConf)
+        conf.validated_at = int(time.time())
         return AIFuncRepoByConfigs(conf, configs, modules)
 
 

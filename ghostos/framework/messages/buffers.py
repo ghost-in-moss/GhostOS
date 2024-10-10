@@ -48,6 +48,8 @@ class DefaultBuffer(Buffer):
         self._functional_token_chars: Dict[int, Set[str]] = {}
         """ functional token 的字符组.. """
 
+        self._destroyed = False
+
         if functional_tokens:
             for ft in functional_tokens:
                 start = ft.token
@@ -93,7 +95,7 @@ class DefaultBuffer(Buffer):
         result = []
         for item in items:
             # 如果是尾包, 对尾包进行必要的处理.
-            is_tail = item.is_done()
+            is_tail = item.is_complete()
             if is_tail:
                 self._buff_tail_pack(item)
             result.append(item)
@@ -108,7 +110,7 @@ class DefaultBuffer(Buffer):
             # final 包不进行 buffer.
             yield pack
             return
-        if pack.is_done():
+        if pack.is_complete():
             # 如果收到了一个尾包, 则走尾包逻辑.
             yield from self._receive_tail_pack(pack)
             return
@@ -217,7 +219,7 @@ class DefaultBuffer(Buffer):
         # 输出的消息会缓存到一起.
         self._buffering_message_delivered_content += deliver_content
         # 结算环节, 变更 pack 可以输出的 content.
-        if pack.is_done() and pack.content != self._buffering_message_delivered_content:
+        if pack.is_complete() and pack.content != self._buffering_message_delivered_content:
             pack.memory = pack.content
         pack.content = deliver_content
         return pack
@@ -357,3 +359,14 @@ class DefaultBuffer(Buffer):
         self._buffed_messages = []
         self._buffed_callers = []
         return flushed
+
+    def destroy(self) -> None:
+        if self._destroyed:
+            return
+        self._destroyed = True
+        del self._buffering_message
+        del self._buffering_message_delivered_content
+        del self._buffering_token
+        del self._functional_token_starts
+        del self._origin_functional_tokens
+        del self._functional_token_ends

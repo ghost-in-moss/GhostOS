@@ -1,6 +1,7 @@
 import enum
 import time
 from typing import Optional, Dict, Set, Iterable, Union, List, ClassVar
+from typing_extensions import Self
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.helpers import uuid
@@ -43,7 +44,7 @@ class Role(str, enum.Enum):
             name: Optional[str] = None,
             type_: Optional[str] = None,
     ) -> "Message":
-        return Message.new_done(
+        return Message.new_tail(
             type_=type_ if type_ else DefaultMessageTypes.DEFAULT.value,
             role=self.value,
             name=name,
@@ -180,39 +181,89 @@ class Attachment(BaseModel, ABC):
         message.attachments[self.key] = values
 
 
-# 消息体的容器. 通用的抽象设计, 设计思路:
-# 1. message 可以是一个完整的消息, 也可以是一个包, 用 pack 字段做区分. 支持 dict 传输, dict 传输时不包含默认值.
-# 2. 完整的 message 需要有 msg_id, 但包可以没有.
-# 3. content 是对客户端展示用的消息体, 而 memory 是对大模型展示的消息体. 两者可能不一样.
-# 4. message 可以有强类型字段, 比如 images, 但通过 attachments (累加) 和 payload (替代) 来定义. Message 容器里放弱类型的 dict.
-# 5. type 字段用来提示 message 拥有的信息. 比如 images 消息, 会包含 images payload, 但同时也会指定 type. 这样方便解析时预判.
-# 6. 所有的 message 都需要能转换成模型的协议, 默认要对齐 openai 的协议.
-# 7. openai 协议中的 tool, function_call 统一成 caller 抽象, 通过 caller.id 来做区分.
-# 8. 流式传输中, 可以有首包和尾包. 首包期待包含全部的 payloads 和 attachments. 间包则可选. 尾包是完整的消息体.
+# the Message class is a container for every kind of message and it's chunks.
+# I need this container because:
+# 1. I hate weak-type container of message, countless type checking and adapting
+# 2. I have not found a community-accepted message protocol for Ai Model messages.
+# So I developed this wheel, may be a bad move, but happy to replace it with a mature library someday.
+#
+# 这个消息类是各种消息类型的一个通用容器.
+# 我需要一个这样的容器是因为:
+# 1. 讨厌弱类型消息, 需要做无数的校验和适配, 缺乏规则. 比如 OpenAI 的那个极其复杂的 dict.
+# 2. 我没找到一个社区广泛使用的标准消息协议.
+# 所以重复造了这个轮子, 如果未来发现了成熟的库, 要果断取代掉它. 为此全链路对 Message 的依赖要控制好.
+# 把 Message 用于创建消息的地方, 很难修改. 但它作为传输时的 item, 是可以替代的.
+#
+# the basic logic of this container:
+# 1. Message instance could be a complete message, or a chunk.
+# 2. I can parse Message to dict/json/serialized data, and unpack a Message from them.
+#    the complete Message instance must have msg_id for tracking, but the chunk does not.
+# 3. I need a message has a default protocol to show it to User/Agent differently.
+#    so this container has two field, content(to user) and memory (to llm).
+# 4. the basic information of message are strong typed, but dynamic payloads or attachments have a certain way to parse.
+# 5. both client side and server side can define it own parser with message type.
+# 6. each type of message can either be parsed to LLM Message (like OpenAI Message), or ignore.
+# 7. define a common action caller for LLM, compatible for JSONSchema Tool, function call or FunctionalTokens.
+# 8. the streaming chunks always have a head package (introduce following chunks),
+#    and a tail package (the complete message).
+#
+# 基本设计逻辑:
+# 1. Message 既可以是一个完整的消息, 也可以是一个间包. 它们通常有相同的结构.
+# 2. 可以用 dict/json/别的序列化协议 传输它, 也可以从这些协议反解. 因此用了 pydantic.
+#    完整的消息体必须有 msg_id, 但中间包不需要它.
+# 3. 消息对客户端和 AI 模型的展示方式可以不一样. 所以有 content 和 memory 字段的区分.
+# 4. 消息的基础信息是强类型的, 那些动态类型的信息可以通过确定的方式反解.
+# 5. 客户端和服务端可以根据需要, 定义自己的消息转义协议.
+# 6. 所有的完整消息要么能被解析成模型的消息, 要么就应该忽略它. 避免展示加工不了的.
+# 7. 用一个 caller 兼容各种模型的 action caller.
+# 8. 流式传输的消息包, 应该有 首包 / 间包 / 尾包. 尾包是一个粘包后的完整包.
 class Message(BaseModel):
-    """标准的消息体."""
+    """ message protocol """
 
-    msg_id: str = Field(default="", description="消息的全局唯一 id. ")
-    ref_id: Optional[str] = Field(default=None, description="消息的关联目标. 如果 role 是 tool, 则这个是 tool_call_id")
-    type: str = Field(default="", description="消息类型是对 payload 的约定. 默认的 type就是 text.")
-    created: float = Field(default=0.0, description="Message creation time")
-    chunk: bool = Field(default=True, description="Message reset time")
+    msg_id: str = Field(default="", description="unique message id. ")
+    ref_id: Optional[str] = Field(default=None, description="the referenced message id.")
+    type: str = Field(default="", description="default message type, if empty, means text")
+    created: float = Field(
+        default=0,
+        description="Message creation time, only available in head chunk or complete one",
+    )
+    chunk: bool = Field(default=True, description="if the message is a chunk or a complete one")
 
     role: str = Field(default=Role.ASSISTANT.value, description="Message role", enum=Role.all())
     name: Optional[str] = Field(default=None, description="Message sender name")
 
-    content: Optional[str] = Field(default=None, description="Message content")
-    memory: Optional[str] = Field(default=None, description="Message memory")
+    content: Optional[str] = Field(
+        default=None,
+        description="Message content that for client side. empty means it shall not be showed",
+    )
+    memory: Optional[str] = Field(
+        default=None,
+        description="Message memory that for llm, if none, means content is memory",
+    )
 
     # --- attachments --- #
 
-    payloads: Dict[str, Dict] = Field(default_factory=dict, description="k/v 结构的强类型参数.")
-    attachments: Dict[str, List[Dict]] = Field(default_factory=dict, description="k/list[v] 类型的强类型参数.")
+    payloads: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="payload type key to payload item. payload shall be a strong-typed dict"
+    )
+    attachments: Dict[str, List[Dict]] = Field(
+        default_factory=dict,
+        description="attachment type key to attachment items. attachment shall be a strong-typed dict",
+    )
 
-    callers: List[Caller] = Field(default_factory=list, description="将 callers 作为一种单独的类型. ")
+    callers: List[Caller] = Field(
+        default_factory=list,
+        description="the callers parsed in a complete message."
+    )
 
-    pack_count: int = Field(default=0, description="pack count")
-    time_cast: float = Field(default=0.0, description="from first pack to last pack")
+    chunk_count: int = Field(default=0, description="how many chunks of this complete message")
+    time_cast: float = Field(default=0.0, description="from first chunk to tail message.")
+
+    streaming_id: Optional[str] = Field(
+        default=None,
+        description="may be multiple streaming exists, use streaming id to separate them into a order",
+    )
 
     @classmethod
     def new_head(
@@ -226,6 +277,18 @@ class Message(BaseModel):
             ref_id: Optional[str] = None,
             created: int = 0,
     ):
+        """
+        create a head chunk message
+        :param role:
+        :param typ_:
+        :param content:
+        :param memory:
+        :param name:
+        :param msg_id:
+        :param ref_id:
+        :param created:
+        :return:
+        """
         if msg_id is None:
             msg_id = uuid()
         if created <= 0:
@@ -238,7 +301,7 @@ class Message(BaseModel):
         )
 
     @classmethod
-    def new_done(
+    def new_tail(
             cls, *,
             type_: str = "",
             role: str = Role.ASSISTANT.value,
@@ -249,6 +312,18 @@ class Message(BaseModel):
             ref_id: Optional[str] = None,
             created: int = 0,
     ):
+        """
+        create a tail message, is the complete message of chunks.
+        :param type_:
+        :param role:
+        :param content:
+        :param memory:
+        :param name:
+        :param msg_id:
+        :param ref_id:
+        :param created:
+        :return:
+        """
         msg = cls.new_head(
             role=role, name=name, content=content, memory=memory,
             typ_=type_,
@@ -268,42 +343,60 @@ class Message(BaseModel):
             memory: Optional[str] = None,
             name: Optional[str] = None,
     ):
+        """
+        create a chunk message.
+        :param typ_:
+        :param role:
+        :param content:
+        :param memory:
+        :param name:
+        :return:
+        """
         return cls(
             role=role, name=name, content=content, memory=memory, chunk=True,
             type=typ_,
         )
 
     def get_content(self) -> str:
+        """
+        get content of this message that is showed to model
+        if result is empty, means do not show it to model.
+        """
         if self.memory is None:
             return self.content if self.content else ""
         return self.memory
 
-    def patch(self, pack: "Message") -> Optional["Message"]:
+    def patch(self, chunk: "Message") -> Optional["Message"]:
         """
-        预期目标消息是当前消息的一个后续包, 执行粘包逻辑.
-        :param pack:
-        :return: 如果粘包成功, 返回粘包后的消息. 粘包失败, 则返回 None.
+        patch a chunk to the current message until get a tail message or other message's chunk
+        :param chunk: the chunk to patch.
+        :return: if patch succeeds, return the patched message. None means it is other message's chunk
         """
-        #  type 不相同的话, 则认为是不同消息.
-        pack_type = pack.get_type()
+        # if the type is not same, it can't be patched
+        pack_type = chunk.get_type()
         if pack_type and pack_type != self.get_type():
             return None
-        # 如果两个消息的 msg id 都存在, 又不相同, 则认为是不同的消息.
-        if pack.msg_id and self.msg_id and pack.msg_id != self.msg_id:
+        # the chunk message shall have the same message id or empty one
+        if chunk.msg_id and self.msg_id and chunk.msg_id != self.msg_id:
             return None
-        # 如果目标包是一个尾包, 则直接返回这个尾包.
-        if not pack.chunk:
-            return pack
-        # 否则更新当前消息.
-        self.update(pack)
+        # if not a chunk, just return the tail message.
+        # tail message may be changed by outside method such as moderation.
+        if not chunk.chunk:
+            return chunk
+        # otherwise, update current one.
+        self.update(chunk)
         return self
 
     def get_copy(self) -> "Message":
+        """
+        :return: deep copy
+        """
         return self.model_copy(deep=True)
 
     def update(self, pack: "Message") -> None:
         """
-        使用目标消息更新当前消息.
+        update the fields.
+        do not call this method outside patch unless you know what you are doing
         """
         if not self.msg_id:
             # 当前消息的 msg id 不会变更.
@@ -333,38 +426,42 @@ class Message(BaseModel):
                 self.attachments[key] = saved
         if pack.callers:
             self.callers.extend(pack.callers)
-        self.pack_count += 1
+        self.chunk_count += 1
         if self.created:
             now = round(time.time(), 4)
             self.time_cast = round(now - self.created, 4)
 
     def get_type(self) -> str:
         """
-        返回消息的类型.
+        return a message type
         """
         return self.type or DefaultMessageTypes.DEFAULT
 
     def is_empty(self) -> bool:
         """
-        根据协议判断是不是空消息.
+        a message is empty means it has no content, payloads, callers, or attachments
         """
         no_content = not self.content and not self.memory
         no_payloads = not self.payloads and not self.attachments and not self.callers
         return no_content and no_payloads
 
-    def is_done(self) -> bool:
+    def is_complete(self) -> bool:
+        """
+        complete message is not a chunk one
+        """
         return not self.chunk
 
     def dump(self) -> Dict:
         """
-        将消息以 dict 形式输出, 过滤掉默认值.
+        dump a message dict without default value.
         """
         return self.model_dump(exclude_defaults=True)
 
 
 class MessageClass(ABC):
     """
-    一种特殊的 Message, 本体是强类型数据结构, 映射到 Message 类型中解决 payloads 等参数问题.
+    A message class with every field that is strong-typed
+    the payloads and attachments shall parse to dict when generate to a Message.
     """
 
     @abstractmethod
@@ -373,17 +470,22 @@ class MessageClass(ABC):
 
     @classmethod
     @abstractmethod
-    def from_message(cls) -> Optional[Message]:
+    def from_message(cls, container: Message) -> Optional[Self]:
+        """
+        from a message container generate a strong-typed one.
+        :param container:
+        :return: None means type not match.
+        """
         pass
 
 
 MessageKind = Union[Message, MessageClass, str]
-"""将三种类型的数据统一视作 message 类型. """
+"""sometimes we need three forms of the message to define an argument or property."""
 
 
 class MessageKindParser:
     """
-    处理 MessageType
+    middleware that parse weak MessageKind into Message chunks
     """
 
     def __init__(self, role: str = Role.ASSISTANT.value, ref_id: Optional[str] = None) -> None:
@@ -395,13 +497,13 @@ class MessageKindParser:
             if isinstance(item, Message):
                 yield self._with_ref(item)
             if isinstance(item, MessageClass):
-                msg= item.to_message()
+                msg = item.to_message()
                 yield self._with_ref(msg)
             if isinstance(item, str):
                 if not item:
                     # exclude empty message
                     continue
-                msg = Message.new_done(content=item, role=self.role)
+                msg = Message.new_tail(content=item, role=self.role)
                 yield self._with_ref(msg)
             else:
                 # todo: 需要日志?
@@ -411,10 +513,3 @@ class MessageKindParser:
         if self.ref_id is not None:
             item.ref_id = self.ref_id
         return item
-
-    def unknown(self, item) -> None:
-        """
-        unknown 消息类型的处理逻辑.
-        默认忽视, 可以重写这个方法.
-        """
-        return

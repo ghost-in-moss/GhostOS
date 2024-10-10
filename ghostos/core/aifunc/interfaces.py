@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple, Dict, Type, List, Iterable
+from typing import Any, Optional, Tuple, Dict, Type, List, Iterable, Callable
 from abc import ABC, abstractmethod
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult
 from ghostos.core.moss.decorators import cls_source_code
@@ -188,6 +188,17 @@ class AIFuncExecutor(ABC):
         -- actually --> AIFuncExecutor execution -------------------------> Sub AIFuncExecutor execution
         """
         pass
+
+    def new_exec_frame(self, fn: AIFunc, upstream: Optional[Stream]) -> Tuple[ExecFrame, Callable[[], AIFuncResult]]:
+        """
+        syntax sugar
+        """
+        frame = ExecFrame.from_func(fn)
+
+        def execution() -> AIFuncResult:
+            return self.execute(fn, frame, upstream)
+
+        return frame, execution
 
     @abstractmethod
     def sub_executor(self, step: ExecStep, upstream: Optional[Stream] = None) -> "AIFuncExecutor":

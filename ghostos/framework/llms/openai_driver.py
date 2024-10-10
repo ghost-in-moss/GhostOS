@@ -154,7 +154,7 @@ class OpenAIAdapter(LLMApi):
             usage = CompletionUsagePayload.from_usage(message.usage)
             usage.set(pack)
 
-        if not pack.is_done():
+        if not pack.is_complete():
             pack.chunk = False
         return pack
 

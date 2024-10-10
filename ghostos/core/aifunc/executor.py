@@ -9,7 +9,7 @@ from ghostos.core.moss import MossCompiler
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
 from ghostos.core.aifunc.interfaces import AIFuncExecutor, AIFuncCtx, AIFuncDriver, ExecFrame, ExecStep
 from ghostos.core.aifunc.driver import DefaultAIFuncDriverImpl
-from ghostos.core.messages import Stream
+from ghostos.core.messages import Stream, DefaultMessageTypes
 
 __all__ = ['DefaultAIFuncExecutorImpl', 'DefaultAIFuncExecutorProvider']
 
@@ -112,6 +112,10 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
         if result is not None and not isinstance(result, AIFuncResult):
             result_type = get_aifunc_result_type(type(fn))
             raise RuntimeError(f"result is invalid AIFuncResult {type(result)}, expecting {result_type}")
+
+        # if frame is the root, send final message as protocol
+        if upstream and frame.depth == 0:
+            upstream.send(DefaultMessageTypes.final())
         return result
 
     def get_driver(

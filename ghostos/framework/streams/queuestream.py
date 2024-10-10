@@ -7,6 +7,10 @@ __all__ = ["QueueStream"]
 
 
 class QueueStream(Stream):
+    """
+    expect to develop a thread-safe stream by python queue.
+    but I'm not familiar to python thread safe queue...
+    """
 
     def __init__(self, queue: Queue, streaming: bool = True, max_final: int = 1):
         self._queue = queue
@@ -30,22 +34,18 @@ class QueueStream(Stream):
                     self._queue.task_done()
                     self._queue.put(pack, block=True)
             return True
-        elif self._streaming and not pack.is_done():
+        elif self._streaming and not pack.is_complete():
             # 不发送间包, 只发送尾包.
             return True
         else:
             self._queue.put(pack, block=True)
             return True
 
-    def is_streaming(self) -> bool:
-        return self._streaming
-
-    def send(self, messages: Iterable[Message]) -> bool:
-        for item in messages:
-            ok = self.deliver(item)
-            if not ok:
-                return False
-        return True
+    def accept_chunks(self) -> bool:
+        return not self._streaming
 
     def stopped(self) -> bool:
         return self._stopped
+
+    def close(self):
+        self._stopped = True

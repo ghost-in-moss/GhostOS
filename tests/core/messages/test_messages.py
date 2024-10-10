@@ -5,7 +5,7 @@ from ghostos.core.messages import (
 
 
 def test_text_msg():
-    msg = Message.new_done(role=Role.SYSTEM, content="hello")
+    msg = Message.new_tail(role=Role.SYSTEM, content="hello")
     assert msg.content == "hello"
     assert len(msg.msg_id) > 0
     assert msg.created > 0
@@ -57,11 +57,11 @@ def test_tail_patch():
         pack = Message.new_chunk(content=c)
         patch = msg.patch(pack)
         assert patch is not None
-    tail = Message.new_done(content=" world")
+    tail = Message.new_tail(content=" world")
     patch = msg.patch(tail)
     assert patch is None
 
-    tail = Message.new_done(content=" world", msg_id=msg.msg_id)
+    tail = Message.new_tail(content=" world", msg_id=msg.msg_id)
     patch = msg.patch(tail)
     assert patch is not None
     assert patch.content == " world"
@@ -78,6 +78,8 @@ def test_patch_default_type_message():
     assert pack.type == "foo"
     patch = msg.patch(pack)
     assert patch is None
+
+
 
 
 

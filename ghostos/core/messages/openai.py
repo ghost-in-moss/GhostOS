@@ -23,19 +23,21 @@ __all__ = [
 
 class OpenAIMessageParser(ABC):
     """
-    用来对齐 openai 的协议.
+    a parser for OpenAI messages alignment.
     """
 
     @abstractmethod
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         """
-        将 message 转换为 openai 的请求入参.
+        parse a Message to OpenAI chat completion message form.
+        OpenAI's input message (ChatCompletionXXXParam) are different to ChatCompletion types,
+        which is exhausting
         """
         pass
 
     def parse_message_list(self, messages: Iterable[Message]) -> Iterable[ChatCompletionMessageParam]:
         """
-        将多条消息转换成 openai 的多条入参.
+        syntax suger
         """
         for message in messages:
             items = self.parse_message(message)
@@ -45,21 +47,23 @@ class OpenAIMessageParser(ABC):
     @abstractmethod
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
         """
-        将 openai chat completion 转换.
+        parse a ChatCompletion message to Message.
+        Request -> Message -> ChatCompletionXXXXParam --LLM generation--> ChatCompletionXXX --> Message
         """
         pass
 
     @abstractmethod
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         """
-        将 openai 的 delta 转换过来.
+        patch the openai Chat Completion Chunks.
+        the Realtime API need a new parser.
         """
         pass
 
 
 class CompletionUsagePayload(CompletionUsage, PayloadItem):
     """
-    将每个包的开销记录下来.
+    the strong-typed payload of OpenAI chat completion usage.
     """
     key: ClassVar[str] = "completion_usage"
 
@@ -81,7 +85,7 @@ class CompletionUsagePayload(CompletionUsage, PayloadItem):
 
 class DefaultOpenAIMessageParser(OpenAIMessageParser):
     """
-    默认的 parser, 只做了极简的实现.
+    default implementation of OpenAIMessageParser
     """
 
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
@@ -159,7 +163,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         )]
 
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
-        pack = Message.new_done(type_=DefaultMessageTypes.CHAT_COMPLETION, role=message.role, content=message.content)
+        pack = Message.new_tail(type_=DefaultMessageTypes.CHAT_COMPLETION, role=message.role, content=message.content)
         if message.function_call:
             caller = Caller(
                 name=message.function_call.name,

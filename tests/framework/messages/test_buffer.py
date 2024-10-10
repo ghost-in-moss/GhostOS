@@ -170,7 +170,7 @@ def test_buffer_with_tail_item():
     for c in content:
         msg = Message.new_chunk(content=c)
         buffer.buff(msg)
-    tail = Message.new_done(content="hello world", msg_id=header.msg_id)
+    tail = Message.new_tail(content="hello world", msg_id=header.msg_id)
     buffer.buff(tail)
     flushed = buffer.flush()
     assert len(flushed.messages) == 1

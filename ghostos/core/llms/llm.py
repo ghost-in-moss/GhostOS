@@ -60,9 +60,9 @@ class LLMApi(ABC):
         """
         逐个发送消息的包.
         """
-        if not deliver.is_streaming():
+        if not deliver.accept_chunks():
             message = self.chat_completion(chat)
-            if message.is_done():
+            if message.is_complete():
                 # add model conf as message payload
                 self.get_model().set(message)
             deliver.deliver(message)
@@ -70,7 +70,7 @@ class LLMApi(ABC):
         items = self.chat_completion_chunks(chat)
         # todo: payload 要计算 tokens
         for item in items:
-            if item.is_done():
+            if item.is_complete():
                 # add model conf as message payload
                 self.get_model().set(item)
             deliver.deliver(item)
