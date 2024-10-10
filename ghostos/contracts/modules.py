@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
+from typing import Optional, Type, Union, List, Iterable
 from types import ModuleType
+from abc import ABC, abstractmethod
 from importlib import import_module
-from typing import Optional, Type
+import pkgutil
 
 from ghostos.container import Provider, Container
 
@@ -18,6 +19,14 @@ class Modules(ABC):
         引用一个模块或抛出异常.
         :param modulename: 模块全路径.
         :exception: ModuleNotFoundError
+        """
+        pass
+
+    @abstractmethod
+    def iter_modules(self, module: Union[str, ModuleType]) -> Iterable[str]:
+        """
+        like pkgutil.iter_modules.
+        :return: module names
         """
         pass
 
@@ -50,6 +59,18 @@ class ImportWrapper:
 class DefaultModules(Modules):
     def import_module(self, modulename) -> ModuleType:
         return import_module(modulename)
+
+    def iter_modules(self, module: Union[str, ModuleType]) -> Iterable[str]:
+        if isinstance(module, str):
+            module_type = self.import_module(module)
+        elif isinstance(module, ModuleType):
+            module_type = module
+        else:
+            raise ValueError(f'Invalid module type: {type(module)}')
+        prefix = module_type.__name__ + "."
+        path = module_type.__path__
+        for i, name, is_pkg in pkgutil.iter_modules(path, prefix):
+            yield name
 
 
 class DefaultModulesProvider(Provider[Modules]):
