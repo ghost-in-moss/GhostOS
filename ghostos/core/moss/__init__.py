@@ -1,4 +1,4 @@
-from ghostos.container import Container, Provider
+from ghostos.container import Container
 from ghostos.core.moss.abc import (
     Moss, MossCompiler, MossRuntime, MossPrompter, MossResult,
     AttrPrompts,
@@ -6,7 +6,7 @@ from ghostos.core.moss.abc import (
     MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT,
     moss_message,
 )
-from ghostos.core.moss.impl import TestMOSSProvider
+from ghostos.core.moss.impl import DefaultMOSSProvider
 from ghostos.core.moss.test_suites import MossTestSuite
 from ghostos.core.moss.pycontext import PyContext, Injection, Property, attr, SerializableType, SerializableData
 from ghostos.core.moss.functional_token import (
@@ -31,7 +31,7 @@ __all__ = [
     # pycontext related
     PyContext, Injection, Property, attr, SerializableType, SerializableData,
     # testing
-    TestMOSSProvider,
+    DefaultMOSSProvider,
     MossTestSuite,
     'test_container',
     'moss_test_suite',
@@ -45,7 +45,7 @@ def test_container() -> Container:
     """
     from ghostos.contracts.modules import DefaultModulesProvider
     container = Container()
-    container.register(TestMOSSProvider())
+    container.register(DefaultMOSSProvider())
     container.register(DefaultModulesProvider())
     return container
 

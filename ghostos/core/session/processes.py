@@ -61,7 +61,7 @@ The meta data that waken the sleeping ghost in disputed services.
 
 class Processes(ABC):
     """
-    管理进程存储的模块. 通常集成到 Session 里.
+    repository to save or load process
     """
 
     @abstractmethod
@@ -90,4 +90,8 @@ class Processes(ABC):
 
     @contextmanager
     def transaction(self):
+        """
+        transaction to process io
+        do nothing as default.
+        """
         yield

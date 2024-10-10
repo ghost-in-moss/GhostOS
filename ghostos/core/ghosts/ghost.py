@@ -137,7 +137,7 @@ class Ghost(ABC):
             meta_prompt = task.assistant.meta_prompt
             return meta_prompt
         meta_prompt = self.meta_prompt()
-        shell_prompt = self.shell().shell_prompt()
+        shell_prompt = self.shell().status_description()
         content = "\n\n".join([meta_prompt, shell_prompt])
         return content.strip()
 

@@ -1,15 +1,22 @@
-from typing import Any, Optional, Tuple, Dict
+from typing import Any, Optional, Tuple, Dict, Type, List, Iterable, Callable
 from abc import ABC, abstractmethod
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult
 from ghostos.core.moss.decorators import cls_source_code
-from ghostos.core.moss.abc import MossCompiler
-from ghostos.core.llms import LLMApi
+from ghostos.core.moss import MossCompiler, PyContext
+from ghostos.core.llms import LLMApi, Chat
 from ghostos.core.session import MsgThread
+from ghostos.core.messages import Message, Stream
+from ghostos.abc import Identifier
+from ghostos.helpers import generate_import_path, uuid
 from ghostos.container import Container
+from ghostos.entity import EntityMeta, model_to_entity_meta
+from pydantic import BaseModel, Field
 
 __all__ = [
     'AIFunc', 'AIFuncResult',
-    'AIFuncManager', 'AIFuncCtx', 'AIFuncDriver'
+    'AIFuncExecutor', 'AIFuncCtx', 'AIFuncDriver',
+    'AIFuncRepository',
+    'ExecFrame', 'ExecStep',
 ]
 
 
@@ -65,7 +72,70 @@ class AIFuncCtx(ABC):
         pass
 
 
-class AIFuncManager(ABC):
+class ExecStep(BaseModel):
+    """
+    AIFunc execute in multi-turn thinking. Each turn is a step.
+    """
+    frame_id: str = Field(description="step id")
+    depth: int = Field(description="depth of the ExecFrame")
+    step_id: str = Field(default_factory=uuid, description="step id")
+    chat: Optional[Chat] = Field(default=None, description="llm chat")
+    messages: List[Message] = Field(default_factory=list, description="list of messages")
+    code: str = Field(default="", description="the generated code of the AIFunc")
+    std_output: str = Field(default="", description="the std output of the AIFunc step")
+    pycontext: Optional[PyContext] = Field(default=None, description="pycontext of the step")
+    error: Optional[Message] = Field(description="the error message")
+    frames: List = Field(default_factory=list, description="list of ExecFrame")
+
+    def new_frame(self, fn: AIFunc) -> "ExecFrame":
+        frame = ExecFrame.from_func(
+            fn,
+            depth=self.depth + 1,
+            parent_step_id=self.step_id,
+        )
+        # thread safe append
+        self.frames.append(frame)
+        return frame
+
+
+class ExecFrame(BaseModel):
+    """
+    stack frame of an AIFunc execution context
+    """
+    frame_id: str = Field(default_factory=uuid, description="AIFunc execution id.")
+    parent_step: Optional[str] = Field(default=None, description="parent execution step id")
+    request: EntityMeta = Field(description="AIFunc request, model to entity")
+    response: Optional[EntityMeta] = Field(None, description="AIFunc response, model to entity")
+    depth: int = Field(default=0, description="the depth of the stack")
+    steps: List[ExecStep] = Field(default_factory=list, description="the execution steps")
+
+    @classmethod
+    def from_func(cls, fn: AIFunc, depth: int = 0, parent_step_id: Optional[str] = None) -> "ExecFrame":
+        return cls(
+            request=model_to_entity_meta(fn),
+            parent_step=parent_step_id,
+            depth=depth,
+        )
+
+    def new_step(self) -> ExecStep:
+        step = ExecStep(frame_id=self.frame_id, depth=self.depth)
+        self.steps.append(step)
+        return step
+
+
+class AIFuncExecutor(ABC):
+    """
+    AIFuncCtx is model-oriented.
+    AIFuncExecutor is developer (human or meta-agent) oriented
+
+    In other words, an AIFuncCtx is the model-oriented interface of an AIFuncExecutor Adapter.
+
+    the core method is `execute`, the method itself is stateless,
+    but receive a state object ExecFrame to record states.
+
+    the `AIFuncCtx.run` is stateful when it is created from a specific ExecStep
+    it will create sub ExecFrame during each call, and update self ExecStep.
+    """
 
     @abstractmethod
     def container(self) -> Container:
@@ -84,35 +154,64 @@ class AIFuncManager(ABC):
         pass
 
     @abstractmethod
-    def compiler(self) -> MossCompiler:
+    def compiler(self, step: ExecStep, upstream: Optional[Stream] = None) -> MossCompiler:
         """
-        返回与 AIFunc 相关的 MossCompiler
-        :return:
+        make a MossCompiler with step and upstream.
+        the MossCompiler.Container() can get sub AiFuncCtx with step and upstream.
+        :param step: get moss compiler with ExecStep
+        :param upstream: pass upstream to sub manager
         """
         pass
 
+    @abstractmethod
     def context(self) -> AIFuncCtx:
         """
-        :return: AIFuncCtx that provide AIFunc Runtime.
+        :return: AIFuncCtx that bind to this manager
         """
         pass
 
     @abstractmethod
-    def execute(self, fn: AIFunc) -> AIFuncResult:
+    def execute(
+            self,
+            fn: AIFunc,
+            frame: Optional[ExecFrame] = None,
+            upstream: Optional[Stream] = None,
+    ) -> AIFuncResult:
         """
-        执行一个 AIFunc, 直到拿到它的返回结果.
+        execute an AIFunc in multi-turn thinking.
+        each step of the processing will record to the frame object.
+
+        when AiFunc is running, it may generate code in which another AiFuncCtx is called.
+        The called AiFuncCtx is actually from a sub manager of this one.
+
+        -- stack    --> AIFuncExecutor execution --> LLM call AiFuncCtx --> Sub AIFuncExecutor execution
+        -- actually --> AIFuncExecutor execution -------------------------> Sub AIFuncExecutor execution
         """
         pass
 
+    def new_exec_frame(self, fn: AIFunc, upstream: Optional[Stream]) -> Tuple[ExecFrame, Callable[[], AIFuncResult]]:
+        """
+        syntax sugar
+        """
+        frame = ExecFrame.from_func(fn)
+
+        def execution() -> AIFuncResult:
+            return self.execute(fn, frame, upstream)
+
+        return frame, execution
+
     @abstractmethod
-    def sub_manager(self) -> "AIFuncManager":
+    def sub_executor(self, step: ExecStep, upstream: Optional[Stream] = None) -> "AIFuncExecutor":
         """
         instance an sub manager to provide AIFuncCtx for sub AIFunc
         """
         pass
 
     @abstractmethod
-    def get_driver(self, fn: AIFunc) -> "AIFuncDriver":
+    def get_driver(
+            self,
+            fn: AIFunc,
+    ) -> "AIFuncDriver":
         """
         根据 AIFunc 实例获取 AIFuncDriver 的实例.
         """
@@ -122,6 +221,61 @@ class AIFuncManager(ABC):
     def destroy(self) -> None:
         """
         for gc
+        """
+        pass
+
+
+class AIFuncRepository(ABC):
+    """
+    Repository that register the AIFunc information, useful to recall AIFuncs
+    """
+
+    @abstractmethod
+    def register(self, *fns: Type[AIFunc]) -> None:
+        """
+        register an AIFunc class
+        :param fns: AIFunc class
+        """
+        pass
+
+    @classmethod
+    def identify(cls, fn: Type[AIFunc]) -> Identifier:
+        """
+        how to identify an AIFunc
+        :param fn: class
+        :return: Identifier(
+           id=[import path of the AiFunc, formation is f"{fn.__module}:{func.__name__}"]
+        )
+        """
+        return Identifier(
+            id=generate_import_path(fn),
+            name=fn.__name__,
+            description=fn.__doc__,
+        )
+
+    @abstractmethod
+    def scan(self, module_name: str, *, recursive: bool, save: bool) -> List[Identifier]:
+        """
+        scan a module and find AiFunc
+        :param module_name: the modulename where an AIFunc is located or start point of a recursive search
+        :param recursive: if recursive search
+        :param save: if auto save to the repository
+        :return: list of AiFunc identifiers
+        """
+        pass
+
+    @abstractmethod
+    def list(self, offset: int = 0, limit: int = -1) -> Iterable[Identifier]:
+        """
+        :param offset: offset of the first item in the list
+        :param limit: limit the list, if limit <= 0 means return all identifiers after offset.
+        :return: all the registered AiFunc identifiers
+        """
+        pass
+
+    def validate(self) -> None:
+        """
+        validate the registered AiFunc, remove invalid ones
         """
         pass
 
@@ -142,21 +296,21 @@ class AIFuncDriver(ABC):
         pass
 
     @abstractmethod
-    def think(self, manager: AIFuncManager, thread: MsgThread) -> Tuple[MsgThread, Optional[Any], bool]:
+    def think(
+            self,
+            manager: AIFuncExecutor,
+            thread: MsgThread,
+            step: ExecStep,
+            upstream: Optional[Stream],
+    ) -> Tuple[MsgThread, Optional[Any], bool]:
         """
         think another round based on msg thread.
-        :param manager: AIFuncManager that provide AIFunc Runtime.
-        :param thread: thread that keep multi-turns thinking's history.
-        :return: (updated thread, __result__, is finish)
-        """
-        pass
+        each think round must pass a ExecStep to it.
 
-    @abstractmethod
-    def on_save(self, manager: AIFuncManager, thread: MsgThread) -> None:
-        """
-        一切运行结束的时候, 保存 chat 数据.
-        :param manager:
-        :param thread:
-        :return:
+        :param manager: AIFuncExecutor that provide AIFunc Runtime.
+        :param thread: thread that keep multi-turns thinking's history.
+        :param step: execution step.
+        :param upstream: upstream that can send runtime messages.
+        :return: (updated thread, __result__, is finish)
         """
         pass

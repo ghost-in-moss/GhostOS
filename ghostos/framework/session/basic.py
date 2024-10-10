@@ -211,8 +211,8 @@ class BasicSession(Session):
         bus = self._eventbus
         main_task_id = process.main_task_id
         for e in self._firing_events:
-            # 异步进程需要通知.
-            notify = not self._upstream.is_streaming() or e.task_id != main_task_id
+            # all the sub-tasks need notification
+            notify = e.task_id != main_task_id
             self._logger.info(f"fire event {e.type}: eid {e.id}; task_id {e.task_id}")
             bus.send_event(e, notify)
         self._firing_events = []

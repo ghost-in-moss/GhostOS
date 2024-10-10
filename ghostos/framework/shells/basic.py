@@ -1,11 +1,15 @@
 from typing import Type, Iterable, List, Tuple
 
-from ghostos.container import ABSTRACT
+from ghostos.container import INSTANCE, ABSTRACT
 from ghostos.core.ghosts import Action
 from ghostos.core.ghosts.shells import Shell
 
 
 class BasicShell(Shell):
+    """
+    A shell implementation that almost do nothing important.
+    just for testing.
+    """
 
     def __init__(
             self, *,
@@ -22,17 +26,17 @@ class BasicShell(Shell):
     def id(self) -> str:
         return self._id
 
-    def shell_prompt(self) -> str:
+    def status_description(self) -> str:
         return self._prompt
 
     def actions(self) -> Iterable[Action]:
         return self._actions
 
-    def drivers(self) -> Iterable[Type[ABSTRACT]]:
+    def drivers(self) -> Iterable[ABSTRACT]:
         for driver in self._drivers:
             yield driver
 
-    def get_driver(self, driver: Type[ABSTRACT]) -> ABSTRACT:
+    def get_driver(self, driver: ABSTRACT) -> INSTANCE:
         if driver not in self._drivers:
             raise KeyError(f"Driver {driver} not supported")
         return self._drivers[driver]

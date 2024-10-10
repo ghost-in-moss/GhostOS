@@ -1,12 +1,12 @@
 from typing import Callable, Optional, Type
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
-from ghostos.container import Provider, Container, ABSTRACT
+from ghostos.container import Provider, Container
 
 
 class Pool(ABC):
     """
-    建一个全局的池.
+    abstract class for pools like process pool or thread pool
     """
 
     @abstractmethod
@@ -30,7 +30,7 @@ class DefaultPool(Pool):
         self.pool.shutdown(wait=wait, cancel_futures=cancel_futures)
 
 
-class DefaultPoolProvider(Provider):
+class DefaultPoolProvider(Provider[Pool]):
 
     def __init__(self, size: int = 100):
         self.size = size
@@ -38,8 +38,8 @@ class DefaultPoolProvider(Provider):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[ABSTRACT]:
+    def contract(self) -> Type:
         return Pool
 
-    def factory(self, con: Container) -> Optional[ABSTRACT]:
+    def factory(self, con: Container) -> Optional[Pool]:
         return DefaultPool(self.size)

@@ -11,6 +11,7 @@ __all__ = [
     'EntityFactory',
     'ModelEntity',
     'EntityFactoryImpl',
+    'model_to_entity_meta',
 ]
 
 
@@ -26,6 +27,15 @@ class EntityMeta(TypedDict, total=False):
 
     data: Required[dict]
     """ use dict to restore the serializable data"""
+
+
+def model_to_entity_meta(model: BaseModel) -> EntityMeta:
+    type_ = generate_import_path(type(model))
+    data = model.model_dump(exclude_defaults=True)
+    return EntityMeta(
+        type=type_,
+        data=data,
+    )
 
 
 class Entity(ABC):

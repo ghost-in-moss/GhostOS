@@ -1,5 +1,5 @@
 from ghostos.prototypes.aifunc import quick_run_aifunc
-from ghostos.demo.src.aifuncs.agentic import AgentFn
+from ghostos.demo.aifuncs import AgentFn
 from ghostos.helpers import yaml_pretty_dump
 
 if __name__ == '__main__':

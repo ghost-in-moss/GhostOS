@@ -9,33 +9,41 @@ __all__ = [
 
 class Stream(ABC):
     """
-    messenger 的原型. Stream 的有状态版本.
+    streaming output messages.
     """
 
     @abstractmethod
     def deliver(self, pack: "Message") -> bool:
         """
-        发送一个包.
+        deliver a pack of message, may be a chunk
+        if an error message or a final message is delivering, the stream usually stop immediately.
+        but nesting stream can accept multiple final messages, only stop when it's done method is called.
+        :return: if the message was delivered. if the stream is stopped, return False.
         """
         pass
 
     @abstractmethod
-    def is_streaming(self) -> bool:
+    def accept_chunks(self) -> bool:
         """
-        if not streaming, only receive tail message
+        weather the stream is sending chunks.
+        if False, the stream will send joined chunks as a single message only.
         """
         pass
 
-    @abstractmethod
     def send(self, messages: Iterable[Message]) -> bool:
         """
-        发送消息.
+        syntax sugar for delivering
         """
-        pass
+        for item in messages:
+            ok = self.deliver(item)
+            if not ok:
+                # break sending
+                return False
+        return True
 
     @abstractmethod
     def stopped(self) -> bool:
         """
-        是否已经停止接受
+        if the stream is stopped.
         """
         pass

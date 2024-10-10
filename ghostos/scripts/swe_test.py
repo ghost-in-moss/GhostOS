@@ -9,7 +9,7 @@ from ghostos.scripts.logconf import prepare_logger
 from ghostos.core.llms import Chat
 from ghostos.core.messages import Message
 from ghostos.core.moss import test_container
-from ghostos.core.aifunc import DefaultAIFuncManagerImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncManager
+from ghostos.core.aifunc import DefaultAIFuncExecutorImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncExecutor
 from ghostos.framework.logger import NamedLoggerProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
@@ -102,7 +102,7 @@ def main() -> None:
         def on_system_messages(self, messages: List[Message]) -> None:
             pass
 
-        def on_save(self, manager: AIFuncManager, thread: MsgThread) -> None:
+        def on_save(self, manager: AIFuncExecutor, thread: MsgThread) -> None:
             current = thread.current
             if current:
                 for message in current.messages():
@@ -113,7 +113,7 @@ def main() -> None:
                         )
                     )
 
-    manager_ = DefaultAIFuncManagerImpl(
+    manager_ = DefaultAIFuncExecutorImpl(
         container=container,
         llm_api_name=llm_api,
         default_driver=TestDriverImpl,
