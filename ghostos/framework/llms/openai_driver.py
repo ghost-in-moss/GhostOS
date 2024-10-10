@@ -154,8 +154,8 @@ class OpenAIAdapter(LLMApi):
             usage = CompletionUsagePayload.from_usage(message.usage)
             usage.set(pack)
 
-        if not pack.is_tail():
-            pack.pack = False
+        if not pack.is_done():
+            pack.chunk = False
         return pack
 
     def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:

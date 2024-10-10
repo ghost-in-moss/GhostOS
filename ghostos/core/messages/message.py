@@ -43,7 +43,7 @@ class Role(str, enum.Enum):
             name: Optional[str] = None,
             type_: Optional[str] = None,
     ) -> "Message":
-        return Message.new_tail(
+        return Message.new_done(
             type_=type_ if type_ else DefaultMessageTypes.DEFAULT.value,
             role=self.value,
             name=name,
@@ -54,9 +54,9 @@ class Role(str, enum.Enum):
 
 class DefaultMessageTypes(str, enum.Enum):
     DEFAULT = ""
-    CHAT_COMPLETION = "chat_completion"
-    ERROR = "error"
-    FINAL = "final"
+    CHAT_COMPLETION = "openai.chat_completion"
+    ERROR = "ghostos.messages.error"
+    FINAL = "ghostos.messages.final"
 
     def new(
             self, *,
@@ -100,7 +100,7 @@ class DefaultMessageTypes(str, enum.Enum):
 
     @classmethod
     def is_protocol_type(cls, message: "Message"):
-        return not message.pack and message.type in {cls.ERROR, cls.FINAL}
+        return not message.chunk and message.type in {cls.ERROR, cls.FINAL}
 
 
 class Caller(BaseModel):
@@ -196,7 +196,7 @@ class Message(BaseModel):
     ref_id: Optional[str] = Field(default=None, description="消息的关联目标. 如果 role 是 tool, 则这个是 tool_call_id")
     type: str = Field(default="", description="消息类型是对 payload 的约定. 默认的 type就是 text.")
     created: float = Field(default=0.0, description="Message creation time")
-    pack: bool = Field(default=True, description="Message reset time")
+    chunk: bool = Field(default=True, description="Message reset time")
 
     role: str = Field(default=Role.ASSISTANT.value, description="Message role", enum=Role.all())
     name: Optional[str] = Field(default=None, description="Message sender name")
@@ -231,14 +231,14 @@ class Message(BaseModel):
         if created <= 0:
             created = round(time.time(), 4)
         return cls(
-            role=role, name=name, content=content, memory=memory, pack=True,
+            role=role, name=name, content=content, memory=memory, chunk=True,
             type=typ_,
             ref_id=ref_id,
             msg_id=msg_id, created=created,
         )
 
     @classmethod
-    def new_tail(
+    def new_done(
             cls, *,
             type_: str = "",
             role: str = Role.ASSISTANT.value,
@@ -256,11 +256,11 @@ class Message(BaseModel):
             ref_id=ref_id,
             created=created,
         )
-        msg.pack = False
+        msg.chunk = False
         return msg
 
     @classmethod
-    def new_pack(
+    def new_chunk(
             cls, *,
             typ_: str = "",
             role: str = Role.ASSISTANT.value,
@@ -269,7 +269,7 @@ class Message(BaseModel):
             name: Optional[str] = None,
     ):
         return cls(
-            role=role, name=name, content=content, memory=memory, pack=True,
+            role=role, name=name, content=content, memory=memory, chunk=True,
             type=typ_,
         )
 
@@ -292,7 +292,7 @@ class Message(BaseModel):
         if pack.msg_id and self.msg_id and pack.msg_id != self.msg_id:
             return None
         # 如果目标包是一个尾包, 则直接返回这个尾包.
-        if not pack.pack:
+        if not pack.chunk:
             return pack
         # 否则更新当前消息.
         self.update(pack)
@@ -352,8 +352,8 @@ class Message(BaseModel):
         no_payloads = not self.payloads and not self.attachments and not self.callers
         return no_content and no_payloads
 
-    def is_tail(self) -> bool:
-        return not self.pack
+    def is_done(self) -> bool:
+        return not self.chunk
 
     def dump(self) -> Dict:
         """
@@ -401,7 +401,7 @@ class MessageKindParser:
                 if not item:
                     # exclude empty message
                     continue
-                msg = Message.new_tail(content=item, role=self.role)
+                msg = Message.new_done(content=item, role=self.role)
                 yield self._with_ref(msg)
             else:
                 # todo: 需要日志?

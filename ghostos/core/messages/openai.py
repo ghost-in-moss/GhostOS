@@ -159,7 +159,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         )]
 
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
-        pack = Message.new_tail(type_=DefaultMessageTypes.CHAT_COMPLETION, role=message.role, content=message.content)
+        pack = Message.new_done(type_=DefaultMessageTypes.CHAT_COMPLETION, role=message.role, content=message.content)
         if message.function_call:
             caller = Caller(
                 name=message.function_call.name,
@@ -185,7 +185,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
-                pack = Message.new_pack(role=Role.ASSISTANT.value, typ_=DefaultMessageTypes.CHAT_COMPLETION)
+                pack = Message.new_chunk(role=Role.ASSISTANT.value, typ_=DefaultMessageTypes.CHAT_COMPLETION)
                 usage.set(pack)
                 yield pack
             else:
@@ -201,8 +201,8 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content,
                                     typ_=DefaultMessageTypes.CHAT_COMPLETION)
         else:
-            pack = Message.new_pack(role=Role.ASSISTANT.value, content=delta.content,
-                                    typ_=DefaultMessageTypes.CHAT_COMPLETION)
+            pack = Message.new_chunk(role=Role.ASSISTANT.value, content=delta.content,
+                                     typ_=DefaultMessageTypes.CHAT_COMPLETION)
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())

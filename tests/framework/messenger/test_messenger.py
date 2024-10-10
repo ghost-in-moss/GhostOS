@@ -9,7 +9,7 @@ def test_default_messenger_baseline():
     messenger = DefaultMessenger(thread=thread)
     content = "hello world"
     for c in content:
-        msg = Message.new_pack(content=c)
+        msg = Message.new_chunk(content=c)
         success = messenger.deliver(msg)
         assert success
     messenger.flush()
@@ -31,7 +31,7 @@ def test_messenger_with_moss_xml_token():
     contents = ["he", "llo >mo", "ss: w", "orld"]
     content = "".join(contents)
     for c in contents:
-        msg = Message.new_pack(content=c)
+        msg = Message.new_chunk(content=c)
         messenger.deliver(msg)
     flushed = messenger.flush()
     assert len(list(flushed.callers)) > 0

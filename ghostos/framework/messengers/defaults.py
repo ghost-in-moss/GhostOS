@@ -144,7 +144,7 @@ class DefaultMessenger(Messenger, Stream):
                     self._saving
                     and self._thread is not None  # thread exists.
                     and not DefaultMessageTypes.is_protocol_type(item)  # not a protocol type message.
-                    and not item.pack
+                    and not item.chunk
             ):  # is tail package.
                 # append tail message to thread.
                 self._thread.append(item)

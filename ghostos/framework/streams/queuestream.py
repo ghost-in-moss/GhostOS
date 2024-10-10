@@ -30,7 +30,7 @@ class QueueStream(Stream):
                     self._queue.task_done()
                     self._queue.put(pack, block=True)
             return True
-        elif self._streaming and not pack.is_tail():
+        elif self._streaming and not pack.is_done():
             # 不发送间包, 只发送尾包.
             return True
         else:

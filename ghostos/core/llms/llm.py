@@ -62,7 +62,7 @@ class LLMApi(ABC):
         """
         if not deliver.is_streaming():
             message = self.chat_completion(chat)
-            if message.is_tail():
+            if message.is_done():
                 # add model conf as message payload
                 self.get_model().set(message)
             deliver.deliver(message)
@@ -70,7 +70,7 @@ class LLMApi(ABC):
         items = self.chat_completion_chunks(chat)
         # todo: payload 要计算 tokens
         for item in items:
-            if item.is_tail():
+            if item.is_done():
                 # add model conf as message payload
                 self.get_model().set(item)
             deliver.deliver(item)
