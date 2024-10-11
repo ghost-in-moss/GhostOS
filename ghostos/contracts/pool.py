@@ -1,6 +1,7 @@
 from typing import Callable, Optional, Type
+from typing_extensions import Self
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, Future
 from ghostos.container import Provider, Container
 
 
@@ -10,7 +11,15 @@ class Pool(ABC):
     """
 
     @abstractmethod
-    def submit(self, caller: Callable, *args, **kwargs) -> Callable:
+    def submit(self, caller: Callable, *args, **kwargs) -> Future:
+        pass
+
+    @abstractmethod
+    def new(self, size: int) -> Self:
+        """
+        use the same class to create a new pool,
+        or split a quota to create a sub pool.
+        """
         pass
 
     @abstractmethod
@@ -23,8 +32,11 @@ class DefaultPool(Pool):
         self.size = size
         self.pool = ThreadPoolExecutor(max_workers=size)
 
-    def submit(self, caller: Callable, *args, **kwargs) -> None:
-        self.pool.submit(caller, *args, **kwargs)
+    def submit(self, caller: Callable, *args, **kwargs) -> Future:
+        return self.pool.submit(caller, *args, **kwargs)
+
+    def new(self, size: int) -> Self:
+        return DefaultPool(size)
 
     def shutdown(self, wait=True, *, cancel_futures=False):
         self.pool.shutdown(wait=wait, cancel_futures=cancel_futures)
