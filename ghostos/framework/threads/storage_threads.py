@@ -1,5 +1,5 @@
 from typing import Optional, Type
-from ghostos.core.session import MsgThread, Threads, SimpleMsgThread
+from ghostos.core.session import MsgThread, MsgThreadRepo, SimpleMsgThread
 from ghostos.core.ghosts import Workspace
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
@@ -8,10 +8,10 @@ from ghostos.container import Provider, Container
 import yaml
 import os
 
-__all__ = ['StorageThreads', 'StorageThreadsProvider', 'WorkspaceThreadsProvider']
+__all__ = ['MsgThreadRepoByStorage', 'MsgThreadRepoByStorageProvider', 'MsgThreadsRepoByWorkSpaceProvider']
 
 
-class StorageThreads(Threads):
+class MsgThreadRepoByStorage(MsgThreadRepo):
 
     def __init__(
             self, *,
@@ -62,7 +62,7 @@ class StorageThreads(Threads):
         return thread.fork()
 
 
-class StorageThreadsProvider(Provider[Threads]):
+class MsgThreadRepoByStorageProvider(Provider[MsgThreadRepo]):
 
     def __init__(self, threads_dir: str = "runtime/threads"):
         self._threads_dir = threads_dir
@@ -70,17 +70,17 @@ class StorageThreadsProvider(Provider[Threads]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Threads]:
-        return Threads
+    def contract(self) -> Type[MsgThreadRepo]:
+        return MsgThreadRepo
 
-    def factory(self, con: Container) -> Optional[Threads]:
+    def factory(self, con: Container) -> Optional[MsgThreadRepo]:
         storage = con.force_fetch(Storage)
         threads_storage = storage.sub_storage(self._threads_dir)
         logger = con.force_fetch(LoggerItf)
-        return StorageThreads(storage=threads_storage, logger=logger)
+        return MsgThreadRepoByStorage(storage=threads_storage, logger=logger)
 
 
-class WorkspaceThreadsProvider(Provider[Threads]):
+class MsgThreadsRepoByWorkSpaceProvider(Provider[MsgThreadRepo]):
 
     def __init__(self, namespace: str = "threads"):
         self._namespace = namespace
@@ -88,11 +88,11 @@ class WorkspaceThreadsProvider(Provider[Threads]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Threads]:
-        return Threads
+    def contract(self) -> Type[MsgThreadRepo]:
+        return MsgThreadRepo
 
-    def factory(self, con: Container) -> Optional[Threads]:
+    def factory(self, con: Container) -> Optional[MsgThreadRepo]:
         workspace = con.force_fetch(Workspace)
         logger = con.force_fetch(LoggerItf)
         threads_storage = workspace.runtime().sub_storage(self._namespace)
-        return StorageThreads(storage=threads_storage, logger=logger)
+        return MsgThreadRepoByStorage(storage=threads_storage, logger=logger)

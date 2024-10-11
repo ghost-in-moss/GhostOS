@@ -13,7 +13,7 @@ from ghostos.core.aifunc import DefaultAIFuncExecutorImpl, AIFunc, DefaultAIFunc
 from ghostos.framework.logger import NamedLoggerProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
-from ghostos.framework.threads import StorageThreadsProvider
+from ghostos.framework.threads import MsgThreadRepoByStorageProvider
 from ghostos.container import Container
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.storage import Storage
@@ -33,7 +33,7 @@ def prepare_container(root_dir: str) -> Container:
     container = test_container()
     container.register(FileStorageProvider(root_dir))
     container.register(NamedLoggerProvider(logger_name="debug"))
-    container.register(StorageThreadsProvider(threads_dir='runtime/threads'))
+    container.register(MsgThreadRepoByStorageProvider(threads_dir='runtime/threads'))
     container.register(ConfigsByStorageProvider("configs"))
     container.register(ConfigBasedLLMsProvider("llms_conf.yml"))
     return container

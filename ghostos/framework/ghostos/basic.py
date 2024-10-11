@@ -7,14 +7,14 @@ from ghostos.container import Container
 from ghostos.core.ghostos import AbsGhostOS
 from ghostos.core.ghosts import Ghost
 from ghostos.core.messages import Stream
-from ghostos.core.session import Process, Task
+from ghostos.core.session import GhostProcess, Task
 from ghostos.contracts.shutdown import ShutdownProvider
 from ghostos.contracts.modules import Modules, DefaultModulesProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.logger import NamedLoggerProvider
 from ghostos.framework.workspaces import BasicWorkspaceProvider
 from ghostos.framework.configs import WorkspaceConfigsProvider
-from ghostos.framework.threads import WorkspaceThreadsProvider
+from ghostos.framework.threads import MsgThreadsRepoByWorkSpaceProvider
 from ghostos.framework.processes import WorkspaceProcessesProvider
 from ghostos.framework.tasks import WorkspaceTasksProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
@@ -80,7 +80,7 @@ class BasicGhostOS(AbsGhostOS, ABC):
     def make_ghost(
             self, *,
             upstream: Stream,
-            process: Process,
+            process: GhostProcess,
             task: Optional[Task] = None,
             task_id: Optional[str] = None,
     ) -> Ghost:
@@ -102,7 +102,7 @@ class BasicGhostOS(AbsGhostOS, ABC):
             WorkspaceConfigsProvider(),
             WorkspaceProcessesProvider(self._processes_path),
             WorkspaceTasksProvider(self._tasks_path),
-            WorkspaceThreadsProvider(self._threads_path),
+            MsgThreadsRepoByWorkSpaceProvider(self._threads_path),
             DefaultPoolProvider(100),
             ConfigBasedLLMsProvider(self._llm_config_path),
             MemEventBusImplProvider(),

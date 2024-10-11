@@ -96,9 +96,9 @@ def default_application_contracts() -> Contracts:
     from ghostos.entity import EntityFactory
     from ghostos.framework.workspaces import Workspace
     from ghostos.framework.configs import Configs
-    from ghostos.framework.processes import Processes
-    from ghostos.framework.threads import Threads
-    from ghostos.framework.tasks import Tasks
+    from ghostos.framework.processes import GhostProcessRepo
+    from ghostos.framework.threads import MsgThreadRepo
+    from ghostos.framework.tasks import TaskRepo
     from ghostos.framework.eventbuses import EventBus
     from ghostos.framework.llms import LLMs
     from ghostos.framework.logger import LoggerItf
@@ -125,9 +125,9 @@ def default_application_contracts() -> Contracts:
         AIFuncRepository,
 
         # session contracts
-        Processes,  # application processes repository
-        Threads,  # application threads repository
-        Tasks,  # application tasks repository
+        GhostProcessRepo,  # application processes repository
+        MsgThreadRepo,  # application threads repository
+        TaskRepo,  # application tasks repository
         EventBus,  # application session eventbus
     ])
 
@@ -153,7 +153,7 @@ def default_application_providers(
     from ghostos.framework.workspaces import BasicWorkspaceProvider
     from ghostos.framework.configs import WorkspaceConfigsProvider
     from ghostos.framework.processes import WorkspaceProcessesProvider
-    from ghostos.framework.threads import WorkspaceThreadsProvider
+    from ghostos.framework.threads import MsgThreadsRepoByWorkSpaceProvider
     from ghostos.framework.tasks import WorkspaceTasksProvider
     from ghostos.framework.eventbuses import MemEventBusImplProvider
     from ghostos.framework.llms import ConfigBasedLLMsProvider
@@ -169,7 +169,7 @@ def default_application_providers(
         WorkspaceConfigsProvider(),
         WorkspaceProcessesProvider(runtime_processes_dir),
         WorkspaceTasksProvider(runtime_tasks_dir),
-        WorkspaceThreadsProvider(runtime_threads_dir),
+        MsgThreadsRepoByWorkSpaceProvider(runtime_threads_dir),
         DefaultPoolProvider(100),
         ConfigBasedLLMsProvider(llms_conf_path),
         DefaultModulesProvider(),

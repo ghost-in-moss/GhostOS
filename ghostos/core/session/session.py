@@ -3,9 +3,9 @@ from abc import ABC, abstractmethod
 
 from ghostos.core.session.events import Event, EventBus
 from ghostos.core.session.messenger import Messenger
-from ghostos.core.session.processes import Processes, Process
-from ghostos.core.session.tasks import Tasks, Task, TaskBrief
-from ghostos.core.session.threads import Threads, MsgThread
+from ghostos.core.session.processes import GhostProcessRepo, GhostProcess
+from ghostos.core.session.tasks import TaskRepo, Task, TaskBrief
+from ghostos.core.session.threads import MsgThreadRepo, MsgThread
 from ghostos.core.messages import MessageKind, Role, Buffer, Payload, Attachment, Message
 from ghostos.core.llms import FunctionalToken
 
@@ -56,7 +56,7 @@ class Session(ABC):
     #     pass
 
     @abstractmethod
-    def process(self) -> "Process":
+    def process(self) -> "GhostProcess":
         """
         当前会话所处的进程数据.
         不允许直接修改. 只有指定的 API 会修改结果并保存.
@@ -119,7 +119,7 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def update_process(self, process: "Process") -> None:
+    def update_process(self, process: "GhostProcess") -> None:
         """
         改动 process 并保存. 通常只在初始化里才需要.
         """
@@ -172,15 +172,15 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def tasks(self) -> Tasks:
+    def tasks(self) -> TaskRepo:
         pass
 
     @abstractmethod
-    def processes(self) -> Processes:
+    def processes(self) -> GhostProcessRepo:
         pass
 
     @abstractmethod
-    def threads(self) -> Threads:
+    def threads(self) -> MsgThreadRepo:
         pass
 
     @abstractmethod

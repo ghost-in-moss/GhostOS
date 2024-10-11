@@ -8,7 +8,7 @@ from ghostos.core.aifunc.func import (
 )
 from ghostos.core.llms import LLMs, Chat
 from ghostos.core.moss.abc import MossRuntime
-from ghostos.core.session import MsgThread, DefaultEventType, Threads, thread_to_chat
+from ghostos.core.session import MsgThread, DefaultEventType, MsgThreadRepo, thread_to_chat
 from ghostos.core.messages import Role, Message, Stream
 from ghostos.contracts.logger import LoggerItf
 
@@ -278,6 +278,6 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def on_save(self, manager: AIFuncExecutor, thread: MsgThread) -> None:
         # 如果 threads 抽象存在, 就保存一下. 还应该做一些日志的工作.
         container = manager.container()
-        threads = container.get(Threads)
+        threads = container.get(MsgThreadRepo)
         if threads is not None:
             threads.save_thread(thread)

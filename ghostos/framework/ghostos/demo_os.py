@@ -2,7 +2,7 @@ from typing import Optional, ClassVar, Dict
 
 from ghostos.core.ghosts import Ghost, GhostConf, Workspace, Shell
 from ghostos.core.messages import Stream
-from ghostos.core.session import Process, Task
+from ghostos.core.session import GhostProcess, Task
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.configs import Configs, YamlConfig
 
@@ -28,7 +28,7 @@ class DemoGhostOS(BasicGhostOS):
     def make_ghost(
             self, *,
             upstream: Stream,
-            process: Process,
+            process: GhostProcess,
             task: Optional[Task] = None,
             task_id: Optional[str] = None,
     ) -> Ghost:
@@ -43,7 +43,7 @@ class DemoGhostOS(BasicGhostOS):
             self,
             conf: GhostConf,
             upstream: Stream,
-            process: Process,
+            process: GhostProcess,
             task: Optional[Task] = None,
             task_id: Optional[str] = None,
     ) -> Ghost:

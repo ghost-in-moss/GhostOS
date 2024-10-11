@@ -1,5 +1,5 @@
 from ghostos.framework.storage import MemStorage
-from ghostos.framework.tasks.storage_tasks import StorageTasksImpl
+from ghostos.framework.tasks.storage_tasks import StorageTaskRepoImpl
 from ghostos.framework.logger import FakeLogger
 from ghostos.core.session import Task
 from ghostos.entity import EntityMeta
@@ -7,7 +7,7 @@ from ghostos.entity import EntityMeta
 
 def test_storage_tasks_impl():
     storage = MemStorage()
-    tasks = StorageTasksImpl(storage, FakeLogger())
+    tasks = StorageTaskRepoImpl(storage, FakeLogger())
     task = Task.new(
         task_id="task_id",
         session_id="session_id",

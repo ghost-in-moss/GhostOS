@@ -16,8 +16,8 @@ from ghostos.core.moss import MossCompiler
 from ghostos.core.messages import Caller
 from ghostos.core.session import (
     Session, Event, DefaultEventType,
-    EventBus, Tasks, Processes, Threads, Messenger,
-    Process, Task, MsgThread,
+    EventBus, TaskRepo, GhostProcessRepo, MsgThreadRepo, Messenger,
+    GhostProcess, Task, MsgThread,
 )
 from ghostos.framework.operators import OnEventOperator
 from ghostos.framework.multitasks import MultiTaskBasicImpl
@@ -61,9 +61,9 @@ class BasicGhost(Ghost, ABC):
         Storage,
         Configs,
         EventBus,
-        Processes,
-        Tasks,
-        Threads,
+        GhostProcessRepo,
+        TaskRepo,
+        MsgThreadRepo,
         Pool,
         LLMs,
         Shutdown,
@@ -94,7 +94,7 @@ class BasicGhost(Ghost, ABC):
             workspace: Workspace,
             entity_factory: EntityFactory,
             upstream: Stream,
-            process: Process,
+            process: GhostProcess,
             max_operator_runs: int,
             task: Optional[Task] = None,
             task_id: Optional[str] = None,
@@ -167,10 +167,10 @@ class BasicGhost(Ghost, ABC):
 
         # register session drivers:
         session_function_providers = {
-            Tasks: self._session.tasks,
-            Processes: self._session.processes,
+            TaskRepo: self._session.tasks,
+            GhostProcessRepo: self._session.processes,
             Messenger: self._session.messenger,
-            Threads: self._session.threads,
+            MsgThreadRepo: self._session.threads,
             EventBus: self._session.eventbus,
         }
         for contract, maker in session_function_providers.items():
@@ -196,16 +196,16 @@ class BasicGhost(Ghost, ABC):
             self,
             logger: LoggerItf,
             upstream: Stream,
-            process: Process,
+            process: GhostProcess,
             root_thought: Thought,
             task: Optional[Task] = None,
             task_id: Optional[str] = None,
     ) -> Session:
         container = self.container()
         identifier = self.conf().identifier()
-        processes = container.force_fetch(Processes)
-        tasks = container.force_fetch(Tasks)
-        threads = container.force_fetch(Threads)
+        processes = container.force_fetch(GhostProcessRepo)
+        tasks = container.force_fetch(TaskRepo)
+        threads = container.force_fetch(MsgThreadRepo)
         pool = container.force_fetch(Pool)
         eventbus = container.force_fetch(EventBus)
         # task and thread init.

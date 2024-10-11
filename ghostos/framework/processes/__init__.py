@@ -1,2 +1,2 @@
-from ghostos.core.session import Processes
+from ghostos.core.session import GhostProcessRepo
 from ghostos.framework.processes.storage_processes import StorageProcessImplProvider, WorkspaceProcessesProvider

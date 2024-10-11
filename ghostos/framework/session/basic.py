@@ -5,9 +5,9 @@ from ghostos.core.messages import (
 )
 from ghostos.core.session import (
     Session,
-    Process, Processes,
-    MsgThread, Threads,
-    Task, Tasks, TaskPayload, TaskState,
+    GhostProcess, GhostProcessRepo,
+    MsgThread, MsgThreadRepo,
+    Task, TaskRepo, TaskPayload, TaskState,
     Messenger,
     Event, EventBus, DefaultEventType,
     TaskBrief,
@@ -43,27 +43,27 @@ class BasicSession(Session):
             upstream: Stream,
             eventbus: EventBus,
             pool: Pool,
-            processes: Processes,
-            tasks: Tasks,
-            threads: Threads,
+            processes: GhostProcessRepo,
+            tasks: TaskRepo,
+            threads: MsgThreadRepo,
             logger: LoggerItf,
             # 当前任务信息.
-            process: Process,
+            process: GhostProcess,
             task: Task,
             thread: MsgThread,
     ):
         self._pool = pool
         self._upstream = upstream
         self._logger = logger
-        self._tasks: Tasks = tasks
-        self._processes: Processes = processes
+        self._tasks: TaskRepo = tasks
+        self._processes: GhostProcessRepo = processes
         self._ghost_name: str = ghost_name
         self._message_role: str = ghost_role
-        self._threads: Threads = threads
+        self._threads: MsgThreadRepo = threads
         self._eventbus: EventBus = eventbus
         # 需要管理的状态.
         self._task: Task = task
-        self._process: Process = process
+        self._process: GhostProcess = process
         self._creating: List[Task] = []
         self._thread: MsgThread = thread
         self._firing_events: List[Event] = []
@@ -86,7 +86,7 @@ class BasicSession(Session):
             return True
         return False
 
-    def process(self) -> "Process":
+    def process(self) -> "GhostProcess":
         return self._process
 
     def task(self) -> "Task":
@@ -259,19 +259,19 @@ class BasicSession(Session):
                 self._fetched_task_briefs[task_brief.task_id] = task_brief
         return result
 
-    def tasks(self) -> Tasks:
+    def tasks(self) -> TaskRepo:
         return self._tasks
 
-    def processes(self) -> Processes:
+    def processes(self) -> GhostProcessRepo:
         return self._processes
 
-    def threads(self) -> Threads:
+    def threads(self) -> MsgThreadRepo:
         return self._threads
 
     def eventbus(self) -> EventBus:
         return self._eventbus
 
-    def update_process(self, process: "Process") -> None:
+    def update_process(self, process: "GhostProcess") -> None:
         self._process = process
 
     def quit(self) -> None:

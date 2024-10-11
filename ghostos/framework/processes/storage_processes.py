@@ -1,17 +1,17 @@
 from typing import Optional, Dict, Type
 import yaml
-from ghostos.core.session import Process
-from ghostos.core.session.processes import Processes
+from ghostos.core.session import GhostProcess
+from ghostos.core.session.processes import GhostProcessRepo
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
 from ghostos.core.ghosts.workspace import Workspace
 from threading import Lock
 from ghostos.container import Provider, Container
 
-__all__ = ['StorageProcessesImpl', 'StorageProcessImplProvider', 'WorkspaceProcessesProvider']
+__all__ = ['StorageGhostProcessRepoImpl', 'StorageProcessImplProvider', 'WorkspaceProcessesProvider']
 
 
-class StorageProcessesImpl(Processes):
+class StorageGhostProcessRepoImpl(GhostProcessRepo):
     session_map_name = "sessions.yml"
 
     def __init__(self, storage: Storage, logger: LoggerItf):
@@ -31,12 +31,12 @@ class StorageProcessesImpl(Processes):
     def _get_process_filename(process_id: str) -> str:
         return f"{process_id}.process.yml"
 
-    def get_process(self, process_id: str) -> Optional[Process]:
+    def get_process(self, process_id: str) -> Optional[GhostProcess]:
         filename = self._get_process_filename(process_id)
         if self._storage.exists(filename):
             content = self._storage.get(filename)
             data = yaml.safe_load(content)
-            process = Process(**data)
+            process = GhostProcess(**data)
             return process
         return None
 
@@ -45,14 +45,14 @@ class StorageProcessesImpl(Processes):
         filename = self.session_map_name
         self._storage.put(filename, content.encode("utf-8"))
 
-    def get_session_process(self, session_id: str) -> Optional[Process]:
+    def get_session_process(self, session_id: str) -> Optional[GhostProcess]:
         m = self._get_session_process_map()
         process_id = m.get(session_id, None)
         if process_id is None:
             return None
         return self.get_process(process_id)
 
-    def save_process(self, process: Process) -> None:
+    def save_process(self, process: GhostProcess) -> None:
         session_id = process.session_id
         process_id = process.process_id
         with self._lock:
@@ -64,35 +64,35 @@ class StorageProcessesImpl(Processes):
         self._storage.put(filename, content.encode("utf-8"))
 
 
-class StorageProcessImplProvider(Provider[Processes]):
+class StorageProcessImplProvider(Provider[GhostProcessRepo]):
     def __init__(self, process_dir: str = "runtime/processes"):
         self.process_dir = process_dir
 
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Processes]:
-        return Processes
+    def contract(self) -> Type[GhostProcessRepo]:
+        return GhostProcessRepo
 
-    def factory(self, con: Container) -> Optional[Processes]:
+    def factory(self, con: Container) -> Optional[GhostProcessRepo]:
         storage = con.force_fetch(Storage)
         logger = con.force_fetch(LoggerItf)
         processes_storage = storage.sub_storage(self.process_dir)
-        return StorageProcessesImpl(processes_storage, logger)
+        return StorageGhostProcessRepoImpl(processes_storage, logger)
 
 
-class WorkspaceProcessesProvider(Provider[Processes]):
+class WorkspaceProcessesProvider(Provider[GhostProcessRepo]):
     def __init__(self, process_dir: str = "processes"):
         self.process_dir = process_dir
 
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Processes]:
-        return Processes
+    def contract(self) -> Type[GhostProcessRepo]:
+        return GhostProcessRepo
 
-    def factory(self, con: Container) -> Optional[Processes]:
+    def factory(self, con: Container) -> Optional[GhostProcessRepo]:
         workspace = con.force_fetch(Workspace)
         logger = con.force_fetch(LoggerItf)
         processes_storage = workspace.runtime().sub_storage(self.process_dir)
-        return StorageProcessesImpl(processes_storage, logger)
+        return StorageGhostProcessRepoImpl(processes_storage, logger)

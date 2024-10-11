@@ -4,7 +4,7 @@ from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought, ThoughtDriver
 from ghostos.core.session import (
     Event, DefaultEventType,
-    Task, TaskState, Tasks,
+    Task, TaskState, TaskRepo,
 )
 from ghostos.core.messages import (
     MessageKind,
@@ -169,7 +169,7 @@ class Utils:
         if not children_ids:
             return
 
-        tasks = self.ghost.container().force_fetch(Tasks)
+        tasks = self.ghost.container().force_fetch(TaskRepo)
         children = list(tasks.get_task_briefs(children_ids))
         if not children:
             # 没有 children.

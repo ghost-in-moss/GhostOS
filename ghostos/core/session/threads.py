@@ -10,7 +10,7 @@ from ghostos.helpers import uuid
 from contextlib import contextmanager
 
 __all__ = [
-    'Threads', 'MsgThread', 'Turn',
+    'MsgThreadRepo', 'MsgThread', 'Turn',
     'thread_to_chat',
 ]
 
@@ -296,7 +296,7 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: MsgThread) -> Ch
     return chat
 
 
-class Threads(ABC):
+class MsgThreadRepo(ABC):
     """
     the repository to save and load threads
     """
