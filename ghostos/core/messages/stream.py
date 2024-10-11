@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, Tuple
 from ghostos.core.messages.message import Message
 
 __all__ = [
     "Stream",
+    "Receiver", "Received",
+    "Connection",
 ]
 
 
@@ -46,4 +48,35 @@ class Stream(ABC):
         """
         if the stream is stopped.
         """
+        pass
+
+
+class Received(ABC):
+
+    @abstractmethod
+    def added(self) -> Message:
+        pass
+
+    @abstractmethod
+    def chunks(self) -> Iterable[Message]:
+        pass
+
+    @abstractmethod
+    def done(self) -> Message:
+        pass
+
+
+class Receiver(ABC):
+    @abstractmethod
+    def received(self) -> Iterable[Received]:
+        pass
+
+
+class Connection(ABC):
+    @abstractmethod
+    def __enter__(self) -> Tuple[Stream, Receiver]:
+        pass
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         pass
