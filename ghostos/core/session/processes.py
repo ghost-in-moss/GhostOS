@@ -6,12 +6,12 @@ from contextlib import contextmanager
 from ghostos.helpers import uuid
 
 __all__ = [
-    'GhostProcess',
+    'SessionProcess',
     'GhostProcessRepo',
 ]
 
 
-class GhostProcess(BaseModel):
+class SessionProcess(BaseModel):
     process_id: str = Field(
         description="""
 Unique process id for the agent session. Session shall only have one process a time.
@@ -48,10 +48,10 @@ The meta data that waken the sleeping ghost in disputed services.
             ghost_meta: EntityMeta,
             process_id: Optional[str] = None,
             main_task_id: Optional[str] = None,
-    ) -> "GhostProcess":
+    ) -> "SessionProcess":
         process_id = process_id if process_id else uuid()
         main_task_id = process_id if main_task_id is None else main_task_id
-        return GhostProcess(
+        return SessionProcess(
             session_id=session_id,
             process_id=process_id,
             main_task_id=main_task_id,
@@ -65,7 +65,7 @@ class GhostProcessRepo(ABC):
     """
 
     @abstractmethod
-    def get_process(self, process_id: str) -> Optional[GhostProcess]:
+    def get_process(self, process_id: str) -> Optional[SessionProcess]:
         """
         get process by id
         :param process_id: process id
@@ -73,14 +73,14 @@ class GhostProcessRepo(ABC):
         pass
 
     @abstractmethod
-    def get_session_process(self, session_id: str) -> Optional[GhostProcess]:
+    def get_session_process(self, session_id: str) -> Optional[SessionProcess]:
         """
         get session process by session id
         """
         pass
 
     @abstractmethod
-    def save_process(self, process: GhostProcess) -> None:
+    def save_process(self, process: SessionProcess) -> None:
         """
         save process
         :param process:

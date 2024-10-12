@@ -17,7 +17,7 @@ from ghostos.core.messages import Caller
 from ghostos.core.session import (
     Session, Event, DefaultEventType,
     EventBus, TaskRepo, GhostProcessRepo, MsgThreadRepo, Messenger,
-    GhostProcess, Task, MsgThread,
+    SessionProcess, Task, MsgThread,
 )
 from ghostos.framework.operators import OnEventOperator
 from ghostos.framework.multitasks import MultiTaskBasicImpl
@@ -94,7 +94,7 @@ class BasicGhost(Ghost, ABC):
             workspace: Workspace,
             entity_factory: EntityFactory,
             upstream: Stream,
-            process: GhostProcess,
+            process: SessionProcess,
             max_operator_runs: int,
             task: Optional[Task] = None,
             task_id: Optional[str] = None,
@@ -196,7 +196,7 @@ class BasicGhost(Ghost, ABC):
             self,
             logger: LoggerItf,
             upstream: Stream,
-            process: GhostProcess,
+            process: SessionProcess,
             root_thought: Thought,
             task: Optional[Task] = None,
             task_id: Optional[str] = None,

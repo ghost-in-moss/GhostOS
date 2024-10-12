@@ -1,7 +1,7 @@
 from typing import Optional, List
 from ghostos.abc import Identifier
 from ghostos.core.ghosts import GhostConf, Shell, Workspace
-from ghostos.core.session import GhostProcess, Task
+from ghostos.core.session import SessionProcess, Task
 from ghostos.contracts.modules import Modules
 from ghostos.core.messages import Stream
 from ghostos.framework.ghosts.basic import BasicGhost, InputsPipe
@@ -59,7 +59,7 @@ class DemoGhost(BasicGhost):
             container: Container,
             entity_factory: EntityFactory,
             workspace: Workspace,
-            process: GhostProcess,
+            process: SessionProcess,
             upstream: Optional[Stream] = None,
             shell: Optional[Shell] = None,
             task: Optional[Task] = None,

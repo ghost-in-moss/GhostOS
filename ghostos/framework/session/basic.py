@@ -5,7 +5,7 @@ from ghostos.core.messages import (
 )
 from ghostos.core.session import (
     Session,
-    GhostProcess, GhostProcessRepo,
+    SessionProcess, GhostProcessRepo,
     MsgThread, MsgThreadRepo,
     Task, TaskRepo, TaskPayload, TaskState,
     Messenger,
@@ -19,17 +19,21 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.pool import Pool
 
 
-class Future:
-    def __init__(self, future_id: str, bus: EventBus, event: Event):
+class FutureCall:
+    def __init__(self, future_id: str, bus: EventBus, event: Event, notify: bool = True):
         self.bus = bus
         self.event = event
         self.future_id = future_id
+        self.notify = notify
 
     def run(self, callback: Callable[[], Iterable[MessageKind]]) -> None:
-        messages = list(callback())
+        try:
+            messages = list(callback())
+        except Exception as e:
+            messages = [Role.new_assistant_system("", memory=str(e))]
         if len(messages) > 0:
             self.event.messages = messages
-            self.bus.send_event(self.event, notify=True)
+            self.bus.send_event(self.event, notify=self.notify)
         del self.bus
         del self.event
 
@@ -48,7 +52,7 @@ class BasicSession(Session):
             threads: MsgThreadRepo,
             logger: LoggerItf,
             # 当前任务信息.
-            process: GhostProcess,
+            process: SessionProcess,
             task: Task,
             thread: MsgThread,
     ):
@@ -63,7 +67,7 @@ class BasicSession(Session):
         self._eventbus: EventBus = eventbus
         # 需要管理的状态.
         self._task: Task = task
-        self._process: GhostProcess = process
+        self._process: SessionProcess = process
         self._creating: List[Task] = []
         self._thread: MsgThread = thread
         self._firing_events: List[Event] = []
@@ -86,7 +90,7 @@ class BasicSession(Session):
             return True
         return False
 
-    def process(self) -> "GhostProcess":
+    def process(self) -> "SessionProcess":
         return self._process
 
     def task(self) -> "Task":
@@ -182,7 +186,8 @@ class BasicSession(Session):
             messages=[],
         )
         # 让异步任务全局执行.
-        future = Future(future_id, self._eventbus, event)
+        notify = self._process.main_task_id != self._task.task_id
+        future = FutureCall(future_id, self._eventbus, event, notify=notify)
         self._pool.submit(future.run)
 
     def _do_quit(self) -> None:
@@ -271,7 +276,7 @@ class BasicSession(Session):
     def eventbus(self) -> EventBus:
         return self._eventbus
 
-    def update_process(self, process: "GhostProcess") -> None:
+    def update_process(self, process: "SessionProcess") -> None:
         self._process = process
 
     def quit(self) -> None:

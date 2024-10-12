@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Type
 import yaml
-from ghostos.core.session import GhostProcess
+from ghostos.core.session import SessionProcess
 from ghostos.core.session.processes import GhostProcessRepo
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
@@ -31,12 +31,12 @@ class StorageGhostProcessRepoImpl(GhostProcessRepo):
     def _get_process_filename(process_id: str) -> str:
         return f"{process_id}.process.yml"
 
-    def get_process(self, process_id: str) -> Optional[GhostProcess]:
+    def get_process(self, process_id: str) -> Optional[SessionProcess]:
         filename = self._get_process_filename(process_id)
         if self._storage.exists(filename):
             content = self._storage.get(filename)
             data = yaml.safe_load(content)
-            process = GhostProcess(**data)
+            process = SessionProcess(**data)
             return process
         return None
 
@@ -45,14 +45,14 @@ class StorageGhostProcessRepoImpl(GhostProcessRepo):
         filename = self.session_map_name
         self._storage.put(filename, content.encode("utf-8"))
 
-    def get_session_process(self, session_id: str) -> Optional[GhostProcess]:
+    def get_session_process(self, session_id: str) -> Optional[SessionProcess]:
         m = self._get_session_process_map()
         process_id = m.get(session_id, None)
         if process_id is None:
             return None
         return self.get_process(process_id)
 
-    def save_process(self, process: GhostProcess) -> None:
+    def save_process(self, process: SessionProcess) -> None:
         session_id = process.session_id
         process_id = process.process_id
         with self._lock:

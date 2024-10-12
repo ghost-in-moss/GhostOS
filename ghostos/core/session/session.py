@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from ghostos.core.session.events import Event, EventBus
 from ghostos.core.session.messenger import Messenger
-from ghostos.core.session.processes import GhostProcessRepo, GhostProcess
+from ghostos.core.session.processes import GhostProcessRepo, SessionProcess
 from ghostos.core.session.tasks import TaskRepo, Task, TaskBrief
 from ghostos.core.session.threads import MsgThreadRepo, MsgThread
 from ghostos.core.messages import MessageKind, Role, Buffer, Payload, Attachment, Message
@@ -56,7 +56,7 @@ class Session(ABC):
     #     pass
 
     @abstractmethod
-    def process(self) -> "GhostProcess":
+    def process(self) -> "SessionProcess":
         """
         当前会话所处的进程数据.
         不允许直接修改. 只有指定的 API 会修改结果并保存.
@@ -119,7 +119,7 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def update_process(self, process: "GhostProcess") -> None:
+    def update_process(self, process: "SessionProcess") -> None:
         """
         改动 process 并保存. 通常只在初始化里才需要.
         """
