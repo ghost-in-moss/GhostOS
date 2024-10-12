@@ -201,3 +201,16 @@ def test_subclass_is_parent():
         foo: int = 11
 
     assert Foo1 is not Foo
+
+
+def test_generic_class_is_same():
+    from typing import Generic, TypeVar
+    T = TypeVar("T")
+
+    class Foo(Generic[T]):
+        def __init__(self, val: T):
+            self.val = val
+    assert Foo[int] is Foo[int]
+    obj1 = Foo[int](1)
+    obj2 = Foo[int](2)
+    assert type(obj1) is type(obj2)

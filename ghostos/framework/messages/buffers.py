@@ -35,8 +35,6 @@ class DefaultBuffer(Buffer):
         """正在 buff 的消息体. """
 
         self._buffed_messages: List[Message] = []
-        """发送出去的完整消息体. """
-        self._buffed_callers: List[Caller] = []
         """过程中 buff 的 caller. """
         self._origin_functional_tokens = functional_tokens
 
@@ -106,7 +104,7 @@ class DefaultBuffer(Buffer):
             return []
         # 不深拷贝的话, 加工逻辑就会交叉污染?
         # pack = origin.model_copy(deep=True)
-        if DefaultMessageTypes.is_protocol_type(pack):
+        if DefaultMessageTypes.is_protocol_message(pack):
             # final 包不进行 buffer.
             yield pack
             return
@@ -255,11 +253,6 @@ class DefaultBuffer(Buffer):
         # 剥离所有的 callers.
         self._buffed_messages.append(tail)
 
-        # 从标准的 payload 和 attachments 里读取 caller.
-        if tail.callers:
-            for caller in tail.callers:
-                self._buffed_callers.append(caller)
-
     def _wrap_first_pack(self, pack: Message) -> Message:
         # 首包强拷贝, 用来做一个 buffer.
         pack = pack.model_copy(deep=True)
@@ -336,7 +329,9 @@ class DefaultBuffer(Buffer):
         if not self._current_functional_token:
             return None
         functional_token = self._functional_token_starts[self._current_functional_token]
-        return functional_token.new_caller(self._current_functional_token_content)
+        caller = functional_token.new_caller(self._current_functional_token_content)
+        self._current_functional_token = ""
+        return caller
 
     def new(self) -> "DefaultBuffer":
         return DefaultBuffer(
@@ -354,10 +349,17 @@ class DefaultBuffer(Buffer):
             self._buff_tail_pack(unsent)
             deliver.append(unsent)
 
-        flushed = Flushed(unsent=deliver, messages=self._buffed_messages, callers=self._buffed_callers)
+        callers = []
+        messages = self._buffed_messages
+        for item in messages:
+            callers.extend(item.callers)
+        flushed = Flushed(
+            unsent=deliver,
+            messages=messages,
+            callers=callers,
+        )
         self._reset_buffering()
         self._buffed_messages = []
-        self._buffed_callers = []
         return flushed
 
     def destroy(self) -> None:

@@ -92,7 +92,7 @@ class ConsolePrototype:
                 ))
 
     def _stream(self) -> QueueStream:
-        return QueueStream(self._main_queue, streaming=False)
+        return QueueStream(self._main_queue, accept_chunks=False)
 
     async def _main(self):
         self._welcome()

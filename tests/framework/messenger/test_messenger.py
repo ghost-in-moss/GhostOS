@@ -1,8 +1,8 @@
 from ghostos.framework.messengers import Messenger, DefaultMessenger
+from ghostos.framework.streams import EmptyStream
 from ghostos.core.session.threads import MsgThread
 from ghostos.core.messages import Message
 from ghostos.core.llms import FunctionalToken
-import time
 
 
 def test_default_messenger_baseline():
@@ -18,12 +18,12 @@ def test_default_messenger_baseline():
     assert thread.current.generates[0].content == content
 
 
-def test_messenger_with_moss_xml_token():
+def test_messenger_with_random_token():
     functional_tokens = [FunctionalToken(
         token=">moss:",
         name="moss",
         description="desc",
-        deliver=False,
+        visible=False,
     )]
 
     thread = MsgThread()
@@ -43,8 +43,8 @@ def test_messenger_with_moss_xml_token():
     assert caller.name == "moss"
     assert caller.arguments == " world"
 
-    assert len(thread.current.generates) == 1
-    assert len(thread.current.generates[0].callers) == 1
+    assert len(thread.last_turn().generates) == 1
+    assert len(thread.last_turn().generates[0].callers) == 1
 
 
 def test_messenger_with_single_message():
@@ -53,7 +53,7 @@ def test_messenger_with_single_message():
         end_token="</moss>",
         name="moss",
         description="desc",
-        deliver=False,
+        visible=False,
     )]
 
     thread = MsgThread()
@@ -66,6 +66,31 @@ def test_messenger_with_single_message():
     assert flushed.messages[0].memory == content
     assert len(flushed.callers) == 1
 
+
+def test_messenger_with_func_token_visible():
+    functional_tokens = [FunctionalToken(
+        token="<moss>",
+        end_token="</moss>",
+        name="moss",
+        description="desc",
+        visible=True,
+    )]
+
+    thread = MsgThread()
+    messenger = DefaultMessenger(
+        thread=thread,
+        functional_tokens=functional_tokens,
+        upstream=EmptyStream(),
+    )
+
+    content = "hello world<moss>hello</moss>"
+    messenger.say(content)
+    flushed = messenger.flush()
+    assert flushed.messages[0].content == content
+    assert flushed.messages[0].memory is None
+    assert len(flushed.callers) == 1
+    assert flushed.callers[0].name == "moss"
+
 # def test_async_sub_messengers():
 #     from threading import Thread
 #     functional_tokens = [FunctionalToken(
@@ -73,7 +98,7 @@ def test_messenger_with_single_message():
 #         end_token="</moss>",
 #         name="moss",
 #         description="desc",
-#         deliver=False,
+#         visible=False,
 #     )]
 #
 #     def make(m: Messenger, idx: int):

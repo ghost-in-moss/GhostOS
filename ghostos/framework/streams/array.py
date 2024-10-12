@@ -1,113 +1,160 @@
-from typing import Tuple, Optional, Dict, List, Union, Iterable
-
+from typing import Tuple, Optional, Dict, List, Iterable, Callable
 from ghostos.core.messages import (
-    Message, Stream, Connection, Receiver, Received,
+    Message, Stream, Receiver, Received,
     DefaultMessageTypes,
 )
-from threading import Lock
 import time
 
+__all__ = ['new_connection']
 
-class ArrayStreamConnection(Connection):
-    """
-    考虑到 Python 的 array 和 map 的操作是线程安全的, 试试用这个来做.
-    """
+from ghostos.helpers import Timeleft
 
-    def __init__(self, accept_chunks: bool = True, idle: float = 0.2):
-        self._stopped = True
-        self._accept_chunks = accept_chunks
-        self._final: Optional[Message] = None
-        self._current_msg_id: str = ""
-        self._msg_ids = []
-        self._message_heads: Dict[str, Union[Message, None]] = {}
-        self._message_chunks: Dict[str, List[Message]] = {}
-        self._message_tails: Dict[str, Union[Message, None]] = {}
-        self._locker = Lock()
-        self._receiver: Optional[ArrayReceiver] = None
-        self._stream: Optional[ArrayStream] = None
+
+def new_connection(timeout: float, accept_chunks: bool, idle: float = 0.2) -> Tuple[Stream, Receiver]:
+    """
+    create a stream and a receiver, which are run at different threads.
+    when receiver is stopped, stream stop immediately.
+    :param timeout:
+    :param accept_chunks:
+    :param idle:
+    :return:
+    """
+    receiver = _ArrayReceiver(idle=idle)
+    stream = _ArrayStream(receiver, timeout=timeout, accept_chunks=accept_chunks)
+    return stream, receiver
+
+
+class _ArrayReceiver(Receiver):
+    def __init__(self, idle: float):
         self._idle = idle
+        self._stopped = False
+        self._received: Dict[str, _ArrayReceived] = {}
+        self._msg_ids: List[str] = []
+        self._final: Optional[Message] = None
+        self._buffering: Optional[Message] = None
+        self._destroyed: bool = False
+        self._iterating: bool = False
 
     def add_item(self, item: Message) -> bool:
         if self._stopped:
             return False
-        # item 还是加锁吧.
-        with self._locker:
-            if DefaultMessageTypes.is_protocol_type(item):
-                self._stopped = False
-                self._final = item
-                return True
-            if not self._accept_chunks and item.chunk:
-                return True
+        if DefaultMessageTypes.is_protocol_message(item):
+            self.stop(item)
+            return True
 
-            msg_id = item.msg_id
-            if msg_id and msg_id != self._current_msg_id and msg_id not in self._msg_ids:
-                self._msg_ids.append(msg_id)
-                self._current_msg_id = msg_id
+        if self._buffering is None:
+            self._new_received(item)
+            return True
 
-            # if the item is the tail of the chunks
-            if item.is_complete():
-                self._message_tails[msg_id] = item
-            # then the item is a chunk
-            elif msg_id:
-                self._message_heads[msg_id] = item
-            else:
-                msg_id = self._current_msg_id
-                items = self._message_chunks.get(msg_id, [])
-                items.append(item)
-                self._message_chunks[msg_id] = items
+        patched = self._buffering.patch(item)
+        if patched:
+            self._append_item(item)
+            return True
+        else:
+            tail = self._buffering.as_tail()
+            self._append_item(tail)
+            self._new_received(item)
+            return True
+
+    def _new_received(self, item: Message) -> None:
+        msg_id = item.msg_id
+        if not item.is_complete():
+            self._buffering = item.as_head()
+            msg_id = self._buffering.msg_id
+        received = _ArrayReceived(item, idle=self.idle)
+        self._received[msg_id] = received
+        self._msg_ids.append(msg_id)
+
+    def _append_item(self, item: Message) -> None:
+        msg_id = self._buffering.msg_id
+        received = self._received[msg_id]
+        received.add_item(item)
 
     def stopped(self) -> bool:
         return self._stopped
 
-    def get_msg_head(self, msg_id: str) -> Optional[Message]:
-        return self._message_heads.get(msg_id, None)
-
-    def get_msg_tail(self, msg_id: str) -> Optional[Message]:
-        return self._message_tails.get(msg_id, None)
-
-    def get_msg_chunks(self, msg_id: str) -> List[Message]:
-        return self._message_chunks.get(msg_id, [])
-
-    def get_msg_id(self, idx: int) -> Optional[str]:
-        if len(self._msg_ids) > idx:
-            return self._msg_ids[idx]
-        return None
-
-    def __enter__(self) -> Tuple[Stream, Receiver]:
-        self._stream = ArrayStream(self, self._accept_chunks)
-        self._receiver = ArrayReceiver(self, self._idle)
-        return self._stream, self._receiver
+    def idle(self) -> bool:
+        time.sleep(self._idle)
+        return not self._stopped
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._stream:
-            self._stream.destroy()
-            del self._stream
-        if self._receiver:
-            self._receiver.destroy()
-            del self._receiver
+        if self._stopped:
+            return
+        self.destroy()
+
+    def __enter__(self) -> Iterable[Received]:
+        if self._iterating:
+            raise RuntimeError("Cannot iterating Retriever at the same time")
+        self._iterating = True
+        idx = 0
+        while not self._stopped:
+            if idx < len(self._msg_ids):
+                msg_id = self._msg_ids[idx]
+                idx += 1
+                yield self._received[msg_id]
+            else:
+                time.sleep(self._idle)
+        while idx < len(self._msg_ids):
+            yield self._received[self._msg_ids[idx]]
+            idx += 1
+        if self._final and DefaultMessageTypes.ERROR.match(self._final):
+            yield _ArrayReceived(self._final, idle=self.idle)
+        self._iterating = False
+
+    def stop(self, item: Optional[Message]) -> None:
+        if self._stopped:
+            return
+        self._stopped = True
+        if self._buffering:
+            tail = self._buffering.as_tail()
+            self._append_item(tail)
+        self._buffering = None
+        self._final = item
+
+    def destroy(self):
+        if self._destroyed:
+            return
+        self._destroyed = True
+        self._stopped = True
+        for item in self._received.values():
+            item.destroy()
+        del self._buffering
         del self._final
-        del self._message_chunks
-        del self._message_tails
         del self._msg_ids
-        del self._locker
+        del self._received
 
 
-class ArrayStream(Stream):
+class _ArrayStream(Stream):
 
-    def __init__(self, connection: ArrayStreamConnection, accept_chunks: bool):
-        self._connection: ArrayStreamConnection = connection
+    def __init__(self, receiver: _ArrayReceiver, timeout: float, accept_chunks: bool = True):
+        self._receiver = receiver
+        self._stopped = receiver.stopped()
         self._accept_chunks = accept_chunks
-        self._stopped = False
+        self._timeleft = Timeleft(timeout)
 
     def deliver(self, pack: "Message") -> bool:
         if self._stopped:
             return False
-        success = self._connection.add_item(pack)
+        if not self._timeleft.alive():
+            e = TimeoutError(f"Timeout after {self._timeleft.passed()}")
+            self._receiver.stop(DefaultMessageTypes.ERROR.new(content=str(e)))
+            raise e
+        if pack.chunk and not self._accept_chunks:
+            return True
+        success = self._receiver.add_item(pack)
         if success:
             return True
-        if self._connection.stopped():
-            self.destroy()
+        if self._receiver.stopped():
+            self.stop()
         return False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        item = None
+        if exc_val:
+            item = DefaultMessageTypes.ERROR.new(content=str(exc_val))
+        if not self._stopped:
+            self._receiver.stop(item)
+        self.stop()
 
     def accept_chunks(self) -> bool:
         return self._accept_chunks
@@ -115,87 +162,72 @@ class ArrayStream(Stream):
     def stopped(self) -> bool:
         if self._stopped:
             return self._stopped
-        self._stopped = self._connection.stopped()
+        self._stopped = self._receiver.stopped()
         return self._stopped
 
-    def destroy(self):
-        self._stopped = True
-        del self._connection
-
-
-class ArrayReceiver(Receiver):
-    def __init__(self, connection: ArrayStreamConnection, idle: float):
-        self._connection: ArrayStreamConnection = connection
-        self._idle = idle
-        self._stopped = False
-        self._received: List[ArrayReceived] = []
-
-    def received(self) -> Iterable[Received]:
-        if self._stopped:
-            return []
-        idx = 0
-        while not self._connection.stopped():
-            msg_id = self._connection.get_msg_id(idx)
-            if msg_id is not None:
-                yield ArrayReceived(msg_id, self._connection, self._idle)
-                idx += 1
-            else:
-                time.sleep(self._idle)
-        while msg_id := self._connection.get_msg_id(idx):
-            yield ArrayReceived(msg_id, self._connection, self._idle)
-        self.destroy()
-
-    def destroy(self):
+    def stop(self):
         if self._stopped:
             return
-        for item in self._received:
-            item.destroy()
-        del self._connection
-        del self._received
+        self._stopped = True
+        del self._receiver
 
 
-class ArrayReceived(Received):
+class _ArrayReceived(Received):
 
-    def __init__(self, msg_id: str, connection: ArrayStreamConnection, idle: float) -> None:
-        self._msg_id = msg_id
-        self._connection = connection
+    def __init__(self, head: Message, idle: Callable) -> None:
+        self._idle = idle
+        self._items: List[Dict] = [head.model_dump(exclude_defaults=True)]
         self._stopped = False
-        self._head = self._connection.get_msg_head(self._msg_id)
         self._tail: Optional[Message] = None
-        self._idle = idle
+        if head.is_complete() or DefaultMessageTypes.is_protocol_message(head):
+            self._tail = head
+        self._destroyed = False
 
-    def added(self) -> Message:
-        if self._head is None:
-            raise ValueError("No head received")
-        return self._head
+    def add_item(self, item: Message) -> None:
+        if item.is_complete() or DefaultMessageTypes.is_protocol_message(item):
+            self._tail = item
+        else:
+            self._items.append(item.model_dump(exclude_defaults=True))
 
-    def destroy(self) -> None:
-        if self._stopped:
-            return
-        self._stopped = True
-        del self._head
-        del self._connection
-        del self._tail
+    def head(self) -> Message:
+        return Message(**self._items[0])
 
     def chunks(self) -> Iterable[Message]:
+        if self._tail:
+            for item in self._items:
+                yield Message(**item)
+            return
         idx = 0
-        stopped = False
-        while True:
-            stopped = stopped or self._connection.stopped()
-            tail = self._connection.get_msg_tail(self._msg_id)
-            if tail is not None:
-                self._tail = tail
-                return
-            chunks = self._connection.get_msg_chunks(msg_id=self._msg_id)
-            if idx < len(chunks):
-                yield chunks[idx]
+        while self._tail is None and not self._stopped:
+            if idx < len(self._items):
+                yield Message(**self._items[idx])
                 idx += 1
-            elif not stopped:
-                time.sleep(self._idle)
             else:
-                return
+                self._stopped = self._idle()
+        while idx < len(self._items):
+            yield Message(**self._items[idx])
+            idx += 1
+
+    def destroy(self) -> None:
+        if self._destroyed:
+            return
+        self._destroyed = True
+        self._stopped = True
+        del self._items
+        del self._tail
+        del self._idle
 
     def done(self) -> Message:
-        if self._tail is None:
-            raise ValueError("No tail received or read before")
-        return self._tail
+        if self._tail:
+            return self._tail
+        failed = 0
+        while not self._stopped:
+            if failed > 3:
+                break
+            if self._tail:
+                return self._tail
+            if not self._idle():
+                failed += 1
+        if self._tail:
+            return self._tail
+        raise RuntimeError(f"empty tail message")

@@ -183,19 +183,19 @@ class DefaultMessenger(Messenger, Stream):
         if self._stopped:
             return False
         for item in delivery:
-            if not DefaultMessageTypes.is_protocol_type(item) and item.chunk and not self._accept_chunks:
+            if not DefaultMessageTypes.is_protocol_message(item) and item.chunk and not self._accept_chunks:
                 continue
             # 如果发送不成功, 直接中断.
             # if self._depth == 0:
             #     item.streaming_id = None
-            if (
-                    self._saving
-                    and self._thread is not None  # thread exists.
-                    and not DefaultMessageTypes.is_protocol_type(item)  # not a protocol type message.
-                    and not item.chunk
-            ):  # is tail package.
-                # append tail message to thread.
-                self._thread.append(item)
+            # if (
+            #         self._saving
+            #         and self._thread is not None  # thread exists.
+            #         and not DefaultMessageTypes.is_protocol_type(item)  # not a protocol type message.
+            #         and not item.chunk
+            # ):  # is tail package.
+            #     # append tail message to thread.
+            #     self._thread.append(item)
 
             if self._upstream is not None:
                 success = self._upstream.deliver(item)
@@ -206,11 +206,13 @@ class DefaultMessenger(Messenger, Stream):
         return True
 
     def flush(self) -> Buffed:
-        if self._stopped:
+        if self._stopped or self._destroyed:
             return Buffed(messages=[], callers=[])
         buffed = self._buffer.flush()
         if buffed.unsent:
             self._deliver_to_upstream(buffed.unsent)
+        if self._thread:
+            self._thread.append(*buffed.messages)
         self._stop(None)
         return Buffed(messages=buffed.messages, callers=buffed.callers)
 
@@ -221,7 +223,7 @@ class DefaultMessenger(Messenger, Stream):
         self._stopped = True
         if self._destroyed:
             return
-        if final is None or not DefaultMessageTypes.is_protocol_type(final):
+        if final is None or not DefaultMessageTypes.is_protocol_message(final):
             final = DefaultMessageTypes.final()
         self._deliver_to_upstream([final])
         self.destroy()
@@ -235,6 +237,14 @@ class DefaultMessenger(Messenger, Stream):
             self._stopped = True
         return self._stopped
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._stopped:
+            return
+        self.flush()
+        if exc_val:
+            self._stop(DefaultMessageTypes.ERROR.new(content=str(exc_val)))
+        self.destroy()
+
     def destroy(self) -> None:
         """
         I kind of don't trust python gc, let me help some
@@ -244,12 +254,10 @@ class DefaultMessenger(Messenger, Stream):
             return
         self._destroyed = True
         del self._upstream
-        if self._buffer:
-            self._buffer.flush()
-        del self._buffer
+        self._buffer = None
         del self._payloads
         del self._attachments
-        del self._thread
+        self._thread = None
         del self._functional_tokens
 
 
@@ -266,4 +274,3 @@ class TestMessengerProvider(Provider[Messenger]):
 
     def factory(self, con: Container) -> Messenger:
         return DefaultMessenger()
-

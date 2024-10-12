@@ -63,7 +63,8 @@ class DefaultMessageTypes(str, enum.Enum):
             self, *,
             content: str, role: str = Role.ASSISTANT.value, memory: Optional[str] = None, name: Optional[str] = None,
     ) -> "Message":
-        return Message(content=content, memory=memory, name=name, type=self.value, role=role)
+        chunk = not self.is_protocol_type(self.value)
+        return Message(content=content, memory=memory, name=name, type=self.value, role=role, chunk=chunk)
 
     def new_assistant(
             self, *,
@@ -93,15 +94,19 @@ class DefaultMessageTypes(str, enum.Enum):
 
     @classmethod
     def final(cls):
-        return Message(type=cls.FINAL.value, role=Role.ASSISTANT.value)
+        return Message(type=cls.FINAL.value, role=Role.ASSISTANT.value, chunk=False)
 
     @classmethod
     def is_final(cls, pack: "Message") -> bool:
         return pack.type == cls.FINAL.value
 
     @classmethod
-    def is_protocol_type(cls, message: "Message"):
-        return not message.chunk and message.type in {cls.ERROR, cls.FINAL}
+    def is_protocol_message(cls, message: "Message") -> bool:
+        return cls.is_protocol_type(message.type)
+
+    @classmethod
+    def is_protocol_type(cls, value: str) -> bool:
+        return value in {cls.ERROR, cls.FINAL}
 
 
 class Caller(BaseModel):
@@ -224,7 +229,7 @@ class Message(BaseModel):
     ref_id: Optional[str] = Field(default=None, description="the referenced message id.")
     type: str = Field(default="", description="default message type, if empty, means text")
     created: float = Field(
-        default=0,
+        default=0.0,
         description="Message creation time, only available in head chunk or complete one",
     )
     chunk: bool = Field(default=True, description="if the message is a chunk or a complete one")
@@ -382,10 +387,25 @@ class Message(BaseModel):
         # if not a chunk, just return the tail message.
         # tail message may be changed by outside method such as moderation.
         if not chunk.chunk:
-            return chunk
+            return chunk.model_copy()
         # otherwise, update current one.
         self.update(chunk)
+        # add msg_id to each chunk
+        chunk.msg_id = self.msg_id
         return self
+
+    def as_head(self) -> Self:
+        item = self.model_copy(deep=True)
+        if not item.msg_id:
+            item.msg_id = uuid()
+        if not self.created:
+            item.created = time.time()
+        return item
+
+    def as_tail(self) -> Self:
+        item = self.as_head()
+        item.chunk = False
+        return item
 
     def get_copy(self) -> "Message":
         """

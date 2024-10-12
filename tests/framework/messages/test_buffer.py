@@ -84,7 +84,7 @@ def test_buffer_sent():
                 count_has_message_id += 1
             count += 1
     assert count == len(content)
-    assert count_has_message_id == 1
+    assert count_has_message_id == count
     assert len(buffer.flush().messages) == 1
 
 
@@ -213,6 +213,33 @@ def test_buffer_with_xml_functional_token():
     message = flushed.messages[0]
     assert message.content == "hello "
     assert message.memory == content
+    caller = flushed.callers[0]
+    assert caller.name == "moss"
+    assert caller.arguments == "world"
+
+
+def test_buffer_with_visible_functional_token():
+    functional_tokens = [FunctionalToken(
+        token="<moss>",
+        end_token="</moss>",
+        name="moss",
+        description="desc",
+        visible=True,
+        deliver=False,
+    )]
+
+    buffer = DefaultBuffer(functional_tokens=functional_tokens)
+    contents = ["he", "llo <mo", "ss>w", "orld</", "mos", 's>']
+    content = "".join(contents)
+    for c in contents:
+        msg = Message.new_chunk(content=c)
+        buffer.buff(msg)
+    flushed = buffer.flush()
+    assert len(flushed.messages) == 1
+    assert len(list(flushed.callers)) > 0
+    message = flushed.messages[0]
+    assert message.content == content
+    assert message.memory is None
     caller = flushed.callers[0]
     assert caller.name == "moss"
     assert caller.arguments == "world"
