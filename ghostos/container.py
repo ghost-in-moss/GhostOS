@@ -147,11 +147,13 @@ class Container(IoCContainer):
         self._bootstrapper: List["Bootstrapper"] = []
         self._bootstrapped: bool = False
         self._aliases: Dict[Any, Any] = {}
+        self._destroyed: bool = False
 
     def bootstrap(self) -> None:
         """
         执行 bootstrap, 只执行一次. 可以操作依赖关系. 比如实例化后反向注册.
         """
+        self._check_destroyed()
         if self._bootstrapped:
             return
         # 必须在这里初始化, 否则会循环调用.
@@ -168,6 +170,7 @@ class Container(IoCContainer):
         """
         设置一个实例, 不会污染父容器.
         """
+        self._check_destroyed()
         self._set_instance(abstract, instance)
 
     def _bind_contract(self, abstract: ABSTRACT) -> None:
@@ -180,6 +183,7 @@ class Container(IoCContainer):
         """
         return whether contract is bound.
         """
+        self._check_destroyed()
         return contract in self._bound or (self.parent is not None and self.parent.bound(contract))
 
     def get(self, abstract: Type[INSTANCE]) -> Optional[INSTANCE]:
@@ -190,6 +194,7 @@ class Container(IoCContainer):
 
         - params 感觉不需要.
         """
+        self._check_destroyed()
         # 进行初始化.
         if not self._bootstrapped:
             warnings.warn("container is not bootstrapped before using")
@@ -223,6 +228,7 @@ class Container(IoCContainer):
         get bound of an abstract
         :return: instance or provider
         """
+        self._check_destroyed()
         if abstract in self._instances:
             return self._instances[abstract]
         elif abstract in self._providers:
@@ -240,6 +246,7 @@ class Container(IoCContainer):
             maker: Callable[[], INSTANCE],
             singleton: bool = False,
     ):
+        self._check_destroyed()
         lineinfo = get_caller_info(2)
 
         def _maker(c):
@@ -252,6 +259,7 @@ class Container(IoCContainer):
         """
         register factory of the contract by provider
         """
+        self._check_destroyed()
         for provider in providers:
             self._register(provider)
 
@@ -286,6 +294,7 @@ class Container(IoCContainer):
         :param bootstrapper: 可以定义一些方法, 比如往容器里的某个类里注册一些工具.
         :return:
         """
+        self._check_destroyed()
         if not self._bootstrapped:
             self._bootstrapper.append(bootstrapper)
 
@@ -294,6 +303,7 @@ class Container(IoCContainer):
         get contract with type check
         :exception: TypeError if instance do not implement abstract
         """
+        self._check_destroyed()
         instance = self.get(abstract)
         if instance is not None:
             if strict and not isinstance(instance, abstract):
@@ -307,6 +317,7 @@ class Container(IoCContainer):
         :exception: NotImplementedError if contract is not registered.
         :exception: TypeError if contract do not implement abstract
         """
+        self._check_destroyed()
         ins = self.fetch(contract, strict)
         if ins is None:
             raise NotImplementedError(f"contract {contract} not register in container")
@@ -320,6 +331,7 @@ class Container(IoCContainer):
         self._instances[abstract] = instance
 
     def contracts(self, recursively: bool = True) -> Iterable[ABSTRACT]:
+        self._check_destroyed()
         done = set()
         for contract in self._bound:
             done.add(contract)
@@ -330,10 +342,17 @@ class Container(IoCContainer):
                     done.add(contract)
                     yield contract
 
+    def _check_destroyed(self) -> None:
+        if self._destroyed:
+            raise RuntimeError("container is called after destroyed")
+
     def destroy(self) -> None:
         """
         Manually delete the container to prevent memory leaks.
         """
+        if self._destroyed:
+            return
+        self._destroyed = True
         del self._instances
         del self.parent
         del self._providers

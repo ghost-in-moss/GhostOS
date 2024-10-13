@@ -173,10 +173,9 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
     def destroy(self) -> None:
         if self._destroyed:
             # destroy once.
-            # not every submanager is created at self.execute
+            # not every submanager is created at self.execute,
             # so they could be destroyed outside already
             return
-        self._container.destroy()
         del self._container
         del self._values
         del self._exec_step

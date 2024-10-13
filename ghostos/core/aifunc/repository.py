@@ -14,7 +14,7 @@ import time
 
 
 class AIFuncsConf(YamlConfig):
-    relative_path = "registered_aifunc.yaml"
+    relative_path = "registered_aifunc.yml"
 
     identifiers: Dict[str, Identifier] = Field(
         default_factory=dict,
