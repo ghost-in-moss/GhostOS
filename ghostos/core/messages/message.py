@@ -35,7 +35,7 @@ class Role(str, enum.Enum):
             content: str,
             memory: Optional[str] = None,
     ):
-        return cls.ASSISTANT.new(content, memory=memory, name="__system__")
+        return cls.USER.new(content, memory=memory, name="__system__")
 
     def new(
             self,

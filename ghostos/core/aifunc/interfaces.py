@@ -17,7 +17,12 @@ __all__ = [
     'AIFuncExecutor', 'AIFuncCtx', 'AIFuncDriver',
     'AIFuncRepository',
     'ExecFrame', 'ExecStep',
+    'TooManyFailureError',
 ]
+
+
+class TooManyFailureError(RuntimeError):
+    pass
 
 
 @cls_source_code()
@@ -33,6 +38,7 @@ class AIFuncCtx(ABC):
         :param key: the key that ctx keep the result in multi-turns thinking.
         :param fn: instance of AIFunc that define the task.
         :return: the certain result that match AIFuncResult and is not None
+        :exception: TooManyFailureError
         """
         pass
 
@@ -88,8 +94,9 @@ class ExecStep(BaseModel):
     depth: int = Field(description="depth of the ExecFrame")
     step_id: str = Field(default_factory=uuid, description="step id")
     chat: Optional[Chat] = Field(default=None, description="llm chat")
-    messages: List[Message] = Field(default_factory=list, description="list of messages")
+    generate: Optional[Message] = Field(default=None, description="AI generate message")
     code: str = Field(default="", description="the generated code of the AIFunc")
+    messages: List[Message] = Field(default_factory=list, description="list of messages")
     std_output: str = Field(default="", description="the std output of the AIFunc step")
     pycontext: Optional[PyContext] = Field(default=None, description="pycontext of the step")
     error: Optional[Message] = Field(default=None, description="the error message")
@@ -157,6 +164,11 @@ class ExecFrame(BaseModel):
         )
         self.steps.append(step)
         return step
+
+    def last_step(self) -> Optional[ExecStep]:
+        if len(self.steps) == 0:
+            return None
+        return self.steps[-1]
 
 
 class AIFuncExecutor(ABC):

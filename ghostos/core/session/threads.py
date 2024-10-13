@@ -59,6 +59,8 @@ class Turn(BaseModel):
             self.pycontext = pycontext
 
     def event_messages(self) -> Iterable[Message]:
+        if not self.event:
+            return []
         event = self.event
         name = event.name
         for message in self.iter_event_message(event):
@@ -67,7 +69,7 @@ class Turn(BaseModel):
             yield message
 
     @staticmethod
-    def iter_event_message( event: Event) -> Iterable[Message]:
+    def iter_event_message(event: Event) -> Iterable[Message]:
         if event is None:
             return []
 

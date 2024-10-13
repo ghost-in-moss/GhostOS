@@ -23,6 +23,8 @@ if __name__ == '__main__':
     console = Console()
     from threading import Thread
 
+    debug = False
+
     executor = application_container.force_fetch(AIFuncExecutor)
     fn = AgentFn(
         request="help me to find news about OpenAI O1 model",
@@ -35,35 +37,52 @@ if __name__ == '__main__':
     with receiver as items:
         for item in items:
             tail = item.done()
-            console.print(Panel(
-                Markdown(
-                    f"""
-{tail.get_content()}
+            payloads = json.dumps(tail.payloads, indent=2, ensure_ascii=False)
 
+            payloads_info = ""
+            if debug:
+                payloads_info = f"""
+            
 ```json
-{json.dumps(tail.payloads, indent=2, ensure_ascii=False)}
+{payloads}
 ```
 """
+            console.print(Panel(
+                Markdown(
+                    tail.get_content() + payloads_info
                 ),
                 title=tail.name,
             ))
+    if debug:
+        console.print(Panel(
+            Markdown(
+                f"""
+    ```json
+    {frame.model_dump_json(indent=2)}
+    ```
+    """
+            ),
+            title="frame details",
+        ))
     result = frame.get_result()
-    console.print(Panel(
-        Markdown(
-            f"""
+    if result is not None:
+        console.print(Panel(
+            Markdown(
+                f"""
 ```json
 {result.model_dump_json(indent=2)}
 ```
 """
-        )
-    ))
-    console.print(Panel(
-        Markdown(
-            f"""
-```json
-{frame.model_dump_json(indent=2)}
-```
-"""
-        )
-    ))
+            ),
+            title="final result",
+        ))
+    elif err := frame.last_step().error:
+        console.print(Panel(
+            Markdown(
+                err.content
+            ),
+            title="result error",
+        ))
+
+
 

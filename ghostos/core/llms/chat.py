@@ -107,6 +107,7 @@ class Chat(BaseModel):
     模拟对话的上下文.
     """
     id: str = Field(default_factory=helpers.uuid, description="trace id")
+    streaming: bool = Field(default=False, description="streaming mode")
 
     system: List[Message] = Field(default_factory=list, description="system messages")
     history: List[Message] = Field(default_factory=list)

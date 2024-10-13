@@ -1,3 +1,4 @@
+import contextlib
 from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable
 from types import ModuleType
 from abc import ABC, abstractmethod
@@ -9,6 +10,7 @@ from ghostos.core.moss.prompts import (
 )
 from ghostos.core.messages import Message, Role
 from ghostos.core.moss.decorators import cls_source_code
+from contextlib import contextmanager
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -219,6 +221,13 @@ class MossCompiler(ABC):
             self.__compiled__ = True
             # 手动管理一下, 避免外部解决内存泄漏的心智成本.
             self.destroy()
+
+    @contextmanager
+    def compile_ctx(self, modulename: Optional[str]):
+        runtime = self.compile(modulename)
+        yield runtime
+        # destroy it in case of memory leak
+        runtime.destroy()
 
     @abstractmethod
     def _compile(self, modulename: Optional[str] = None) -> ModuleType:

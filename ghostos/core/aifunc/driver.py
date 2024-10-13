@@ -3,6 +3,7 @@ from typing import Tuple, List, Optional, Any
 
 from ghostos.core.aifunc.interfaces import (
     AIFuncDriver, AIFuncExecutor, ExecStep, ExecFrame, AIFuncRepository,
+    TooManyFailureError,
 )
 from ghostos.core.aifunc.func import (
     AIFunc,
@@ -168,7 +169,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         # build chat
         self.on_system_messages(systems)
         chat = thread_to_chat(thread.id, systems, thread)
-        step.chat = chat
+        step.chat = chat.model_copy(deep=True)
         # on_chat hook
         self.on_chat(chat)
 
@@ -183,7 +184,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
         # append ai_generation
         thread.append(ai_generation)
-        step.messages.append(ai_generation)
+        step.generate = ai_generation
         # on_message hook
         self.on_message(ai_generation, step, upstream)
 
@@ -194,16 +195,23 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         # handle code:
         if not code:
             error = Role.new_assistant_system(
-                content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT"
+                content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT. "
+                        "Generate code in `<code></code>`."
             )
 
         elif "main(" not in code:
             error = Role.new_assistant_system(
-                content="Error! No main function found in your generation!"
+                content="Error! No main function found in your generation! use `<code></code>` to wrap your code."
             )
 
         if error is not None:
-            thread.append(error)
+            thread.new_turn(
+                event=DefaultEventType.OBSERVE.new(
+                    messages=[error],
+                    task_id=thread.id,
+                    from_task_id=thread.id,
+                ),
+            )
             step.error = error
             self.on_message(error, step, upstream)
             return thread, None, False
@@ -250,12 +258,13 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             # I think this method is thread-safe
             step.messages.extend(messages)
             self.error_times = 0
+        except TooManyFailureError:
+            raise
         except Exception as e:
             exe_info = "\n".join(traceback.format_exception(e)[-5:])
             output_message = Role.new_assistant_system(
                 content=f"moss executed main, exception occurs: \n{exe_info}"
             )
-
             thread.new_turn(
                 event=DefaultEventType.OBSERVE.new(
                     messages=[output_message],
@@ -267,7 +276,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             self.on_message(output_message, step, upstream)
             self.error_times += 1
             if self.error_times >= 3:
-                raise RuntimeError(f"AIFunc `{self.name()}` failed {self.error_times} times, can not fix itself: \n{e}")
+                raise TooManyFailureError(f"AIFunc `{self.name()}` failed {self.error_times} times, can not fix itself: \n{e}")
             else:
                 finish = False
         finally:
