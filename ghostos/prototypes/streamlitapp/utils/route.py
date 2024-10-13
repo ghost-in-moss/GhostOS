@@ -145,6 +145,12 @@ class Route(SessionStateValue, BaseModel, ABC):
             return session_state[key]
         return None
 
+    def get_or_bind(self, session_state: MutableMapping) -> Self:
+        key = self.session_state_key()
+        if key not in session_state:
+            session_state[key] = self
+        return session_state[key]
+
     @classmethod
     def default(cls) -> Self:
         return cls()
