@@ -1,7 +1,9 @@
 import traceback
 from typing import Tuple, List, Optional, Any
 
-from ghostos.core.aifunc.interfaces import AIFuncDriver, AIFuncExecutor, ExecStep, ExecFrame
+from ghostos.core.aifunc.interfaces import (
+    AIFuncDriver, AIFuncExecutor, ExecStep, ExecFrame, AIFuncRepository,
+)
 from ghostos.core.aifunc.func import (
     AIFunc,
     get_aifunc_instruction, get_aifunc_result_type, get_aifunc_pycontext, get_aifunc_llmapi,
@@ -10,7 +12,7 @@ from ghostos.core.llms import LLMs, Chat
 from ghostos.core.moss.abc import MossRuntime
 from ghostos.core.session import MsgThread, DefaultEventType, MsgThreadRepo, thread_to_chat
 from ghostos.core.messages import Role, Message, Stream
-from ghostos.contracts.logger import LoggerItf
+from ghostos.container import Container
 
 __all__ = [
     'DefaultAIFuncDriverImpl',
@@ -88,9 +90,15 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def name(self) -> str:
         return self.aifunc.__class__.__name__
 
-    def initialize(self) -> MsgThread:
+    def initialize(self, container: Container, frame: ExecFrame) -> MsgThread:
         pycontext = get_aifunc_pycontext(self.aifunc)
         messages = []
+        threads = container.get(MsgThreadRepo)
+        if threads:
+            thread = threads.get_thread(frame.frame_id, create=False)
+            if thread:
+                return thread
+        # create one for frame
         instruction = get_aifunc_instruction(self.aifunc)
         if instruction:
             system_message = Role.SYSTEM.new(
@@ -104,6 +112,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             messages=messages,
         )
         thread = MsgThread.new(
+            thread_id=frame.frame_id,
             event=event,
             pycontext=pycontext,
         )
@@ -126,8 +135,13 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def on_chat(self, chat: Chat) -> None:
         pass
 
-    def on_message(self, message: Message) -> None:
-        pass
+    def on_message(self, message: Message, step: ExecStep, upstream: Optional[Stream]) -> None:
+        if upstream:
+            message = message.model_copy(deep=True)
+            message.name = self.aifunc.func_name()
+            payload = step.as_payload()
+            payload.set(message)
+            upstream.deliver(message)
 
     def on_system_messages(self, messages: List[Message]) -> None:
         pass
@@ -139,7 +153,6 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             step: ExecStep,
             upstream: Optional[Stream]
     ) -> Tuple[MsgThread, Optional[Any], bool]:
-        logger = manager.container().get(LoggerItf)
         # get compiler by current exec step
         # the MossCompiler.container().get(AIFuncCtx) will bind this step.
         compiler = manager.compiler(step, upstream)
@@ -172,7 +185,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         thread.append(ai_generation)
         step.messages.append(ai_generation)
         # on_message hook
-        self.on_message(ai_generation)
+        self.on_message(ai_generation, step, upstream)
 
         # parse the ai_generation.
         code = self.parse_moss_code_in_message(ai_generation)
@@ -183,8 +196,6 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             error = Role.new_assistant_system(
                 content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT"
             )
-            # log
-            logger.error(f"ai_generation: {repr(ai_generation)}")
 
         elif "main(" not in code:
             error = Role.new_assistant_system(
@@ -194,12 +205,12 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         if error is not None:
             thread.append(error)
             step.error = error
+            self.on_message(error, step, upstream)
             return thread, None, False
 
         result = None
         # 运行 moss.
         try:
-            logger.info(f"executing ai_generation: {code}")
             executed = runtime.execute(
                 code=code,
                 target='main',
@@ -218,6 +229,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                     content=f"## Observation\n\nmoss executed main, std output is: \n{output}"
                 )
                 messages = [output_message]
+                self.on_message(output_message, step, upstream)
             else:
                 output_message = Role.new_assistant_system(
                     content=f"## Observation\n\nhave not printed anything"
@@ -237,7 +249,6 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             step.pycontext = pycontext
             # I think this method is thread-safe
             step.messages.extend(messages)
-
             self.error_times = 0
         except Exception as e:
             exe_info = "\n".join(traceback.format_exception(e)[-5:])
@@ -253,7 +264,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
                 ),
             )
             step.error = output_message
-
+            self.on_message(output_message, step, upstream)
             self.error_times += 1
             if self.error_times >= 3:
                 raise RuntimeError(f"AIFunc `{self.name()}` failed {self.error_times} times, can not fix itself: \n{e}")
@@ -275,9 +286,11 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
         return content[code_start_index + len(CODE_MARK_LEFT): code_end_index].strip()
 
-    def on_save(self, manager: AIFuncExecutor, thread: MsgThread) -> None:
+    def on_save(self, container: Container, frame: ExecFrame, step: ExecStep, thread: MsgThread) -> None:
         # 如果 threads 抽象存在, 就保存一下. 还应该做一些日志的工作.
-        container = manager.container()
         threads = container.get(MsgThreadRepo)
         if threads is not None:
             threads.save_thread(thread)
+        repo = container.get(AIFuncRepository)
+        if repo is not None:
+            repo.save_exec_frame(frame)

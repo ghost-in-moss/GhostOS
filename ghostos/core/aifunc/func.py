@@ -42,6 +42,10 @@ class AIFunc(PromptAbleClass, BaseModel, ABC):
         result_prompt = f"result type of {cls.__name__} (which maybe not imported yet) is :\n{result_prompt}"
         return source + "\n\n" + add_comment_mark(result_prompt)
 
+    @classmethod
+    def func_name(cls) -> str:
+        return generate_import_path(cls)
+
 
 class AIFuncResult(PromptAbleClass, BaseModel, ABC):
     """

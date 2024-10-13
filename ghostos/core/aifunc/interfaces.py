@@ -5,11 +5,11 @@ from ghostos.core.moss.decorators import cls_source_code
 from ghostos.core.moss import MossCompiler, PyContext
 from ghostos.core.llms import LLMApi, Chat
 from ghostos.core.session import MsgThread
-from ghostos.core.messages import Message, Stream
+from ghostos.core.messages import Message, Stream, Payload
 from ghostos.abc import Identifier
 from ghostos.helpers import generate_import_path, uuid
 from ghostos.container import Container
-from ghostos.entity import EntityMeta, model_to_entity_meta
+from ghostos.entity import EntityMeta, model_to_entity_meta, model_from_entity_meta
 from pydantic import BaseModel, Field
 
 __all__ = [
@@ -72,11 +72,19 @@ class AIFuncCtx(ABC):
         pass
 
 
+class ExecStepPayload(Payload):
+    key = "AIFuncExecStep"
+    func: str = Field(description="AIFunc name")
+    frame_id: str = Field(description="execution id")
+    step_id: str = Field(description="step id")
+
+
 class ExecStep(BaseModel):
     """
     AIFunc execute in multi-turn thinking. Each turn is a step.
     """
     frame_id: str = Field(description="step id")
+    func: str = Field(description="AIFunc name")
     depth: int = Field(description="depth of the ExecFrame")
     step_id: str = Field(default_factory=uuid, description="step id")
     chat: Optional[Chat] = Field(default=None, description="llm chat")
@@ -84,7 +92,7 @@ class ExecStep(BaseModel):
     code: str = Field(default="", description="the generated code of the AIFunc")
     std_output: str = Field(default="", description="the std output of the AIFunc step")
     pycontext: Optional[PyContext] = Field(default=None, description="pycontext of the step")
-    error: Optional[Message] = Field(description="the error message")
+    error: Optional[Message] = Field(default=None, description="the error message")
     frames: List = Field(default_factory=list, description="list of ExecFrame")
 
     def new_frame(self, fn: AIFunc) -> "ExecFrame":
@@ -97,6 +105,16 @@ class ExecStep(BaseModel):
         self.frames.append(frame)
         return frame
 
+    def as_payload(self) -> ExecStepPayload:
+        return ExecStepPayload(
+            func=self.func,
+            frame_id=self.frame_id,
+            step_id=self.step_id,
+        )
+
+    def func_name(self) -> str:
+        return self.func
+
 
 class ExecFrame(BaseModel):
     """
@@ -104,21 +122,39 @@ class ExecFrame(BaseModel):
     """
     frame_id: str = Field(default_factory=uuid, description="AIFunc execution id.")
     parent_step: Optional[str] = Field(default=None, description="parent execution step id")
-    request: EntityMeta = Field(description="AIFunc request, model to entity")
-    response: Optional[EntityMeta] = Field(None, description="AIFunc response, model to entity")
+    args: EntityMeta = Field(description="AIFunc request, model to entity")
+    result: Optional[EntityMeta] = Field(None, description="AIFunc response, model to entity")
     depth: int = Field(default=0, description="the depth of the stack")
     steps: List[ExecStep] = Field(default_factory=list, description="the execution steps")
 
     @classmethod
     def from_func(cls, fn: AIFunc, depth: int = 0, parent_step_id: Optional[str] = None) -> "ExecFrame":
         return cls(
-            request=model_to_entity_meta(fn),
+            args=model_to_entity_meta(fn),
             parent_step=parent_step_id,
             depth=depth,
         )
 
+    def func_name(self) -> str:
+        return self.args['type']
+
+    def get_args(self) -> AIFunc:
+        return model_from_entity_meta(self.args, AIFunc)
+
+    def set_result(self, result: AIFuncResult) -> None:
+        self.result = model_to_entity_meta(result)
+
+    def get_result(self) -> Optional[AIFuncResult]:
+        if self.result is None:
+            return None
+        return model_from_entity_meta(self.result, AIFuncResult)
+
     def new_step(self) -> ExecStep:
-        step = ExecStep(frame_id=self.frame_id, depth=self.depth)
+        step = ExecStep(
+            frame_id=self.frame_id,
+            func=self.args['type'],
+            depth=self.depth,
+        )
         self.steps.append(step)
         return step
 
@@ -189,14 +225,15 @@ class AIFuncExecutor(ABC):
         """
         pass
 
-    def new_exec_frame(self, fn: AIFunc, upstream: Optional[Stream]) -> Tuple[ExecFrame, Callable[[], AIFuncResult]]:
+    def new_exec_frame(self, fn: AIFunc, upstream: Stream) -> Tuple[ExecFrame, Callable[[], AIFuncResult]]:
         """
         syntax sugar
         """
         frame = ExecFrame.from_func(fn)
 
         def execution() -> AIFuncResult:
-            return self.execute(fn, frame, upstream)
+            with upstream:
+                return self.execute(fn, frame, upstream)
 
         return frame, execution
 
@@ -273,10 +310,15 @@ class AIFuncRepository(ABC):
         """
         pass
 
+    @abstractmethod
     def validate(self) -> None:
         """
         validate the registered AiFunc, remove invalid ones
         """
+        pass
+
+    @abstractmethod
+    def save_exec_frame(self, frame: ExecFrame) -> None:
         pass
 
 
@@ -289,7 +331,7 @@ class AIFuncDriver(ABC):
         self.aifunc = fn
 
     @abstractmethod
-    def initialize(self) -> MsgThread:
+    def initialize(self, container: Container, frame: ExecFrame) -> MsgThread:
         """
         initialize the AIFunc thread by quest configuration.
         """
@@ -312,5 +354,12 @@ class AIFuncDriver(ABC):
         :param step: execution step.
         :param upstream: upstream that can send runtime messages.
         :return: (updated thread, __result__, is finish)
+        """
+        pass
+
+    @abstractmethod
+    def on_save(self, container: Container, frame: ExecFrame, step: ExecStep, thread: MsgThread) -> None:
+        """
+        save the status on each step
         """
         pass

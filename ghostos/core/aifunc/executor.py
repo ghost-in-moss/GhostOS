@@ -95,7 +95,7 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
         if frame is None:
             frame = ExecFrame.from_func(fn)
         driver = self.get_driver(fn)
-        thread = driver.initialize()
+        thread = driver.initialize(self.container(), frame)
         step = 0
         finished = False
         result = None
@@ -106,6 +106,7 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
             if self._max_step != 0 and step > self._max_step:
                 raise RuntimeError(f"exceeded max step {self._max_step}")
             thread, result, finished = driver.think(self, thread, exec_step, upstream=upstream)
+            driver.on_save(self.container(), frame, exec_step, thread)
 
             if finished:
                 break
@@ -113,9 +114,8 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
             result_type = get_aifunc_result_type(type(fn))
             raise RuntimeError(f"result is invalid AIFuncResult {type(result)}, expecting {result_type}")
 
+        frame.set_result(result)
         # if frame is the root, send final message as protocol
-        if upstream and frame.depth == 0:
-            upstream.send(DefaultMessageTypes.final())
         return result
 
     def get_driver(

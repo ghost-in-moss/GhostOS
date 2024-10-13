@@ -3,7 +3,7 @@ from typing import List, Type, Dict, Set, Iterable, Optional
 from types import ModuleType
 
 from ghostos.abc import Identifier, identify_class
-from ghostos.core.aifunc import AIFunc
+from ghostos.core.aifunc import AIFunc, ExecFrame
 from ghostos.core.aifunc.interfaces import AIFuncRepository
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.modules import Modules
@@ -103,6 +103,9 @@ class AIFuncRepoByConfigs(AIFuncRepository):
                 continue
         self.conf.identifiers = identifiers
         self.configs.save(self.conf)
+
+    def save_exec_frame(self, frame: ExecFrame) -> None:
+        return None
 
 
 class AIFuncRepoByConfigsProvider(Provider[AIFuncRepository]):

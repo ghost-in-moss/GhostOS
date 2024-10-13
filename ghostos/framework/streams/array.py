@@ -180,12 +180,12 @@ class _ArrayReceived(Received):
         self._stopped = False
         self._tail: Optional[Message] = None
         if head.is_complete() or DefaultMessageTypes.is_protocol_message(head):
-            self._tail = head
+            self._tail = head.as_tail()
         self._destroyed = False
 
     def add_item(self, item: Message) -> None:
         if item.is_complete() or DefaultMessageTypes.is_protocol_message(item):
-            self._tail = item
+            self._tail = item.as_tail()
         else:
             self._items.append(item.model_dump(exclude_defaults=True))
 
