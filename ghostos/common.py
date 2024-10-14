@@ -89,7 +89,7 @@ def get_identifier(value: Any) -> Optional[Identifier]:
             kind="function",
         )
     if inspect.ismethod(value):
-        return Identifiable(
+        return Identifier(
             id=generate_import_path(value.__class__) + ":" + value.__name__,
             name=value.__name__,
             description=value.__doc__,
