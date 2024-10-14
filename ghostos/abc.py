@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import Any, Optional, Dict, Union
 from pydantic import BaseModel, Field
 from ghostos.helpers import generate_import_path
+from typing_extensions import Protocol
+from types import FunctionType
+import inspect
 
 __all__ = [
     'Descriptive',
@@ -20,6 +24,7 @@ class Identifier(BaseModel):
     id: str = Field(default="", description="Unique identifier")
     name: str = Field(default="", description="Name of the object")
     description: str = Field(default="", description="Description of the object")
+    kind: Optional[str] = Field(default=None, description="Kind of the object")
 
 
 class Identifiable(ABC):
@@ -30,6 +35,12 @@ class Identifiable(ABC):
     @abstractmethod
     def identifier(self) -> Identifier:
         pass
+
+
+class IdentifiableProtocol(Protocol):
+    id: Optional[str]
+    name: str
+    description: str
 
 
 class IdentifiableClass(ABC):
@@ -51,11 +62,59 @@ def identify_class(cls: type) -> Identifier:
     id_ = identify_class_id(cls)
     name = cls.__name__
     desc = cls.__doc__
-    return Identifier(id=id_, name=name, description=desc)
+    return Identifier(
+        id=id_,
+        name=name,
+        description=desc,
+        kind="class",
+    )
 
 
 def identify_class_id(cls: type) -> str:
     return generate_import_path(cls)
+
+
+def get_identifier(value: Any) -> Optional[Identifier]:
+    if isinstance(value, Identifier):
+        return value
+    if isinstance(value, Identifiable):
+        return value.identifier()
+    if isinstance(value, IdentifiableClass):
+        return value.class_identifier()
+    if inspect.isfunction(value):
+        return Identifier(
+            id=generate_import_path(value),
+            name=value.__name__,
+            description=value.__doc__,
+            kind="function",
+        )
+    if inspect.ismethod(value):
+        return Identifiable(
+            id=generate_import_path(value.__class__) + ":" + value.__name__,
+            name=value.__name__,
+            description=value.__doc__,
+            kind="method",
+        )
+    if isinstance(value, type):
+        return identify_class(value)
+    if isinstance(value, Dict) and "name" in value and "description" in value:
+        return Identifier(
+            id=value.get("id", None),
+            name=value["name"],
+            description=value["description"],
+            kind=str(type(value)),
+        )
+    if isinstance(value, object) and hasattr(value, 'name') and hasattr(value, 'description'):
+        return Identifier(
+            id=getattr(value, 'id', None),
+            name=getattr(value, 'name'),
+            description=getattr(value, 'description'),
+            kind=str(type(value)),
+        )
+    return None
+
+
+IDAble = Union[Identifier, Identifiable, IdentifiableClass, type, FunctionType, IdentifiableProtocol]
 
 
 class PromptAble(ABC):
