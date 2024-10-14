@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_function_call_option_param import ChatCom
 from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 
 from pydantic import BaseModel, Field
-from ghostos.abc import Identifiable, Identifier
+from ghostos.common import Identifiable, Identifier
 from ghostos import helpers
 from ghostos.core.messages import Message, Role, Caller
 

@@ -2,7 +2,7 @@ import inspect
 import re
 from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, is_typeddict
 from pydantic import BaseModel
-from ghostos.abc import Identifiable, Descriptive
+from ghostos.common import Identifiable, Descriptive
 
 __all__ = [
 

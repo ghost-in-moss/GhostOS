@@ -1,6 +1,6 @@
 from typing import List
 from abc import ABC, abstractmethod
-from ghostos.abc import Identifiable
+from ghostos.common import Identifiable
 from ghostos.core.llms import ChatPreparer
 
 

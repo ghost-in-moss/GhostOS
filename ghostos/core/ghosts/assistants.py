@@ -1,6 +1,6 @@
 from typing import Optional, TypeVar, Generic, Type
 from abc import ABC, abstractmethod
-from ghostos.abc import Identifiable, Identifier
+from ghostos.common import Identifiable, Identifier
 from ghostos.core.ghosts import Ghost
 from ghostos.core.ghosts.thoughts import Thought, ModelThought
 from ghostos.helpers import generate_import_path, md5, import_from_path

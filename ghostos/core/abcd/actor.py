@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Iterable, Optional
 from typing_extensions import Protocol
 from .transport import Message
-from ghostos.abc import Identifier
+from ghostos.common import Identifier
 
 __all__ = ("Actor", "Address", "Topic", "Mail")
 

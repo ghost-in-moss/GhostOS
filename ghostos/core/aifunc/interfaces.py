@@ -6,7 +6,7 @@ from ghostos.core.moss import MossCompiler, PyContext
 from ghostos.core.llms import LLMApi, Chat
 from ghostos.core.session import MsgThread
 from ghostos.core.messages import Message, Stream, Payload
-from ghostos.abc import Identifier
+from ghostos.common import Identifier
 from ghostos.helpers import generate_import_path, uuid
 from ghostos.container import Container
 from ghostos.entity import EntityMeta, model_to_entity_meta, model_from_entity_meta

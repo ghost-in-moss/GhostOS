@@ -6,7 +6,7 @@ from ghostos.core.llms import Chat, LLMTool, ChatPreparer
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.messages.message import Caller
 from ghostos.core.session import Session
-from ghostos.abc import Identifiable, Identifier
+from ghostos.common import Identifiable, Identifier
 from pydantic import BaseModel
 
 __all__ = ['Action', 'ToolAction']
