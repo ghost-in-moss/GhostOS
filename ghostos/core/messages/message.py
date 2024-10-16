@@ -1,10 +1,10 @@
 import enum
-import time
 from typing import Optional, Dict, Set, Iterable, Union, List, ClassVar
-from typing_extensions import Self
+from typing_extensions import Self, Literal
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.helpers import uuid
+from copy import deepcopy
 
 __all__ = [
     "Message", "Role", "DefaultMessageTypes",
@@ -12,6 +12,8 @@ __all__ = [
     "MessageKind", "MessageKindParser",
     "Payload", "PayloadItem", "Attachment", "Caller",
 ]
+
+Seq = Literal["head", "chunk", "complete"]
 
 
 class Role(str, enum.Enum):
@@ -56,8 +58,9 @@ class Role(str, enum.Enum):
 class DefaultMessageTypes(str, enum.Enum):
     DEFAULT = ""
     CHAT_COMPLETION = "openai.chat_completion"
-    ERROR = "ghostos.messages.error"
-    FINAL = "ghostos.messages.final"
+    ERROR = "ghostos.streaming.error"
+    FINAL = "ghostos.streaming.final"
+    ACK = "ghostos.streaming.ack"
 
     def new(
             self, *,
@@ -101,7 +104,9 @@ class DefaultMessageTypes(str, enum.Enum):
         return pack.type == cls.FINAL.value
 
     @classmethod
-    def is_protocol_message(cls, message: "Message") -> bool:
+    def is_protocol_message(cls, message: Optional["Message"]) -> bool:
+        if message is None:
+            return True
         return cls.is_protocol_type(message.type)
 
     @classmethod
@@ -228,10 +233,11 @@ class Message(BaseModel):
     msg_id: str = Field(default="", description="unique message id. ")
     ref_id: Optional[str] = Field(default=None, description="the referenced message id.")
     type: str = Field(default="", description="default message type, if empty, means text")
-    created: float = Field(
-        default=0.0,
-        description="Message creation time, only available in head chunk or complete one",
-    )
+    # created: float = Field(
+    #     default=0.0,
+    #     description="Message creation time, only available in head chunk or complete one",
+    # )
+    # todo: remove later, use seq instead
     chunk: bool = Field(default=True, description="if the message is a chunk or a complete one")
 
     role: str = Field(default=Role.ASSISTANT.value, description="Message role", enum=Role.all())
@@ -262,13 +268,14 @@ class Message(BaseModel):
         description="the callers parsed in a complete message."
     )
 
-    chunk_count: int = Field(default=0, description="how many chunks of this complete message")
-    time_cast: float = Field(default=0.0, description="from first chunk to tail message.")
+    # chunk_count: int = Field(default=0, description="how many chunks of this complete message")
+    # time_cast: float = Field(default=0.0, description="from first chunk to tail message.")
 
     streaming_id: Optional[str] = Field(
         default=None,
         description="may be multiple streaming exists, use streaming id to separate them into a order",
     )
+    seq: Seq = Field(default="chunk")
 
     @classmethod
     def new_head(
@@ -280,7 +287,7 @@ class Message(BaseModel):
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
             ref_id: Optional[str] = None,
-            created: int = 0,
+            # created: int = 0,
     ):
         """
         create a head chunk message
@@ -291,18 +298,19 @@ class Message(BaseModel):
         :param name:
         :param msg_id:
         :param ref_id:
-        :param created:
+        # :param created:
         :return:
         """
         if msg_id is None:
             msg_id = uuid()
-        if created <= 0:
-            created = round(time.time(), 4)
+        # if created <= 0:
+        #     created = round(time.time(), 4)
         return cls(
             role=role, name=name, content=content, memory=memory, chunk=True,
             type=typ_,
             ref_id=ref_id,
-            msg_id=msg_id, created=created,
+            msg_id=msg_id,
+            # created=created,
         )
 
     @classmethod
@@ -315,7 +323,7 @@ class Message(BaseModel):
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
             ref_id: Optional[str] = None,
-            created: int = 0,
+            # created: int = 0,
     ):
         """
         create a tail message, is the complete message of chunks.
@@ -326,7 +334,7 @@ class Message(BaseModel):
         :param name:
         :param msg_id:
         :param ref_id:
-        :param created:
+        # :param created:
         :return:
         """
         msg = cls.new_head(
@@ -334,7 +342,7 @@ class Message(BaseModel):
             typ_=type_,
             msg_id=msg_id,
             ref_id=ref_id,
-            created=created,
+            # created=created,
         )
         msg.chunk = False
         return msg
@@ -394,24 +402,27 @@ class Message(BaseModel):
         chunk.msg_id = self.msg_id
         return self
 
-    def as_head(self) -> Self:
-        item = self.model_copy(deep=True)
+    def as_head(self, copy: bool = True) -> Self:
+        if copy:
+            item = self.get_copy()
+        else:
+            item = self
         if not item.msg_id:
             item.msg_id = uuid()
-        if not self.created:
-            item.created = time.time()
+        # if not self.created:
+        #     item.created = time.time()
+        if item.seq == "chunk":
+            item.seq = "head"
         return item
 
-    def as_tail(self) -> Self:
-        item = self.as_head()
-        item.chunk = False
-        return item
-
-    def get_copy(self) -> "Message":
-        """
-        :return: deep copy
-        """
+    def get_copy(self) -> Self:
         return self.model_copy(deep=True)
+
+    def as_tail(self, copy: bool = True) -> Self:
+        item = self.as_head(copy)
+        item.chunk = False
+        item.seq = "complete"
+        return item
 
     def update(self, pack: "Message") -> None:
         """
@@ -437,19 +448,19 @@ class Message(BaseModel):
         if pack.memory is not None:
             self.memory = pack.memory
 
-        self.payloads.update(pack.payloads)
+        self.payloads.update(deepcopy(pack.payloads))
 
         if pack.attachments is not None:
             for key, items in pack.attachments.items():
                 saved = self.attachments.get(key, [])
-                saved.append(*items)
+                saved.append(*[deepcopy(at) for at in saved])
                 self.attachments[key] = saved
         if pack.callers:
             self.callers.extend(pack.callers)
-        self.chunk_count += 1
-        if self.created:
-            now = round(time.time(), 4)
-            self.time_cast = round(now - self.created, 4)
+        # self.chunk_count += 1
+        # if self.created:
+        #     now = round(time.time(), 4)
+        #     self.time_cast = round(now - self.created, 4)
 
     def get_type(self) -> str:
         """
@@ -469,13 +480,41 @@ class Message(BaseModel):
         """
         complete message is not a chunk one
         """
-        return not self.chunk
+        return not self.chunk or self.seq == "complete"
+
+    def is_head(self) -> bool:
+        return self.seq == "head"
+
+    def get_seq(self) -> Seq:
+        return self.seq
 
     def dump(self) -> Dict:
         """
         dump a message dict without default value.
         """
         return self.model_dump(exclude_defaults=True)
+
+    def __str__(self):
+        return self.get_content()
+
+
+
+class Buffer(ABC):
+
+    @abstractmethod
+    def buffer(self, message: Iterable[Message]) -> Iterable[Message]:
+        pass
+
+    @abstractmethod
+    def completes(self) -> List[Message]:
+        pass
+
+    def __enter__(self):
+        return self
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
 
 class MessageClass(ABC):

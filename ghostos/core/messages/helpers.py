@@ -1,15 +1,33 @@
-from typing import Iterable, List
-from ghostos.core.messages.message import Message
+from typing import Iterable, List, Union, Dict
+from ghostos.core.messages.message import Message, Role, MessageClass
 
 __all__ = [
-    'copy_messages',
+    'copy_messages', 'iter_messages',
 ]
 
 
 def copy_messages(messages: Iterable[Message]) -> List[Message]:
+    """
+    syntax sugar for copy
+    """
     result = []
     for message in messages:
-        result.append(message.model_copy(deep=True))
+        result.append(message.get_copy())
     return result
 
-# seems at last not so many helper function are made....
+
+def iter_messages(messages: Iterable[Union[Message, str, Dict, MessageClass]]) -> Iterable[Message]:
+    """
+    yield from all kinds of messages
+    """
+    for item in messages:
+        if isinstance(item, Message):
+            yield item
+        elif isinstance(item, str):
+            yield Role.ASSISTANT.new(content=item)
+        elif isinstance(item, MessageClass):
+            yield item.to_message()
+        elif isinstance(item, Dict):
+            yield Message(**item)
+        else:
+            raise TypeError(f"Unexpected type {type(item)}")
