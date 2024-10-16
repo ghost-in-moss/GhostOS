@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict
+from typing_extensions import Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -28,7 +29,10 @@ class Event(BaseModel):
         default="",
         description="event type, by default the handler shall named on_{type}"
     )
-
+    name: Optional[str] = Field(
+        default=None,
+        description="sender name of this event messages",
+    )
     id: str = Field(
         default_factory=uuid,
         description="event id",
@@ -173,10 +177,24 @@ class DefaultEventType(str, Enum):
         )
 
 
+# EventBus 要实现分流设计
+# Task notification queue => Task Event queue
+# 0. 一个实例接受到 Task notification 后, 开始对这个 Task 上锁.
+# 1. Task 只有在上锁 (全局只有一个实例在处理这个 Task) 后才能消费 Task Event queue
+# 2. 如果对 Task 上锁不成功, 意味着有别的实例在消费 Task Event queue.
+# 3. 如果 Task 上锁成功, 而拿不到 Event, 说明 Event 被别的实例消费完了. 这时不继续发送 notification.
+# 4. 如果 Task 上锁成功, 消费到了 Event, 它应该反复更新锁, 继续消费下去.
+# 5. 如果消费 Event 结束, 或者出错, 应该再发送一个 notification. 让下一个拿到的实例检查是否消息都消费完了.
+# 6. 发送 event 时, 应该发送 notification, 这样异步消费队列才能感知到
+# 7. n 个事件理论上会发送 n 个 notification. 而在消费过程中被生产, 丢弃的 notification 应该有 1 ~ n 个.
+# 8. 如果目标 task 是会话进程的主 task, 而会话状态是端侧管理, 则不应该 notify, 而是由端侧来做推送.
 class EventBus(ABC):
     """
     global event bus.
     """
+    # @abstractmethod
+    # def with_process_id(self, process_id: str) -> Self:
+    #     pass
 
     @abstractmethod
     def send_event(self, e: Event, notify: bool) -> None:
@@ -217,6 +235,10 @@ class EventBus(ABC):
     @abstractmethod
     def clear_task(self, task_id: str) -> None:
         pass
+
+    # @abstractmethod
+    # def clear_all(self):
+    #     pass
 
     @contextmanager
     def transaction(self):

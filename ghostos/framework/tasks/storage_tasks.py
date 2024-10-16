@@ -1,16 +1,16 @@
 from typing import Optional, List, Iterable, Dict, Type
 import yaml
-from ghostos.core.session import TaskState, TaskBrief, Task, Tasks
+from ghostos.core.session import TaskState, TaskBrief, Task, TaskRepo
 from ghostos.core.ghosts import Workspace
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage
 from ghostos.container import Provider, Container
 from ghostos.helpers import uuid
 
-__all__ = ['StorageTasksImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
+__all__ = ['StorageTaskRepoImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
 
 
-class StorageTasksImpl(Tasks):
+class StorageTaskRepoImpl(TaskRepo):
 
     def __init__(self, storage: Storage, logger: LoggerItf):
         self._storage = storage
@@ -87,7 +87,7 @@ class StorageTasksImpl(Tasks):
         return None
 
 
-class StorageTasksImplProvider(Provider[Tasks]):
+class StorageTasksImplProvider(Provider[TaskRepo]):
     """
     provide storage based Tasks
     """
@@ -98,17 +98,17 @@ class StorageTasksImplProvider(Provider[Tasks]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Tasks]:
-        return Tasks
+    def contract(self) -> Type[TaskRepo]:
+        return TaskRepo
 
-    def factory(self, con: Container) -> Optional[Tasks]:
+    def factory(self, con: Container) -> Optional[TaskRepo]:
         logger = con.force_fetch(LoggerItf)
         storage = con.force_fetch(Storage)
         tasks_storage = storage.sub_storage(self.tasks_dir)
-        return StorageTasksImpl(tasks_storage, logger)
+        return StorageTaskRepoImpl(tasks_storage, logger)
 
 
-class WorkspaceTasksProvider(Provider[Tasks]):
+class WorkspaceTasksProvider(Provider[TaskRepo]):
 
     def __init__(self, namespace: str = "tasks"):
         self.namespace = namespace
@@ -116,12 +116,12 @@ class WorkspaceTasksProvider(Provider[Tasks]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Tasks]:
-        return Tasks
+    def contract(self) -> Type[TaskRepo]:
+        return TaskRepo
 
-    def factory(self, con: Container) -> Optional[Tasks]:
+    def factory(self, con: Container) -> Optional[TaskRepo]:
         workspace = con.force_fetch(Workspace)
         runtime_storage = workspace.runtime()
         tasks_storage = runtime_storage.sub_storage(self.namespace)
         logger = con.force_fetch(LoggerItf)
-        return StorageTasksImpl(tasks_storage, logger)
+        return StorageTaskRepoImpl(tasks_storage, logger)

@@ -2,7 +2,7 @@ from typing import Optional, TYPE_CHECKING, List, Tuple, Dict
 from abc import ABC, abstractmethod
 from ghostos.entity import ModelEntity, EntityMeta, EntityFactory
 from ghostos.container import Container
-from ghostos.abc import Identifiable, Identifier
+from ghostos.common import Identifiable, Identifier
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.configs import Configs
@@ -137,7 +137,7 @@ class Ghost(ABC):
             meta_prompt = task.assistant.meta_prompt
             return meta_prompt
         meta_prompt = self.meta_prompt()
-        shell_prompt = self.shell().shell_prompt()
+        shell_prompt = self.shell().status_description()
         content = "\n\n".join([meta_prompt, shell_prompt])
         return content.strip()
 

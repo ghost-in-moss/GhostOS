@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from typing import Dict, Type, Optional
 
-from ghostos.container import Provider, Container, ABSTRACT
+from ghostos.container import Provider, Container
 from ghostos.contracts.cache import Cache
 
 

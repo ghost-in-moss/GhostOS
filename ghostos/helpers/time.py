@@ -11,8 +11,13 @@ class Timeleft:
         self.start = time.time()
 
     def left(self) -> float:
-        if self.timeout <= 0.0:
-            return 0.0
-        now = time.time()
-        timeleft = self.timeout - (now - self.start)
+        passed = self.passed()
+        timeleft = self.timeout - passed
         return timeleft
+
+    def alive(self) -> bool:
+        return self.timeout < 0 or self.passed() < self.timeout
+
+    def passed(self) -> float:
+        now = time.time()
+        return now - self.start

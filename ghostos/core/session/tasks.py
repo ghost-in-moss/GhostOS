@@ -4,14 +4,14 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
 from ghostos.entity import EntityMeta
-from ghostos.abc import Identifier, Identifiable
+from ghostos.common import Identifier, Identifiable
 from ghostos.core.messages import Payload
 from contextlib import contextmanager
 
 __all__ = [
     'Task', 'TaskPayload', 'TaskBrief',
     'TaskState',
-    'Tasks',
+    'TaskRepo',
     'WaitGroup',
 ]
 
@@ -342,7 +342,7 @@ class TaskPayload(Payload):
         )
 
 
-class Tasks(ABC):
+class TaskRepo(ABC):
     """
     管理 task 存储的模块. 通常集成到 Session 里.
     """

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict
+from typing import Type, Dict, get_args, get_origin
 
-from ghostos.container import Container, Provider
+from ghostos.container import Container, Provider, ABSTRACT
 
 
 def test_container_baseline():
@@ -96,3 +96,28 @@ def test_boostrap():
     container.set(Foo, Foo())
     container.bootstrap()
     assert container.force_fetch(Foo).foo == 1
+
+
+def test_provider_generic_types():
+    class SomeProvider(Provider[int]):
+
+        def singleton(self) -> bool:
+            return True
+
+        def contract(self) -> ABSTRACT:
+            return self.get_instance_type()
+
+        def factory(self, con: Container) -> int:
+            return 3
+
+    # baseline
+    args = get_args(Provider[int])
+    assert args[0] is int
+    assert get_origin(Provider[int]) is Provider
+
+    p = SomeProvider()
+    con = Container()
+    assert p.singleton()
+    assert p.factory(con) == 3
+    assert p.contract() is int
+

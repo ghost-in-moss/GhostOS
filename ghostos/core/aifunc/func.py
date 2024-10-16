@@ -3,7 +3,7 @@ from typing import Callable, Type, Optional, TYPE_CHECKING
 from abc import ABC
 from pydantic import BaseModel
 from ghostos.helpers import generate_import_path, import_from_path
-from ghostos.abc import PromptAbleClass
+from ghostos.common import PromptAbleClass
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.moss.utils import make_class_prompt, add_comment_mark
 from ghostos.core.moss.prompts import get_class_magic_prompt
@@ -41,6 +41,10 @@ class AIFunc(PromptAbleClass, BaseModel, ABC):
         result_prompt = get_class_magic_prompt(result_type)
         result_prompt = f"result type of {cls.__name__} (which maybe not imported yet) is :\n{result_prompt}"
         return source + "\n\n" + add_comment_mark(result_prompt)
+
+    @classmethod
+    def func_name(cls) -> str:
+        return generate_import_path(cls)
 
 
 class AIFuncResult(PromptAbleClass, BaseModel, ABC):
