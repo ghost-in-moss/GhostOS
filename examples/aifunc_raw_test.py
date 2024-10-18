@@ -1,6 +1,7 @@
 import sys
 from os.path import dirname
 from ghostos.core.aifunc import AIFuncExecutor
+from ghostos.core.messages.transport import new_arr_connection
 
 # I hate python imports
 ghostos_project_dir = dirname(dirname(__file__))
@@ -14,7 +15,6 @@ Print out almost every thing.
 if __name__ == '__main__':
     from ghostos.bootstrap import application_container
     from ghostos.demo.aifuncs.agentic import AgentFn
-    from ghostos.framework.streams import new_connection
     from rich.console import Console
     from rich.markdown import Markdown
     from rich.panel import Panel
@@ -29,18 +29,19 @@ if __name__ == '__main__':
     fn = AgentFn(
         request="help me to find news about OpenAI O1 model",
     )
-    stream, receiver = new_connection(-1, accept_chunks=False)
+    stream, receiver = new_arr_connection(timeout=-1, complete_only=True)
     frame, caller = executor.new_exec_frame(fn, stream)
     t = Thread(target=caller)
     t.start()
 
-    with receiver as items:
-        for item in items:
-            tail = item.done()
-            payloads = json.dumps(tail.payloads, indent=2, ensure_ascii=False)
-
+    with receiver:
+        for item in receiver.recv():
+            if not item.is_complete():
+                continue
+            tail = item
             payloads_info = ""
             if debug:
+                payloads = json.dumps(tail.payloads, indent=2, ensure_ascii=False)
                 payloads_info = f"""
             
 ```json

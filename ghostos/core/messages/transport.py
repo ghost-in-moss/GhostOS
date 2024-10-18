@@ -22,7 +22,6 @@ class Stream(Protocol):
         """
         pass
 
-    @abstractmethod
     def deliver(self, message: Message) -> bool:
         return self.send([message])
 
@@ -249,10 +248,18 @@ class ArrayStream(Stream):
 
 
 def new_arr_connection(
+        *,
         timeout: float = -1,
         idle: float = 0.2,
         complete_only: bool = False,
 ) -> Tuple[Stream, Receiver]:
+    """
+    use array to pass and receive messages in multi-thread
+    :param timeout: if negative, wait until done
+    :param idle: sleep time in seconds wait for next pull
+    :param complete_only: only receive complete message
+    :return: created stream and receiver
+    """
     from ghostos.helpers import Timeleft
     timeleft = Timeleft(timeout)
 
