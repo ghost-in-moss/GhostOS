@@ -10,13 +10,13 @@ from ghostos.core.llms import Chat
 from ghostos.core.messages import Message
 from ghostos.core.moss import test_container
 from ghostos.core.aifunc import (
-    DefaultAIFuncManagerImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncManager,
+    DefaultAIFuncExecutorImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncExecutor,
     AIFuncResult,
 )
 from ghostos.framework.logger import NamedLoggerProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
-from ghostos.framework.threads import StorageThreadsProvider
+from ghostos.framework.threads import MsgThreadRepoByStorageProvider
 from ghostos.framework.configs import ConfigsByStorageProvider
 from rich.console import Console
 from rich.panel import Panel
@@ -54,7 +54,7 @@ def run_aifunc(
     container = test_container()
     container.register(FileStorageProvider(root_dir))
     container.register(NamedLoggerProvider(logger_name=logger_name))
-    container.register(StorageThreadsProvider(threads_dir=threads_path))
+    container.register(MsgThreadRepoByStorageProvider(threads_dir=threads_path))
     container.register(ConfigsByStorageProvider(configs_path))
     container.register(ConfigBasedLLMsProvider(llm_conf_path))
 
@@ -87,7 +87,7 @@ def run_aifunc(
         def on_system_messages(self, messages: List[Message]) -> None:
             pass
 
-        def on_save(self, manager: AIFuncManager, thread: MsgThread) -> None:
+        def on_save(self, manager: AIFuncExecutor, thread: MsgThread) -> None:
             current = thread.current
             if current:
                 for message in current.messages():
@@ -99,7 +99,7 @@ def run_aifunc(
                     )
             super().on_save(manager, thread)
 
-    manager = DefaultAIFuncManagerImpl(
+    manager = DefaultAIFuncExecutorImpl(
         container=container,
         llm_api_name=llm_api_name,
         default_driver=TestDriverImpl,

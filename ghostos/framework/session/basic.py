@@ -5,9 +5,9 @@ from ghostos.core.messages import (
 )
 from ghostos.core.session import (
     Session,
-    Process, Processes,
-    MsgThread, Threads,
-    Task, Tasks, TaskPayload, TaskState,
+    SessionProcess, GhostProcessRepo,
+    MsgThread, MsgThreadRepo,
+    Task, TaskRepo, TaskPayload, TaskState,
     Messenger,
     Event, EventBus, DefaultEventType,
     TaskBrief,
@@ -19,17 +19,21 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.pool import Pool
 
 
-class Future:
-    def __init__(self, future_id: str, bus: EventBus, event: Event):
+class FutureCall:
+    def __init__(self, future_id: str, bus: EventBus, event: Event, notify: bool = True):
         self.bus = bus
         self.event = event
         self.future_id = future_id
+        self.notify = notify
 
     def run(self, callback: Callable[[], Iterable[MessageKind]]) -> None:
-        messages = list(callback())
+        try:
+            messages = list(callback())
+        except Exception as e:
+            messages = [Role.new_assistant_system("", memory=str(e))]
         if len(messages) > 0:
             self.event.messages = messages
-            self.bus.send_event(self.event, notify=True)
+            self.bus.send_event(self.event, notify=self.notify)
         del self.bus
         del self.event
 
@@ -43,27 +47,27 @@ class BasicSession(Session):
             upstream: Stream,
             eventbus: EventBus,
             pool: Pool,
-            processes: Processes,
-            tasks: Tasks,
-            threads: Threads,
+            processes: GhostProcessRepo,
+            tasks: TaskRepo,
+            threads: MsgThreadRepo,
             logger: LoggerItf,
             # 当前任务信息.
-            process: Process,
+            process: SessionProcess,
             task: Task,
             thread: MsgThread,
     ):
         self._pool = pool
         self._upstream = upstream
         self._logger = logger
-        self._tasks: Tasks = tasks
-        self._processes: Processes = processes
+        self._tasks: TaskRepo = tasks
+        self._processes: GhostProcessRepo = processes
         self._ghost_name: str = ghost_name
         self._message_role: str = ghost_role
-        self._threads: Threads = threads
+        self._threads: MsgThreadRepo = threads
         self._eventbus: EventBus = eventbus
         # 需要管理的状态.
         self._task: Task = task
-        self._process: Process = process
+        self._process: SessionProcess = process
         self._creating: List[Task] = []
         self._thread: MsgThread = thread
         self._firing_events: List[Event] = []
@@ -86,7 +90,7 @@ class BasicSession(Session):
             return True
         return False
 
-    def process(self) -> "Process":
+    def process(self) -> "SessionProcess":
         return self._process
 
     def task(self) -> "Task":
@@ -182,7 +186,8 @@ class BasicSession(Session):
             messages=[],
         )
         # 让异步任务全局执行.
-        future = Future(future_id, self._eventbus, event)
+        notify = self._process.main_task_id != self._task.task_id
+        future = FutureCall(future_id, self._eventbus, event, notify=notify)
         self._pool.submit(future.run)
 
     def _do_quit(self) -> None:
@@ -211,8 +216,8 @@ class BasicSession(Session):
         bus = self._eventbus
         main_task_id = process.main_task_id
         for e in self._firing_events:
-            # 异步进程需要通知.
-            notify = not self._upstream.is_streaming() or e.task_id != main_task_id
+            # all the sub-tasks need notification
+            notify = e.task_id != main_task_id
             self._logger.info(f"fire event {e.type}: eid {e.id}; task_id {e.task_id}")
             bus.send_event(e, notify)
         self._firing_events = []
@@ -259,19 +264,19 @@ class BasicSession(Session):
                 self._fetched_task_briefs[task_brief.task_id] = task_brief
         return result
 
-    def tasks(self) -> Tasks:
+    def tasks(self) -> TaskRepo:
         return self._tasks
 
-    def processes(self) -> Processes:
+    def processes(self) -> GhostProcessRepo:
         return self._processes
 
-    def threads(self) -> Threads:
+    def threads(self) -> MsgThreadRepo:
         return self._threads
 
     def eventbus(self) -> EventBus:
         return self._eventbus
 
-    def update_process(self, process: "Process") -> None:
+    def update_process(self, process: "SessionProcess") -> None:
         self._process = process
 
     def quit(self) -> None:

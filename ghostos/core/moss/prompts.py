@@ -10,7 +10,7 @@ from ghostos.core.moss.utils import (
     add_source_indent,
 )
 from ghostos.core.moss.exports import Exporter
-from ghostos.abc import PromptAble, PromptAbleClass
+from ghostos.common import PromptAble, PromptAbleClass
 from ghostos.helpers import generate_import_path
 import inspect
 

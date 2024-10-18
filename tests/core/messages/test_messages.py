@@ -23,7 +23,7 @@ def test_message_basic_merge():
 
     msg = Message.new_head(role="assistant")
     for c in string:
-        msg = msg.patch(msg.new_pack(content=c, role="assistant"))
+        msg = msg.patch(msg.new_chunk(content=c, role="assistant"))
     assert msg.content == "hello world"
 
 
@@ -31,10 +31,10 @@ def test_message_with_full_type():
     msg = Message.new_head()
     content = "hello world"
     for c in content:
-        msg = msg.patch(msg.new_pack(content=c))
+        msg = msg.patch(msg.new_chunk(content=c))
 
     last = msg.model_copy(update=dict(content="good"))
-    last.pack = False
+    last.chunk = False
     buffed = msg.patch(last)
     assert buffed is not None and buffed.content == "good"
 
@@ -46,7 +46,7 @@ def test_head_is_not_empty():
 
 def test_head_pack_patch():
     msg = Message.new_head(content="a")
-    patch = msg.patch(Message.new_pack(content="b"))
+    patch = msg.patch(Message.new_chunk(content="b"))
     assert patch is not None
     assert patch.content == "ab"
 
@@ -54,7 +54,7 @@ def test_head_pack_patch():
 def test_tail_patch():
     msg = Message.new_head(content="")
     for c in "hello":
-        pack = Message.new_pack(content=c)
+        pack = Message.new_chunk(content=c)
         patch = msg.patch(pack)
         assert patch is not None
     tail = Message.new_tail(content=" world")
@@ -69,15 +69,17 @@ def test_tail_patch():
 
 def test_patch_default_type_message():
     msg = Message.new_head(typ_="kind")
-    patch = msg.patch(Message.new_pack(content="c", typ_=""))
+    patch = msg.patch(Message.new_chunk(content="c", typ_=""))
     assert patch is not None
 
-    patch = msg.patch(Message.new_pack(content="c", typ_="kind"))
+    patch = msg.patch(Message.new_chunk(content="c", typ_="kind"))
     assert patch is not None
-    pack = Message.new_pack(content="c", typ_="foo")
+    pack = Message.new_chunk(content="c", typ_="foo")
     assert pack.type == "foo"
     patch = msg.patch(pack)
     assert patch is None
+
+
 
 
 
