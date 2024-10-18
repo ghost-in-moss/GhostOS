@@ -93,8 +93,8 @@ def default_application_contracts() -> Contracts:
     from ghostos.contracts.pool import Pool
     from ghostos.contracts.shutdown import Shutdown
     from ghostos.contracts.modules import Modules
+    from ghostos.contracts.workspace import Workspace
     from ghostos.entity import EntityFactory
-    from ghostos.framework.workspaces import Workspace
     from ghostos.framework.configs import Configs
     from ghostos.framework.processes import GhostProcessRepo
     from ghostos.framework.threads import MsgThreadRepo
@@ -161,6 +161,11 @@ def default_application_providers(
     from ghostos.framework.entities import EntityFactoryProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
     return [
+
+        # --- logger ---#
+
+        NamedLoggerProvider(logger_name),
+        # --- workspace --- #
         BasicWorkspaceProvider(
             workspace_dir=root_dir,
             configs_path=workspace_configs_dir,
@@ -169,17 +174,26 @@ def default_application_providers(
         WorkspaceConfigsProvider(),
         WorkspaceProcessesProvider(runtime_processes_dir),
         WorkspaceTasksProvider(runtime_tasks_dir),
+
+        # --- session ---#
         MsgThreadsRepoByWorkSpaceProvider(runtime_threads_dir),
         DefaultPoolProvider(100),
-        ConfigBasedLLMsProvider(llms_conf_path),
-        DefaultModulesProvider(),
         MemEventBusImplProvider(),
-        ShutdownProvider(),
-        NamedLoggerProvider(logger_name),
+
+        # --- moss --- #
         DefaultMOSSProvider(),
+
+        # --- llm --- #
+        ConfigBasedLLMsProvider(llms_conf_path),
+
+        # --- basic library --- #
         EntityFactoryProvider(),
+        DefaultModulesProvider(),
+        ShutdownProvider(),
+
+        # --- aifunc --- #
         DefaultAIFuncExecutorProvider(),
-        AIFuncRepoByConfigsProvider(),
+        AIFuncRepoByConfigsProvider(runtime_frame_dir="aifunc_frames"),
     ]
 
 

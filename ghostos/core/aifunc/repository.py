@@ -7,9 +7,12 @@ from ghostos.core.aifunc import AIFunc, ExecFrame
 from ghostos.core.aifunc.interfaces import AIFuncRepository
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.modules import Modules
+from ghostos.contracts.storage import Storage
+from ghostos.contracts.workspace import Workspace
 from ghostos.helpers import generate_module_spec
-from ghostos.container import Provider, Container, INSTANCE
+from ghostos.container import Provider, Container
 from pydantic import Field
+from os.path import join
 import time
 
 
@@ -20,7 +23,7 @@ class AIFuncsConf(YamlConfig):
         default_factory=dict,
         description="registered AiFuncs identifier",
     )
-    validated_at: int = Field(0, description="Validation time in seconds")
+    validated_at: int = Field(0, description="validate the identifiers, validation time in seconds")
     overdue: int = Field(3600, description="Overdue time in seconds")
 
     def is_overdue(self) -> bool:
@@ -35,12 +38,14 @@ class AIFuncRepoByConfigs(AIFuncRepository):
             conf: AIFuncsConf,
             configs: Configs,
             modules: Modules,
+            frame_storage: Optional[Storage] = None,
     ):
         self.conf = conf
         self.configs = configs
         self.modules = modules
         if self.conf.is_overdue():
             self.validate()
+        self.frame_storage = frame_storage
 
     def register(self, *fns: Type[AIFunc]) -> None:
         saving = []
@@ -105,10 +110,21 @@ class AIFuncRepoByConfigs(AIFuncRepository):
         self.configs.save(self.conf)
 
     def save_exec_frame(self, frame: ExecFrame) -> None:
+        if self.frame_storage is not None:
+            filename = self._frame_filepath(frame.func_name(), frame.frame_id + ".json")
+            value = frame.model_dump_json(exclude_defaults=True, indent=2)
+            self.frame_storage.put(filename, value.encode())
         return None
+
+    @classmethod
+    def _frame_filepath(cls, func_name: str, frame_id: str, ext: str = ".json") -> str:
+        return join(func_name, frame_id + ext)
 
 
 class AIFuncRepoByConfigsProvider(Provider[AIFuncRepository]):
+
+    def __init__(self, runtime_frame_dir: Optional[str] = None):
+        self._runtime_frame_dir = runtime_frame_dir
 
     def singleton(self) -> bool:
         return True
@@ -118,6 +134,8 @@ class AIFuncRepoByConfigsProvider(Provider[AIFuncRepository]):
         modules = con.force_fetch(Modules)
         conf = configs.get(AIFuncsConf)
         conf.validated_at = int(time.time())
-        return AIFuncRepoByConfigs(conf, configs, modules)
-
-
+        runtime_storage = None
+        if self._runtime_frame_dir:
+            workspace = con.force_fetch(Workspace)
+            runtime_storage = workspace.runtime().sub_storage(self._runtime_frame_dir)
+        return AIFuncRepoByConfigs(conf, configs, modules, runtime_storage)

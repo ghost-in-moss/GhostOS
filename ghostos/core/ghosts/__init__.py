@@ -11,4 +11,3 @@ from ghostos.core.ghosts.thoughts import (
 )
 from ghostos.core.ghosts.shells import Shell
 from ghostos.core.ghosts.utils import Utils, NewTask
-from ghostos.core.ghosts.workspace import Workspace

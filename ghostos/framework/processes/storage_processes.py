@@ -4,7 +4,7 @@ from ghostos.core.session import SessionProcess
 from ghostos.core.session.processes import GhostProcessRepo
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
-from ghostos.core.ghosts.workspace import Workspace
+from ghostos.contracts.workspace import Workspace
 from threading import Lock
 from ghostos.container import Provider, Container
 

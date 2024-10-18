@@ -1,6 +1,6 @@
 from typing import Optional, Type
 from ghostos.core.session import MsgThread, MsgThreadRepo, SimpleMsgThread
-from ghostos.core.ghosts import Workspace
+from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
 from ghostos.helpers import yaml_pretty_dump

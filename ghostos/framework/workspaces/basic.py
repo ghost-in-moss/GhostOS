@@ -1,6 +1,6 @@
 from typing import Optional, Type
 
-from ghostos.core.ghosts.workspace import Workspace
+from ghostos.contracts.workspace import Workspace
 from ghostos.framework.storage import FileStorage, FileStorageImpl
 from ghostos.container import Provider, Container, INSTANCE
 

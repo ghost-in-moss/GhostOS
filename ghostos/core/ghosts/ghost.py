@@ -7,7 +7,7 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.configs import Configs
 from ghostos.core.session import Session, Event
-from ghostos.core.messages import Message, Caller, Role
+from ghostos.core.messages import Message, Role
 from ghostos.core.moss import MossCompiler
 from ghostos.core.llms import LLMs
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ghostos.core.ghosts.thoughts import Mindset, Thought
     from ghostos.core.ghosts.schedulers import MultiTask, Taskflow, Replier
     from ghostos.core.ghosts.operators import Operator
-    from ghostos.core.ghosts.workspace import Workspace
+    from ghostos.contracts.workspace import Workspace
     from ghostos.core.ghosts.actions import Action
 
 __all__ = ['Ghost', 'Inputs', 'GhostConf']
