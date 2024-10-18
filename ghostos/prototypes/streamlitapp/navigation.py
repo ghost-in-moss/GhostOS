@@ -1,14 +1,18 @@
 from ghostos.prototypes.streamlitapp.utils.route import Route, Router, Link
 from ghostos.prototypes.streamlitapp.pages import homepage
 from enum import Enum
+from pydantic import Field
 
 
 class PagePath(str, Enum):
     HOMEPAGE = "ghostos.prototypes.streamlitapp.pages.homepage"
+    AIFUNCS = "ghostos.prototypes.streamlitapp.pages.aifuncs"
 
     def spec(self, attr_name: str):
         return self.value + ':' + attr_name
 
+
+# --- home --- #
 
 class Home(Route):
     link = Link(
@@ -48,22 +52,39 @@ class Helloworld(Route):
     )
 
 
-default_router = Router(
-    [
-        Home(),
-        Helloworld(),
-        Navigator(),
-        GhostOSHost(),
-    ],
-    home=Home.label(),
-    navigator_names=[
-        GhostOSHost.label(),
-        Helloworld.label(),
-    ],
-    default_menu={
-        Home.label(): None,
-        Helloworld.label(): None,
-    },
-    default_sidebar_buttons=[
-    ],
-)
+# --- ai functions --- #
+
+class AIFuncListRoute(Route):
+    link = Link(
+        name="AIFunc List",
+        import_path=PagePath.AIFUNCS.spec("aifuncs_list"),
+        streamlit_icon=":material/functions:",
+    )
+    search: str = Field(
+        default="",
+        description="search ai functions with keyword",
+    )
+
+
+# --- routers --- #
+
+def default_router() -> Router:
+    return Router(
+[
+            Home(),
+            Helloworld(),
+            Navigator(),
+            GhostOSHost(),
+            AIFuncListRoute(),
+        ],
+        home=Home.label(),
+        navigator_names=[
+            GhostOSHost.label(),
+            AIFuncListRoute.label(),
+        ],
+        default_menu={
+            Home.label(): None,
+        },
+        default_sidebar_buttons=[
+        ],
+    )

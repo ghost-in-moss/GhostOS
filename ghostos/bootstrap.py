@@ -102,6 +102,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.framework.eventbuses import EventBus
     from ghostos.framework.llms import LLMs
     from ghostos.framework.logger import LoggerItf
+    from ghostos.framework.translation import Translation
     from ghostos.core.aifunc import AIFuncExecutor, AIFuncRepository
 
     return Contracts([
@@ -116,6 +117,7 @@ def default_application_contracts() -> Contracts:
         LoggerItf,  # the logger instance of application
         Modules,  # the import_module proxy
         EntityFactory,  # wrap and un-wrap Entity class
+        Translation,
 
         # moss
         MossCompiler,
@@ -160,6 +162,7 @@ def default_application_providers(
     from ghostos.framework.logger import NamedLoggerProvider
     from ghostos.framework.entities import EntityFactoryProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
+    from ghostos.framework.translation import WorkspaceTranslationProvider
     return [
 
         # --- logger ---#
@@ -190,6 +193,7 @@ def default_application_providers(
         EntityFactoryProvider(),
         DefaultModulesProvider(),
         ShutdownProvider(),
+        WorkspaceTranslationProvider("translations"),
 
         # --- aifunc --- #
         DefaultAIFuncExecutorProvider(),

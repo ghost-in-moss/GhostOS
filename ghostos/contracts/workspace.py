@@ -15,6 +15,10 @@ class Workspace(ABC):
         pass
 
     @abstractmethod
+    def assets(self) -> FileStorage:
+        pass
+
+    @abstractmethod
     def runtime(self) -> FileStorage:
         """
         runtime that save data by filesystem

@@ -1,4 +1,4 @@
-from gettext import gettext as _
+from ghostos.prototypes.streamlitapp.resources import trans as _
 
 
 def home():

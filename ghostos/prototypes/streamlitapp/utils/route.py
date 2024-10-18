@@ -8,7 +8,7 @@ from ghostos.helpers import generate_import_path, import_from_path
 from pydantic import BaseModel, Field
 import streamlit as st
 from pathlib import Path
-from gettext import gettext as _
+from ghostos.prototypes.streamlitapp.resources import trans as _
 import streamlit_antd_components as sac
 
 __all__ = ["Router", 'Route', 'Link']
@@ -144,12 +144,6 @@ class Route(SessionStateValue, BaseModel, ABC):
         if key in session_state:
             return session_state[key]
         return None
-
-    def get_or_bind(self, session_state: MutableMapping) -> Self:
-        key = self.session_state_key()
-        if key not in session_state:
-            session_state[key] = self
-        return session_state[key]
 
     @classmethod
     def default(cls) -> Self:

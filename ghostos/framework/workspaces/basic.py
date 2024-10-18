@@ -11,17 +11,22 @@ class BasicWorkspace(Workspace):
             self,
             workspace_storage: FileStorage,
             runtime_path: str = "runtime",
-            configs_path="configs",
+            configs_path: str = "configs",
+            assets_path: str = "asserts",
     ):
         self._storage: FileStorage = workspace_storage
         self._runtime_storage = workspace_storage.sub_storage(runtime_path)
         self._configs_storage = workspace_storage.sub_storage(configs_path)
+        self._assets_storage = workspace_storage.sub_storage(assets_path)
 
     def root(self) -> FileStorage:
         return self._storage
 
     def runtime(self) -> FileStorage:
         return self._runtime_storage
+
+    def assets(self) -> FileStorage:
+        return self._assets_storage
 
     def configs(self) -> FileStorage:
         return self._configs_storage
@@ -37,6 +42,7 @@ class BasicWorkspaceProvider(Provider):
             workspace_dir: str,
             runtime_path: str = "runtime",
             configs_path="configs",
+            assets_path: str = "asserts",
     ):
         """
         :param workspace_dir: relative workspace dir to the root path
@@ -46,6 +52,7 @@ class BasicWorkspaceProvider(Provider):
         self._root_path = workspace_dir
         self._runtime_path = runtime_path
         self._configs_path = configs_path
+        self._assets_path = assets_path
 
     def singleton(self) -> bool:
         return True
@@ -59,4 +66,5 @@ class BasicWorkspaceProvider(Provider):
             root_storage,
             runtime_path=self._runtime_path,
             configs_path=self._configs_path,
+            assets_path=self._assets_path,
         )

@@ -29,7 +29,7 @@ class SessionStateValue(ABC):
         pass
 
     @classmethod
-    def load(cls, session_state: MutableMapping) -> Self:
+    def get_or_bind(cls, session_state: MutableMapping) -> Self:
         value = cls.get(session_state)
         if value is None:
             default_value = cls.default()
@@ -61,9 +61,6 @@ class ModelSingleton(BaseModel, SessionStateValue, ABC):
     use pydantic.BaseModel to define state value
     """
 
-    session_key: ClassVar[str]
-    """Streamlit Session State Key"""
-
     @classmethod
     def get(cls, session_state: MutableMapping) -> Optional[Self]:
         """
@@ -71,7 +68,14 @@ class ModelSingleton(BaseModel, SessionStateValue, ABC):
         :param session_state: the streamlit session state
         :return: None if not bound yet
         """
-        return session_state.get(cls.session_key, None)
+        key = cls.session_key()
+        if key not in session_state:
+            return None
+        return session_state.get(key, None)
+
+    @classmethod
+    def session_key(cls) -> str:
+        return generate_import_path(cls)
 
     @classmethod
     def default(cls) -> Self:
@@ -79,7 +83,8 @@ class ModelSingleton(BaseModel, SessionStateValue, ABC):
         return cls()
 
     def bind(self, session_state: MutableMapping) -> None:
-        session_state[self.session_key] = self
+        key = self.session_key()
+        session_state[key] = self
 
 
 T = TypeVar('T')

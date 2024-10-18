@@ -3,9 +3,8 @@ from typing import Callable, List
 from ghostos.container import Container
 from ghostos.prototypes.streamlitapp.utils.session import expect, SingletonContracts, Singleton
 from ghostos.prototypes.streamlitapp.utils.route import Router
-from ghostos.prototypes.streamlitapp.utils.options import BoolOpts
-from ghostos.prototypes.streamlitapp.widgets import application_navigator_menu
-from gettext import gettext as _
+from ghostos.prototypes.streamlitapp.options import BoolOpts
+from ghostos.prototypes.streamlitapp.resources import trans as _
 
 __all__ = [
     "SINGLETONS", "BOOTSTRAP", "BOOTSTRAPPED_KEY",

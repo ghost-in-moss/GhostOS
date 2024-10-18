@@ -1,5 +1,5 @@
 import streamlit as st
-from gettext import gettext as _
+from ghostos.prototypes.streamlitapp.resources import trans as _
 from ghostos.prototypes.streamlitapp.utils.route import Router
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 

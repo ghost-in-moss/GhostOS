@@ -9,8 +9,9 @@ def bootstrap() -> SINGLETONS:
 
     app_dir = dirname(__file__)
     app_container = make_app_container(app_dir)
+    # bind container before everything
     yield Singleton(app_container)
-    yield Singleton(default_router)
+    yield Singleton(default_router())
 
 
 run_ghostos_streamlit_app(bootstrap)
