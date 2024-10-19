@@ -1,0 +1,8 @@
+# from class: ghostos.prototypes.streamlitapp.resources:AppConf
+bool_options:
+  DEBUG_MODE: false
+  HELP_MODE: false
+debug_mode: false
+domain: ghostos
+help_mode: false
+lang: zh

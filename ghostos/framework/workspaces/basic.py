@@ -12,7 +12,7 @@ class BasicWorkspace(Workspace):
             workspace_storage: FileStorage,
             runtime_path: str = "runtime",
             configs_path: str = "configs",
-            assets_path: str = "asserts",
+            assets_path: str = "assets",
     ):
         self._storage: FileStorage = workspace_storage
         self._runtime_storage = workspace_storage.sub_storage(runtime_path)
@@ -42,7 +42,7 @@ class BasicWorkspaceProvider(Provider):
             workspace_dir: str,
             runtime_path: str = "runtime",
             configs_path="configs",
-            assets_path: str = "asserts",
+            assets_path: str = "assets",
     ):
         """
         :param workspace_dir: relative workspace dir to the root path

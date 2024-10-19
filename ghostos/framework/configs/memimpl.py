@@ -15,3 +15,6 @@ class MemoryConfigs(BasicConfigs):
 
     def _put(self, relative_path: str, content: bytes) -> None:
         self._cache[relative_path] = content
+
+    def _exists(self, relative_path: str) -> bool:
+        return relative_path in self._cache

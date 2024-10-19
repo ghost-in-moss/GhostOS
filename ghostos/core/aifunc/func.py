@@ -82,6 +82,7 @@ def __aifunc_llmapi__(fn: AIFunc, llms: LLMs) -> LLMApi:
     """
     pass
 
+# ---- some helpers ---#
 
 def get_aifunc_llmapi(fn: AIFunc, llms: LLMs) -> Optional[LLMApi]:
     """

@@ -61,6 +61,10 @@ class Configs(ABC):
         pass
 
     @abstractmethod
+    def get_or_create(self, conf: C) -> C:
+        pass
+
+    @abstractmethod
     def save(self, conf: Config, relative_path: Optional[str] = None) -> None:
         """
         save a Config instance to it source.
@@ -98,7 +102,7 @@ class YamlConfig(Config, BaseModel):
         return cls(**value)
 
     def marshal(self) -> bytes:
-        value = self.model_dump(exclude_defaults=True)
+        value = self.model_dump(exclude_defaults=False)
         comment = f"# from class: {generate_import_path(self.__class__)}"
         result = yaml.safe_dump(value)
         return "\n".join([comment, result]).encode()

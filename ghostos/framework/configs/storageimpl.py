@@ -17,6 +17,9 @@ class StorageConfigs(BasicConfigs):
     def _put(self, relative_path: str, content: bytes) -> None:
         self._storage.put(relative_path, content)
 
+    def _exists(self, relative_path: str) -> bool:
+        return self._storage.exists(relative_path)
+
 
 class ConfigsByStorageProvider(Provider[Configs]):
 

@@ -1,14 +1,17 @@
 import streamlit as st
 from typing import Callable, List
-from ghostos.container import Container
+from ghostos.container import Container, Contracts
+from ghostos.contracts.configs import Configs
 from ghostos.prototypes.streamlitapp.utils.session import expect, SingletonContracts, Singleton
 from ghostos.prototypes.streamlitapp.utils.route import Router
-from ghostos.prototypes.streamlitapp.options import BoolOpts
-from ghostos.prototypes.streamlitapp.resources import trans as _
+from ghostos.prototypes.streamlitapp.resources import AppConf
+from ghostos.helpers import gettext as _
 
 __all__ = [
     "SINGLETONS", "BOOTSTRAP", "BOOTSTRAPPED_KEY",
-    "contracts", "validate_container",
+    "streamlit_contracts",
+    "container_contracts",
+    "SingletonContracts",
     "run_ghostos_streamlit_app",
 ]
 
@@ -18,29 +21,34 @@ BOOTSTRAP = Callable[[], SINGLETONS]
 
 BOOTSTRAPPED_KEY = "ghostos.streamlit.app.bootstrapped"
 
-contracts = SingletonContracts([
+container_contracts = Contracts([
+    Configs,
+])
+
+streamlit_contracts = SingletonContracts([
     Container,
     Router,
 ])
 
 
-def validate_container(container: Container) -> None:
-    pass
-
-
 def boot(fn: BOOTSTRAP) -> None:
-    if not expect(st.session_state, BOOTSTRAPPED_KEY, True):
-        singletons = fn()
-        for s in singletons:
-            s.bind(st.session_state, force=False)
-        unbound = contracts.validate(st.session_state)
-        if unbound:
-            error = ",".join([str(c) for c in unbound])
-            raise NotImplementedError(f'GhostOS Streamlit app unbound contracts: {error}')
-        # validate the container bootstrapped outside.
-        container = Singleton.get(Container, st.session_state)
-        validate_container(container)
-        st.session_state[BOOTSTRAPPED_KEY] = True
+    if expect(st.session_state, BOOTSTRAPPED_KEY, True):
+        return
+    singletons = fn()
+    for s in singletons:
+        s.bind(st.session_state, force=False)
+
+    # validate streamlit bounds
+    unbound = streamlit_contracts.validate(st.session_state)
+    if unbound:
+        error = ",".join([str(c) for c in unbound])
+        raise NotImplementedError(f'GhostOS Streamlit app unbound contracts: {error}')
+
+    # validate container bounds
+    container = Singleton.get(Container, st.session_state)
+    container_contracts.validate(container)
+    # validate the container bootstrapped outside.
+    st.session_state[BOOTSTRAPPED_KEY] = True
 
 
 def run_ghostos_streamlit_app(bootstrap: BOOTSTRAP) -> None:
@@ -72,14 +80,15 @@ def run_ghostos_streamlit_app(bootstrap: BOOTSTRAP) -> None:
         #     use_container_width=True,
         # )
         with st.expander(label="Options", expanded=False, icon=":material/settings:"):
-            BoolOpts.HELP_MODE.render_toggle(
+            AppConf.BoolOpts.HELP_MODE.render_toggle(
                 label=_("Help Mode"),
                 tips=_("switch help mode at every page"),
             )
-            BoolOpts.DEBUG_MODE.render_toggle(
+            AppConf.BoolOpts.DEBUG_MODE.render_toggle(
                 label=_("Debug Mode"),
                 tips=_("switch debug mode at every page"),
             )
+        st.subheader(_("page menu"))
 
     # global navigator dialog
     # if open_navigator:

@@ -26,6 +26,16 @@ class Identifier(BaseModel):
     description: str = Field(default="", description="Description of the object")
     kind: Optional[str] = Field(default=None, description="Kind of the object")
 
+    def match_keyword(self, keyword: str) -> bool:
+        keyword = keyword.strip()
+        if not keyword:
+            return True
+        return (
+                keyword.lower() in self.name.lower()
+                or keyword.lower() in self.description.lower()
+                or keyword.lower() in self.id.lower()
+        )
+
 
 class Identifiable(ABC):
     """

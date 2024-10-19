@@ -7,8 +7,7 @@ from ghostos.prototypes.streamlitapp.utils.session import SessionStateValue
 from ghostos.helpers import generate_import_path, import_from_path
 from pydantic import BaseModel, Field
 import streamlit as st
-from pathlib import Path
-from ghostos.prototypes.streamlitapp.resources import trans as _
+from ghostos.helpers import gettext as _
 import streamlit_antd_components as sac
 
 __all__ = ["Router", 'Route', 'Link']
@@ -36,7 +35,7 @@ class Link:
         self.antd_icon = antd_icon
         self.button_help = button_help
         self.menu_desc = menu_desc
-        self.url_path = url_path if url_path else name
+        self.url_path = url_path if url_path else name.lower().replace(" ", '_')
 
     def st_page(
             self, *,
@@ -152,6 +151,15 @@ class Route(SessionStateValue, BaseModel, ABC):
     def bind(self, session_state: MutableMapping) -> None:
         key = self.session_state_key()
         session_state[key] = self
+        current = generate_import_path(Route)
+        session_state[current] = self.label()
+
+    @classmethod
+    def current_page_label(cls) -> str:
+        current = generate_import_path(Route)
+        if current in st.session_state:
+            return st.session_state[current]
+        return ""
 
 
 class Router:

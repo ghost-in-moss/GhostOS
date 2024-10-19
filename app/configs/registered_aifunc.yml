@@ -1,1 +1,19 @@
-{}
+# from class: ghostos.core.aifunc.repository:AIFuncsConf
+identifiers:
+  ghostos.demo.aifuncs.agentic:AgentFn:
+    description: "\n    AIFunc that act like an agent\n    "
+    id: ghostos.demo.aifuncs.agentic:AgentFn
+    kind: null
+    name: AgentFn
+  ghostos.demo.aifuncs.news:NewsAIFunc:
+    description: "\n    search news\n    "
+    id: ghostos.demo.aifuncs.news:NewsAIFunc
+    kind: null
+    name: NewsAIFunc
+  ghostos.demo.aifuncs.weather:WeatherAIFunc:
+    description: "\n    tell about weather\n    "
+    id: ghostos.demo.aifuncs.weather:WeatherAIFunc
+    kind: null
+    name: WeatherAIFunc
+overdue: 3600
+validated_at: 1729316054

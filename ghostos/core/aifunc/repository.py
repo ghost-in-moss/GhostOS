@@ -64,21 +64,18 @@ class AIFuncRepoByConfigs(AIFuncRepository):
     def scan(self, module_name: str, *, recursive: bool, save: bool) -> List[Identifier]:
         mod = self.modules.import_module(module_name)
         result: Set[Type[AIFunc]] = set()
-        self._scan_aifuncs_in_module(mod, result)
-        if recursive:
-            for sub_module_name in self.modules.iter_modules(mod):
-                sub_module = self.modules.import_module(sub_module_name)
-                self._scan_aifuncs_in_module(sub_module, result)
+        self._scan_aifuncs_in_module(mod, result, recursive)
         returns = []
         for fn in result:
+            if fn is AIFunc:
+                continue
             identifier = self.identify(fn)
             returns.append(identifier)
         if save:
             self._save_aifunc_identifier(*returns)
         return returns
 
-    @staticmethod
-    def _scan_aifuncs_in_module(mod: ModuleType, scanned: Set[Type[AIFunc]]) -> None:
+    def _scan_aifuncs_in_module(self, mod: ModuleType, scanned: Set[Type[AIFunc]], recursive: bool) -> None:
         """
         scan a single module, not recursively
         """
@@ -88,10 +85,16 @@ class AIFuncRepoByConfigs(AIFuncRepository):
             value = mod.__dict__[name]
             if value and inspect.isclass(value) and issubclass(value, AIFunc):
                 scanned.add(value)
+        for sub_module_name, is_pkg in self.modules.iter_modules(mod):
+            try:
+                sub_module = self.modules.import_module(sub_module_name)
+                self._scan_aifuncs_in_module(sub_module, scanned, recursive)
+            except Exception:
+                continue
 
     def list(self, offset: int = 0, limit: int = -1) -> Iterable[Identifier]:
         limit = limit if limit > 0 else len(self.conf.identifiers)
-        return self.conf.identifiers.values()[offset:offset + limit]
+        return list(self.conf.identifiers.values())[offset:offset + limit]
 
     def validate(self) -> None:
         identifiers = {}

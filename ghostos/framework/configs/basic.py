@@ -14,12 +14,23 @@ class BasicConfigs(Configs, ABC):
         content = self._get(relative_path)
         return conf_type.unmarshal(content)
 
+    def get_or_create(self, conf: C) -> C:
+        path = conf.conf_path()
+        if not self._exists(path):
+            self._put(path, conf.marshal())
+            return conf
+        return self.get(type(conf))
+
     @abstractmethod
     def _get(self, relative_path: str) -> bytes:
         pass
 
     @abstractmethod
     def _put(self, relative_path: str, content: bytes) -> None:
+        pass
+
+    @abstractmethod
+    def _exists(self, relative_path: str) -> bool:
         pass
 
     def save(self, conf: Config, relative_path: Optional[str] = None) -> None:

@@ -2,7 +2,6 @@ from typing import List, Optional
 from os.path import dirname, join
 from ghostos.container import Container, Provider, Contracts
 from ghostos.contracts.logger import config_logging
-# from ghostos.providers import default_application_providers, application_contracts
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
 import dotenv
 import os
@@ -102,7 +101,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.framework.eventbuses import EventBus
     from ghostos.framework.llms import LLMs
     from ghostos.framework.logger import LoggerItf
-    from ghostos.framework.translation import Translation
+    from ghostos.framework.documents import DocumentRegistry
     from ghostos.core.aifunc import AIFuncExecutor, AIFuncRepository
 
     return Contracts([
@@ -117,7 +116,8 @@ def default_application_contracts() -> Contracts:
         LoggerItf,  # the logger instance of application
         Modules,  # the import_module proxy
         EntityFactory,  # wrap and un-wrap Entity class
-        Translation,
+
+        DocumentRegistry,
 
         # moss
         MossCompiler,
@@ -162,7 +162,7 @@ def default_application_providers(
     from ghostos.framework.logger import NamedLoggerProvider
     from ghostos.framework.entities import EntityFactoryProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
-    from ghostos.framework.translation import WorkspaceTranslationProvider
+    from ghostos.framework.documents import ConfiguredDocumentRegistryProvider
     return [
 
         # --- logger ---#
@@ -177,6 +177,7 @@ def default_application_providers(
         WorkspaceConfigsProvider(),
         WorkspaceProcessesProvider(runtime_processes_dir),
         WorkspaceTasksProvider(runtime_tasks_dir),
+        ConfiguredDocumentRegistryProvider("documents_registry.yml"),
 
         # --- session ---#
         MsgThreadsRepoByWorkSpaceProvider(runtime_threads_dir),
@@ -193,7 +194,7 @@ def default_application_providers(
         EntityFactoryProvider(),
         DefaultModulesProvider(),
         ShutdownProvider(),
-        WorkspaceTranslationProvider("translations"),
+        # WorkspaceTranslationProvider("translations"),
 
         # --- aifunc --- #
         DefaultAIFuncExecutorProvider(),

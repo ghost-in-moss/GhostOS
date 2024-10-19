@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 __all__ = ["Translation", "Translator", "DomainTranslator", "TransItem"]
 
+# deprecated: use gettext instead
+
 
 class TransItem(BaseModel):
     id: str = Field(description="the target text")

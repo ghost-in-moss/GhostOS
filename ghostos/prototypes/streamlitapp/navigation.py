@@ -1,7 +1,11 @@
+from typing import Optional, List
 from ghostos.prototypes.streamlitapp.utils.route import Route, Router, Link
 from ghostos.prototypes.streamlitapp.pages import homepage
+from ghostos.core.messages import Message
+from ghostos.core.aifunc import ExecFrame
 from enum import Enum
 from pydantic import Field
+from ghostos.entity import EntityMeta
 
 
 class PagePath(str, Enum):
@@ -66,16 +70,41 @@ class AIFuncListRoute(Route):
     )
 
 
+class AIFuncDetailRoute(Route):
+    link = Link(
+        name="AIFunc Detail",
+        import_path=PagePath.AIFUNCS.spec("aifunc_detail"),
+        streamlit_icon=":material/functions:",
+    )
+    aifunc_id: str = Field(
+        default="",
+        description="AIFunc ID, which is import path of it",
+    )
+    aifunc_meta: Optional[EntityMeta] = Field(
+        default=None,
+        description="aifuncs metadata",
+    )
+    frame: Optional[ExecFrame] = Field(
+        default=None,
+        description="current execution frame",
+    )
+    messages: List[Message] = Field(
+        default_factory=list,
+        description="list of execution messages",
+    )
+
+
 # --- routers --- #
 
 def default_router() -> Router:
     return Router(
-[
+        [
             Home(),
             Helloworld(),
             Navigator(),
             GhostOSHost(),
             AIFuncListRoute(),
+            AIFuncDetailRoute(),
         ],
         home=Home.label(),
         navigator_names=[
