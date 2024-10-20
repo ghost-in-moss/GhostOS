@@ -95,12 +95,18 @@ class ExecStep(BaseModel):
     step_id: str = Field(default_factory=uuid, description="step id")
     chat: Optional[Chat] = Field(default=None, description="llm chat")
     generate: Optional[Message] = Field(default=None, description="AI generate message")
-    code: str = Field(default="", description="the generated code of the AIFunc")
     messages: List[Message] = Field(default_factory=list, description="list of messages")
     std_output: str = Field(default="", description="the std output of the AIFunc step")
     pycontext: Optional[PyContext] = Field(default=None, description="pycontext of the step")
     error: Optional[Message] = Field(default=None, description="the error message")
     frames: List = Field(default_factory=list, description="list of ExecFrame")
+
+    def iter_messages(self) -> Iterable[Message]:
+        if self.generate:
+            yield self.generate
+        if self.error:
+            yield self.error
+        yield from self.messages
 
     def new_frame(self, fn: AIFunc) -> "ExecFrame":
         frame = ExecFrame.from_func(
@@ -133,6 +139,7 @@ class ExecFrame(BaseModel):
     result: Optional[EntityMeta] = Field(None, description="AIFunc response, model to entity")
     depth: int = Field(default=0, description="the depth of the stack")
     steps: List[ExecStep] = Field(default_factory=list, description="the execution steps")
+    error: Optional[Message] = Field(default=None, description="the error message")
 
     @classmethod
     def from_func(cls, fn: AIFunc, depth: int = 0, parent_step_id: Optional[str] = None) -> "ExecFrame":

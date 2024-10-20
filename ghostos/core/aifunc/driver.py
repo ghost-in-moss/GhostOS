@@ -234,13 +234,13 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             step.std_output = output
             if output:
                 output_message = Role.new_assistant_system(
-                    content=f"## Observation\n\nmoss executed main, std output is: \n{output}"
+                    content=f"Observation:\n\nmoss executed main, std output is: \n{output}"
                 )
                 messages = [output_message]
                 self.on_message(output_message, step, upstream)
             else:
                 output_message = Role.new_assistant_system(
-                    content=f"## Observation\n\nhave not printed anything"
+                    content=f"Observation:\n\nhave not printed anything"
                 )
                 messages = [output_message]
             pycontext = executed.pycontext

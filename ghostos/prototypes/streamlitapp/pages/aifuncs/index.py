@@ -1,25 +1,24 @@
-import inspect
-from typing import List, Iterable
-import streamlit as st
+from typing import Iterable
 from ghostos.prototypes.streamlitapp.navigation import AIFuncListRoute, AIFuncDetailRoute
 from ghostos.prototypes.streamlitapp.resources import (
     get_container,
     get_app_conf,
     get_app_docs,
 )
-from ghostos.prototypes.streamlitapp.widgets import open_code_dialog, help_document, markdown_document
-from ghostos.core.aifunc import AIFuncRepository, AIFunc, get_aifunc_result_type
-from ghostos.core.aifunc import func, interfaces
-from ghostos.common import Identifier, identify_class
+from ghostos.prototypes.streamlitapp.widgets import (
+    open_code_dialog
+)
+from ghostos.core.aifunc import (
+    AIFuncRepository
+)
+import ghostos.core.aifunc.func as func
+import ghostos.core.aifunc.interfaces as interfaces
+from ghostos.common import Identifier
 from ghostos.helpers import (
     gettext as _,
     reflect_module_code,
-    import_from_path,
-    import_class_from_path, generate_import_path,
-    parse_import_module_and_spec,
 )
-import inspect
-import webbrowser
+import streamlit as st
 
 
 def render_aifuncs(items: Iterable[Identifier], keyword: str = "") -> None:
@@ -38,7 +37,7 @@ def render_aifuncs(items: Iterable[Identifier], keyword: str = "") -> None:
                 route.switch_page()
 
 
-def aifuncs_list():
+def main():
     # bind if route value not bind before
     route = AIFuncListRoute().get_or_bind(st.session_state)
     app_conf = get_app_conf()
@@ -81,65 +80,3 @@ def aifuncs_list():
                 value=route.search,
             )
         render_aifuncs(funcs, keyword)
-
-
-def aifunc_detail():
-    route = AIFuncDetailRoute().get_or_bind(st.session_state)
-    with st.sidebar:
-        AIFuncListRoute().render_page_link(use_container_width=True)
-
-    if not route.aifunc_id:
-        st.error("No AI Functions found")
-        return
-    try:
-        fn = import_class_from_path(route.aifunc_id, AIFunc)
-    except TypeError as e:
-        st.error(e)
-        return
-
-    idt = identify_class(fn)
-
-    # 渲染全局信息.
-    st.title(idt.name)
-    st.caption(idt.id)
-    st.markdown(idt.description)
-
-    tab_exec, tab_source = st.tabs([_("Execute AIFuncs"), _("Source Code")])
-    with tab_exec:
-        st.write("hello")
-
-    with tab_source:
-        # prepare
-        module_name, attr_name = parse_import_module_and_spec(idt.id)
-        mod = import_from_path(module_name)
-        result_type = get_aifunc_result_type(fn)
-
-        # open source code
-        if st.button("Open The Source File"):
-            webbrowser.open(f"file://{mod.__file__}")
-
-        # func code panel
-        st.subheader(_("Func Request"))
-        st.caption(idt.id)
-        source = inspect.getsource(fn)
-        st.code(source, line_numbers=True, wrap_lines=True)
-        help_document("aifunc/request_info")
-        st.divider()
-
-        # result code panel
-        st.subheader(_("Func Result"))
-        st.caption(generate_import_path(result_type))
-        source = inspect.getsource(result_type)
-        st.code(source, line_numbers=True, wrap_lines=True)
-        st.divider()
-
-        # run
-        st.subheader(_("Usage Example"))
-        markdown_document("aifunc/usage_example")
-
-        # full context
-        st.subheader(_("AIFunc Full Context"))
-        with st.expander(module_name):
-            source = inspect.getsource(mod)
-            st.code(source, line_numbers=True, wrap_lines=True)
-        st.divider()

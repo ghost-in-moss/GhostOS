@@ -98,6 +98,10 @@ class Route(SessionStateValue, BaseModel, ABC):
         self.bind(st.session_state)
         self.link.switch_page(url_path=url_path)
 
+    def rerun(self) -> None:
+        self.bind(st.session_state)
+        st.rerun()
+
     def render_page_link(
             self, *,
             disabled: bool = False,

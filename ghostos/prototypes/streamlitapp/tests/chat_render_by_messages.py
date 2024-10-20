@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from pydantic import BaseModel, Field
 
-st.session_state.messages = []
+st.session_state.received = []
 
 chart_data = pd.DataFrame(
     {
@@ -21,18 +21,18 @@ class Item(BaseModel):
     kwargs: Dict[str, Any] = Field(default_factory=dict)
 
 
-st.session_state.messages.append(Item(
+st.session_state.received.append(Item(
     method="write",
     args=["hello world!"],
 ))
 
-st.session_state.messages.append(Item(
+st.session_state.received.append(Item(
     method="area_chart",
     args=[chart_data],
     kwargs=dict(x="col1", y="col2", color="col3"),
 ))
 
-messages: List[Item] = st.session_state.messages
+messages: List[Item] = st.session_state.received
 
 for item in messages:
     with st.chat_message("assistant"):

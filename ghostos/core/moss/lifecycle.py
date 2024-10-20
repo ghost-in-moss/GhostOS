@@ -127,11 +127,16 @@ def __moss_exec__(
     """
     from typing import Callable
     from ghostos.core.moss.abc import MossResult
+    pycontext = runtime.dump_pycontext()
+    pycontext.execute_code = code
+    pycontext.executed = False
+
     local_values = runtime.locals()
     # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
     with runtime.runtime_ctx():
         if code:
-            compiled = compile(code, filename='<MOSS>', mode='exec')
+            filename = pycontext.module if pycontext.module is not None else "<MOSS>"
+            compiled = compile(code, filename=filename, mode='exec')
             exec(compiled, local_values)
 
     if target not in local_values:
@@ -168,4 +173,5 @@ def __moss_exec__(
         returns = target_module_attr
     std_output = runtime.dump_std_output()
     pycontext = runtime.dump_pycontext()
+    pycontext.executed = True
     return MossResult(returns, std_output, pycontext)

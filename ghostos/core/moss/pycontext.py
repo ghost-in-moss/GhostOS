@@ -37,7 +37,7 @@ class PyContext(BaseModel):
         description="在上下文中定义的变量. 会注入到 MOSS 上. 修改后也会保存到 pycontext 里. ",
     )
 
-    generated: Optional[str] = Field(
+    execute_code: Optional[str] = Field(
         default=None,
         description="the generated python code on this context",
     )

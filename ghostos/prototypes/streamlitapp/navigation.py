@@ -1,19 +1,17 @@
 from typing import Optional, List
 from ghostos.prototypes.streamlitapp.utils.route import Route, Router, Link
-from ghostos.prototypes.streamlitapp.pages import homepage
 from ghostos.core.messages import Message
 from ghostos.core.aifunc import ExecFrame
 from enum import Enum
 from pydantic import Field
-from ghostos.entity import EntityMeta
 
 
 class PagePath(str, Enum):
     HOMEPAGE = "ghostos.prototypes.streamlitapp.pages.homepage"
     AIFUNCS = "ghostos.prototypes.streamlitapp.pages.aifuncs"
 
-    def spec(self, attr_name: str):
-        return self.value + ':' + attr_name
+    def suffix(self, attr_name: str):
+        return self.value + attr_name
 
 
 # --- home --- #
@@ -21,7 +19,7 @@ class PagePath(str, Enum):
 class Home(Route):
     link = Link(
         name="Home",
-        import_path=PagePath.HOMEPAGE.spec("home"),
+        import_path=PagePath.HOMEPAGE.suffix(":home"),
         streamlit_icon=":material/home:",
         button_help="help",
         antd_icon="house-fill",
@@ -31,7 +29,7 @@ class Home(Route):
 class Navigator(Route):
     link = Link(
         name="Navigator",
-        import_path=PagePath.HOMEPAGE.spec("navigator"),
+        import_path=PagePath.HOMEPAGE.suffix(":navigator"),
         streamlit_icon=":material/home:",
         antd_icon="box-fill",
     )
@@ -40,7 +38,7 @@ class Navigator(Route):
 class GhostOSHost(Route):
     link = Link(
         name="GhostOS Host",
-        import_path=PagePath.HOMEPAGE.spec("ghostos_host"),
+        import_path=PagePath.HOMEPAGE.suffix(":ghostos_host"),
         streamlit_icon=":material/smart_toy:",
     )
 
@@ -51,7 +49,7 @@ class Helloworld(Route):
     """
     link = Link(
         name="Hello World",
-        import_path=PagePath.HOMEPAGE.spec("helloworld"),
+        import_path=PagePath.HOMEPAGE.suffix(":helloworld"),
         streamlit_icon=":material/home:",
     )
 
@@ -61,7 +59,7 @@ class Helloworld(Route):
 class AIFuncListRoute(Route):
     link = Link(
         name="AIFunc List",
-        import_path=PagePath.AIFUNCS.spec("aifuncs_list"),
+        import_path=PagePath.AIFUNCS.suffix(".index:main"),
         streamlit_icon=":material/functions:",
     )
     search: str = Field(
@@ -73,25 +71,29 @@ class AIFuncListRoute(Route):
 class AIFuncDetailRoute(Route):
     link = Link(
         name="AIFunc Detail",
-        import_path=PagePath.AIFUNCS.spec("aifunc_detail"),
+        import_path=PagePath.AIFUNCS.suffix(".detail:main"),
         streamlit_icon=":material/functions:",
     )
     aifunc_id: str = Field(
         default="",
         description="AIFunc ID, which is import path of it",
     )
-    aifunc_meta: Optional[EntityMeta] = Field(
-        default=None,
-        description="aifuncs metadata",
-    )
     frame: Optional[ExecFrame] = Field(
         default=None,
         description="current execution frame",
     )
-    messages: List[Message] = Field(
+    executed: bool = False
+    received: List[Message] = Field(
         default_factory=list,
         description="list of execution messages",
     )
+    timeout: float = 40
+    exec_idle: float = 0.2
+
+    def clear_execution(self):
+        self.executed = False
+        self.received = []
+        self.frame = None
 
 
 # --- routers --- #

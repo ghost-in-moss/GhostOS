@@ -92,31 +92,35 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
             frame: Optional[ExecFrame] = None,
             upstream: Optional[Stream] = None,
     ) -> AIFuncResult:
-        if frame is None:
-            frame = ExecFrame.from_func(fn)
-        driver = self.get_driver(fn)
-        thread = driver.initialize(self.container(), frame)
-        step = 0
-        finished = False
-        result = None
-        while not finished:
-            step += 1
-            # each step generate a new exec step
-            exec_step = frame.new_step()
-            if self._max_step != 0 and step > self._max_step:
-                raise RuntimeError(f"exceeded max step {self._max_step}")
-            thread, result, finished = driver.think(self, thread, exec_step, upstream=upstream)
-            driver.on_save(self.container(), frame, exec_step, thread)
+        try:
+            if frame is None:
+                frame = ExecFrame.from_func(fn)
+            driver = self.get_driver(fn)
+            thread = driver.initialize(self.container(), frame)
+            step = 0
+            finished = False
+            result = None
+            while not finished:
+                step += 1
+                # each step generate a new exec step
+                exec_step = frame.new_step()
+                if self._max_step != 0 and step > self._max_step:
+                    raise RuntimeError(f"exceeded max step {self._max_step}")
+                thread, result, finished = driver.think(self, thread, exec_step, upstream=upstream)
+                driver.on_save(self.container(), frame, exec_step, thread)
 
-            if finished:
-                break
-        if result is not None and not isinstance(result, AIFuncResult):
-            result_type = get_aifunc_result_type(type(fn))
-            raise RuntimeError(f"result is invalid AIFuncResult {type(result)}, expecting {result_type}")
+                if finished:
+                    break
+            if result is not None and not isinstance(result, AIFuncResult):
+                result_type = get_aifunc_result_type(type(fn))
+                raise RuntimeError(f"result is invalid AIFuncResult {type(result)}, expecting {result_type}")
 
-        frame.set_result(result)
-        # if frame is the root, send final message as protocol
-        return result
+            frame.set_result(result)
+            # if frame is the root, send final message as protocol
+            return result
+        except Exception as e:
+            frame.error = DefaultMessageTypes.ERROR.new(content=str(e))
+            raise
 
     def get_driver(
             self,
