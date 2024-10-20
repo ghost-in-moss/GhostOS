@@ -140,7 +140,7 @@ class GhostFuncDriver:
         """
         # get generated code from history, run it.
         pycontext = thread.last_turn().pycontext
-        generated = pycontext.generated
+        generated = pycontext.execute_code
         if self._caching and generated and pycontext.executed:
             thread, result = self._start_with_generated_code(generated, thread, pycontext, args, kwargs)
         else:
@@ -241,7 +241,7 @@ class GhostFuncDriver:
             kwargs: Dict[str, Any],
     ) -> Tuple[Any, bool]:
         runtime = self._moss_runtime(pycontext)
-        pycontext.generated = code
+        pycontext.execute_code = code
         pycontext.executed = True
         executed = None
         try:

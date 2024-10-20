@@ -5,7 +5,7 @@ from ghostos.entity import Entity, ModelEntity
 from ghostos.core.session import Event, MsgThread, Session
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
-from ghostos.abc import Identifiable, Identifier, PromptAbleClass
+from ghostos.common import Identifiable, Identifier, PromptAbleClass
 from ghostos.helpers import uuid, generate_import_path
 from pydantic import Field
 

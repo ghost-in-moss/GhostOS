@@ -11,6 +11,8 @@ __all__ = [
     'EntityFactory',
     'ModelEntity',
     'EntityFactoryImpl',
+    'model_to_entity_meta',
+    'model_from_entity_meta',
 ]
 
 
@@ -26,6 +28,26 @@ class EntityMeta(TypedDict, total=False):
 
     data: Required[dict]
     """ use dict to restore the serializable data"""
+
+
+def model_to_entity_meta(model: BaseModel) -> EntityMeta:
+    type_ = generate_import_path(type(model))
+    data = model.model_dump(exclude_defaults=True)
+    return EntityMeta(
+        type=type_,
+        data=data,
+    )
+
+
+MODEL = TypeVar('MODEL', bound=BaseModel)
+
+
+def model_from_entity_meta(meta: EntityMeta, wrapper: Type[MODEL] = BaseModel) -> MODEL:
+    type_ = meta['type']
+    imported = import_from_path(type_)
+    if not issubclass(imported, wrapper):
+        raise TypeError(f"the type of the meta `{type_}` is not a subclass of `{wrapper}`")
+    return imported(**meta['data'])
 
 
 class Entity(ABC):

@@ -27,7 +27,7 @@ class TaskflowBasicImpl(Taskflow):
             content = yaml_pretty_dump(values)
 
             # 用什么协议没想明白, function ? tool? system ?
-            content = "# observe values: \n" + content
+            content = "observe values: \n" + content
             msg = DefaultMessageTypes.DEFAULT.new_system(
                 content=content,
             )

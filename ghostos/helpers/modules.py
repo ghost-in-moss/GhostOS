@@ -1,10 +1,11 @@
 import inspect
-from typing import Any, Tuple, Optional, Dict, Callable, Type
+from typing import Any, Tuple, Optional, Dict, Callable, Type, TypeVar
 from types import ModuleType
 
 __all__ = [
     'Importer',
     'import_from_path',
+    'import_class_from_path',
     'get_calling_modulename',
     'get_module_spec',
     'generate_import_path',
@@ -17,6 +18,15 @@ __all__ = [
 ]
 
 Importer = Callable[[str], ModuleType]
+
+T = TypeVar('T', bound=type)
+
+
+def import_class_from_path(path: str, parent: Optional[T]) -> T:
+    imported = import_from_path(path)
+    if parent and not issubclass(imported, parent):
+        raise TypeError(f'{path} is not a subclass of {parent}')
+    return imported
 
 
 def import_from_path(module_spec: str, importer: Optional[Importer] = None) -> Any:

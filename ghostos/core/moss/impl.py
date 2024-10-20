@@ -295,7 +295,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         del self._moss
 
 
-class TestMOSSProvider(Provider[MossCompiler]):
+class DefaultMOSSProvider(Provider[MossCompiler]):
     """
     用于测试的标准 compiler.
     但实际上好像也是这个样子.
@@ -308,4 +308,4 @@ class TestMOSSProvider(Provider[MossCompiler]):
         return MossCompiler
 
     def factory(self, con: Container) -> MossCompiler:
-        return MossCompilerImpl(container=con, pycontext=PyContext())
+        return MossCompilerImpl(container=con, pycontext=None)

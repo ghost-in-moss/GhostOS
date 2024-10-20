@@ -10,7 +10,7 @@ from ghostos.helpers import uuid
 from contextlib import contextmanager
 
 __all__ = [
-    'Threads', 'MsgThread', 'Turn',
+    'MsgThreadRepo', 'MsgThread', 'Turn',
     'thread_to_chat',
 ]
 
@@ -59,7 +59,17 @@ class Turn(BaseModel):
             self.pycontext = pycontext
 
     def event_messages(self) -> Iterable[Message]:
+        if not self.event:
+            return []
         event = self.event
+        name = event.name
+        for message in self.iter_event_message(event):
+            if message.name is None:
+                message.name = name
+            yield message
+
+    @staticmethod
+    def iter_event_message(event: Event) -> Iterable[Message]:
         if event is None:
             return []
 
@@ -72,7 +82,7 @@ class Turn(BaseModel):
 
         # messages in middle
         if event.messages:
-            for message in self.event.messages:
+            for message in event.messages:
                 yield message
 
         # instruction after messages.
@@ -242,10 +252,8 @@ class MsgThread(BaseModel):
         """
         if self.current is None:
             self.new_turn(None)
-        if messages:
-            self.current.append(*messages)
-        if pycontext:
-            self.current.pycontext = pycontext
+        if messages or pycontext:
+            self.current.append(*messages, pycontext=pycontext)
 
     def get_generates(self) -> List[Message]:
         if self.current is None:
@@ -296,9 +304,9 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: MsgThread) -> Ch
     return chat
 
 
-class Threads(ABC):
+class MsgThreadRepo(ABC):
     """
-    管理 Threads 存取的模块. 通常集成到 Session 里.
+    the repository to save and load threads
     """
 
     @abstractmethod

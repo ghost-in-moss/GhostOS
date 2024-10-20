@@ -9,7 +9,7 @@ from ghostos.core.messages import DefaultMessageTypes, Caller
 from ghostos.core.moss import MossRuntime, moss_message
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.session import Session
-from ghostos.abc import Identifier
+from ghostos.common import Identifier
 from pydantic import BaseModel, Field
 from traceback import format_exc
 

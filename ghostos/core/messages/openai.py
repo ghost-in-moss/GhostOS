@@ -13,8 +13,7 @@ from openai.types.chat.chat_completion_function_message_param import ChatComplet
 from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 
 from ghostos.core.messages.message import Message, DefaultMessageTypes, Role, Caller, PayloadItem
-from ghostos.container import Provider, Container, ABSTRACT
-from pydantic import BaseModel, Field
+from ghostos.container import Provider, Container, INSTANCE
 
 __all__ = [
     "OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider",
@@ -24,19 +23,21 @@ __all__ = [
 
 class OpenAIMessageParser(ABC):
     """
-    用来对齐 openai 的协议.
+    a parser for OpenAI messages alignment.
     """
 
     @abstractmethod
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         """
-        将 message 转换为 openai 的请求入参.
+        parse a Message to OpenAI chat completion message form.
+        OpenAI's input message (ChatCompletionXXXParam) are different to ChatCompletion types,
+        which is exhausting
         """
         pass
 
     def parse_message_list(self, messages: Iterable[Message]) -> Iterable[ChatCompletionMessageParam]:
         """
-        将多条消息转换成 openai 的多条入参.
+        syntax suger
         """
         for message in messages:
             items = self.parse_message(message)
@@ -46,21 +47,23 @@ class OpenAIMessageParser(ABC):
     @abstractmethod
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
         """
-        将 openai chat completion 转换.
+        parse a ChatCompletion message to Message.
+        Request -> Message -> ChatCompletionXXXXParam --LLM generation--> ChatCompletionXXX --> Message
         """
         pass
 
     @abstractmethod
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         """
-        将 openai 的 delta 转换过来.
+        patch the openai Chat Completion Chunks.
+        the Realtime API need a new parser.
         """
         pass
 
 
 class CompletionUsagePayload(CompletionUsage, PayloadItem):
     """
-    将每个包的开销记录下来.
+    the strong-typed payload of OpenAI chat completion usage.
     """
     key: ClassVar[str] = "completion_usage"
 
@@ -82,7 +85,7 @@ class CompletionUsagePayload(CompletionUsage, PayloadItem):
 
 class DefaultOpenAIMessageParser(OpenAIMessageParser):
     """
-    默认的 parser, 只做了极简的实现.
+    default implementation of OpenAIMessageParser
     """
 
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
@@ -186,7 +189,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
-                pack = Message.new_pack(role=Role.ASSISTANT.value, typ_=DefaultMessageTypes.CHAT_COMPLETION)
+                pack = Message.new_chunk(role=Role.ASSISTANT.value, typ_=DefaultMessageTypes.CHAT_COMPLETION)
                 usage.set(pack)
                 yield pack
             else:
@@ -202,8 +205,8 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content,
                                     typ_=DefaultMessageTypes.CHAT_COMPLETION)
         else:
-            pack = Message.new_pack(role=Role.ASSISTANT.value, content=delta.content,
-                                    typ_=DefaultMessageTypes.CHAT_COMPLETION)
+            pack = Message.new_chunk(role=Role.ASSISTANT.value, content=delta.content,
+                                     typ_=DefaultMessageTypes.CHAT_COMPLETION)
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())
@@ -217,7 +220,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         return pack
 
 
-class DefaultOpenAIParserProvider(Provider):
+class DefaultOpenAIParserProvider(Provider[OpenAIMessageParser]):
     """
     默认的 provider.
     """
@@ -225,8 +228,5 @@ class DefaultOpenAIParserProvider(Provider):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[ABSTRACT]:
-        return OpenAIMessageParser
-
-    def factory(self, con: Container) -> Optional[ABSTRACT]:
+    def factory(self, con: Container) -> Optional[OpenAIMessageParser]:
         return DefaultOpenAIMessageParser()

@@ -1,0 +1,1 @@
+AIFunc 使用 `pydantic.BaseModel` 来定义, 是一个强类型的数据结构. 

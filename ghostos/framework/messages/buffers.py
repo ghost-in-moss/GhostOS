@@ -35,8 +35,6 @@ class DefaultBuffer(Buffer):
         """正在 buff 的消息体. """
 
         self._buffed_messages: List[Message] = []
-        """发送出去的完整消息体. """
-        self._buffed_callers: List[Caller] = []
         """过程中 buff 的 caller. """
         self._origin_functional_tokens = functional_tokens
 
@@ -47,6 +45,8 @@ class DefaultBuffer(Buffer):
 
         self._functional_token_chars: Dict[int, Set[str]] = {}
         """ functional token 的字符组.. """
+
+        self._destroyed = False
 
         if functional_tokens:
             for ft in functional_tokens:
@@ -93,7 +93,7 @@ class DefaultBuffer(Buffer):
         result = []
         for item in items:
             # 如果是尾包, 对尾包进行必要的处理.
-            is_tail = item.is_tail()
+            is_tail = item.is_complete()
             if is_tail:
                 self._buff_tail_pack(item)
             result.append(item)
@@ -104,11 +104,11 @@ class DefaultBuffer(Buffer):
             return []
         # 不深拷贝的话, 加工逻辑就会交叉污染?
         # pack = origin.model_copy(deep=True)
-        if DefaultMessageTypes.is_protocol_type(pack):
+        if DefaultMessageTypes.is_protocol_message(pack):
             # final 包不进行 buffer.
             yield pack
             return
-        if pack.is_tail():
+        if pack.is_complete():
             # 如果收到了一个尾包, 则走尾包逻辑.
             yield from self._receive_tail_pack(pack)
             return
@@ -217,7 +217,7 @@ class DefaultBuffer(Buffer):
         # 输出的消息会缓存到一起.
         self._buffering_message_delivered_content += deliver_content
         # 结算环节, 变更 pack 可以输出的 content.
-        if pack.is_tail() and pack.content != self._buffering_message_delivered_content:
+        if pack.is_complete() and pack.content != self._buffering_message_delivered_content:
             pack.memory = pack.content
         pack.content = deliver_content
         return pack
@@ -252,11 +252,6 @@ class DefaultBuffer(Buffer):
     def _buff_tail_pack(self, tail: Message) -> None:
         # 剥离所有的 callers.
         self._buffed_messages.append(tail)
-
-        # 从标准的 payload 和 attachments 里读取 caller.
-        if tail.callers:
-            for caller in tail.callers:
-                self._buffed_callers.append(caller)
 
     def _wrap_first_pack(self, pack: Message) -> Message:
         # 首包强拷贝, 用来做一个 buffer.
@@ -300,7 +295,7 @@ class DefaultBuffer(Buffer):
             return None
 
         buffering = self._buffering_message
-        buffering.pack = False
+        buffering.chunk = False
 
         if self._functional_token_starts:
             if self._buffering_token:
@@ -334,7 +329,9 @@ class DefaultBuffer(Buffer):
         if not self._current_functional_token:
             return None
         functional_token = self._functional_token_starts[self._current_functional_token]
-        return functional_token.new_caller(self._current_functional_token_content)
+        caller = functional_token.new_caller(self._current_functional_token_content)
+        self._current_functional_token = ""
+        return caller
 
     def new(self) -> "DefaultBuffer":
         return DefaultBuffer(
@@ -352,8 +349,26 @@ class DefaultBuffer(Buffer):
             self._buff_tail_pack(unsent)
             deliver.append(unsent)
 
-        flushed = Flushed(unsent=deliver, messages=self._buffed_messages, callers=self._buffed_callers)
+        callers = []
+        messages = self._buffed_messages
+        for item in messages:
+            callers.extend(item.callers)
+        flushed = Flushed(
+            unsent=deliver,
+            messages=messages,
+            callers=callers,
+        )
         self._reset_buffering()
         self._buffed_messages = []
-        self._buffed_callers = []
         return flushed
+
+    def destroy(self) -> None:
+        if self._destroyed:
+            return
+        self._destroyed = True
+        del self._buffering_message
+        del self._buffering_message_delivered_content
+        del self._buffering_token
+        del self._functional_token_starts
+        del self._origin_functional_tokens
+        del self._functional_token_ends
