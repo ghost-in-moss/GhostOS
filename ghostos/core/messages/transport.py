@@ -1,6 +1,7 @@
 from typing import Iterable, Optional, Callable, List, Tuple
 
 from typing_extensions import Protocol
+from collections import deque
 from abc import abstractmethod
 from ghostos.core.messages.message import Message, DefaultMessageTypes
 from ghostos.core.messages.pipeline import SequencePipe
@@ -118,7 +119,7 @@ class ArrayReceiver(Receiver):
     def __init__(self, alive: Callable[[], bool], idle: float = 0.1, complete_only: bool = False):
         self._check_alive = alive
         self._idle = idle
-        self._chunks: List[Message] = []
+        self._chunks = deque()
         self._closed = False
         self._done = False
         self._error: Optional[Message] = None
@@ -127,12 +128,11 @@ class ArrayReceiver(Receiver):
     def recv(self) -> Iterable[Message]:
         if self._closed:
             raise RuntimeError("Receiver is closed")
-        idx = 0
         alive = self._check_alive
         while not self._done:
-            if idx < len(self._chunks):
-                yield self._chunks[idx]
-                idx += 1
+            if len(self._chunks) > 0:
+                item = self._chunks.popleft()
+                yield item
                 continue
             is_alive = alive()
             if not is_alive:
@@ -141,10 +141,9 @@ class ArrayReceiver(Receiver):
                 break
             if self._idle:
                 time.sleep(self._idle)
-        if idx < len(self._chunks):
-            while idx < len(self._chunks):
-                yield self._chunks[idx]
-                idx += 1
+        if len(self._chunks) > 0:
+            yield from self._chunks
+            self._chunks = []
         if self._error is not None:
             yield self._error
 
