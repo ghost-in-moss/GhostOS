@@ -138,3 +138,11 @@ def test_init_model_with_more_values():
     bar_data = bar.model_dump(exclude_defaults=True)
     assert len(bar_data) == 0
     assert not hasattr(bar, 'c')
+
+
+def test_bytes_in_model():
+    class Foo(BaseModel):
+        foo: bytes
+
+    f = Foo(foo="test".encode())
+    assert f.foo.decode() == "test"
