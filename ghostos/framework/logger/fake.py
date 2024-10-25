@@ -22,11 +22,6 @@ class FakeLogger(LoggerItf):
     def critical(self, msg, *args, **kwargs):
         pass
 
-    def fatal(self, msg, *args, **kwargs):
-        pass
-
     def log(self, level, msg, *args, **kwargs):
         pass
 
-    def with_trace(self, trace: Dict) -> "LoggerItf":
-        return self

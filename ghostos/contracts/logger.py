@@ -1,13 +1,12 @@
-from abc import ABC, abstractmethod
-from logging import LoggerAdapter, Logger, getLogger
+from abc import abstractmethod
 from logging.config import dictConfig
-from typing import Union, Dict
+from typing import Protocol
 import yaml
 
-__all__ = ['LoggerItf', 'LoggerAdapter', 'LoggerType', 'LoggerWrapper', 'config_logging']
+__all__ = ['LoggerItf', 'config_logging']
 
 
-class LoggerItf(ABC):
+class LoggerItf(Protocol):
     """
     """
 
@@ -79,13 +78,6 @@ class LoggerItf(ABC):
         pass
 
     @abstractmethod
-    def fatal(self, msg, *args, **kwargs):
-        """
-        Don't use this method, use critical() instead.
-        """
-        pass
-
-    @abstractmethod
     def log(self, level, msg, *args, **kwargs):
         """
         Log 'msg % args' with the integer severity 'level'.
@@ -96,51 +88,6 @@ class LoggerItf(ABC):
         logger.log(level, "We have a %s", "mysterious problem", exc_info=True)
         """
         pass
-
-    @abstractmethod
-    def with_trace(self, trace: Dict) -> "LoggerItf":
-        pass
-
-
-LoggerType = Union[LoggerAdapter, Logger]
-
-
-class LoggerWrapper(LoggerItf):
-
-    def __init__(self, logger: LoggerType):
-        self.logger = logger
-
-    def debug(self, msg, *args, **kwargs):
-        return self.logger.debug(msg, *args, **kwargs)
-
-    def info(self, msg, *args, **kwargs):
-        return self.logger.info(msg, *args, **kwargs)
-
-    def warning(self, msg, *args, **kwargs):
-        return self.logger.warning(msg, *args, **kwargs)
-
-    def error(self, msg, *args, **kwargs):
-        return self.logger.error(msg, *args, **kwargs)
-
-    def exception(self, msg, *args, exc_info=True, **kwargs):
-        return self.logger.exception(msg, *args, **kwargs)
-
-    def critical(self, msg, *args, **kwargs):
-        return self.logger.critical(msg, *args, **kwargs)
-
-    def fatal(self, msg, *args, **kwargs):
-        return self.logger.fatal(msg, *args, **kwargs)
-
-    def log(self, level, msg, *args, **kwargs):
-        return self.logger.log(level, msg, *args, **kwargs)
-
-    def with_trace(self, trace: Dict) -> "LoggerItf":
-        # todo: add trace
-        return LoggerWrapper(LoggerAdapter(self.logger, extra=dict(trace=trace)))
-
-
-def get_logger(logger_name: str) -> LoggerItf:
-    return LoggerWrapper(getLogger(logger_name))
 
 
 def config_logging(conf_path: str) -> None:

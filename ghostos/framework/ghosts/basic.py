@@ -129,9 +129,7 @@ class BasicGhost(Ghost, ABC):
             logger=logger,
         )
         # prepare ghost logger
-        trace = self.trace()
-        ghost_logger = logger.with_trace(trace)
-        self._logger = ghost_logger
+        self._logger = logger
         # 初始化 container 的相关绑定.
         self._bootstrap_ghost_container()
         # 检查所有必须绑定的对象.
