@@ -108,14 +108,16 @@ def config_logging(conf_path: str) -> None:
 
 
 def get_console_logger(
-        name: str = "__console__",
+        name: str = "__ghostos_console__",
         extra: Optional[dict] = None,
+        debug: bool = False,
 ) -> LoggerItf:
     logger = getLogger(name)
     if not logger.hasHandlers():
         logger.setLevel(logging.DEBUG)
         _console_handler = logging.StreamHandler()
-        _console_handler.setLevel(logging.DEBUG)
+        if debug:
+            _console_handler.setLevel(logging.DEBUG)
         _console_formatter = PleshakovFormatter()
         _console_handler.setFormatter(_console_formatter)
         logger.addHandler(_console_handler)
