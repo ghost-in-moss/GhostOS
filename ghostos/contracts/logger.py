@@ -1,9 +1,11 @@
+import logging
 from abc import abstractmethod
 from logging.config import dictConfig
-from typing import Protocol
+from logging import getLogger, LoggerAdapter
+from typing import Protocol, Optional
 import yaml
 
-__all__ = ['LoggerItf', 'config_logging']
+__all__ = ['LoggerItf', 'config_logging', 'get_logger', 'get_console_logger']
 
 
 class LoggerItf(Protocol):
@@ -90,6 +92,10 @@ class LoggerItf(Protocol):
         pass
 
 
+def get_logger(name: Optional[str] = None, extra: Optional[dict] = None) -> LoggerItf:
+    return LoggerAdapter(getLogger(name), extra=extra)
+
+
 def config_logging(conf_path: str) -> None:
     """
     configurate logging by yaml config
@@ -99,3 +105,51 @@ def config_logging(conf_path: str) -> None:
         content = f.read()
     data = yaml.safe_load(content)
     dictConfig(data)
+
+
+def get_console_logger(
+        name: str = "__console__",
+        extra: Optional[dict] = None,
+) -> LoggerItf:
+    logger = getLogger(name)
+    if not logger.hasHandlers():
+        logger.setLevel(logging.DEBUG)
+        _console_handler = logging.StreamHandler()
+        _console_handler.setLevel(logging.DEBUG)
+        _console_formatter = PleshakovFormatter()
+        _console_handler.setFormatter(_console_formatter)
+        logger.addHandler(_console_handler)
+    return LoggerAdapter(logger, extra=extra)
+
+
+class PleshakovFormatter(logging.Formatter):
+    # copy from
+    # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
+    grey = "\x1b[37;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    green = "\x1b[32;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+
+    FORMATS = {
+        logging.DEBUG: grey + format + reset,
+        logging.INFO: green + format + reset,
+        logging.WARNING: yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
+if __name__ == '__main__':
+    get_console_logger().debug("hello world")
+    get_console_logger().info("hello world")
+    get_console_logger().error("hello world")
+    get_console_logger().warning("hello world")
+    get_console_logger().critical("hello world")
