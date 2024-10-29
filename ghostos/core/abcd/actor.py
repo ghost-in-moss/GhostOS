@@ -4,7 +4,7 @@ from typing_extensions import Protocol
 from .transport import Message
 from ghostos.common import Identifier
 
-__all__ = ("Actor", "Address", "Topic", "Mail")
+__all__ = ("Actor", "Address", "Topic", "Mail", "Message")
 
 
 class Address(Protocol):
