@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from ghostos.core.ghosts import ModelThought, Ghost
 from ghostos.core.llms import LLMApi
 from ghostos.core.moss import PyContext, MossCompiler
-from ghostos.core.session import Event, Session, MsgThread
+from ghostos.core.session import Event, Session, GoThreadInfo
 from ghostos.thoughts.basic import LLMThoughtDriver
 from ghostos.thoughts.moss_thought import BasicMossThoughtDriver
 from ghostos.thoughts import pymodule_editor_moss
@@ -76,7 +76,7 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         # task_id in a same process will always be the same
         return md5(task_id)
 
-    def prepare_thread(self, session: Session, thread: MsgThread) -> MsgThread:
+    def prepare_thread(self, session: Session, thread: GoThreadInfo) -> GoThreadInfo:
         """
         save the thread where I'm convenient to see it
         :param session:

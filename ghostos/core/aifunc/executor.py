@@ -9,7 +9,7 @@ from ghostos.core.moss import MossCompiler
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
 from ghostos.core.aifunc.interfaces import AIFuncExecutor, AIFuncCtx, AIFuncDriver, ExecFrame, ExecStep
 from ghostos.core.aifunc.driver import DefaultAIFuncDriverImpl
-from ghostos.core.messages import Stream, DefaultMessageTypes
+from ghostos.core.messages import Stream, MessageType
 
 __all__ = ['DefaultAIFuncExecutorImpl', 'DefaultAIFuncExecutorProvider']
 
@@ -119,7 +119,7 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
             # if frame is the root, send final message as protocol
             return result
         except Exception as e:
-            frame.error = DefaultMessageTypes.ERROR.new(content=str(e))
+            frame.error = MessageType.ERROR.new(content=str(e))
             raise
 
     def get_driver(

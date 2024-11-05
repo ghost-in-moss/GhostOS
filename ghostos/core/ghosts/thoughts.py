@@ -2,17 +2,17 @@ import inspect
 from typing import Optional, TypeVar, Generic, Type, Iterable
 from abc import ABC, abstractmethod
 from ghostos.entity import Entity, ModelEntity
-from ghostos.core.session import Event, MsgThread, Session
+from ghostos.core.session import Event, GoThreadInfo, Session
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
-from ghostos.common import Identifiable, Identifier, PromptAbleClass
+from ghostos.common import Identical, Identifier, PrompterClass
 from ghostos.helpers import uuid, generate_import_path
 from pydantic import Field
 
 __all__ = ['Thought', 'ModelThought', 'ThoughtDriver', 'BasicThoughtDriver', "Mindset", "get_thought_driver_type", 'T']
 
 
-class Thought(Identifiable, Entity, ABC):
+class Thought(Identical, Entity, ABC):
     """
     The Thought class serves as a fundamental component of AI,
     adept at initiating a stateful task to address specific inquiries.
@@ -60,7 +60,7 @@ class Thought(ABC):
         return inspect.getsource(cls)
 
 
-class ModelThought(Thought, ModelEntity, PromptAbleClass, ABC):
+class ModelThought(Thought, ModelEntity, PrompterClass, ABC):
     """
     The abstract model of the thought based by pydantic.BaseModel.
     """
@@ -179,7 +179,7 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
         return self.think(g, e)
 
     @staticmethod
-    def prepare_thread(session: Session, thread: MsgThread) -> MsgThread:
+    def prepare_thread(session: Session, thread: GoThreadInfo) -> GoThreadInfo:
         """
         prepare thread usually defining thread id and thread.save_file for debug reason
         """

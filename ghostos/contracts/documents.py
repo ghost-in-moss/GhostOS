@@ -1,10 +1,10 @@
 from typing import List, Iterable
 from typing_extensions import Self
 from abc import ABC, abstractmethod
-from ghostos.common import Identifiable, Identifier
+from ghostos.common import Identical, Identifier
 
 
-class Documents(Identifiable, ABC):
+class Documents(Identical, ABC):
 
     @abstractmethod
     def domain(self) -> str:

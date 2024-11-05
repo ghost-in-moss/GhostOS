@@ -1,5 +1,5 @@
 from typing import Optional, Type
-from ghostos.core.session import MsgThread, MsgThreadRepo, SimpleMsgThread
+from ghostos.core.session import GoThreadInfo, GoThreads, SimpleMsgThread
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
@@ -8,10 +8,10 @@ from ghostos.container import Provider, Container
 import yaml
 import os
 
-__all__ = ['MsgThreadRepoByStorage', 'MsgThreadRepoByStorageProvider', 'MsgThreadsRepoByWorkSpaceProvider']
+__all__ = ['GoThreadsByStorage', 'MsgThreadRepoByStorageProvider', 'MsgThreadsRepoByWorkSpaceProvider']
 
 
-class MsgThreadRepoByStorage(MsgThreadRepo):
+class GoThreadsByStorage(GoThreads):
 
     def __init__(
             self, *,
@@ -23,16 +23,16 @@ class MsgThreadRepoByStorage(MsgThreadRepo):
         self._logger = logger
         self._allow_saving_file = allow_saving_file
 
-    def get_thread(self, thread_id: str, create: bool = False) -> Optional[MsgThread]:
+    def get_thread(self, thread_id: str, create: bool = False) -> Optional[GoThreadInfo]:
         path = self._get_thread_filename(thread_id)
         if not self._storage.exists(path):
             return None
         content = self._storage.get(path)
         data = yaml.safe_load(content)
-        thread = MsgThread(**data)
+        thread = GoThreadInfo(**data)
         return thread
 
-    def save_thread(self, thread: MsgThread) -> None:
+    def save_thread(self, thread: GoThreadInfo) -> None:
         data = thread.model_dump(exclude_defaults=True)
         data_content = yaml_pretty_dump(data)
         path = self._get_thread_filename(thread.id)
@@ -58,11 +58,11 @@ class MsgThreadRepoByStorage(MsgThreadRepo):
     def _get_thread_filename(thread_id: str) -> str:
         return thread_id + ".thread.yml"
 
-    def fork_thread(self, thread: MsgThread) -> MsgThread:
+    def fork_thread(self, thread: GoThreadInfo) -> GoThreadInfo:
         return thread.fork()
 
 
-class MsgThreadRepoByStorageProvider(Provider[MsgThreadRepo]):
+class MsgThreadRepoByStorageProvider(Provider[GoThreads]):
 
     def __init__(self, threads_dir: str = "runtime/threads"):
         self._threads_dir = threads_dir
@@ -70,17 +70,17 @@ class MsgThreadRepoByStorageProvider(Provider[MsgThreadRepo]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[MsgThreadRepo]:
-        return MsgThreadRepo
+    def contract(self) -> Type[GoThreads]:
+        return GoThreads
 
-    def factory(self, con: Container) -> Optional[MsgThreadRepo]:
+    def factory(self, con: Container) -> Optional[GoThreads]:
         storage = con.force_fetch(Storage)
         threads_storage = storage.sub_storage(self._threads_dir)
         logger = con.force_fetch(LoggerItf)
-        return MsgThreadRepoByStorage(storage=threads_storage, logger=logger)
+        return GoThreadsByStorage(storage=threads_storage, logger=logger)
 
 
-class MsgThreadsRepoByWorkSpaceProvider(Provider[MsgThreadRepo]):
+class MsgThreadsRepoByWorkSpaceProvider(Provider[GoThreads]):
 
     def __init__(self, namespace: str = "threads"):
         self._namespace = namespace
@@ -88,11 +88,11 @@ class MsgThreadsRepoByWorkSpaceProvider(Provider[MsgThreadRepo]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[MsgThreadRepo]:
-        return MsgThreadRepo
+    def contract(self) -> Type[GoThreads]:
+        return GoThreads
 
-    def factory(self, con: Container) -> Optional[MsgThreadRepo]:
+    def factory(self, con: Container) -> Optional[GoThreads]:
         workspace = con.force_fetch(Workspace)
         logger = con.force_fetch(LoggerItf)
         threads_storage = workspace.runtime().sub_storage(self._namespace)
-        return MsgThreadRepoByStorage(storage=threads_storage, logger=logger)
+        return GoThreadsByStorage(storage=threads_storage, logger=logger)

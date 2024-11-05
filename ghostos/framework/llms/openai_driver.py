@@ -10,12 +10,12 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostos.core.messages import (
-    Message, OpenAIMessageParser, DefaultOpenAIMessageParser, DefaultMessageTypes,
+    Message, OpenAIMessageParser, DefaultOpenAIMessageParser, MessageType,
     CompletionUsagePayload,
 )
 from ghostos.core.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
-    Chat,
+    Prompt,
     FunctionalToken,
 )
 from ghostos.container import Bootstrapper, Container
@@ -123,7 +123,7 @@ class OpenAIAdapter(LLMApi):
     #         # todo: log
     #         raise GhostOSIOError("failed to get text embedding", e)
 
-    def _chat_completion(self, chat: Chat, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
+    def _chat_completion(self, chat: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         # todo: try catch
         chat = self.parse_chat(chat)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
@@ -146,7 +146,7 @@ class OpenAIAdapter(LLMApi):
             **self._model.kwargs,
         )
 
-    def chat_completion(self, chat: Chat) -> Message:
+    def chat_completion(self, chat: Prompt) -> Message:
         message: ChatCompletion = self._chat_completion(chat, stream=False)
         pack = self._parser.from_chat_completion(message.choices[0].message)
         # add completion usage
@@ -159,7 +159,7 @@ class OpenAIAdapter(LLMApi):
             pack.chunk = False
         return pack
 
-    def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
+    def chat_completion_chunks(self, chat: Prompt) -> Iterable[Message]:
         chunks: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
         messages = self._parser.from_chat_completion_chunks(chunks)
         first = True
@@ -169,12 +169,12 @@ class OpenAIAdapter(LLMApi):
                 first = False
             yield chunk
 
-    def parse_chat(self, chat: Chat) -> Chat:
+    def parse_chat(self, chat: Prompt) -> Prompt:
         if not chat.functional_tokens:
             return chat
         prompt = FunctionalTokenPrompt(self._functional_token_prompt)
         content = prompt.format_tokens(chat.functional_tokens)
-        message = DefaultMessageTypes.DEFAULT.new_system(content=content)
+        message = MessageType.DEFAULT.new_system(content=content)
         chat.system.append(message)
         return chat
 
@@ -205,7 +205,7 @@ class LitellmAdapter(OpenAIAdapter):
     adapter class wrap openai api to ghostos.blueprint.kernel.llms.LLMApi
     """
 
-    def _chat_completion(self, chat: Chat, stream: bool) -> ChatCompletion:
+    def _chat_completion(self, chat: Prompt, stream: bool) -> ChatCompletion:
         messages = chat.get_messages()
         messages = self._parser.parse_message_list(messages)
         response = litellm.completion(

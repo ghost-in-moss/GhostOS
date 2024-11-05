@@ -8,6 +8,8 @@ __all__ = [
 ]
 
 
+# todo: remove
+
 class Stream(ABC):
     """
     streaming output messages.

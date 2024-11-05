@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from ghostos.core.ghosts import Taskflow, Operator
-from ghostos.core.messages import DefaultMessageTypes
+from ghostos.core.messages import MessageType
 from ghostos.framework.operators import (
     ThinkOperator,
     FinishOperator,
@@ -28,7 +28,7 @@ class TaskflowBasicImpl(Taskflow):
 
             # 用什么协议没想明白, function ? tool? system ?
             content = "observe values: \n" + content
-            msg = DefaultMessageTypes.DEFAULT.new_system(
+            msg = MessageType.DEFAULT.new_system(
                 content=content,
             )
             observation.append(msg)

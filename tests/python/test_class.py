@@ -210,7 +210,25 @@ def test_generic_class_is_same():
     class Foo(Generic[T]):
         def __init__(self, val: T):
             self.val = val
+
     assert Foo[int] is Foo[int]
     obj1 = Foo[int](1)
     obj2 = Foo[int](2)
     assert type(obj1) is type(obj2)
+
+
+def test_protocol_and_abc():
+    from abc import ABC
+    from typing import Protocol
+
+    class _Foo(Protocol):
+        foo = 1
+
+    class _Bar(_Foo, ABC):
+        pass
+
+    class _Baz(_Bar):
+        pass
+
+    b = _Baz()
+    assert b.foo == 1

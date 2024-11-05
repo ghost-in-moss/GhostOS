@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult
 from ghostos.core.moss.decorators import cls_source_code
 from ghostos.core.moss import MossCompiler, PyContext
-from ghostos.core.llms import LLMApi, Chat
-from ghostos.core.session import MsgThread
+from ghostos.core.llms import LLMApi, Prompt
+from ghostos.core.session import GoThreadInfo
 from ghostos.core.messages import Message, Stream, Payload
 from ghostos.common import Identifier
 from ghostos.helpers import generate_import_path, uuid
@@ -93,7 +93,7 @@ class ExecStep(BaseModel):
     func: str = Field(description="AIFunc name")
     depth: int = Field(description="depth of the ExecFrame")
     step_id: str = Field(default_factory=uuid, description="step id")
-    chat: Optional[Chat] = Field(default=None, description="llm chat")
+    chat: Optional[Prompt] = Field(default=None, description="llm chat")
     generate: Optional[Message] = Field(default=None, description="AI generate message")
     messages: List[Message] = Field(default_factory=list, description="list of messages")
     std_output: str = Field(default="", description="the std output of the AIFunc step")
@@ -350,7 +350,7 @@ class AIFuncDriver(ABC):
         self.aifunc = fn
 
     @abstractmethod
-    def initialize(self, container: Container, frame: ExecFrame) -> MsgThread:
+    def initialize(self, container: Container, frame: ExecFrame) -> GoThreadInfo:
         """
         initialize the AIFunc thread by quest configuration.
         """
@@ -360,10 +360,10 @@ class AIFuncDriver(ABC):
     def think(
             self,
             manager: AIFuncExecutor,
-            thread: MsgThread,
+            thread: GoThreadInfo,
             step: ExecStep,
             upstream: Optional[Stream],
-    ) -> Tuple[MsgThread, Optional[Any], bool]:
+    ) -> Tuple[GoThreadInfo, Optional[Any], bool]:
         """
         think another round based on msg thread.
         each think round must pass a ExecStep to it.
@@ -377,7 +377,7 @@ class AIFuncDriver(ABC):
         pass
 
     @abstractmethod
-    def on_save(self, container: Container, frame: ExecFrame, step: ExecStep, thread: MsgThread) -> None:
+    def on_save(self, container: Container, frame: ExecFrame, step: ExecStep, thread: GoThreadInfo) -> None:
         """
         save the status on each step
         """

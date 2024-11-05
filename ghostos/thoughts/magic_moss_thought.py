@@ -7,7 +7,7 @@ from ghostos.thoughts.moss_thought import BasicMossThoughtDriver
 from ghostos.core.moss import PyContext, MossCompiler
 from ghostos.core.ghosts import Ghost, Action
 from ghostos.core.llms import LLMApi
-from ghostos.core.session import Event, Session, MsgThread
+from ghostos.core.session import Event, Session, GoThreadInfo
 from ghostos.container import Provider
 import inspect
 from pydantic import Field
@@ -27,7 +27,7 @@ class MagicMossThought(ModelThought, ABC):
     debug: bool = Field(default=False, description="if the debug mode is on")
 
 
-# <moss>
+# <moss-hide>
 
 def __magic_moss_thought_instruction__(thought: MagicMossThought, g: "Ghost", e: "Event") -> str:
     """
@@ -79,7 +79,7 @@ def __magic_moss_thought_compiling__(thought: MagicMossThought, g: "Ghost", comp
     return compiler
 
 
-def __magic_moss_thought_thread__(thought: MagicMossThought, session: Session, thread: MsgThread) -> MsgThread:
+def __magic_moss_thought_thread__(thought: MagicMossThought, session: Session, thread: GoThreadInfo) -> GoThreadInfo:
     """
     optional magic function that prepare the thread info, such as modify thread.save_file
     :param thought:
@@ -100,7 +100,7 @@ def __on_inputs__(driver: MagicMossThoughtDriver, g: Ghost, e: Event) -> Optiona
     pass
 
 
-# </moss>
+# </moss-hide>
 
 class MagicMossThoughtDriver(LLMThoughtDriver[MagicMossThought], BasicMossThoughtDriver):
 
@@ -135,7 +135,7 @@ class MagicMossThoughtDriver(LLMThoughtDriver[MagicMossThought], BasicMossThough
             fn = __magic_moss_thought_compiling__
         return fn(self.thought, g, compiler)
 
-    def prepare_thread(self, session: Session, thread: MsgThread) -> MsgThread:
+    def prepare_thread(self, session: Session, thread: GoThreadInfo) -> GoThreadInfo:
         thread = super().prepare_thread(session, thread)
         fn = self.get_magic_func_of_the_module(__magic_moss_thought_thread__.__name__)
         if fn is None:

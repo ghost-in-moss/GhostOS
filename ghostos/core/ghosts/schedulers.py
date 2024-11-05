@@ -4,7 +4,7 @@ from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought
 from ghostos.core.ghosts.assistants import Assistant
 from ghostos.core.messages.message import MessageKind
-from ghostos.core.llms import ChatPreparer
+from ghostos.core.llms import PromptPipe
 from dataclasses import dataclass
 
 __all__ = [
@@ -66,7 +66,7 @@ class Taskflow(ABC):
         pass
 
 
-class MultiTask(ChatPreparer, ABC):
+class MultiTask(PromptPipe, ABC):
     """
     You are equipped with this MultiTasks Library that can execute thought in an asynchronous task.
     A thought is a mind-machine usually driven by LLM, can resolve certain type of task in multi-turns chain of thought.

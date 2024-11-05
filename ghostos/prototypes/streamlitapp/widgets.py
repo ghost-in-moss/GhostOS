@@ -2,7 +2,7 @@ import streamlit as st
 from typing import List, Union, Dict, Iterable, Tuple, Optional
 import streamlit_antd_components as sac
 from ghostos.core.aifunc import ExecFrame, ExecStep
-from ghostos.core.messages import Message, Role, DefaultMessageTypes
+from ghostos.core.messages import Message, Role, MessageType
 from ghostos.core.moss import PyContext
 from ghostos.prototypes.streamlitapp.utils.route import Router
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
@@ -54,7 +54,7 @@ def render_messages(messages: Iterable[Message]):
 def render_message(msg: Message, debug: bool):
     if not msg.is_complete():
         return
-    if DefaultMessageTypes.ERROR.match(msg):
+    if MessageType.ERROR.match(msg):
         with st.chat_message("user"):
             st.caption(_("Error"))
             st.error(msg.get_content())

@@ -3,7 +3,7 @@ import time
 from ghostos.core.messages import Message
 from ghostos.framework.streams import new_connection, Stream
 from ghostos.framework.messengers import DefaultMessenger
-from ghostos.core.session import MsgThread
+from ghostos.core.session import GoThreadInfo
 from ghostos.core.llms import FunctionalToken
 from threading import Thread
 
@@ -112,7 +112,7 @@ def test_new_connection_with_messenger_sync():
     content = "hello world, ha ha ha ha"
 
     with stream:
-        messenger = DefaultMessenger(upstream=stream, thread=MsgThread())
+        messenger = DefaultMessenger(upstream=stream, thread=GoThreadInfo())
         with messenger:
             for c in content:
                 messenger.deliver(Message.new_chunk(content=c))
@@ -131,7 +131,7 @@ def test_new_connection_with_messenger_async():
 
     def send_data(s: Stream):
         with s:
-            messenger = DefaultMessenger(upstream=s, thread=MsgThread())
+            messenger = DefaultMessenger(upstream=s, thread=GoThreadInfo())
             with messenger:
                 for c in content:
                     messenger.deliver(Message.new_chunk(content=c))
@@ -154,7 +154,7 @@ def test_new_connection_with_functional_tokens():
     stream, retriever = new_connection(timeout=5, accept_chunks=True)
     content = "hello world<moss>hello</moss>"
 
-    msg_thread = MsgThread()
+    msg_thread = GoThreadInfo()
 
     def send_data(s: Stream):
         with s:
@@ -188,5 +188,5 @@ def test_new_connection_with_functional_tokens():
     assert len(messages) == 1
     assert len(messages[0].callers) == 1
     assert messages[0].callers[0].arguments == "hello"
-    assert len(msg_thread.last_turn().generates[0].callers) == 1
+    assert len(msg_thread.last_turn().added[0].callers) == 1
     t.join()

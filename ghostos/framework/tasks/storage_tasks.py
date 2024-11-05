@@ -1,23 +1,23 @@
 from typing import Optional, List, Iterable, Dict, Type
 import yaml
-from ghostos.core.session import TaskState, TaskBrief, Task, TaskRepo
+from ghostos.core.session import TaskState, TaskBrief, GoTaskStruct, GoTasks
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage
 from ghostos.container import Provider, Container
 from ghostos.helpers import uuid
 
-__all__ = ['StorageTaskRepoImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
+__all__ = ['StorageGoTasksImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
 
 
-class StorageTaskRepoImpl(TaskRepo):
+class StorageGoTasksImpl(GoTasks):
 
     def __init__(self, storage: Storage, logger: LoggerItf):
         self._storage = storage
         self._logger = logger
         self._locks: Dict[str, str] = {}
 
-    def save_task(self, *tasks: Task) -> None:
+    def save_task(self, *tasks: GoTaskStruct) -> None:
         for task in tasks:
             filename = self._get_task_filename(task.task_id)
             content = yaml.safe_dump(task.model_dump(exclude_defaults=True))
@@ -28,20 +28,20 @@ class StorageTaskRepoImpl(TaskRepo):
     def _get_task_filename(task_id: str) -> str:
         return f"{task_id}.task.yml"
 
-    def _get_task(self, task_id: str) -> Optional[Task]:
+    def _get_task(self, task_id: str) -> Optional[GoTaskStruct]:
         filename = self._get_task_filename(task_id)
         if not self._storage.exists(filename):
             return None
         content = self._storage.get(filename)
         data = yaml.safe_load(content)
-        task = Task(**data)
+        task = GoTaskStruct(**data)
         return task
 
     def exists(self, task_id: str) -> bool:
         filename = self._get_task_filename(task_id)
         return self._storage.exists(filename)
 
-    def get_task(self, task_id: str, lock: bool) -> Optional[Task]:
+    def get_task(self, task_id: str, lock: bool) -> Optional[GoTaskStruct]:
         task = self._get_task(task_id)
         if task is None:
             return None
@@ -55,7 +55,7 @@ class StorageTaskRepoImpl(TaskRepo):
             task.lock = None
             return task
 
-    def get_tasks(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[Task]:
+    def get_tasks(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[GoTaskStruct]:
         states = set(states) if states else None
         for task_id in task_ids:
             task = self.get_task(task_id, lock=False)
@@ -87,7 +87,7 @@ class StorageTaskRepoImpl(TaskRepo):
         return None
 
 
-class StorageTasksImplProvider(Provider[TaskRepo]):
+class StorageTasksImplProvider(Provider[GoTasks]):
     """
     provide storage based Tasks
     """
@@ -98,17 +98,17 @@ class StorageTasksImplProvider(Provider[TaskRepo]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[TaskRepo]:
-        return TaskRepo
+    def contract(self) -> Type[GoTasks]:
+        return GoTasks
 
-    def factory(self, con: Container) -> Optional[TaskRepo]:
+    def factory(self, con: Container) -> Optional[GoTasks]:
         logger = con.force_fetch(LoggerItf)
         storage = con.force_fetch(Storage)
         tasks_storage = storage.sub_storage(self.tasks_dir)
-        return StorageTaskRepoImpl(tasks_storage, logger)
+        return StorageGoTasksImpl(tasks_storage, logger)
 
 
-class WorkspaceTasksProvider(Provider[TaskRepo]):
+class WorkspaceTasksProvider(Provider[GoTasks]):
 
     def __init__(self, namespace: str = "tasks"):
         self.namespace = namespace
@@ -116,12 +116,12 @@ class WorkspaceTasksProvider(Provider[TaskRepo]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[TaskRepo]:
-        return TaskRepo
+    def contract(self) -> Type[GoTasks]:
+        return GoTasks
 
-    def factory(self, con: Container) -> Optional[TaskRepo]:
+    def factory(self, con: Container) -> Optional[GoTasks]:
         workspace = con.force_fetch(Workspace)
         runtime_storage = workspace.runtime()
         tasks_storage = runtime_storage.sub_storage(self.namespace)
         logger = con.force_fetch(LoggerItf)
-        return StorageTaskRepoImpl(tasks_storage, logger)
+        return StorageGoTasksImpl(tasks_storage, logger)

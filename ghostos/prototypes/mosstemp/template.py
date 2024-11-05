@@ -22,7 +22,7 @@ if __name__ == "__examples__":
         # todo: the example codes
         pass
 
-# <moss>  the content between <moss> mark are not visible in the prompt for LLM
+# <moss-hide>  the content between <moss> mark are not visible in the prompt for LLM
 
 from typing import TYPE_CHECKING
 
@@ -63,4 +63,4 @@ thought = MossThought(
     llm_api_name="",
 )
 
-# </moss>
+# </moss-hide>

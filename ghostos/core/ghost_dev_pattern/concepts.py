@@ -11,23 +11,11 @@ class Func(Protocol):
     AI Function definition in data-driven pattern.
     """
 
-    class Args(BaseModel):
-        """
-        the Arguments model of the function.
-        """
-        pass
-
-    class Returns(BaseModel):
-        """
-        the return values model of the function.
-        """
-        pass
-
-    # __meta__: ClassVar[dict] = {}
-    # meta is convention of the func, optional field
+    Args: Type[BaseModel]
+    Returns: Optional[Type[BaseModel]]
 
 
-F = TypeVar("F", bound=Func)
+F = TypeVar('F', bound=Func)
 
 
 class Task(Protocol[F]):

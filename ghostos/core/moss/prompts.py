@@ -10,7 +10,7 @@ from ghostos.core.moss.utils import (
     add_source_indent,
 )
 from ghostos.core.moss.exports import Exporter
-from ghostos.common import PromptAble, PromptAbleClass
+from ghostos.common import Prompter, PrompterClass
 from ghostos.helpers import generate_import_path
 import inspect
 
@@ -270,7 +270,7 @@ def get_magic_prompt(value: Any) -> Optional[str]:
     不做类型校验, 直接返回 PROMPT_MAGIC_ATTR 生成 prompt 的结果.
     :param value: 合理类型是 module, function, method, instance of class
     """
-    if isinstance(value, PromptAble):
+    if isinstance(value, Prompter):
         return value.__prompt__()
     fn = getattr(value, PROMPT_MAGIC_ATTR, None)
     return unwrap_str(fn) if fn is not None else None
@@ -281,7 +281,7 @@ def get_class_magic_prompt(value: Any) -> Optional[str]:
     不做类型校验, 直接返回 CLASS_PROMPT_MAGIC_ATTR 生成 prompt 的结果.
     :param value: 合理的类型是 class.
     """
-    if issubclass(value, PromptAbleClass):
+    if issubclass(value, PrompterClass):
         return value.__class_prompt__()
     fn = getattr(value, CLASS_PROMPT_MAGIC_ATTR, None)
     return unwrap_str(fn) if fn is not None else None

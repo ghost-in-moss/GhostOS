@@ -35,6 +35,7 @@ python-dotenv = "^1.0.1"
 babel = "^2.16.0"
 websockets = "^13.1"
 pysocks = "^1.7.1"
+requests = {extras = ["socks"], version = "^2.32.3"}
 
 [tool.poetry.scripts]
 init = "ghostos.scripts.init:main"

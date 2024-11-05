@@ -5,18 +5,13 @@ from typing import (
     Self,
     Union,
 )
+from ghostos.core.messages import Message
 import time
 from enum import Enum
 from pydantic import BaseModel
 from queue import Queue
 from contextlib import contextmanager
 
-
-class Message(Protocol):
-    msg_id: str
-    type: str
-    role: str
-    seq: Literal["head", "chunk", "complete"]
 
 
 class State(ABC):
@@ -27,15 +22,7 @@ class State(ABC):
         pass
 
     @abstractmethod
-    def status(self) -> str:
-        """
-        if there are sub statuses of this State
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def operate(self, op: Operator) -> Tuple[Literal["", "queued", "blocked", "illegal"], str | None]:
+    def operate(self, op: Operator) -> Tuple[OperationType, str | None]:
         """
         :param op:
         :return: accept level | error message
@@ -73,7 +60,6 @@ class State(ABC):
     @abstractmethod
     def join(self):
         """
-        clear/recycle/release resources when a state is overdue
         """
         pass
 
@@ -123,7 +109,6 @@ class RealtimeAgent(Protocol[S]):
     @abstractmethod
     def run_util_stop(
             self,
-            conversation: Optional[ConversationProtocol] = None,
             *shells: Shell,
     ) -> None:
         pass
@@ -136,18 +121,11 @@ class ConversationProtocol(Protocol):
         pass
 
     @abstractmethod
-    def messages(self) -> Iterable[Message]:
+    def messages(self) -> List[Message]:
         pass
 
     @abstractmethod
-    def append(self, message: Message) -> None:
-        pass
-
-    @abstractmethod
-    def save(self):
-        """
-        save to local storage or do nothing.
-        """
+    def add(self, message: Message) -> None:
         pass
 
 
@@ -160,26 +138,18 @@ class Function(BaseModel):
         return self.model_copy(update={"name": name}, deep=True)
 
 
-class Ghost(Protocol):
+class Ghost(Protocol[S]):
 
     @abstractmethod
-    def alive(self) -> bool:
+    def operate(self, op: Operator) -> Tuple[OperationType, str | None]:
+        """
+        :param op:
+        :return: accept level | error message
+        """
         pass
 
     @abstractmethod
-    def status(self) -> str:
-        pass
-
-    @abstractmethod
-    def operate(self, op: Operator) -> Tuple[str, bool]:
-        pass
-
-    @abstractmethod
-    def allow(self, op: Type[Operator]) -> bool:
-        pass
-
-    @abstractmethod
-    def session(self) -> S:
+    def state(self) -> S:
         pass
 
     @abstractmethod
@@ -188,12 +158,13 @@ class Ghost(Protocol):
 
 
 class Shell(Protocol):
-    id: str
-    name: str
-    description: str
 
     @abstractmethod
-    def functions(self) -> Iterable[Function]:
+    def name(self) -> str:
+        pass
+
+    @abstractmethod
+    def functions(self) -> List[Function]:
         pass
 
     @abstractmethod
@@ -201,7 +172,7 @@ class Shell(Protocol):
         pass
 
     @abstractmethod
-    def on_sync(self, ghost: Ghost) -> ChanOut[Union[dict, None]]:
+    def on_sync(self, ghost: Ghost) -> ChanIn[Union[dict, None]]:
         """
         sync the ghost with shell,
         and return a channel that the agent publish the subscribed event to the shell.
@@ -265,4 +236,7 @@ class Operator(BaseModel, ABC):
     is a protocol defined by the agent.
     """
     type: str
-    shell_id: str = ""
+    shell: str = ""
+
+
+OperationType = Literal["", "queued", "blocked", "illegal"]

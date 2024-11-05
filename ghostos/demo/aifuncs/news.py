@@ -26,7 +26,7 @@ class NewsAIFuncResult(AIFuncResult):
     results: List[News] = Field(default_factory=list)
 
 
-# <moss>
+# <moss-hide>
 
 
 def __aifunc_instruction__(fn: NewsAIFunc) -> str:
@@ -38,4 +38,4 @@ def __aifunc_instruction__(fn: NewsAIFunc) -> str:
 
 example = NewsAIFunc(query="我想知道黑神话悟空这款游戏的媒体评分。")
 
-# </moss>
+# </moss-hide>

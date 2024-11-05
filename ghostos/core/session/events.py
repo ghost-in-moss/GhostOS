@@ -8,7 +8,7 @@ from ghostos.helpers import uuid
 from contextlib import contextmanager
 
 __all__ = [
-    'Event', 'EventBus', 'DefaultEventType',
+    'Event', 'EventBus', 'EventTypes',
 ]
 
 EVENT_ENTITY_TYPE = "ghostos.core.session.events.Event"
@@ -22,22 +22,17 @@ class Event(BaseModel):
     Session.task() shall handle the Event, change the session state, and maybe fire more events.
     """
 
-    task_id: str = Field(
-        description="task id of which this event shall send to.",
+    event_id: str = Field(
+        default_factory=uuid,
+        description="event id",
     )
     type: str = Field(
         default="",
         description="event type, by default the handler shall named on_{type}"
     )
-    name: Optional[str] = Field(
-        default=None,
-        description="sender name of this event messages",
+    task_id: str = Field(
+        description="task id of which this event shall send to.",
     )
-    id: str = Field(
-        default_factory=uuid,
-        description="event id",
-    )
-
     from_task_id: Optional[str] = Field(
         default=None,
         description="task id in which this event is fired",
@@ -112,43 +107,40 @@ class Event(BaseModel):
         )
 
 
-class DefaultEventType(str, Enum):
+class EventTypes(str, Enum):
     """
     默认的消息类型.
     """
+
+    # --- upstream events --- #
+
     CREATED = "created"
-    """任务刚刚被创建出来"""
 
-    INPUT = "input"
-    """外部对当前 task 的输入. """
+    REQUEST = "request"
 
-    OBSERVE = "observe"
-    """自我驱动的思考"""
+    NOTIFY = "notify"
 
-    CANCELING = "cancelling"
-    """任务取消时, 触发的事件. 需要广播给子节点. """
-    KILLING = "killing"
+    CANCEL = "cancel"
+
+    # --- self events --- #
+
+    ROTATE = "rotate"
+
+    # --- callback events --- #
 
     FINISH_CALLBACK = "finish_callback"
-    """child task 运行正常, 返回的消息. """
 
     FAILURE_CALLBACK = "failure_callback"
-    """child task 运行失败, 返回的消息. """
-
-    NOTIFY_CALLBACK = "notify_callback"
-    """child task send some notice messages"""
 
     WAIT_CALLBACK = "wait_callback"
-    """Child task 返回消息, 期待更多的输入. """
+
+    # --- dead events --- #
 
     FINISHED = "finished"
-    """任务结束时, 触发的事件. 可用于反思."""
+
+    CANCELED = "canceled"
 
     FAILED = "failed"
-    """任务失败时, 触发的事件. 可用于反思."""
-
-    def block(self) -> bool:
-        return self not in {}
 
     def new(
             self,
@@ -192,9 +184,13 @@ class EventBus(ABC):
     """
     global event bus.
     """
-    # @abstractmethod
-    # def with_process_id(self, process_id: str) -> Self:
-    #     pass
+
+    @abstractmethod
+    def with_process_id(self, process_id: str) -> Self:
+        """
+        process level eventbus, all event and notifications are private for the process
+        """
+        pass
 
     @abstractmethod
     def send_event(self, e: Event, notify: bool) -> None:
@@ -207,17 +203,15 @@ class EventBus(ABC):
         pass
 
     @abstractmethod
-    def pop_task_event(self, task_id: str) -> Optional[Event]:
+    def pop_task_event(self, task_id: str, block: bool = False, timeout: float = 0.0) -> Optional[Event]:
         """
         pop a task event by task_id.
         the canceled event has higher priority to others.
-        :param task_id: certain task id.
-        :return: event or None if timeout is reached
         """
         pass
 
     @abstractmethod
-    def pop_task_notification(self) -> Optional[str]:
+    def pop_task_notification(self, block: bool = False, timeout: float = 0.0) -> Optional[str]:
         """
         pop a task notification from the main queue.
         :return: task id or None if not found.
@@ -236,9 +230,9 @@ class EventBus(ABC):
     def clear_task(self, task_id: str) -> None:
         pass
 
-    # @abstractmethod
-    # def clear_all(self):
-    #     pass
+    @abstractmethod
+    def clear_all(self):
+        pass
 
     @contextmanager
     def transaction(self):

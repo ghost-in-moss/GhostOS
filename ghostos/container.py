@@ -20,7 +20,7 @@ INSTRUCTION = """
 打算实现一个 IoC 容器用来管理大量可替换的中间库. 
 """
 
-INSTANCE = TypeVar('INSTANCE', bound=object)
+INSTANCE = TypeVar('INSTANCE')
 """instance in the container"""
 
 ABSTRACT = Type[INSTANCE]
@@ -63,7 +63,7 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get(self, abstract: ABSTRACT) -> Optional[INSTANCE]:
+    def get(self, abstract: Type[INSTANCE]) -> Optional[INSTANCE]:
         """
         get bound instance or initialize one from registered abstract, or generate one by factory or provider.
         :return: None if no bound instance.
@@ -71,7 +71,7 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_bound(self, abstract: ABSTRACT) -> Union[INSTANCE, Provider]:
+    def get_bound(self, abstract: Type[INSTANCE]) -> Union[INSTANCE, Provider]:
         """
         get bound of an abstract
         useful to debug
@@ -80,7 +80,7 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def fetch(self, abstract: ABSTRACT, strict: bool = False) -> Optional[INSTANCE]:
+    def fetch(self, abstract: Type[INSTANCE], strict: bool = False) -> Optional[INSTANCE]:
         """
         :param abstract: use type of the object (usually an abstract class) to fetch the implementation.
         :param strict: autotype check
@@ -89,7 +89,7 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def force_fetch(self, contract: ABSTRACT, strict: bool = False) -> INSTANCE:
+    def force_fetch(self, contract: Type[INSTANCE], strict: bool = False) -> INSTANCE:
         """
         if fetch contract failed, raise error.
         :exception: NotImplementedError if contract is not registered.
@@ -98,7 +98,7 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def bound(self, contract: ABSTRACT) -> bool:
+    def bound(self, contract: Type[INSTANCE]) -> bool:
         """
         return whether contract is bound.
         """
@@ -148,6 +148,7 @@ class Container(IoCContainer):
         self._bootstrapped: bool = False
         self._aliases: Dict[Any, Any] = {}
         self._destroyed: bool = False
+        self._shutdown: List[Callable[[], None]] = []
 
     def bootstrap(self) -> None:
         """
@@ -165,6 +166,9 @@ class Container(IoCContainer):
             # some bootstrapper provider may be override
             if isinstance(provider, Bootstrapper):
                 provider.bootstrap(self)
+
+    def add_shutdown(self, shutdown: Callable):
+        self._shutdown.append(shutdown)
 
     def set(self, abstract: Any, instance: INSTANCE) -> None:
         """
@@ -186,7 +190,7 @@ class Container(IoCContainer):
         self._check_destroyed()
         return contract in self._bound or (self.parent is not None and self.parent.bound(contract))
 
-    def get(self, abstract: Type[INSTANCE]) -> Optional[INSTANCE]:
+    def get(self, abstract: Union[Type[INSTANCE]]) -> Optional[INSTANCE]:
         """
         get bound instance or initialize one from registered factory or provider.
 
@@ -353,6 +357,9 @@ class Container(IoCContainer):
         if self._destroyed:
             return
         self._destroyed = True
+        for shutdown in self._shutdown:
+            shutdown()
+        del self._shutdown
         del self._instances
         del self.parent
         del self._providers
@@ -377,9 +384,9 @@ class Provider(Generic[INSTANCE], metaclass=ABCMeta):
     def contract(self) -> ABSTRACT:
         """
         :return: contract for this provider.
-        override this method to define a contract without generic type
+        override this method to define a contract without get from generic args
         """
-        return self.get_instance_type()
+        return get_contract_type(self.__class__)
 
     def aliases(self) -> Iterable[ABSTRACT]:
         """
@@ -394,19 +401,19 @@ class Provider(Generic[INSTANCE], metaclass=ABCMeta):
         """
         pass
 
-    def get_instance_type(self) -> ABSTRACT:
-        """
-        get generic INSTANCE type from the instance of the provider.
-        """
-        cls = self.__class__
-        for parent in cls.__orig_bases__:
-            if get_origin(parent) is not Provider:
-                continue
-            args = get_args(parent)
-            if not args:
-                break
-            return args[0]
-        raise AttributeError("can not get instance type")
+
+def get_contract_type(cls: Type[Provider]) -> ABSTRACT:
+    """
+    get generic INSTANCE type from the instance of the provider.
+    """
+    for parent in cls.__orig_bases__:
+        if get_origin(parent) is not Provider:
+            continue
+        args = get_args(parent)
+        if not args:
+            break
+        return args[0]
+    raise AttributeError("can not get instance type")
 
 
 class Bootstrapper(metaclass=ABCMeta):

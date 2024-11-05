@@ -9,9 +9,9 @@ from ghostos.core.aifunc.func import (
     AIFunc,
     get_aifunc_instruction, get_aifunc_result_type, get_aifunc_pycontext, get_aifunc_llmapi,
 )
-from ghostos.core.llms import LLMs, Chat
+from ghostos.core.llms import LLMs, Prompt
 from ghostos.core.moss.abc import MossRuntime
-from ghostos.core.session import MsgThread, DefaultEventType, MsgThreadRepo, thread_to_chat
+from ghostos.core.session import GoThreadInfo, EventTypes, GoThreads, thread_to_chat
 from ghostos.core.messages import Role, Message, Stream
 from ghostos.container import Container
 
@@ -91,10 +91,10 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def name(self) -> str:
         return self.aifunc.__class__.__name__
 
-    def initialize(self, container: Container, frame: ExecFrame) -> MsgThread:
+    def initialize(self, container: Container, frame: ExecFrame) -> GoThreadInfo:
         pycontext = get_aifunc_pycontext(self.aifunc)
         messages = []
-        threads = container.get(MsgThreadRepo)
+        threads = container.get(GoThreads)
         if threads:
             thread = threads.get_thread(frame.frame_id, create=False)
             if thread:
@@ -107,12 +107,12 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             )
             messages.append(system_message)
 
-        event = DefaultEventType.INPUT.new(
+        event = EventTypes.REQUEST.new(
             task_id="",
             from_task_id="",
             messages=messages,
         )
-        thread = MsgThread.new(
+        thread = GoThreadInfo.new(
             thread_id=frame.frame_id,
             event=event,
             pycontext=pycontext,
@@ -133,7 +133,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         message = Role.SYSTEM.new(content=prompt)
         return [message]
 
-    def on_chat(self, chat: Chat) -> None:
+    def on_chat(self, chat: Prompt) -> None:
         pass
 
     def on_message(self, message: Message, step: ExecStep, upstream: Optional[Stream]) -> None:
@@ -150,10 +150,10 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
     def think(
             self,
             manager: AIFuncExecutor,
-            thread: MsgThread,
+            thread: GoThreadInfo,
             step: ExecStep,
             upstream: Optional[Stream]
-    ) -> Tuple[MsgThread, Optional[Any], bool]:
+    ) -> Tuple[GoThreadInfo, Optional[Any], bool]:
         # get compiler by current exec step
         # the MossCompiler.container().get(AIFuncCtx) will bind this step.
         compiler = manager.compiler(step, upstream)
@@ -194,19 +194,19 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         error = None
         # handle code:
         if not code:
-            error = Role.new_assistant_system(
+            error = Role.new_system(
                 content="Error! You shall only write python code! DO NOT ACT LIKE IN A CHAT. "
                         "Generate code in `<code></code>`."
             )
 
         elif "main(" not in code:
-            error = Role.new_assistant_system(
+            error = Role.new_system(
                 content="Error! No main function found in your generation! use `<code></code>` to wrap your code."
             )
 
         if error is not None:
             thread.new_turn(
-                event=DefaultEventType.OBSERVE.new(
+                event=EventTypes.ROTATE.new(
                     messages=[error],
                     task_id=thread.id,
                     from_task_id=thread.id,
@@ -233,13 +233,13 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             output = executed.std_output
             step.std_output = output
             if output:
-                output_message = Role.new_assistant_system(
+                output_message = Role.new_system(
                     content=f"Observation:\n\nmoss executed main, std output is: \n{output}"
                 )
                 messages = [output_message]
                 self.on_message(output_message, step, upstream)
             else:
-                output_message = Role.new_assistant_system(
+                output_message = Role.new_system(
                     content=f"Observation:\n\nhave not printed anything"
                 )
                 messages = [output_message]
@@ -247,7 +247,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
             # append the messages.
             thread.new_turn(
-                event=DefaultEventType.OBSERVE.new(
+                event=EventTypes.ROTATE.new(
                     messages=messages,
                     task_id=thread.id,
                     from_task_id=thread.id,
@@ -262,11 +262,11 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             raise
         except Exception as e:
             exe_info = "\n".join(traceback.format_exception(e)[-5:])
-            output_message = Role.new_assistant_system(
+            output_message = Role.new_system(
                 content=f"moss executed main, exception occurs: \n{exe_info}"
             )
             thread.new_turn(
-                event=DefaultEventType.OBSERVE.new(
+                event=EventTypes.ROTATE.new(
                     messages=[output_message],
                     task_id=thread.id,
                     from_task_id=thread.id,
@@ -295,9 +295,9 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
         return content[code_start_index + len(CODE_MARK_LEFT): code_end_index].strip()
 
-    def on_save(self, container: Container, frame: ExecFrame, step: ExecStep, thread: MsgThread) -> None:
+    def on_save(self, container: Container, frame: ExecFrame, step: ExecStep, thread: GoThreadInfo) -> None:
         # 如果 threads 抽象存在, 就保存一下. 还应该做一些日志的工作.
-        threads = container.get(MsgThreadRepo)
+        threads = container.get(GoThreads)
         if threads is not None:
             threads.save_thread(thread)
         repo = container.get(AIFuncRepository)

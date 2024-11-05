@@ -1,15 +1,27 @@
-from typing import Optional, Iterable, List, Callable
+from typing import Optional, Iterable, List, Callable, Self, Union, Protocol, Dict, Any
 from abc import ABC, abstractmethod
 
 from ghostos.core.session.events import Event, EventBus
 from ghostos.core.session.messenger import Messenger
-from ghostos.core.session.processes import GhostProcessRepo, SessionProcess
-from ghostos.core.session.tasks import TaskRepo, Task, TaskBrief
-from ghostos.core.session.threads import MsgThreadRepo, MsgThread
-from ghostos.core.messages import MessageKind, Role, Buffer, Payload, Attachment, Message
+from ghostos.core.session.processes import GoProcesses, GoProcess
+from ghostos.core.session.tasks import GoTasks, GoTaskStruct, TaskBrief
+from ghostos.core.session.threads import GoThreads, GoThreadInfo
+from ghostos.core.messages import MessageKind, Role, Buffer, Payload, Message
 from ghostos.core.llms import FunctionalToken
+from ghostos.container import Container
+from pydantic import BaseModel
 
-__all__ = ['Session']
+__all__ = ['Session', 'SessionProps', 'SessionStateValue']
+
+SessionProps = Dict[str, Union[Dict, BaseModel]]
+
+
+class Scope(BaseModel):
+    shell_id: str
+    process_id: str
+    task_id: str
+    thread_id: str
+    parent_task_id: Optional[str] = None
 
 
 class Session(ABC):
@@ -19,15 +31,37 @@ class Session(ABC):
 
     Session 则提供了 Ghost 的 Task 运行时状态统一管理的 API.
     通常每个运行中的 Task 都会创建一个独立的 Session.
-    Session 在运行周期里不会立刻调用底层 IO 存储消息, 而是要等 Finish 执行后.
+    Session 在运行周期里不会立刻调用底层 IO 存储消息, 而是要等一个周期正常结束.
     这是为了减少运行时错误对状态机造成的副作用.
     """
 
-    def id(self) -> str:
-        """
-        session 自身的 id.
-        """
-        return self.process().session_id
+    scope: Scope
+    """
+    the running scope of the session
+    """
+
+    globals: Dict[str, Any]
+    """
+    global values of the session. 
+    inherit from parent task or shell props. 
+    some key are override by parent task or current task.
+    """
+
+    properties: SessionProps
+    """ 
+    Most important value of the session.
+    keep the runtime properties of the task. 
+    key is unique to the task handler, value shall be dict or BaseModel.
+    value shall be serializable, otherwise the world may crash!!
+    
+    session 最重要的数据结构, 用来承载所有的运行时数据. 
+    key 是数据运行时唯一的 key, 值只能是 dict. 
+    所有的值都应该是 Serializable 的, 否则会有世界毁灭之类的灾难爆发!!
+    """
+
+    @abstractmethod
+    def container(self) -> Container:
+        pass
 
     @abstractmethod
     def alive(self) -> bool:
@@ -42,9 +76,9 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def refresh_lock(self) -> bool:
+    def refresh(self) -> Self:
         """
-        :return:
+        refresh the session, update overdue time and task lock.
         """
         pass
 
@@ -56,15 +90,7 @@ class Session(ABC):
     #     pass
 
     @abstractmethod
-    def process(self) -> "SessionProcess":
-        """
-        当前会话所处的进程数据.
-        不允许直接修改. 只有指定的 API 会修改结果并保存.
-        """
-        pass
-
-    @abstractmethod
-    def task(self) -> "Task":
+    def task(self) -> "GoTaskStruct":
         """
         获取当前的任务对象.
         描述了任务所有的状态.
@@ -73,7 +99,7 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def thread(self) -> "MsgThread":
+    def thread(self) -> "GoThreadInfo":
         """
         Session 会持有当前任务的 Thread, 只有 finish 的时候才会真正地保存它.
         """
@@ -84,7 +110,7 @@ class Session(ABC):
             self, *,
             sending: bool = True,
             saving: bool = True,
-            thread: Optional[MsgThread] = None,
+            thread: Optional[GoThreadInfo] = None,
             name: Optional[str] = None,
             buffer: Optional[Buffer] = None,
             payloads: Optional[Iterable[Payload]] = None,
@@ -99,34 +125,32 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def send_messages(self, *messages: MessageKind, role: str = Role.ASSISTANT.value) -> List[Message]:
+    def send_messages(self, *messages: MessageKind, remember: bool = True) -> List[Message]:
         """
         发送消息.
         :param messages:
-        :param role:
+        :param remember: remember the messages within the thread
         :return:
         """
         pass
 
     @abstractmethod
-    def update_task(self, task: "Task", thread: Optional["MsgThread"], update_history: bool) -> None:
+    def update_task(self, task: "GoTaskStruct") -> None:
         """
         更新当前 session 的 task.
         :param task: 如果不属于当前 session, 则会报错
-        :param thread: 由于 thread 和 task 是绑定的, 需要一起保存. update thread 的时候, thread 的 appending 等信息会更新.
-        :param update_history: 如果为 True, thread 会把 current round 添加到 history.
         """
         pass
 
     @abstractmethod
-    def update_process(self, process: "SessionProcess") -> None:
+    def update_process(self, process: "GoProcess") -> None:
         """
         改动 process 并保存. 通常只在初始化里才需要.
         """
         pass
 
     @abstractmethod
-    def update_thread(self, thread: "MsgThread", update_history: bool) -> None:
+    def update_thread(self, thread: "GoThreadInfo", update_history: bool) -> None:
         """
         单独更新当前 session 的 thread.
         :param thread: 如果不属于当前 session, 则会报错
@@ -135,7 +159,7 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def create_tasks(self, *tasks: "Task") -> None:
+    def create_tasks(self, *tasks: "GoTaskStruct") -> None:
         """
         创建多个 task. 只有 session.done() 的时候才会执行.
         """
@@ -152,39 +176,12 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def future(self, name: str, call: Callable[[], Iterable[MessageKind]], reason: str) -> None:
-        """
-        异步运行一个函数, 将返回的消息作为 think 事件发送.
-        :param name: task name
-        :param call:
-        :param reason:
-        :return:
-        """
-        pass
-
-    @abstractmethod
     def get_task_briefs(self, *task_ids, children: bool = False) -> List[TaskBrief]:
         """
         获取多个任务的简介.
         :param task_ids: 可以指定要获取的 task id
         :param children: 如果为 true, 会返回当前任务的所有子任务数据.
         """
-        pass
-
-    @abstractmethod
-    def tasks(self) -> TaskRepo:
-        pass
-
-    @abstractmethod
-    def processes(self) -> GhostProcessRepo:
-        pass
-
-    @abstractmethod
-    def threads(self) -> MsgThreadRepo:
-        pass
-
-    @abstractmethod
-    def eventbus(self) -> EventBus:
         pass
 
     @abstractmethod
@@ -203,7 +200,7 @@ class Session(ABC):
         pass
 
     @abstractmethod
-    def fail(self, err: Optional[Exception]) -> None:
+    def fail(self, err: Optional[Exception]) -> bool:
         """
         任务执行异常的处理. 需要判断任务是致命的, 还是可以恢复.
         :param err:
@@ -221,3 +218,38 @@ class Session(ABC):
         手动清理数据, 方便垃圾回收.
         """
         pass
+
+    def __enter__(self) -> "Session":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        intercept = None
+        if exc_val is not None:
+            intercept = self.fail(exc_val)
+        else:
+            self.done()
+        self.destroy()
+        return intercept
+
+
+class SessionStateValue(Protocol):
+    """
+    show a way to easy the session state controlling
+    """
+
+    @classmethod
+    @abstractmethod
+    def load(cls, session: Session) -> Union[Self, None]:
+        pass
+
+    @abstractmethod
+    def bind(self, session: Session) -> None:
+        pass
+
+    @abstractmethod
+    def get_or_bind(self, session: Session) -> Self:
+        val = self.load(session)
+        if val is None:
+            self.bind(session)
+            val = self
+        return val

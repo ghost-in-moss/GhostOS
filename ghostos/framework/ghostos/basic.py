@@ -7,7 +7,7 @@ from ghostos.container import Container
 from ghostos.core.ghostos import AbsGhostOS
 from ghostos.core.ghosts import Ghost
 from ghostos.core.messages import Stream
-from ghostos.core.session import SessionProcess, Task
+from ghostos.core.session import GoProcess, GoTaskStruct
 from ghostos.contracts.shutdown import ShutdownProvider
 from ghostos.contracts.modules import Modules, DefaultModulesProvider
 from ghostos.framework.storage import FileStorageProvider
@@ -80,8 +80,8 @@ class BasicGhostOS(AbsGhostOS, ABC):
     def make_ghost(
             self, *,
             upstream: Stream,
-            process: SessionProcess,
-            task: Optional[Task] = None,
+            process: GoProcess,
+            task: Optional[GoTaskStruct] = None,
             task_id: Optional[str] = None,
     ) -> Ghost:
         pass

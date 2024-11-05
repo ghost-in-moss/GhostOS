@@ -4,7 +4,7 @@ import time
 import asyncio
 from typing import Optional, List
 
-from ghostos.core.messages import Message, Role, DefaultMessageTypes
+from ghostos.core.messages import Message, Role, MessageType
 from ghostos.core.ghosts import Inputs
 from ghostos.framework.streams import QueueStream
 from ghostos.framework.messages import TaskPayload
@@ -83,7 +83,7 @@ class ConsolePrototype:
             if not handled:
                 time.sleep(1)
             elif not self._debug:
-                self._console.print(f"handled event {handled.type}: task_id {handled.task_id}; event_id {handled.id};")
+                self._console.print(f"handled event {handled.type}: task_id {handled.task_id}; event_id {handled.event_id};")
             else:
                 self._console.print(Panel(
                     Markdown(f"```json\n{handled.model_dump_json(indent=2)}\n```"),
@@ -107,7 +107,7 @@ class ConsolePrototype:
             self._main_task_id = self._on_input(self._on_create_message)
         else:
             self._console.print("waiting for agent say hi...")
-            message = Role.new_assistant_system(
+            message = Role.new_system(
                 self._welcome_user_message,
             )
             self._main_task_id = self._on_message_input(message)
@@ -230,12 +230,12 @@ This demo provide a console interface to communicate with an agent.
                 f"> task_name: {payload.task_name}\n\n",
             ])
         if "<moss>" in content:
-            content = content.replace("<moss>", "\n```python\n# <moss>\n", )
+            content = content.replace("<moss>", "\n```python\n# <moss-hide>\n", )
         if "</moss>" in content:
-            content = content.replace("</moss>", "\n# </moss>\n```\n", )
+            content = content.replace("</moss>", "\n# </moss-hide>\n```\n", )
         markdown = self._markdown_output(prefix + content)
         # border style
-        if DefaultMessageTypes.ERROR.match(message):
+        if MessageType.ERROR.match(message):
             border_style = "red"
         elif payload is not None and payload.task_id == self._main_task_id:
             border_style = "blue"

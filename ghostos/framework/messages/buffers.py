@@ -1,7 +1,7 @@
 import time
 from typing import Iterable, Optional, List, Dict, Set
 
-from ghostos.core.messages import Message, Caller, DefaultMessageTypes, Role, Payload, Attachment, Buffer, Flushed
+from ghostos.core.messages import Message, Caller, MessageType, Role, Payload, Attachment, Buffer, Flushed
 from ghostos.core.llms import FunctionalToken
 from ghostos.helpers import uuid
 
@@ -104,7 +104,7 @@ class DefaultBuffer(Buffer):
             return []
         # 不深拷贝的话, 加工逻辑就会交叉污染?
         # pack = origin.model_copy(deep=True)
-        if DefaultMessageTypes.is_protocol_message(pack):
+        if MessageType.is_protocol_message(pack):
             # final 包不进行 buffer.
             yield pack
             return

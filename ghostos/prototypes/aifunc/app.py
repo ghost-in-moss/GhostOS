@@ -4,9 +4,9 @@ import os
 import yaml
 from typing import List, Dict
 
-from ghostos.core.session import MsgThread
+from ghostos.core.session import GoThreadInfo
 from logging.config import dictConfig
-from ghostos.core.llms import Chat
+from ghostos.core.llms import Prompt
 from ghostos.core.messages import Message
 from ghostos.core.moss import test_container
 from ghostos.core.aifunc import (
@@ -73,7 +73,7 @@ def run_aifunc(
                 if value != "y":
                     exit(0)
 
-        def on_chat(self, chat: Chat) -> None:
+        def on_chat(self, chat: Prompt) -> None:
             for message in chat.get_messages():
                 self.console.print(Panel(
                     Markdown(message.get_content()),
@@ -87,7 +87,7 @@ def run_aifunc(
         def on_system_messages(self, messages: List[Message]) -> None:
             pass
 
-        def on_save(self, manager: AIFuncExecutor, thread: MsgThread) -> None:
+        def on_save(self, manager: AIFuncExecutor, thread: GoThreadInfo) -> None:
             current = thread.current
             if current:
                 for message in current.messages():

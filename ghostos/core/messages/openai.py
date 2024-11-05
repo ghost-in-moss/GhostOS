@@ -12,7 +12,7 @@ from openai.types.chat.chat_completion_user_message_param import ChatCompletionU
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 
-from ghostos.core.messages.message import Message, DefaultMessageTypes, Role, Caller, PayloadItem
+from ghostos.core.messages.message import Message, MessageType, Role, Caller, PayloadItem
 from ghostos.container import Provider, Container, INSTANCE
 
 __all__ = [
@@ -89,7 +89,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     """
 
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
-        if message.type == DefaultMessageTypes.CHAT_COMPLETION:
+        if message.type == MessageType.CHAT_COMPLETION:
             return self._parse_assistant_chat_completion(message)
         else:
             return self._parse_message(message)
@@ -163,7 +163,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         )]
 
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
-        pack = Message.new_tail(type_=DefaultMessageTypes.CHAT_COMPLETION, role=message.role, content=message.content)
+        pack = Message.new_tail(type_=MessageType.CHAT_COMPLETION, role=message.role, content=message.content)
         if message.function_call:
             caller = Caller(
                 name=message.function_call.name,
@@ -189,7 +189,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
-                pack = Message.new_chunk(role=Role.ASSISTANT.value, typ_=DefaultMessageTypes.CHAT_COMPLETION)
+                pack = Message.new_chunk(role=Role.ASSISTANT.value, typ_=MessageType.CHAT_COMPLETION)
                 usage.set(pack)
                 yield pack
             else:
@@ -203,20 +203,20 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     def _new_pack_from_delta(delta: ChoiceDelta, first: bool) -> Message:
         if first:
             pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content,
-                                    typ_=DefaultMessageTypes.CHAT_COMPLETION)
+                                    typ_=MessageType.CHAT_COMPLETION)
         else:
             pack = Message.new_chunk(role=Role.ASSISTANT.value, content=delta.content,
-                                     typ_=DefaultMessageTypes.CHAT_COMPLETION)
+                                     typ_=MessageType.CHAT_COMPLETION)
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())
-            pack.callers.append(function_call)
+            pack.callers.add(function_call)
 
         # tool calls
         if delta.tool_calls:
             for item in delta.tool_calls:
                 tool_call = Caller(**item.tool_call.model_dump())
-                pack.callers.append(tool_call)
+                pack.callers.add(tool_call)
         return pack
 
 

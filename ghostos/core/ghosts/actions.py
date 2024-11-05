@@ -2,23 +2,23 @@ from typing import Optional, ClassVar, Type, TypeVar, Generic
 import json
 from abc import ABC, abstractmethod
 from ghostos.container import Container
-from ghostos.core.llms import Chat, LLMTool, ChatPreparer
+from ghostos.core.llms import Prompt, LLMFunc, PromptPipe
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.messages.message import Caller
 from ghostos.core.session import Session
-from ghostos.common import Identifiable, Identifier
+from ghostos.common import Identical, Identifier
 from pydantic import BaseModel
 
 __all__ = ['Action', 'ToolAction']
 
 
-class Action(Identifiable, ChatPreparer, ABC):
+class Action(Identical, PromptPipe, ABC):
     """
     ghost actions that triggered by LLM output's caller
     """
 
     @abstractmethod
-    def prepare_chat(self, chat: Chat) -> Chat:
+    def process(self, chat: Prompt) -> Prompt:
         """
         Action update the chat with messages, tool, functional_tokens, etc.
         :param chat: origin chat.
@@ -62,11 +62,11 @@ class ToolAction(Action, Generic[A], ABC):
         """
         pass
 
-    def prepare_chat(self, chat: Chat) -> Chat:
+    def process(self, chat: Prompt) -> Prompt:
         """
         将工具注入到 chat.
         """
-        tool = LLMTool.new(
+        tool = LLMFunc.new(
             name=self.name,
             desc=self.description,
             parameters=self.args_model.model_json_schema(),

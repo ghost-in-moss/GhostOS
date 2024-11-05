@@ -146,3 +146,21 @@ def test_bytes_in_model():
 
     f = Foo(foo="test".encode())
     assert f.foo.decode() == "test"
+
+
+def test_multi_type_attr():
+    class Foo(BaseModel):
+        foo: int = 0
+
+    class Bar(BaseModel):
+        bar: str = ""
+
+    class Baz(BaseModel):
+        baz: List[BaseModel]
+
+    b = Baz(baz=[Foo(), Bar()])
+    data = b.model_dump(serialize_as_any=True)
+    assert data == {"baz": [{"foo": 0}, {"bar": ""}]}
+
+    unmarshalled = Baz(**data)
+    assert not isinstance(unmarshalled.baz[0], Foo)

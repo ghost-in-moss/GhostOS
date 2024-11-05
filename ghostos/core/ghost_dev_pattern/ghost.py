@@ -9,7 +9,7 @@ from ghostos.container import Container, Contracts
 from ghostos.core.moss import PyContext, Moss, MossCompiler
 from ghostos.core.session import Session, Event
 from ghostos.core.messages import Message
-from ghostos.common import IdentifiableClass, identify_class, Identifier, Identifiable
+from ghostos.common import IDAbleClass, identify_class, Identifier, Identical
 from ghostos.entity import EntityMeta
 from pydantic import BaseModel, Field
 from contextlib import contextmanager
@@ -36,7 +36,7 @@ Ghost 的定位类似于前端 React 框架的 ReactComponent, 或是 MVC 开发
 """
 
 
-class Ghost(BaseModel, Identifiable, ABC):
+class Ghost(BaseModel, Identical, ABC):
 
     @abstractmethod
     def identifier(self) -> Identifier:

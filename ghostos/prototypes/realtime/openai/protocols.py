@@ -1,4 +1,4 @@
-from typing import Self, Literal, List, Optional, Union, Dict, Protocol, ClassVar
+from typing import Self, Literal, List, Optional, Union, Dict, Protocol, ClassVar, Set
 from abc import ABC, abstractmethod
 from enum import Enum
 from ghostos.prototypes.realtime.abcd import Function
@@ -11,7 +11,7 @@ class StateName(str, Enum):
     stopped = "stopped"
 
     # --- blocking
-    connected = "connected"
+    connecting = "connecting"
     session_updating = "session_updating"
 
     # --- interruptible
@@ -38,7 +38,7 @@ class OperatorName(str, Enum):
     function_output = "function_output"
 
     # --- blocking
-    session_updating = "session_updating"
+    session_update = "session_updating"
 
     # --- idempotent or illegal
     create_response = "create_response"
@@ -72,8 +72,30 @@ class ServerEventType(str, Enum):
     rate_limits_updated = "rate_limits.updated"
 
     @classmethod
+    def conversation_item_events(cls) -> List["ServerEventType"]:
+        return [
+            cls.conversation_item_created,
+            cls.conversation_item_deleted,
+            cls.audio_transcript_created,
+            cls.audio_transcript_failed,
+            cls.response_output_item_done,
+        ]
+
+    @classmethod
     def get_type(cls, event: dict) -> Self:
         return cls(event["type"])
+
+    @classmethod
+    def get_event_id(cls, event: dict) -> str:
+        return event.get("event_id", "")
+
+    @classmethod
+    def get_response_id(cls, event: dict) -> Union[str, None]:
+        if "response" in event:
+            return event["response"].get("id", None)
+        if "response_id" in event:
+            return event["response_id"]
+        return None
 
     def match(self, event: dict) -> bool:
         return "type" in event and event["type"] == self.value
@@ -147,10 +169,10 @@ class ClientEvent(BaseModel, ABC):
         pass
 
 
-class ClientSessionUpdate(ClientEvent):
+class ClientSessionUpdateEvent(ClientEvent):
     type = ClientEventType.session_update.value
-    shell_funcs: Dict[str, List[Function]] = Field(default_factory=dict)
     session: OpenAISessionObj
 
     def _to_openai_event(self, data: dict) -> dict:
+        data['session'] = self.session.model_dump()
         return data

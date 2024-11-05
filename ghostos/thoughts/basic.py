@@ -2,10 +2,10 @@ from typing import Optional, Generic, Iterable
 from abc import ABC, abstractmethod
 from ghostos.core.session import Event, thread_to_chat
 from ghostos.core.ghosts import Ghost, Operator, Action
-from ghostos.core.llms import LLMApi, ChatPreparer, Chat, prepare_chat
+from ghostos.core.llms import LLMApi, PromptPipe, Prompt, run_prompt_pipeline
 from ghostos.core.messages import Role
 from ghostos.core.ghosts.thoughts import T, BasicThoughtDriver
-from ghostos.framework.chatpreparers import OtherAgentOrTaskPreparer
+from ghostos.framework.chatpreparers import OtherAgentOrTaskPipe
 
 
 class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
@@ -21,12 +21,12 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         """
         pass
 
-    def chat_preparers(self, g: Ghost, e: Event) -> Iterable[ChatPreparer]:
+    def chat_preparers(self, g: Ghost, e: Event) -> Iterable[PromptPipe]:
         """
         return chat preparers that filter chat messages by many rules.
         """
         assistant_name = g.identifier().name
-        yield OtherAgentOrTaskPreparer(
+        yield OtherAgentOrTaskPipe(
             assistant_name=assistant_name,
             task_id=g.session().task().task_id,
         )
@@ -45,7 +45,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         """
         pass
 
-    def initialize_chat(self, g: Ghost, e: Event) -> Chat:
+    def initialize_chat(self, g: Ghost, e: Event) -> Prompt:
         session = g.session()
         thread = session.thread()
         system_prompt = g.system_prompt()
@@ -53,7 +53,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         content = "\n\n".join([system_prompt, thought_instruction])
         # system prompt from thought
         system_messages = [Role.SYSTEM.new(content=content.strip())]
-        chat = thread_to_chat(e.id, system_messages, thread)
+        chat = thread_to_chat(e.event_id, system_messages, thread)
         return chat
 
     def think(self, g: Ghost, e: Event) -> Optional[Operator]:
@@ -66,7 +66,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
 
         # prepare chat, filter messages.
         preparers = self.chat_preparers(g, e)
-        chat = prepare_chat(chat, preparers)
+        chat = run_prompt_pipeline(chat, preparers)
 
         # prepare actions
         actions = list(self.actions(g, e))
@@ -74,7 +74,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
 
         # prepare chat by actions
         for action in actions:
-            chat = action.prepare_chat(chat)
+            chat = action.process(chat)
 
         # prepare llm api
         llm_api = self.get_llmapi(g)

@@ -35,7 +35,7 @@ class Moss(Parent):
     """
 
 
-# <moss>
+# <moss-hide>
 # the codes between the moss xml marks are not visible to LLM
 
 from ghostos.libraries.file_editor import DirectoryEditorImpl
@@ -43,7 +43,7 @@ from ghostos.libraries.file_editor import DirectoryEditorImpl
 # using TYPE_CHECKING to avoid reflect invalid importing to prompt.
 if TYPE_CHECKING:
     from ghostos.core.ghosts import Ghost
-    from ghostos.core.session import Event, Session, MsgThread
+    from ghostos.core.session import Event, Session, GoThreadInfo
     from ghostos.core.llms import LLMApi
     from ghostos.core.moss import MossCompiler
 
@@ -128,7 +128,7 @@ You shall use dir_editor and FileEditorThought to fulfill the user's request.
     return instruction
 
 
-def __magic_moss_thought_thread__(thought: DirectoryEditorThought, session: "Session", thread: "MsgThread") -> "MsgThread":
+def __magic_moss_thought_thread__(thought: DirectoryEditorThought, session: "Session", thread: "GoThreadInfo") -> "GoThreadInfo":
     """
     optional magic function that prepare the thread info, such as modify thread.save_file
     """
@@ -137,4 +137,4 @@ def __magic_moss_thought_thread__(thought: DirectoryEditorThought, session: "Ses
         thread.save_file = join(thought.directory, ".directory_editor_thought.thread.yml")
     return thread
 
-# </moss>
+# </moss-hide>

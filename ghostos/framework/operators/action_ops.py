@@ -7,9 +7,9 @@ from ghostos.core.messages import (
     MessageKind, MessageKindParser, Role,
 )
 from ghostos.core.session import (
-    DefaultEventType,
+    EventTypes,
     TaskState,
-    Task,
+    GoTaskStruct,
 )
 
 __all__ = [
@@ -30,7 +30,7 @@ class ActionOperator(Operator):
     3. 如果父任务存在, 向父任务发送消息.
     """
     task_state: ClassVar[str] = TaskState.WAITING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK.value
+    callback_event_type: ClassVar[str] = EventTypes.WAIT_CALLBACK.value
 
     def __init__(
             self, *,
@@ -49,7 +49,7 @@ class ActionOperator(Operator):
             session = g.session()
             self.messages = session.send_messages(*self.messages)
 
-    def get_callback_task_id(self, task: Task) -> Optional[str]:
+    def get_callback_task_id(self, task: GoTaskStruct) -> Optional[str]:
         if self.callback_task_id is not None:
             return self.callback_task_id
         return task.parent
@@ -98,7 +98,7 @@ class ActionOperator(Operator):
 
 class WaitsOperator(ActionOperator):
     task_state: ClassVar[str] = TaskState.WAITING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK.value
+    callback_event_type: ClassVar[str] = EventTypes.WAIT_CALLBACK.value
 
     def __init__(self, *, reason: str, messages: List[MessageKind], callback_task_id: Optional[str] = None):
         super().__init__(reason=reason, messages=messages, callback_task_id=callback_task_id)
@@ -114,7 +114,7 @@ class FailOperator(ActionOperator):
     5. 自己继续执行 on_finished 事件, 可以创建独立的任务去理解.
     """
     task_state: ClassVar[str] = TaskState.FAILED.value
-    callback_event_type: ClassVar[str] = DefaultEventType.FAILURE_CALLBACK.value
+    callback_event_type: ClassVar[str] = EventTypes.FAILURE_CALLBACK.value
 
     def __init__(
             self, *,
@@ -139,7 +139,7 @@ class FailOperator(ActionOperator):
         session = g.session()
         task = session.task()
         # finish 没有后续. 但还是要执行一个反思事件.
-        event = DefaultEventType.FAILED.new(
+        event = EventTypes.FAILED.new(
             task_id=task.task_id,
             messages=[],
         )
@@ -157,7 +157,7 @@ class FinishOperator(ActionOperator):
     5. 自己继续执行 on_finished 事件, 可以创建独立的任务去理解.
     """
     task_state: ClassVar[str] = TaskState.FINISHED.value
-    callback_event_type: ClassVar[str] = DefaultEventType.FINISH_CALLBACK.value
+    callback_event_type: ClassVar[str] = EventTypes.FINISH_CALLBACK.value
 
     def __init__(
             self, *,
@@ -183,7 +183,7 @@ class FinishOperator(ActionOperator):
         # finish 没有后续. 但还是要执行一个反思事件.
         session = g.session()
         task = session.task()
-        event = DefaultEventType.FINISHED.new(
+        event = EventTypes.FINISHED.new(
             task_id=task.task_id,
             messages=[],
         )
@@ -197,7 +197,7 @@ class WaitOnTasksOperator(ActionOperator):
     wait on children tasks
     """
     task_state: ClassVar[str] = TaskState.RUNNING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK.value
+    callback_event_type: ClassVar[str] = EventTypes.NOTIFY.value
 
     def __init__(
             self, *,
@@ -229,7 +229,7 @@ class ThinkOperator(ActionOperator):
     运行下一轮思考.
     """
     task_state: ClassVar[str] = TaskState.RUNNING.value
-    callback_event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK.value
+    callback_event_type: ClassVar[str] = EventTypes.NOTIFY.value
 
     def __init__(
             self, *,
@@ -256,7 +256,7 @@ class ThinkOperator(ActionOperator):
         utils = g.utils()
         utils.send_task_event(
             task_id=task.task_id,
-            event_type=DefaultEventType.OBSERVE.value,
+            event_type=EventTypes.ROTATE.value,
             reason=self.reason,
             instruction=self.instruction,
             messages=observations,

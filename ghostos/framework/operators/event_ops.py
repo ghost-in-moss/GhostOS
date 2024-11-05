@@ -5,7 +5,7 @@ from ghostos.core.ghosts import (
 )
 from ghostos.core.session import (
     TaskState,
-    DefaultEventType,
+    EventTypes,
 )
 
 __all__ = [
@@ -84,7 +84,7 @@ class OnUpstreamEventOperator(EventOperator):
         session = g.session()
         task = session.task()
         # 思考轮次设置为 0.
-        task.think_turns = 0
+        # task.think_turns = 0
         thread = session.thread()
         thread.new_turn(self.event)
         session.update_task(task, thread, update_history=False)
@@ -116,7 +116,7 @@ class OnSelfEventOperator(EventOperator):
         session = g.session()
         task = session.task()
         # 思考轮次设置为 0.
-        task.think_turns += 1
+        # task.think_turns += 1
         thread = session.thread()
         thread.new_turn(self.event)
         if task.think_too_much():
@@ -180,7 +180,7 @@ class OnInputOperator(OnUpstreamEventOperator):
     """
     接受到上游的输入.
     """
-    event_type: ClassVar[str] = DefaultEventType.INPUT.value
+    event_type: ClassVar[str] = EventTypes.REQUEST.value
     default_state: ClassVar[str] = TaskState.WAITING.value
 
 
@@ -188,12 +188,12 @@ class OnCreatedOperator(OnUpstreamEventOperator):
     """
     接受到创建任务的消息.
     """
-    event_type: ClassVar[str] = DefaultEventType.CREATED.value
+    event_type: ClassVar[str] = EventTypes.CREATED.value
     default_state: ClassVar[str] = TaskState.WAITING.value
 
 
 class OnCancelingOperator(OnUpstreamEventOperator):
-    event_type = DefaultEventType.CANCELING.value
+    event_type = EventTypes.CANCEL.value
     default_state: ClassVar[str] = TaskState.CANCELLED.value
 
     def handle_event(self, g: "Ghost") -> Optional["Operator"]:
@@ -219,14 +219,14 @@ class OnCancelingOperator(OnUpstreamEventOperator):
 # --- self event operators --- #
 
 class OnObserveOperator(OnSelfEventOperator):
-    event_type: ClassVar[str] = DefaultEventType.OBSERVE.value
+    event_type: ClassVar[str] = EventTypes.ROTATE.value
     default_state: ClassVar[str] = TaskState.WAITING.value
 
 
 # --- call back operators --- #
 
 class OnFinishCallbackOperator(OnCallbackEventOperator):
-    event_type: ClassVar[str] = DefaultEventType.FINISH_CALLBACK
+    event_type: ClassVar[str] = EventTypes.FINISH_CALLBACK
 
     def handle_event(self, g: "Ghost") -> Optional["Operator"]:
         session = g.session()
@@ -242,12 +242,12 @@ class OnFinishCallbackOperator(OnCallbackEventOperator):
 
 
 class OnFailureCallbackOperator(OnCallbackEventOperator):
-    event_type: ClassVar[str] = DefaultEventType.FAILURE_CALLBACK
+    event_type: ClassVar[str] = EventTypes.FAILURE_CALLBACK
 
 
 class OnWaitCallbackOperator(OnCallbackEventOperator):
-    event_type: ClassVar[str] = DefaultEventType.WAIT_CALLBACK
+    event_type: ClassVar[str] = EventTypes.WAIT_CALLBACK
 
 
 class OnNotifyCallbackOperator(OnCallbackEventOperator):
-    event_type: ClassVar[str] = DefaultEventType.NOTIFY_CALLBACK
+    event_type: ClassVar[str] = EventTypes.NOTIFY

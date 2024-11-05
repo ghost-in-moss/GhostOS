@@ -1,6 +1,6 @@
 from typing import Iterable, Optional
 
-from ghostos.core.messages import Stream, Message, DefaultMessageTypes
+from ghostos.core.messages import Stream, Message, MessageType
 from queue import Queue
 
 __all__ = ["QueueStream"]
@@ -20,7 +20,7 @@ class QueueStream(Stream):
     def deliver(self, pack: "Message") -> bool:
         if self._stopped:
             return False
-        if DefaultMessageTypes.is_protocol_message(pack):
+        if MessageType.is_protocol_message(pack):
             return True
         elif self._accept_chunks and not pack.is_complete():
             # 不发送间包, 只发送尾包.
@@ -40,9 +40,9 @@ class QueueStream(Stream):
             return
         self._stopped = True
         if error:
-            final = DefaultMessageTypes.ERROR.new(content=str(error))
+            final = MessageType.ERROR.new(content=str(error))
         else:
-            final = DefaultMessageTypes.final()
+            final = MessageType.final()
         self._queue.put(final)
         self._queue.task_done()
         del self._queue

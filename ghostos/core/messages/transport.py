@@ -3,7 +3,7 @@ from typing import Iterable, Optional, Callable, List, Tuple
 from typing_extensions import Protocol
 from collections import deque
 from abc import abstractmethod
-from ghostos.core.messages.message import Message, DefaultMessageTypes
+from ghostos.core.messages.message import Message, MessageType
 from ghostos.core.messages.pipeline import SequencePipe
 import time
 
@@ -136,7 +136,7 @@ class ArrayReceiver(Receiver):
                 continue
             is_alive = alive()
             if not is_alive:
-                self._error = DefaultMessageTypes.ERROR.new(content="Receiver is closed")
+                self._error = MessageType.ERROR.new(content="Receiver is closed")
                 self._done = True
                 break
             if self._idle:
@@ -152,9 +152,9 @@ class ArrayReceiver(Receiver):
             return False
         if not self._check_alive():
             return False
-        if DefaultMessageTypes.is_protocol_message(message):
+        if MessageType.is_protocol_message(message):
             self._done = True
-            if DefaultMessageTypes.ERROR.match(message):
+            if MessageType.ERROR.match(message):
                 self._error = message
             return True
         else:
@@ -167,7 +167,7 @@ class ArrayReceiver(Receiver):
 
     def fail(self, error: str) -> bool:
         self._done = True
-        self._error = DefaultMessageTypes.ERROR.new(content=error)
+        self._error = MessageType.ERROR.new(content=error)
         return False
 
     def done(self) -> bool:
@@ -228,7 +228,7 @@ class ArrayStream(Stream):
         if self._closed:
             return
         if self._alive:
-            self._receiver.add(DefaultMessageTypes.final())
+            self._receiver.add(MessageType.final())
         self._alive = False
         self._closed = True
         del self._receiver
@@ -236,7 +236,7 @@ class ArrayStream(Stream):
     def fail(self, error: str) -> bool:
         if self._error is not None:
             return False
-        self._error = DefaultMessageTypes.ERROR.new(content=error)
+        self._error = MessageType.ERROR.new(content=error)
         if self._alive:
             self._receiver.add(self._error)
         self._alive = False

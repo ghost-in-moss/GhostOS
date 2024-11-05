@@ -1,15 +1,15 @@
 from typing import Optional, Callable, List, Iterable, Dict
 from ghostos.core.messages import (
-    MessageKind, Role, Stream, MessageKindParser, DefaultMessageTypes,
+    MessageKind, Role, Stream, MessageKindParser, MessageType,
     Buffer, Payload, Attachment, Message,
 )
 from ghostos.core.session import (
     Session,
-    SessionProcess, GhostProcessRepo,
-    MsgThread, MsgThreadRepo,
-    Task, TaskRepo, TaskPayload, TaskState,
+    GoProcess, GoProcesses,
+    GoThreadInfo, GoThreads,
+    GoTaskStruct, GoTasks, TaskPayload, TaskState,
     Messenger,
-    Event, EventBus, DefaultEventType,
+    Event, EventBus, EventTypes,
     TaskBrief,
 )
 from ghostos.core.llms import FunctionalToken
@@ -30,7 +30,7 @@ class FutureCall:
         try:
             messages = list(callback())
         except Exception as e:
-            messages = [Role.new_assistant_system("", memory=str(e))]
+            messages = [Role.new_system("", memory=str(e))]
         if len(messages) > 0:
             self.event.messages = messages
             self.bus.send_event(self.event, notify=self.notify)
@@ -47,34 +47,34 @@ class BasicSession(Session):
             upstream: Stream,
             eventbus: EventBus,
             pool: Pool,
-            processes: GhostProcessRepo,
-            tasks: TaskRepo,
-            threads: MsgThreadRepo,
+            processes: GoProcesses,
+            tasks: GoTasks,
+            threads: GoThreads,
             logger: LoggerItf,
             # 当前任务信息.
-            process: SessionProcess,
-            task: Task,
-            thread: MsgThread,
+            process: GoProcess,
+            task: GoTaskStruct,
+            thread: GoThreadInfo,
     ):
         self._pool = pool
         self._upstream = upstream
         self._logger = logger
-        self._tasks: TaskRepo = tasks
-        self._processes: GhostProcessRepo = processes
+        self._tasks: GoTasks = tasks
+        self._processes: GoProcesses = processes
         self._ghost_name: str = ghost_name
         self._message_role: str = ghost_role
-        self._threads: MsgThreadRepo = threads
+        self._threads: GoThreads = threads
         self._eventbus: EventBus = eventbus
         # 需要管理的状态.
-        self._task: Task = task
-        self._process: SessionProcess = process
-        self._creating: List[Task] = []
-        self._thread: MsgThread = thread
+        self._task: GoTaskStruct = task
+        self._process: GoProcess = process
+        self._creating: List[GoTaskStruct] = []
+        self._thread: GoThreadInfo = thread
         self._firing_events: List[Event] = []
         self._fetched_task_briefs: Dict[str, TaskBrief] = {}
 
     def id(self) -> str:
-        return self._task.session_id
+        return self._task.shell_id
 
     def alive(self) -> bool:
         return (
@@ -90,20 +90,20 @@ class BasicSession(Session):
             return True
         return False
 
-    def process(self) -> "SessionProcess":
+    def process(self) -> "GoProcess":
         return self._process
 
-    def task(self) -> "Task":
+    def task(self) -> "GoTaskStruct":
         return self._task
 
-    def thread(self) -> "MsgThread":
+    def thread(self) -> "GoThreadInfo":
         return self._thread
 
     def messenger(
             self, *,
             sending: bool = True,
             saving: bool = True,
-            thread: Optional[MsgThread] = None,
+            thread: Optional[GoThreadInfo] = None,
             name: Optional[str] = None,
             buffer: Optional[Buffer] = None,
             payloads: Optional[Iterable[Payload]] = None,
@@ -145,20 +145,20 @@ class BasicSession(Session):
         self._logger.info(f"send message by session [send_messages], sent: {len(sent)}, callers: {len(callers)}")
         return sent
 
-    def update_task(self, task: "Task", thread: Optional["MsgThread"], update_history: bool) -> None:
+    def update_task(self, task: "GoTaskStruct", thread: Optional["GoThreadInfo"], update_history: bool) -> None:
         self._task = task
         if thread is not None:
             self._task.thread_id = thread.id
-            self._thread = thread.update_history()
+            self._thread = thread.get_updated_copy()
         if update_history:
-            self._thread = self._thread.update_history()
+            self._thread = self._thread.get_updated_copy()
 
-    def update_thread(self, thread: "MsgThread", update_history: bool) -> None:
+    def update_thread(self, thread: "GoThreadInfo", update_history: bool) -> None:
         if update_history:
-            thread = thread.update_history()
+            thread = thread.get_updated_copy()
         self._thread = thread
 
-    def create_tasks(self, *tasks: "Task") -> None:
+    def create_tasks(self, *tasks: "GoTaskStruct") -> None:
         self._creating.extend(tasks)
 
     def fire_events(self, *events: "Event") -> None:
@@ -176,11 +176,11 @@ class BasicSession(Session):
     def future(self, name: str, call: Callable[[], Iterable[MessageKind]], reason: str) -> None:
         future_id = uuid()
         # 增加一个消息.
-        system = DefaultMessageTypes.DEFAULT.new_system(
+        system = MessageType.DEFAULT.new_system(
             content=f"async call `{name}` with id `{future_id}`, wait for future callback.",
         )
         self.send_messages(system)
-        event = DefaultEventType.OBSERVE.new(
+        event = EventTypes.ROTATE.new(
             task_id=self._task.task_id,
             from_task_id=self._task.task_id,
             messages=[],
@@ -195,7 +195,7 @@ class BasicSession(Session):
         task = self._tasks.get_task(main_task_id, False)
         self._firing_events = []
         for task_id in task.children:
-            event = DefaultEventType.KILLING.new(
+            event = EventTypes.KILL.new(
                 task_id=task_id,
                 messages=[],
                 from_task_id=self._task.task_id,
@@ -218,7 +218,7 @@ class BasicSession(Session):
         for e in self._firing_events:
             # all the sub-tasks need notification
             notify = e.task_id != main_task_id
-            self._logger.info(f"fire event {e.type}: eid {e.id}; task_id {e.task_id}")
+            self._logger.info(f"fire event {e.type}: eid {e.event_id}; task_id {e.task_id}")
             bus.send_event(e, notify)
         self._firing_events = []
 
@@ -235,10 +235,10 @@ class BasicSession(Session):
                 child = children[idx]
                 if child.is_overdue() or TaskState.is_dead(child.task_state):
                     task.remove_child(child.task_id)
-        task.update_turn()
+        task.new_turn()
         self._task = task
         self._fetched_task_briefs = {}
-        self._thread = self._thread.update_history()
+        self._thread = self._thread.get_updated_copy()
         self._tasks.save_task(task)
         self._threads.save_thread(self._thread)
 
@@ -264,19 +264,19 @@ class BasicSession(Session):
                 self._fetched_task_briefs[task_brief.task_id] = task_brief
         return result
 
-    def tasks(self) -> TaskRepo:
+    def tasks(self) -> GoTasks:
         return self._tasks
 
-    def processes(self) -> GhostProcessRepo:
+    def processes(self) -> GoProcesses:
         return self._processes
 
-    def threads(self) -> MsgThreadRepo:
+    def threads(self) -> GoThreads:
         return self._threads
 
     def eventbus(self) -> EventBus:
         return self._eventbus
 
-    def update_process(self, process: "SessionProcess") -> None:
+    def update_process(self, process: "GoProcess") -> None:
         self._process = process
 
     def quit(self) -> None:
@@ -319,11 +319,11 @@ class BasicSession(Session):
         if locked:
             self._tasks.unlock_task(self._task.task_id, locked)
             self._task.lock = None
-        self._upstream.deliver(DefaultMessageTypes.ERROR.new(content=str(err)))
+        self._upstream.deliver(MessageType.ERROR.new(content=str(err)))
         self._logger.error(err)
 
     def done(self) -> None:
         locked = self._task.lock
         if locked:
             self._tasks.unlock_task(self._task.task_id, locked)
-        self._upstream.deliver(DefaultMessageTypes.final())
+        self._upstream.deliver(MessageType.final())

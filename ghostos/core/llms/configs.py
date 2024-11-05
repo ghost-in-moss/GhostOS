@@ -32,11 +32,6 @@ class ModelConf(Payload):
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="kwargs")
 
 
-class EmbedConf(BaseModel):
-    service: str = Field(description="service name, share with llm model conf")
-    model: str = Field(description="the model name that provide embeddings")
-
-
 class ServiceConf(BaseModel):
     """
     The service configuration of a llm.
@@ -70,9 +65,7 @@ class LLMsConfig(BaseModel):
         default_factory=list,
         description="define llm services, such as openai or moonshot",
     )
-    default: ModelConf = Field(
-        description="define default LLMApi 's model config.",
-    )
+    default: str = Field(description="one of the models key")
     models: Dict[str, ModelConf] = Field(
         default_factory=dict,
         description="define llm apis, the key is llm_api_name and value is model config of it.",

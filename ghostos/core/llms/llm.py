@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, Iterable, Optional
 from ghostos.core.messages import Message, Stream
 from ghostos.core.llms.configs import ModelConf, ServiceConf
-from ghostos.core.llms.chat import Chat
+from ghostos.core.llms.prompt import Prompt
 
 __all__ = [
     'LLMs', 'LLMApi', 'LLMDriver',
@@ -31,7 +31,7 @@ class LLMApi(ABC):
         pass
 
     @abstractmethod
-    def parse_chat(self, chat: Chat) -> Chat:
+    def parse_chat(self, chat: Prompt) -> Prompt:
         """
         parse chat by llm api default logic. Functional tokens for example.
         this method is used to test.
@@ -46,25 +46,22 @@ class LLMApi(ABC):
         pass
 
     @abstractmethod
-    def chat_completion(self, chat: Chat) -> Message:
+    def chat_completion(self, chat: Prompt) -> Message:
         pass
 
     @abstractmethod
-    def chat_completion_chunks(self, chat: Chat) -> Iterable[Message]:
+    def chat_completion_chunks(self, chat: Prompt) -> Iterable[Message]:
         """
         todo: 暂时先这么定义了.
         """
         pass
 
-    def deliver_chat_completion(self, chat: Chat, deliver: Stream) -> None:
+    def deliver_chat_completion(self, chat: Prompt, deliver: Stream) -> None:
         """
         逐个发送消息的包.
         """
-        if not deliver.accept_chunks():
+        if deliver.completes_only():
             message = self.chat_completion(chat)
-            if message.is_complete():
-                # add model conf as message payload
-                self.get_model().set(message)
             deliver.deliver(message)
             return
         items = self.chat_completion_chunks(chat)

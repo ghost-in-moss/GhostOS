@@ -77,10 +77,10 @@ MOSS_TYPE_NAME = "Moss"
 
 MOSS_NAME = "moss"
 
-MOSS_HIDDEN_MARK = "# <moss>"
+MOSS_HIDDEN_MARK = "# <moss-hide>"
 """ pycontext.module 源码某一行以这个标记开头, 其后的代码都不生成到 prompt 里. """
 
-MOSS_HIDDEN_UNMARK = "# </moss>"
+MOSS_HIDDEN_UNMARK = "# </moss-hide>"
 """ pycontext.module 源码某一行以这个标记开头, 其后的代码都展示到 prompt 里. """
 
 

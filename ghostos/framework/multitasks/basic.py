@@ -1,8 +1,8 @@
 from typing import Tuple
 from ghostos.core.ghosts import MultiTask, Operator, Ghost, Thought, NewTask
-from ghostos.core.llms import Chat
+from ghostos.core.llms import Prompt
 from ghostos.core.messages import MessageKind, Role
-from ghostos.core.session.events import DefaultEventType
+from ghostos.core.session.events import EventTypes
 from ghostos.framework.operators import WaitOnTasksOperator
 from ghostos.helpers import yaml_pretty_dump
 
@@ -12,7 +12,7 @@ class MultiTaskBasicImpl(MultiTask):
     def __init__(self, ghost: Ghost):
         self._ghost = ghost
 
-    def prepare_chat(self, chat: Chat) -> Chat:
+    def process(self, chat: Prompt) -> Prompt:
         children = self._ghost.session().get_task_briefs(children=True)
         if not children:
             return chat
@@ -67,7 +67,7 @@ You are equipped with MultiTask library. You have created the async tasks below:
         tasks = session.get_task_briefs(children=True)
         for task in tasks:
             if task.name == task_name:
-                event = DefaultEventType.INPUT.new(
+                event = EventTypes.REQUEST.new(
                     task_id=task.id,
                     from_task_id=from_task_id,
                     messages=messages,
@@ -80,7 +80,7 @@ You are equipped with MultiTask library. You have created the async tasks below:
         tasks = session.get_task_briefs(children=True)
         for task in tasks:
             if task.name == task_name:
-                event = DefaultEventType.CANCELING.new(
+                event = EventTypes.CANCEL.new(
                     task_id=task.id,
                     from_task_id=from_task_id,
                     messages=[],

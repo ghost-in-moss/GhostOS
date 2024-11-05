@@ -95,9 +95,9 @@ def default_application_contracts() -> Contracts:
     from ghostos.contracts.workspace import Workspace
     from ghostos.entity import EntityFactory
     from ghostos.framework.configs import Configs
-    from ghostos.framework.processes import GhostProcessRepo
-    from ghostos.framework.threads import MsgThreadRepo
-    from ghostos.framework.tasks import TaskRepo
+    from ghostos.framework.processes import GoProcesses
+    from ghostos.framework.threads import GoThreads
+    from ghostos.framework.tasks import GoTasks
     from ghostos.framework.eventbuses import EventBus
     from ghostos.framework.llms import LLMs
     from ghostos.framework.logger import LoggerItf
@@ -127,9 +127,9 @@ def default_application_contracts() -> Contracts:
         AIFuncRepository,
 
         # session contracts
-        GhostProcessRepo,  # application processes repository
-        MsgThreadRepo,  # application threads repository
-        TaskRepo,  # application tasks repository
+        GoProcesses,  # application processes repository
+        GoThreads,  # application threads repository
+        GoTasks,  # application tasks repository
         EventBus,  # application session eventbus
     ])
 

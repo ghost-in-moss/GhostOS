@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from enum import Enum
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Type
 
 from pydantic import BaseModel, Field
-from ghostos.common import Identifiable, Identifier
+from ghostos.common import Identical, Identifier
 from ghostos.core.messages import Caller
 
 
 # ---- tool and function ---- #
 
-class LLMTool(BaseModel):
+class LLMFunc(BaseModel):
     """
     a common wrapper for JSONSchema LLM tool.
     Compatible to OpenAI Tool.
@@ -38,6 +38,19 @@ class LLMTool(BaseModel):
             del parameters["title"]
         return cls(name=name, description=desc, parameters=parameters)
 
+    @classmethod
+    def from_model(
+            cls,
+            name: str,
+            model: Type[BaseModel],
+            description: Optional[str] = None,
+    ):
+        if description is None:
+            description = model.__doc__
+        return cls.new(name, desc=description, parameters=model.model_json_schema())
+
+
+# todo: remove
 
 class FunctionalTokenMode(str, Enum):
     XML = "xml"
@@ -48,7 +61,7 @@ class FunctionalTokenMode(str, Enum):
     """ token mod. use single token to parse content. """
 
 
-class FunctionalToken(Identifiable, BaseModel):
+class FunctionalToken(Identical, BaseModel):
     """
     functional token means to provide function ability to LLM not by JsonSchema, but by token.
     LLM generates special tokens (such as XML marks) to indicate further tokens are the content of the function.
@@ -81,8 +94,8 @@ class FunctionalToken(Identifiable, BaseModel):
             description=self.description,
         )
 
-    def as_tool(self) -> LLMTool:
+    def as_tool(self) -> LLMFunc:
         """
         all functional token are compatible to a llm tool.
         """
-        return LLMTool.new(name=self.name, desc=self.description, parameters=self.parameters)
+        return LLMFunc.new(name=self.name, desc=self.description, parameters=self.parameters)

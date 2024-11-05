@@ -26,10 +26,10 @@ class Moss(Parent):
     """useful to run AIFunc"""
 
 
-# <moss>
+# <moss-hide>
 
 
 def __aifunc_instruction__(fn: AgentFn) -> str:
     return fn.request
 
-# </moss>
+# </moss-hide>

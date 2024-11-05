@@ -21,7 +21,7 @@ from ghostos.helpers.time import Timeleft
 from ghostos.helpers.hashes import md5
 from ghostos.helpers.trans import gettext, ngettext, get_current_locale, GHOSTOS_DOMAIN
 
-from ghostos.helpers.coding import reflect_module_code
+from ghostos.helpers.coding import reflect_module_code, unwrap
 from ghostos.helpers.openai import get_openai_key
 
 if TYPE_CHECKING:

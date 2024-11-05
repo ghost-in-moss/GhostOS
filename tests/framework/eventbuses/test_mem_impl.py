@@ -1,10 +1,10 @@
 from ghostos.framework.eventbuses.memimpl import MemEventBusImpl
-from ghostos.core.session.events import DefaultEventType
+from ghostos.core.session.events import EventTypes
 
 
 def test_mem_impl_send_pop_event():
     bus = MemEventBusImpl()
-    e = DefaultEventType.INPUT.new("foo", [])
+    e = EventTypes.REQUEST.new("foo", [])
     bus.send_event(e, notify=True)
     task_id = bus.pop_task_notification()
     assert task_id is not None

@@ -3,7 +3,7 @@ import os
 import yaml
 import importlib
 from ghostos.container import Container
-from ghostos.core.session import MsgThread, DefaultEventType, thread_to_chat
+from ghostos.core.session import GoThreadInfo, EventTypes, thread_to_chat
 from ghostos.core.moss import MossRuntime, MossCompiler, PyContext
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.messages import Role, Message
@@ -21,7 +21,7 @@ class GhostFuncCache(BaseModel):
     """
     modulename: str = Field(description="the module name that decorated function located")
     filename: Optional[str] = Field(default=None, description="the filename that decorated function located")
-    threads: Dict[str, MsgThread] = Field(
+    threads: Dict[str, GoThreadInfo] = Field(
         default_factory=dict,
         description="a map of function.__qualname__ to thread instance",
     )
@@ -130,7 +130,7 @@ class GhostFuncDriver:
             thread = self._init_thread()
         return self._run(thread, args, kwargs)
 
-    def _run(self, thread: MsgThread, args: List[Any], kwargs: Dict[str, Any]) -> Any:
+    def _run(self, thread: GoThreadInfo, args: List[Any], kwargs: Dict[str, Any]) -> Any:
         """
         run the ghost func with the origin function's args and kwargs.
         :param thread:
@@ -162,14 +162,14 @@ class GhostFuncDriver:
             target_source=self._target_source,
         )
 
-    def _init_thread(self) -> MsgThread:
+    def _init_thread(self) -> GoThreadInfo:
         pycontext = self._init_pycontext()
         moss_runtime = self._moss_runtime(pycontext)
         context_code = moss_runtime.prompter().dump_context_prompt()
         instruction = self._init_prompt(context_code)
         system = Role.SYSTEM.new(content=instruction)
-        e = DefaultEventType.OBSERVE.new(task_id="", messages=[system], from_task_id="")
-        return MsgThread.new(
+        e = EventTypes.ROTATE.new(task_id="", messages=[system], from_task_id="")
+        return GoThreadInfo.new(
             event=e,
             pycontext=pycontext,
         )
@@ -193,17 +193,17 @@ class GhostFuncDriver:
     def _start_with_generated_code(
             self,
             generated: str,
-            thread: MsgThread,
+            thread: GoThreadInfo,
             pycontext: PyContext,
             args: List[Any],
             kwargs: Dict[str, Any],
-    ) -> Tuple[MsgThread, Any]:
+    ) -> Tuple[GoThreadInfo, Any]:
         result, ok = self._run_code(generated, thread, pycontext, args, kwargs)
         if ok:
             return thread, result
         return self._think(thread, args, kwargs)
 
-    def _think(self, thread: MsgThread, args: List[Any], kwargs: Dict[str, Any]) -> Tuple[MsgThread, Any]:
+    def _think(self, thread: GoThreadInfo, args: List[Any], kwargs: Dict[str, Any]) -> Tuple[GoThreadInfo, Any]:
         turns = 0
         while True:
             result, ok = self._run_turn(thread, args, kwargs)
@@ -213,7 +213,7 @@ class GhostFuncDriver:
             if turns > self._max_turns:
                 raise RuntimeError(f"Exceed max turns {self._max_turns} turns, still not success")
 
-    def _run_turn(self, thread: MsgThread, args: List[Any], kwargs: Dict[str, Any]) -> Tuple[Any, bool]:
+    def _run_turn(self, thread: GoThreadInfo, args: List[Any], kwargs: Dict[str, Any]) -> Tuple[Any, bool]:
         pycontext = thread.last_turn().pycontext
         chat = thread_to_chat(thread.id, [], thread)
         llm_api = self._get_llm_api()
@@ -223,7 +223,7 @@ class GhostFuncDriver:
         code, ok = self._unwrap_message_code(message)
         if not ok:
             thread.new_turn(
-                event=DefaultEventType.OBSERVE.new(
+                event=EventTypes.ROTATE.new(
                     task_id="",
                     from_task_id="",
                     messages=[Role.SYSTEM.new(content=code)],
@@ -235,7 +235,7 @@ class GhostFuncDriver:
     def _run_code(
             self,
             code: str,
-            thread: MsgThread,
+            thread: GoThreadInfo,
             pycontext: PyContext,
             args: List[Any],
             kwargs: Dict[str, Any],
@@ -250,7 +250,7 @@ class GhostFuncDriver:
             if not self._ask_confirm_error(thread, e):
                 message = Role.SYSTEM.new(content=f"Error occur: {e}")
                 thread.new_turn(
-                    event=DefaultEventType.OBSERVE.new(task_id="", messages=[message], from_task_id="")
+                    event=EventTypes.ROTATE.new(task_id="", messages=[message], from_task_id="")
                 )
                 return None, False
         finally:
@@ -260,12 +260,12 @@ class GhostFuncDriver:
         if not ok:
             message = Role.SYSTEM.new(content=executed.std_output)
             thread.new_turn(
-                event=DefaultEventType.OBSERVE.new(task_id="", messages=[message], from_task_id=""),
+                event=EventTypes.ROTATE.new(task_id="", messages=[message], from_task_id=""),
             )
             return None, False
         return result, True
 
-    def _ask_confirm_error(self, thread: MsgThread, error: Exception) -> bool:
+    def _ask_confirm_error(self, thread: GoThreadInfo, error: Exception) -> bool:
         chat = thread_to_chat(thread.id, [], thread)
         chat.appending.append(
             Role.SYSTEM.new(
@@ -286,7 +286,7 @@ class GhostFuncDriver:
         splits = code.split('</moss>', 2)
         return splits[0], True
 
-    def _save_thread(self, thread: MsgThread) -> None:
+    def _save_thread(self, thread: GoThreadInfo) -> None:
         self._cache.threads[self._target_qualname] = thread
 
     def destroy(self) -> None:

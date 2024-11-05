@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from ghostos.prototypes.realtime.abcd import ChanIn
@@ -22,7 +22,7 @@ class Broadcaster(ABC):
         pass
 
     @abstractmethod
-    def publish(self, topic: str, data: dict):
+    def publish(self, topic: str, data: Union[dict, None]):
         pass
 
     @abstractmethod
@@ -58,7 +58,7 @@ class SimpleBroadcaster(Broadcaster):
             self.topic_to_subscribers[topic] = subscribers
         return None
 
-    def publish(self, topic: str, data: dict):
+    def publish(self, topic: str, data: Union[dict, None]):
         if self._closed:
             raise RuntimeError("Broadcaster already closed")
         if topic not in self.topic_to_subscribers:
@@ -70,9 +70,9 @@ class SimpleBroadcaster(Broadcaster):
             if self._closed:
                 break
             chan = self.subscriber_channels[subscriber]
-            copied = deepcopy(data)
+            # copied = deepcopy(data)
             try:
-                chan.put(copied, block=False, timeout=0.5)
+                chan.put(data, block=False, timeout=0.5)
             except TimeoutError as e:
                 raise RuntimeError(f"Failed to publish because subscriber {subscriber} chan timed out: {e}")
             except Exception as e:

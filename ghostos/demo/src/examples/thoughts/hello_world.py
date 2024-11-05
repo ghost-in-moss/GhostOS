@@ -6,7 +6,7 @@ class Moss(Parent):
     replier: Replier
 
 
-# <moss>  the content between <moss> mark are not visible in the prompt for LLM
+# <moss-hide>  the content between <moss> mark are not visible in the prompt for LLM
 
 
 # todo: can define a moss thought in a moss file
@@ -27,4 +27,4 @@ if __name__ == "__main__":
         instruction="say hello world",
     )
 
-# </moss>
+# </moss-hide>

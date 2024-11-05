@@ -3,14 +3,14 @@ from typing import Optional, Dict, Any
 from ghostos.core.ghosts import Operator
 from ghostos.core.ghosts.schedulers import Replier
 from ghostos.core.messages import Role
-from ghostos.core.session import Task
+from ghostos.core.session import GoTaskStruct
 from ghostos.framework.operators import WaitsOperator, ThinkOperator, FinishOperator
 from ghostos.helpers import yaml_pretty_dump
 
 
 class ReplierImpl(Replier):
 
-    def __init__(self, task: Task, event_from_task: Optional[str] = None):
+    def __init__(self, task: GoTaskStruct, event_from_task: Optional[str] = None):
         callback_task_id = task.parent
         if event_from_task and event_from_task != task.task_id:
             callback_task_id = event_from_task
@@ -59,7 +59,7 @@ class ReplierImpl(Replier):
 
             # 用什么协议没想明白, function ? tool? system ?
             content = "# observe values: \n" + content
-            msg = Role.new_assistant_system(
+            msg = Role.new_system(
                 content=content,
             )
             messages.append(msg)

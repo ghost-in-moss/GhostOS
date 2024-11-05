@@ -15,9 +15,9 @@ from ghostos.core.llms import LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.messages import Caller
 from ghostos.core.session import (
-    Session, Event, DefaultEventType,
-    EventBus, TaskRepo, GhostProcessRepo, MsgThreadRepo, Messenger,
-    SessionProcess, Task, MsgThread,
+    Session, Event, EventTypes,
+    EventBus, GoTasks, GoProcesses, GoThreads, Messenger,
+    GoProcess, GoTaskStruct, GoThreadInfo,
 )
 from ghostos.framework.operators import OnEventOperator
 from ghostos.framework.multitasks import MultiTaskBasicImpl
@@ -61,9 +61,9 @@ class BasicGhost(Ghost, ABC):
         Storage,
         Configs,
         EventBus,
-        GhostProcessRepo,
-        TaskRepo,
-        MsgThreadRepo,
+        GoProcesses,
+        GoTasks,
+        GoThreads,
         Pool,
         LLMs,
         Shutdown,
@@ -94,9 +94,9 @@ class BasicGhost(Ghost, ABC):
             workspace: Workspace,
             entity_factory: EntityFactory,
             upstream: Stream,
-            process: SessionProcess,
+            process: GoProcess,
             max_operator_runs: int,
-            task: Optional[Task] = None,
+            task: Optional[GoTaskStruct] = None,
             task_id: Optional[str] = None,
     ):
         # init ghost container, validate it first
@@ -165,10 +165,10 @@ class BasicGhost(Ghost, ABC):
 
         # register session drivers:
         session_function_providers = {
-            TaskRepo: self._session.tasks,
-            GhostProcessRepo: self._session.processes,
+            GoTasks: self._session.tasks,
+            GoProcesses: self._session.processes,
             Messenger: self._session.messenger,
-            MsgThreadRepo: self._session.threads,
+            GoThreads: self._session.threads,
             EventBus: self._session.eventbus,
         }
         for contract, maker in session_function_providers.items():
@@ -194,16 +194,16 @@ class BasicGhost(Ghost, ABC):
             self,
             logger: LoggerItf,
             upstream: Stream,
-            process: SessionProcess,
+            process: GoProcess,
             root_thought: Thought,
-            task: Optional[Task] = None,
+            task: Optional[GoTaskStruct] = None,
             task_id: Optional[str] = None,
     ) -> Session:
         container = self.container()
         identifier = self.conf().identifier()
-        processes = container.force_fetch(GhostProcessRepo)
-        tasks = container.force_fetch(TaskRepo)
-        threads = container.force_fetch(MsgThreadRepo)
+        processes = container.force_fetch(GoProcesses)
+        tasks = container.force_fetch(GoTasks)
+        threads = container.force_fetch(GoThreads)
         pool = container.force_fetch(Pool)
         eventbus = container.force_fetch(EventBus)
         # task and thread init.
@@ -218,7 +218,7 @@ class BasicGhost(Ghost, ABC):
                 if not task:
                     identifier = root_thought.identifier()
                     meta = root_thought.to_entity_meta()
-                    task = Task.new(
+                    task = GoTaskStruct.new(
                         task_id=task_id,
                         session_id=process.session_id,
                         process_id=process.process_id,
@@ -236,7 +236,7 @@ class BasicGhost(Ghost, ABC):
         })
         thread = threads.get_thread(task.thread_id)
         if thread is None:
-            thread = MsgThread.new(None, thread_id=task.thread_id)
+            thread = GoThreadInfo.new(None, thread_id=task.thread_id)
         return BasicSession(
             ghost_name=identifier.name,
             ghost_role=self.role(),
@@ -290,12 +290,12 @@ class BasicGhost(Ghost, ABC):
                 return None
         task = self.session().task()
         if task.is_new():
-            event = DefaultEventType.CREATED.new(
+            event = EventTypes.CREATED.new(
                 task_id=self.session().task().task_id,
                 messages=inputs.messages,
             )
         else:
-            event = DefaultEventType.INPUT.new(
+            event = EventTypes.REQUEST.new(
                 task_id=self.session().task().task_id,
                 messages=inputs.messages,
             )

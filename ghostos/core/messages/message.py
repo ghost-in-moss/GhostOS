@@ -1,5 +1,6 @@
 import enum
-from typing import Optional, Dict, Set, Iterable, Union, List, ClassVar
+import time
+from typing import Optional, Dict, Set, Iterable, Union, List, Any, ClassVar
 from typing_extensions import Self, Literal
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
@@ -7,13 +8,13 @@ from ghostos.helpers import uuid
 from copy import deepcopy
 
 __all__ = [
-    "Message", "Role", "DefaultMessageTypes",
+    "Message", "Role", "MessageType",
     "MessageClass",
     "MessageKind", "MessageKindParser",
-    "Payload", "PayloadItem", "Attachment", "Caller",
+    "Caller",
 ]
 
-Seq = Literal["head", "chunk", "complete"]
+SeqType = Literal["head", "chunk", "complete"]
 
 
 class Role(str, enum.Enum):
@@ -21,23 +22,22 @@ class Role(str, enum.Enum):
     消息体的角色, 对齐了 OpenAI
     """
 
+    UNKNOWN = ""
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
-    FUNCTION = "function"
-    TOOL = "tool"
 
     @classmethod
     def all(cls) -> Set[str]:
         return set(map(lambda x: x.value, cls))
 
     @classmethod
-    def new_assistant_system(
+    def new_system(
             cls,
             content: str,
             memory: Optional[str] = None,
     ):
-        return cls.USER.new(content, memory=memory, name="__system__")
+        return cls.SYSTEM.new(content, memory=memory)
 
     def new(
             self,
@@ -47,7 +47,7 @@ class Role(str, enum.Enum):
             type_: Optional[str] = None,
     ) -> "Message":
         return Message.new_tail(
-            type_=type_ if type_ else DefaultMessageTypes.DEFAULT.value,
+            type_=type_ if type_ else MessageType.DEFAULT.value,
             role=self.value,
             name=name,
             content=content,
@@ -55,16 +55,25 @@ class Role(str, enum.Enum):
         )
 
 
-class DefaultMessageTypes(str, enum.Enum):
+class MessageType(str, enum.Enum):
     DEFAULT = ""
-    CHAT_COMPLETION = "openai.chat_completion"
-    ERROR = "ghostos.streaming.error"
-    FINAL = "ghostos.streaming.final"
-    ACK = "ghostos.streaming.ack"
+    TEXT = "text"
+    VARIABLE = "variable"
+    FUNCTION_CALL = "function_call"
+    FUNCTION_OUTPUT = "function_output"
+    AUDIO = "audio"
+    IMAGE = "image"
+    VIDEO = "video"
+    FILE = "file"
+    ERROR = "error"
+    FINAL = "final"
 
     def new(
             self, *,
-            content: str, role: str = Role.ASSISTANT.value, memory: Optional[str] = None, name: Optional[str] = None,
+            content: str,
+            role: str = Role.ASSISTANT.value,
+            memory: Optional[str] = None,
+            name: Optional[str] = None,
     ) -> "Message":
         chunk = not self.is_protocol_type(self.value)
         return Message(content=content, memory=memory, name=name, type=self.value, role=role, chunk=chunk)
@@ -92,12 +101,12 @@ class DefaultMessageTypes(str, enum.Enum):
     ):
         return self.new(content=content, role=Role.USER.value, memory=memory, name=name)
 
-    def match(self, message: "Message") -> bool:
-        return message.type == self.value
-
     @classmethod
     def final(cls):
         return Message(type=cls.FINAL.value, role=Role.ASSISTANT.value, chunk=False)
+
+    def match(self, message: "Message") -> bool:
+        return message.type == self.value
 
     @classmethod
     def is_final(cls, pack: "Message") -> bool:
@@ -125,70 +134,6 @@ class Caller(BaseModel):
 
     def add(self, message: "Message") -> None:
         message.callers.append(self)
-
-
-class Payload(BaseModel, ABC):
-    """
-    消息体的可扩展的部分. 拥有强类型设计.
-    """
-    key: ClassVar[str]
-
-    @classmethod
-    def read(cls, message: "Message") -> Optional["Payload"]:
-        value = message.payloads.get(cls.key, None)
-        if value is None:
-            return None
-        return cls(**value)
-
-    def set(self, message: "Message") -> None:
-        message.payloads[self.key] = self.model_dump()
-
-    def exists(self, message: "Message") -> bool:
-        return self.key in message.payloads
-
-
-class PayloadItem(Payload, ABC):
-    """
-    自身可以粘包的特殊 payload.
-    比如 tokens 的计数.
-    """
-
-    @abstractmethod
-    def join(self, payload: "PayloadItem") -> "PayloadItem":
-        pass
-
-    def set(self, message: "Message") -> None:
-        exists = message.payloads.get(self.key, None)
-        if exists is not None:
-            join = self.__class__(**exists)
-            payload = self.join(join)
-            payload.set(message)
-            return
-        super().set(message)
-
-
-class Attachment(BaseModel, ABC):
-    """
-    消息上可以追加的附件.
-    """
-    key: ClassVar[str]
-
-    @classmethod
-    def read(cls, message: "Message") -> Optional[List["Attachment"]]:
-        value = message.attachments.get(cls.key, None)
-        if not value:
-            return None
-        result = []
-        for item in value:
-            result.append(cls(**item))
-        return result
-
-    def add(self, message: "Message") -> None:
-        values = message.attachments.get(self.key)
-        if values is None:
-            values = []
-        values.append(self.model_dump())
-        message.attachments[self.key] = values
 
 
 # the Message class is a container for every kind of message and it's chunks.
@@ -232,17 +177,11 @@ class Message(BaseModel):
 
     msg_id: str = Field(default="", description="unique message id. ")
     ref_id: Optional[str] = Field(default=None, description="the referenced message id.")
+    index: Optional[int] = Field(default=None, description="the index of the message.")
     type: str = Field(default="", description="default message type, if empty, means text")
-    # created: float = Field(
-    #     default=0.0,
-    #     description="Message creation time, only available in head chunk or complete one",
-    # )
-    # todo: remove later, use seq instead
-    chunk: bool = Field(default=True, description="if the message is a chunk or a complete one")
 
-    role: str = Field(default=Role.ASSISTANT.value, description="Message role", enum=Role.all())
+    role: str = Field(default="", description="Message role", enum=Role.all())
     name: Optional[str] = Field(default=None, description="Message sender name")
-
     content: Optional[str] = Field(
         default=None,
         description="Message content that for client side. empty means it shall not be showed",
@@ -252,15 +191,14 @@ class Message(BaseModel):
         description="Message memory that for llm, if none, means content is memory",
     )
 
-    # --- attachments --- #
+    attrs: Optional[Dict[str, Any]] = Field(
+        None,
+        description="the additional attrs for the message type"
+    )
 
     payloads: Dict[str, Dict] = Field(
         default_factory=dict,
         description="payload type key to payload item. payload shall be a strong-typed dict"
-    )
-    attachments: Dict[str, List[Dict]] = Field(
-        default_factory=dict,
-        description="attachment type key to attachment items. attachment shall be a strong-typed dict",
     )
 
     callers: List[Caller] = Field(
@@ -271,11 +209,10 @@ class Message(BaseModel):
     # chunk_count: int = Field(default=0, description="how many chunks of this complete message")
     # time_cast: float = Field(default=0.0, description="from first chunk to tail message.")
 
-    streaming_id: Optional[str] = Field(
-        default=None,
-        description="may be multiple streaming exists, use streaming id to separate them into a order",
-    )
-    seq: Seq = Field(default="chunk")
+    seq: SeqType = Field(default="chunk", description="sequence type in streaming")
+    created: float = Field(default=0.0, description="time when message was created")
+
+    __attachment__: Optional[Any] = None
 
     @classmethod
     def new_head(
@@ -287,7 +224,6 @@ class Message(BaseModel):
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
             ref_id: Optional[str] = None,
-            # created: int = 0,
     ):
         """
         create a head chunk message
@@ -303,14 +239,17 @@ class Message(BaseModel):
         """
         if msg_id is None:
             msg_id = uuid()
-        # if created <= 0:
-        #     created = round(time.time(), 4)
+        created = round(time.time(), 4)
         return cls(
-            role=role, name=name, content=content, memory=memory, chunk=True,
+            role=role,
+            name=name,
+            content=content,
+            memory=memory,
+            seq="head",
             type=typ_,
             ref_id=ref_id,
             msg_id=msg_id,
-            # created=created,
+            created=created,
         )
 
     @classmethod
@@ -323,7 +262,7 @@ class Message(BaseModel):
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
             ref_id: Optional[str] = None,
-            # created: int = 0,
+            attrs: Optional[Dict[str, Any]] = None,
     ):
         """
         create a tail message, is the complete message of chunks.
@@ -334,17 +273,20 @@ class Message(BaseModel):
         :param name:
         :param msg_id:
         :param ref_id:
-        # :param created:
+        :param attrs:
         :return:
         """
         msg = cls.new_head(
-            role=role, name=name, content=content, memory=memory,
+            role=role,
+            name=name,
+            content=content,
+            memory=memory,
             typ_=type_,
             msg_id=msg_id,
             ref_id=ref_id,
-            # created=created,
         )
-        msg.chunk = False
+        msg.seq = "complete"
+        msg.attrs = attrs
         return msg
 
     @classmethod
@@ -366,8 +308,9 @@ class Message(BaseModel):
         :return:
         """
         return cls(
-            role=role, name=name, content=content, memory=memory, chunk=True,
+            role=role, name=name, content=content, memory=memory,
             type=typ_,
+            seq="chunk",
         )
 
     def get_content(self) -> str:
@@ -448,44 +391,38 @@ class Message(BaseModel):
         if pack.memory is not None:
             self.memory = pack.memory
 
-        self.payloads.update(deepcopy(pack.payloads))
+        if pack.attrs:
+            self.attrs.update(pack.attrs)
 
-        if pack.attachments is not None:
-            for key, items in pack.attachments.items():
-                saved = self.attachments.get(key, [])
-                saved.append(*[deepcopy(at) for at in saved])
-                self.attachments[key] = saved
+        self.payloads.update(deepcopy(pack.payloads))
         if pack.callers:
             self.callers.extend(pack.callers)
-        # self.chunk_count += 1
-        # if self.created:
-        #     now = round(time.time(), 4)
-        #     self.time_cast = round(now - self.created, 4)
 
     def get_type(self) -> str:
         """
         return a message type
         """
-        return self.type or DefaultMessageTypes.DEFAULT
+        return self.type or MessageType.DEFAULT
 
     def is_empty(self) -> bool:
         """
         a message is empty means it has no content, payloads, callers, or attachments
         """
         no_content = not self.content and not self.memory
-        no_payloads = not self.payloads and not self.attachments and not self.callers
-        return no_content and no_payloads
+        no_attrs = not self.attrs
+        no_payloads = not self.payloads and self.__attachment__ is None and not self.callers
+        return no_content and no_attrs and no_payloads
 
     def is_complete(self) -> bool:
         """
         complete message is not a chunk one
         """
-        return not self.chunk or self.seq == "complete"
+        return self.seq == "complete"
 
     def is_head(self) -> bool:
         return self.seq == "head"
 
-    def get_seq(self) -> Seq:
+    def get_seq(self) -> SeqType:
         return self.seq
 
     def dump(self) -> Dict:
@@ -498,30 +435,12 @@ class Message(BaseModel):
         return self.get_content()
 
 
-
-class Buffer(ABC):
-
-    @abstractmethod
-    def buffer(self, message: Iterable[Message]) -> Iterable[Message]:
-        pass
-
-    @abstractmethod
-    def completes(self) -> List[Message]:
-        pass
-
-    def __enter__(self):
-        return self
-
-    @abstractmethod
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-
 class MessageClass(ABC):
     """
     A message class with every field that is strong-typed
     the payloads and attachments shall parse to dict when generate to a Message.
     """
+    message_type: ClassVar[Union[MessageType, str]]
 
     @abstractmethod
     def to_message(self) -> Message:
@@ -537,6 +456,38 @@ class MessageClass(ABC):
         """
         pass
 
+    @abstractmethod
+    def to_openai_param(self) -> Dict:
+        pass
+
+
+class MessageClasses:
+    def __init__(
+            self,
+            classes: Iterable[MessageClass],
+    ) -> None:
+        self.classes = {str(cls.message_type): cls for cls in classes}
+
+    def parse(self, messages: List[Message]) -> List[MessageClass]:
+        result = []
+        for message in messages:
+            if not message.is_complete():
+                continue
+            if message.type not in self.classes:
+                continue
+            cls = self.classes[message.type]
+            item = cls.from_message(message)
+            if item is not None:
+                result.append(item)
+        return result
+
+    def to_openai_params(self, messages: List[Message]) -> List[Dict]:
+        parsed = self.parse(messages)
+        result = []
+        for message in parsed:
+            result.append(message.to_openai_param())
+        return result
+
 
 MessageKind = Union[Message, MessageClass, str]
 """sometimes we need three forms of the message to define an argument or property."""
@@ -547,9 +498,15 @@ class MessageKindParser:
     middleware that parse weak MessageKind into Message chunks
     """
 
-    def __init__(self, role: str = Role.ASSISTANT.value, ref_id: Optional[str] = None) -> None:
+    def __init__(
+            self, *,
+            name: Optional[str] = None,
+            role: str = Role.ASSISTANT.value,
+            ref_id: Optional[str] = None,
+    ) -> None:
         self.role = role
         self.ref_id = ref_id
+        self.name = name
 
     def parse(self, messages: Iterable[MessageKind]) -> Iterable[Message]:
         for item in messages:
@@ -571,4 +528,8 @@ class MessageKindParser:
     def _with_ref(self, item: Message) -> Message:
         if self.ref_id is not None:
             item.ref_id = self.ref_id
+        if not item.role and self.role:
+            item.role = self.role
+        if not item.name and self.name:
+            item.name = self.name
         return item

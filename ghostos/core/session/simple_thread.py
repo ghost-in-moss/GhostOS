@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Message
-from ghostos.core.session.threads import MsgThread, Turn
+from ghostos.core.session.threads import GoThreadInfo, Turn
 
 DESCRIPTION = """
 Simple Thread is a simple mode for MsgThread, useful to show thread important information when debugging.
@@ -53,7 +53,7 @@ class SimpleMsgThread(BaseModel):
     turns: List[SimpleTurn] = Field(default_factory=list)
 
     @classmethod
-    def from_thread(cls, thread: MsgThread) -> "SimpleMsgThread":
+    def from_thread(cls, thread: GoThreadInfo) -> "SimpleMsgThread":
         turns = []
         idx = 0
         for turn in thread.turns():

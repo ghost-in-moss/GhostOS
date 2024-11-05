@@ -1,7 +1,7 @@
 from typing import Iterable, List, Optional, Dict
 from typing_extensions import Self
 from abc import ABC, abstractmethod
-from ghostos.core.messages.message import Message, DefaultMessageTypes
+from ghostos.core.messages.message import Message, MessageType
 from ghostos.core.messages.helpers import iter_messages
 
 
@@ -42,7 +42,7 @@ class SequencePipe(Pipe):
         head: Optional[Message] = None
         final: Optional[Message] = None
         for item in messages:
-            if DefaultMessageTypes.is_protocol_message(item):
+            if MessageType.is_protocol_message(item):
                 break
             if head is None:
                 if item.is_complete():
@@ -78,7 +78,7 @@ class CompleteOnly(Pipe):
 
     def across(self, messages: Iterable[Message]) -> Iterable[Message]:
         for item in messages:
-            if DefaultMessageTypes.is_protocol_message(item):
+            if MessageType.is_protocol_message(item):
                 yield item
                 break
             elif item.is_complete():
@@ -93,7 +93,7 @@ class TailPatchPipe(Pipe):
     def across(self, messages: Iterable[Message]) -> Iterable[Message]:
         last_tail: Optional[Message] = None
         for item in messages:
-            if DefaultMessageTypes.is_protocol_message(item):
+            if MessageType.is_protocol_message(item):
                 yield item
                 break
             if not item.is_complete():

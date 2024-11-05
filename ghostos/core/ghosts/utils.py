@@ -3,8 +3,8 @@ from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought, ThoughtDriver
 from ghostos.core.session import (
-    Event, DefaultEventType,
-    Task, TaskState, TaskRepo,
+    Event, EventTypes,
+    GoTaskStruct, TaskState, GoTasks,
 )
 from ghostos.core.messages import (
     MessageKind,
@@ -51,7 +51,7 @@ class Utils:
         root_thought = self.ghost.root_thought()
         identifier = root_thought.identifier()
         meta = root_thought.to_entity_meta()
-        task = Task.new(
+        task = GoTaskStruct.new(
             task_id=task_id,
             session_id=session.id(),
             process_id=process.process_id,
@@ -64,7 +64,7 @@ class Utils:
         session.update_process(process)
         session.update_task(task, None, False)
 
-    def fetch_thought_from_task(self, task: "Task") -> ThoughtDriver:
+    def fetch_thought_from_task(self, task: "GoTaskStruct") -> ThoughtDriver:
         thought = self.ghost.entity_factory().force_new_entity(task.meta, Thought)
         return self.ghost.mindset().get_thought_driver(thought)
 
@@ -126,7 +126,7 @@ class Utils:
             children.append(child)
             children_names.append(child.name)
             # 准备任务的创建事件. 这个事件的消息应该是目标 Thought 自己生成的. 所以不需要消息.
-            e = DefaultEventType.CREATED.new(
+            e = EventTypes.CREATED.new(
                 task_id=task_id,
                 messages=[],
                 from_task_id=parent_task_id,
@@ -138,7 +138,7 @@ class Utils:
         session.create_tasks(*children)
         # 存储要发送的事件.
         session.fire_events(*events)
-        thread.append(Role.new_assistant_system(
+        thread.append(Role.new_system(
             content=f"create {len(children_names)} async tasks",
         ))
         # 更新 awaits 的信息.
@@ -153,7 +153,7 @@ class Utils:
             reason: str = "",
             instruction: str = "",
             includes: Optional[List[str]] = None,
-            self_task: Optional[Task] = None,
+            self_task: Optional[GoTaskStruct] = None,
     ) -> None:
         """
         取消当前任务的子任务.
@@ -169,7 +169,7 @@ class Utils:
         if not children_ids:
             return
 
-        tasks = self.ghost.container().force_fetch(TaskRepo)
+        tasks = self.ghost.container().force_fetch(GoTasks)
         children = list(tasks.get_task_briefs(children_ids))
         if not children:
             # 没有 children.
@@ -179,7 +179,7 @@ class Utils:
         canceling_events = []
         for t in children:
             if not TaskState.is_dead(t.state) and t.task_id in includes_set:
-                event = DefaultEventType.CANCELING.new(
+                event = EventTypes.CANCEL.new(
                     task_id=t.task_id,
                     from_task_id=self_task.task_id,
                     from_task_name=self_task.name,
@@ -210,7 +210,7 @@ class Utils:
             messages: List[MessageKind],
             reason: str = "",
             instruction: str = "",
-            self_task: Optional[Task] = None,
+            self_task: Optional[GoTaskStruct] = None,
     ) -> None:
         """
         主动向一个目标任务发送通知.
@@ -230,7 +230,7 @@ class Utils:
         session = self.ghost.session()
         self_task = self_task if self_task is not None else session.task()
 
-        event = DefaultEventType(event_type).new(
+        event = EventTypes(event_type).new(
             task_id=task_id,
             messages=outputs,
             from_task_id=self_task.task_id,

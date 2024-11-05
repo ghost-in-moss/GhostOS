@@ -3,8 +3,8 @@ import time
 import datetime
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-from ghostos.core.llms import LLMs, Chat, ModelConf, ServiceConf
-from ghostos.core.messages import Message, DefaultMessageTypes
+from ghostos.core.llms import LLMs, Prompt, ModelConf, ServiceConf
+from ghostos.core.messages import Message, MessageType
 
 
 # 测试用, 不直接对外开放.
@@ -21,7 +21,7 @@ class ChatCompletionTestResult(BaseModel):
 
 
 class ChatCompletionTestCase(BaseModel):
-    chat: Chat
+    chat: Prompt
     apis: List[APIInfo]
     results: List[ChatCompletionTestResult] = Field(default_factory=list)
 
@@ -39,7 +39,7 @@ def run_test_cases(cases: ChatCompletionTestCase, llms: LLMs) -> Dict[str, Messa
     return result
 
 
-def run_test_case(api_info: APIInfo, chat: Chat, llms: LLMs, result: Dict[str, Message]) -> None:
+def run_test_case(api_info: APIInfo, chat: Prompt, llms: LLMs, result: Dict[str, Message]) -> None:
     api = None
     if api_info.api:
         api = llms.get_api(api_info.api)
@@ -58,7 +58,7 @@ def run_test_case(api_info: APIInfo, chat: Chat, llms: LLMs, result: Dict[str, M
     try:
         message = api.chat_completion(chat)
     except Exception as e:
-        message = DefaultMessageTypes.ERROR.new(content=str(e))
+        message = MessageType.ERROR.new(content=str(e))
     finally:
         end = time.time()
         duration = end - start

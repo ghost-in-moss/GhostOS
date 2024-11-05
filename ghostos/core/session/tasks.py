@@ -1,18 +1,16 @@
 import time
-from typing import Optional, List, Set, Iterable, ClassVar, Dict
+from typing import Optional, List, Set, Iterable, ClassVar, Dict, Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
-from ghostos.entity import EntityMeta
-from ghostos.common import Identifier, Identifiable
+from ghostos.common import Identifier, Identical, EntityMeta
 from ghostos.core.messages import Payload
 from contextlib import contextmanager
 
 __all__ = [
-    'Task', 'TaskPayload', 'TaskBrief',
+    'GoTaskStruct', 'TaskPayload', 'TaskBrief',
     'TaskState',
-    'TaskRepo',
-    'WaitGroup',
+    'GoTasks',
 ]
 
 
@@ -37,8 +35,6 @@ class TaskState(str, Enum):
     FAILED = "failed"
     """the task is failed due to an exception"""
 
-    KILLED = "killed"
-
     FINISHED = "finished"
     """the task is finished"""
 
@@ -47,17 +43,18 @@ class TaskState(str, Enum):
         return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED, cls.KILLED}
 
 
-class WaitGroup(BaseModel):
-    """
-    await group of children tasks that will wake up the task.
-    """
-    tasks: Dict[str, bool] = Field(description="children task ids to wait")
-
-    def is_done(self) -> bool:
-        for _, ok in self.tasks.items():
-            if not ok:
-                return False
-        return True
+#
+# class WaitGroup(BaseModel):
+#     """
+#     await group of children tasks that will wake up the task.
+#     """
+#     tasks: Dict[str, bool] = Field(description="children task ids to wait")
+#
+#     def is_done(self) -> bool:
+#         for _, ok in self.tasks.items():
+#             if not ok:
+#                 return False
+#         return True
 
 
 class AssistantInfo(Identifier, BaseModel):
@@ -67,10 +64,10 @@ class AssistantInfo(Identifier, BaseModel):
     meta_prompt: str = Field(description="meta prompt of the assistant")
 
 
-class Task(BaseModel):
+class GoTaskStruct(BaseModel):
     # -- scope --- #
-    session_id: str = Field(
-        description="session id that task belongs.",
+    shell_id: str = Field(
+        description="shell id that task belongs.",
     )
     process_id: str = Field(
         description="""
@@ -94,24 +91,49 @@ the id of the thread that contains the context of the task.
 Parent task id of the task.
 """,
     )
+    depth: int = Field(
+        default=0,
+        description="the depth of the task",
+    )
+
+    # --- state values --- #
+
+    pointer: EntityMeta = Field(
+        description="the entity meta of the task handler",
+    )
+
+    state: str = Field(
+        default=TaskState.NEW.value,
+        description="""
+    the state of the current task.
+    """
+    )
+
+    status_desc: str = Field(
+        default="",
+        description="The description of the current task status.",
+    )
+
+    globals: Dict = Field(
+        default_factory=dict,
+        description="the global values that inherit from the parent task or shell",
+    )
+
+    properties: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="the state data of the task handler"
+    )
 
     # --- brief --- #
     name: str = Field(
-        description="The name of the task. "
+        description="The name of the task. not very important"
     )
-    description: str = Field(
-        description="The description of the task"
+    purpose: str = Field(
+        description="The description of the task purpose"
     )
     priority: float = Field(
         default=0.0,
         description="The priority of the task",
-    )
-
-    # --- assistant info --- #
-
-    assistant: Optional[AssistantInfo] = Field(
-        default=None,
-        description="the assistant information, if given, took it as the message sender",
     )
 
     # --- relations --- #
@@ -123,30 +145,6 @@ children task ids to wait
 """
     )
 
-    depending: List[WaitGroup] = Field(
-        default_factory=list,
-        description="the children task ids that wait them callback",
-    )
-
-    # --- thought --- #
-    meta: EntityMeta = Field(
-        description="""
-The meta data to restore the handler of this task. 
-"""
-    )
-
-    # --- state --- #
-    state: str = Field(
-        default=TaskState.NEW.value,
-        description="""
-the state of the current task.
-"""
-    )
-    # --- state ---#
-    logs: List[str] = Field(
-        default_factory=list,
-        description="log of the status change of the task",
-    )
     # --- time related --- #
     created: float = Field(
         default_factory=lambda: round(time.time(), 4),
@@ -156,38 +154,15 @@ the state of the current task.
         default=0.0,
         description="The time the task was updated.",
     )
-    overdue: float = Field(
-        default=0.0,
-        description="The time the task was overdue.",
-    )
-    timeout: float = Field(
-        default=0.0,
-        description="timeout for each round of the task execution",
-    )
 
     # --- system --- #
     lock: Optional[str] = Field(
         default=None,
     )
+
     turns: int = Field(
         default=0,
         description="the turn number of the task runs",
-    )
-    think_turns: int = Field(
-        default=0,
-        description="记录 task 已经自动运行过多少次. 如果是 0 的话, 则意味着它刚刚被创建出来. ",
-    )
-    depth: int = Field(
-        default=0,
-        description="task depth that should be parent task depth +1 if parent exists",
-    )
-    max_think_turns: int = Field(
-        default=20,
-        description="任务最大自动运行轮数, 为 0 的话表示无限. "
-    )
-    max_children: int = Field(
-        default=20,
-        description="当前任务最大的子任务数, 超过这范围的子任务开始垃圾回收. "
     )
 
     @classmethod
@@ -200,9 +175,8 @@ the state of the current task.
             description: str,
             meta: EntityMeta,
             parent_task_id: Optional[str] = None,
-            assistant: Optional[Identifier] = None,
-    ) -> "Task":
-        return Task(
+    ) -> "GoTaskStruct":
+        return GoTaskStruct(
             task_id=task_id,
             session_id=session_id,
             process_id=process_id,
@@ -211,7 +185,6 @@ the state of the current task.
             meta=meta,
             name=name,
             description=description,
-            assistant=assistant,
         )
 
     def add_child(
@@ -221,11 +194,11 @@ the state of the current task.
             description: str,
             meta: EntityMeta,
             assistant: Optional[Identifier] = None,
-    ) -> "Task":
+    ) -> "GoTaskStruct":
         self.children.append(task_id)
         return self.new(
             task_id=task_id,
-            session_id=self.session_id,
+            session_id=self.shell_id,
             process_id=self.process_id,
             name=name,
             description=description,
@@ -233,15 +206,6 @@ the state of the current task.
             parent_task_id=self.task_id,
             assistant=assistant,
         )
-
-    def think_too_much(self) -> bool:
-        """
-        任务是否超过了自动思考的轮次.
-        """
-        return 0 < self.max_think_turns <= self.think_turns
-
-    def too_much_children(self) -> bool:
-        return 0 < self.max_children <= len(self.children)
 
     def remove_child(self, child_task_id: str) -> bool:
         results = []
@@ -258,7 +222,7 @@ the state of the current task.
         return Identifier(
             id=self.id,
             name=self.name,
-            description=self.description,
+            description=self.purpose,
         )
 
     def is_dead(self) -> bool:
@@ -267,46 +231,27 @@ the state of the current task.
     def is_new(self) -> bool:
         return TaskState.NEW.value == self.state
 
-    def depending_tasks(self) -> Set[str]:
-        result = set()
-        for group in self.depending:
-            for task in group.tasks:
-                result.add(task)
-        return result
-
-    def depend_on_tasks(self, task_ids: List[str]) -> None:
-        group = WaitGroup(
-            tasks={task_id: False for task_id in task_ids},
-        )
-        self.depending.append(group)
-
-    def on_callback_task(self, task_id: str) -> Optional[WaitGroup]:
-        """
-        得到一个 task id 的回调. 判断是否一组 wait group 被激活了.
-        :param task_id:
-        :return: 是否有 wait group 激活了.
-        """
-        for group in self.depending:
-            if task_id in group.tasks:
-                group.tasks[task_id] = True
-                if group.is_done():
-                    return group
-        return None
-
-    def update_turn(self) -> None:
+    def new_turn(self) -> Self:
         """
         保存一轮变更之前运行的方法.
+        todo
         """
-        self.updated = round(time.time(), 4)
-        self.turns += 1
+        return self.model_copy(
+            update={
+                "updated": round(time.time(), 4),
+                "turns": self.turns + 1,
+
+            },
+            deep=True,
+        )
 
 
-class TaskBrief(BaseModel, Identifiable):
+class TaskBrief(BaseModel, Identical):
     task_id: str = Field(description="the id of the task")
     name: str = Field(description="the name of the task")
-    description: str = Field(description="the description of the task")
+    purpose: str = Field(description="the purpose of the task")
     state: str = Field(description="the state of the task")
-    logs: List[str] = Field(description="the logs of the task")
+    status_desc: str = Field(description="the description of the task status")
 
     def is_overdue(self) -> bool:
         now = time.time()
@@ -320,7 +265,7 @@ class TaskBrief(BaseModel, Identifiable):
         )
 
     @classmethod
-    def from_task(cls, task: Task) -> "TaskBrief":
+    def from_task(cls, task: GoTaskStruct) -> "TaskBrief":
         return TaskBrief(**task.model_dump())
 
 
@@ -330,32 +275,49 @@ class TaskPayload(Payload):
     task_id: str = Field(description="the id of the task")
     task_name: str = Field(description="the name of the task")
     process_id: str = Field(description="the id of the process")
+    session_id: str = Field(description="the session id of the task")
     thread_id: str = Field(description="the id of the thread")
 
     @classmethod
-    def from_task(cls, task: Task) -> "TaskPayload":
+    def from_task(cls, task: GoTaskStruct) -> "TaskPayload":
         return cls(
             task_id=task.task_id,
             task_name=task.name,
+            session_id=task.shell_id,
             process_id=task.process_id,
             thread_id=task.thread_id,
         )
 
 
-class TaskRepo(ABC):
+class TaskLocker(ABC):
+
+    @abstractmethod
+    def acquire(self) -> bool:
+        pass
+
+    @abstractmethod
+    def refresh(self) -> bool:
+        pass
+
+    @abstractmethod
+    def release(self) -> bool:
+        pass
+
+
+class GoTasks(ABC):
     """
     管理 task 存储的模块. 通常集成到 Session 里.
     """
 
     @abstractmethod
-    def save_task(self, *tasks: Task) -> None:
+    def save_task(self, *tasks: GoTaskStruct) -> None:
         """
         保存一个或者多个 task.
         """
         pass
 
     @abstractmethod
-    def get_task(self, task_id: str, lock: bool) -> Optional[Task]:
+    def get_task(self, task_id: str, lock: bool) -> Optional[GoTaskStruct]:
         """
         使用 task id 来获取一个 task.
         :param task_id:
@@ -374,17 +336,16 @@ class TaskRepo(ABC):
         pass
 
     @abstractmethod
-    def get_tasks(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[Task]:
+    def get_tasks(self, task_ids: List[str]) -> Dict[str, GoTaskStruct]:
         """
         从数据库里读取出多个 task. 不会获取目标 task 的锁, 所以也无法更新.
         :param task_ids:
-        :param states:
         :return:
         """
         pass
 
     @abstractmethod
-    def get_task_briefs(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[TaskBrief]:
+    def get_task_briefs(self, task_ids: List[str]) -> Dict[str, TaskBrief]:
         """
         获取多个任务的摘要信息.
         :param task_ids:
@@ -394,22 +355,10 @@ class TaskRepo(ABC):
         pass
 
     @abstractmethod
-    def unlock_task(self, task_id: str, lock: str) -> None:
+    def lock_task(self, task_id: str) -> TaskLocker:
         """
-        对一个任务解锁.
         :param task_id:
-        :param lock:
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def refresh_task_lock(self, task_id: str, lock: str) -> Optional[str]:
-        """
-        更新一个任务的锁, 也会给它续期.
-        :param task_id:
-        :param lock:
-        :return:
+        :return: None if not locked
         """
         pass
 

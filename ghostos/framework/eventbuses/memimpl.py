@@ -20,7 +20,7 @@ class MemEventBusImpl(EventBus):
             self.notify_task(e.task_id)
 
     def _send_task_event(self, e: Event) -> None:
-        event_id = e.id
+        event_id = e.event_id
         task_id = e.task_id
         self._events[event_id] = e
         if task_id not in self._task_queues:

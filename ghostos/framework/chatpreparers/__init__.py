@@ -1,1 +1,1 @@
-from ghostos.framework.chatpreparers.assistant_preparer import OtherAgentOrTaskPreparer
+from ghostos.framework.chatpreparers.assistant_preparer import OtherAgentOrTaskPipe

@@ -30,8 +30,8 @@ class Moss(Parent):
     """依赖注入 Foo 的测试用例. """
 
 
-# <moss>
-# !!! 使用 `# <moss>` 和 `# </moss>` 包裹的代码不会对大模型呈现.
+# <moss-hide>
+# !!! 使用 `# <moss-hide>` 和 `# </moss-hide>` 包裹的代码不会对大模型呈现.
 
 from typing import TYPE_CHECKING
 
@@ -105,4 +105,4 @@ if __name__ == "__test__":
         """
         return plus(2, 2)
 
-# </moss>
+# </moss-hide>

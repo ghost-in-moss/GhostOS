@@ -26,7 +26,7 @@ class WeatherAIFuncResult(AIFuncResult):
     wind_dir: Optional[float] = Field(default=None, description="the wind direction of the weather")
 
 
-# <moss>
+# <moss-hide>
 
 def __aifunc_instruction__(fn: WeatherAIFunc) -> str:
     return "Your task is using get_weather function to get weather information fit the input"
@@ -35,4 +35,4 @@ def __aifunc_instruction__(fn: WeatherAIFunc) -> str:
 
 
 example = WeatherAIFunc()
-# </moss>
+# </moss-hide>

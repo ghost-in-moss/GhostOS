@@ -4,8 +4,8 @@ import json
 from typing import Optional, ClassVar
 from ghostos.container import Container
 from ghostos.core.ghosts import Action, Ghost
-from ghostos.core.llms import Chat, FunctionalToken, ChatPreparer
-from ghostos.core.messages import DefaultMessageTypes, Caller
+from ghostos.core.llms import Prompt, FunctionalToken, PromptPipe
+from ghostos.core.messages import MessageType, Caller
 from ghostos.core.moss import MossRuntime, moss_message
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.session import Session
@@ -116,7 +116,7 @@ At these scenarios you shall write target code as string, and using the librarie
             description=self._functional_token.description,
         )
 
-    def prepare_chat(self, chat: Chat) -> Chat:
+    def process(self, chat: Prompt) -> Prompt:
         # update functional tokens
         function_token = self._functional_token
         chat.functional_tokens.append(function_token)
@@ -124,7 +124,7 @@ At these scenarios you shall write target code as string, and using the librarie
         # update code prompt as system message
         code_prompt = self._moss_runtime.prompter().dump_context_prompt()
         moss_instruction = self.template.format(code=code_prompt)
-        moss_prompt = DefaultMessageTypes.DEFAULT.new_system(
+        moss_prompt = MessageType.DEFAULT.new_system(
             content=moss_instruction,
         )
         chat.system.append(moss_prompt)
@@ -133,8 +133,8 @@ At these scenarios you shall write target code as string, and using the librarie
         for name, member in inspect.getmembers(moss_instance):
             if name.startswith("_"):
                 continue
-            if isinstance(member, ChatPreparer):
-                member.prepare_chat(chat)
+            if isinstance(member, PromptPipe):
+                member.process(chat)
 
         return chat
 

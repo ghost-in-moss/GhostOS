@@ -2,10 +2,10 @@ from typing import Optional, Iterable, TYPE_CHECKING, Type, Dict, List
 from ghostos.container import Container, Provider
 from ghostos.core.session.messenger import Messenger, Buffed
 from ghostos.core.messages import (
-    Message, Payload, Attachment, Role, DefaultMessageTypes,
+    Message, Payload, Attachment, Role, MessageType,
     Buffer, Stream,
 )
-from ghostos.core.session.threads import MsgThread
+from ghostos.core.session.threads import GoThreadInfo
 from ghostos.core.llms import FunctionalToken
 from ghostos.framework.messages.buffers import DefaultBuffer
 from ghostos.helpers import uuid
@@ -28,7 +28,7 @@ class DefaultMessenger(Messenger, Stream):
             self, *,
             depth: int = 0,
             upstream: Optional[Stream] = None,
-            thread: Optional["MsgThread"] = None,
+            thread: Optional["GoThreadInfo"] = None,
             name: Optional[str] = None,
             role: Optional[str] = None,
             buffer: Optional[Buffer] = None,
@@ -51,7 +51,7 @@ class DefaultMessenger(Messenger, Stream):
         :param logger:
         """
         self._depth = depth
-        self._thread: Optional[MsgThread] = thread
+        self._thread: Optional[GoThreadInfo] = thread
         # self._streaming_id: str = uuid()
         self._name = name
         self._logger = logger
@@ -112,14 +112,14 @@ class DefaultMessenger(Messenger, Stream):
         if self.stopped():
             return False
 
-        elif DefaultMessageTypes.is_final(pack):
+        elif MessageType.is_final(pack):
             # 下游发送的 final 包, 上游会装作已经发送成功.
             return True
 
         with self._locker:
             # 下游返回 error, 会导致全链路的 messenger 因为 error 而停止.
             # 所以 error 类型的消息, 链路里只能有一个.
-            if DefaultMessageTypes.ERROR.match(pack):
+            if MessageType.ERROR.match(pack):
                 # receive error pack will stop the current streaming.
                 self._stop(pack)
                 return True
@@ -183,7 +183,7 @@ class DefaultMessenger(Messenger, Stream):
         if self._stopped:
             return False
         for item in delivery:
-            if not DefaultMessageTypes.is_protocol_message(item) and item.chunk and not self._accept_chunks:
+            if not MessageType.is_protocol_message(item) and item.chunk and not self._accept_chunks:
                 continue
             # 如果发送不成功, 直接中断.
             # if self._depth == 0:
@@ -223,8 +223,8 @@ class DefaultMessenger(Messenger, Stream):
         self._stopped = True
         if self._destroyed:
             return
-        if final is None or not DefaultMessageTypes.is_protocol_message(final):
-            final = DefaultMessageTypes.final()
+        if final is None or not MessageType.is_protocol_message(final):
+            final = MessageType.final()
         self._deliver_to_upstream([final])
         self.destroy()
 
@@ -242,7 +242,7 @@ class DefaultMessenger(Messenger, Stream):
             return
         self.flush()
         if exc_val:
-            self._stop(DefaultMessageTypes.ERROR.new(content=str(exc_val)))
+            self._stop(MessageType.ERROR.new(content=str(exc_val)))
         self.destroy()
 
     def destroy(self) -> None:

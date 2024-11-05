@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from typing import List, Iterable, Optional, Union, Callable
+from typing import List, Iterable, Optional, Union, Callable, Tuple
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
@@ -10,34 +10,35 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 
 from pydantic import BaseModel, Field
 from ghostos import helpers
-from ghostos.core.messages import Message, Role
-from .tools import LLMTool, FunctionalToken
+from ghostos.core.messages import Message, Role, Payload
+from .tools import LLMFunc, FunctionalToken
 
 __all__ = [
-    'LLMTool', 'FunctionalToken',
-    'Chat', 'ChatPreparer',
-    'prepare_chat',
+    'Prompt', 'PromptPipe',
+    'run_prompt_pipeline',
+    'PromptStorage',
 ]
-
 
 
 # ---- api objects ---- #
 
-class Chat(BaseModel):
+class Prompt(BaseModel):
     """
     模拟对话的上下文.
     """
     id: str = Field(default_factory=helpers.uuid, description="trace id")
-    streaming: bool = Field(default=False, description="streaming mode")
+    description: str = Field(default="")
 
     system: List[Message] = Field(default_factory=list, description="system messages")
     history: List[Message] = Field(default_factory=list)
     inputs: List[Message] = Field(default_factory=list, description="input messages")
     appending: List[Message] = Field(default_factory=list, description="appending messages")
 
-    functions: List[LLMTool] = Field(default_factory=list)
-    functional_tokens: List[FunctionalToken] = Field(default_factory=list)
+    functions: List[LLMFunc] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
+
+    # deprecated
+    functional_tokens: List[FunctionalToken] = Field(default_factory=list)
 
     def system_prompt(self) -> str:
         contents = []
@@ -47,13 +48,13 @@ class Chat(BaseModel):
                 contents.append(message.get_content())
         return "\n\n".join(contents)
 
-    def get_messages(self) -> List[Message]:
+    def get_messages(self, with_system: bool = True) -> List[Message]:
         """
         返回所有的消息.
         """
         messages = []
         # combine system messages into one
-        if self.system:
+        if with_system and self.system:
             system_message = Role.SYSTEM.new(content=self.system_prompt())
             messages.append(system_message)
         if self.history:
@@ -117,22 +118,81 @@ class Chat(BaseModel):
             return "auto"
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
 
+    def add(self, messages: Iterable[Message]) -> Iterable[Message]:
+        for msg in messages:
+            if msg.is_complete():
+                self.appending.append(msg.get_copy())
+            yield msg
 
-class ChatPreparer(ABC):
+    def fork(
+            self,
+            inputs: List[Message],
+            system: Optional[List[Message]] = None,
+            description: str = "",
+            prompt_id: Optional[str] = None,
+            functions: Optional[List[Function]] = None,
+            function_call: Optional[str] = None,
+    ) -> Prompt:
+        """
+        fork current prompt.
+        """
+        prompt_id = prompt_id or helpers.uuid()
+        description = description
+        copied = self.model_copy(update={
+            "id": prompt_id,
+            "description": description,
+        }, deep=True)
+        if copied.inputs:
+            copied.history.extend(copied.inputs)
+            copied.inputs = inputs
+        if copied.appending:
+            copied.history.extend(copied.appending)
+            copied.appending = []
+        if system:
+            copied.system = system
+        if functions:
+            copied.functions = functions
+        if function_call is not None:
+            copied.function_call = function_call
+        return copied
+
+
+class PromptPayload(Payload):
+    key = "prompt_info"
+
+    prompt_id: str = Field(description="created from prompt")
+    desc: str = Field(default="description of the prompt")
+
+
+class PromptPipe(ABC):
     """
     用来对 chat message 做加工.
     基本思路是, 尽可能保证消息体本身的一致性, 在使用的时候才对消息结构做调整.
     """
 
     @abstractmethod
-    def prepare_chat(self, chat: Chat) -> Chat:
+    def process(self, prompt: Prompt) -> Prompt:
         pass
 
 
-def prepare_chat(chat: Chat, updater: Iterable[ChatPreparer]) -> Chat:
+def run_prompt_pipeline(prompt: Prompt, pipeline: Iterable[PromptPipe]) -> Prompt:
     """
     通过多个 filter 来加工 chat.
     """
-    for f in updater:
-        chat = f.prepare_chat(chat)
-    return chat
+    for f in pipeline:
+        prompt = f.process(prompt)
+    return prompt
+
+
+class PromptStorage(ABC):
+    """
+    save and get prompt
+    """
+
+    @abstractmethod
+    def save(self, prompt: Prompt) -> None:
+        pass
+
+    @abstractmethod
+    def get(self, prompt_id: str) -> Optional[Prompt]:
+        pass

@@ -1,12 +1,12 @@
 from ghostos.framework.messengers import Messenger, DefaultMessenger
 from ghostos.framework.streams import EmptyStream
-from ghostos.core.session.threads import MsgThread
+from ghostos.core.session.threads import GoThreadInfo
 from ghostos.core.messages import Message
 from ghostos.core.llms import FunctionalToken
 
 
 def test_default_messenger_baseline():
-    thread = MsgThread()
+    thread = GoThreadInfo()
     messenger = DefaultMessenger(thread=thread)
     content = "hello world"
     for c in content:
@@ -14,8 +14,8 @@ def test_default_messenger_baseline():
         success = messenger.deliver(msg)
         assert success
     messenger.flush()
-    assert len(thread.current.generates) == 1
-    assert thread.current.generates[0].content == content
+    assert len(thread.current.added) == 1
+    assert thread.current.added[0].content == content
 
 
 def test_messenger_with_random_token():
@@ -26,7 +26,7 @@ def test_messenger_with_random_token():
         visible=False,
     )]
 
-    thread = MsgThread()
+    thread = GoThreadInfo()
     messenger = DefaultMessenger(thread=thread, functional_tokens=functional_tokens)
 
     contents = ["he", "llo >mo", "ss: w", "orld"]
@@ -43,8 +43,8 @@ def test_messenger_with_random_token():
     assert caller.name == "moss"
     assert caller.arguments == " world"
 
-    assert len(thread.last_turn().generates) == 1
-    assert len(thread.last_turn().generates[0].callers) == 1
+    assert len(thread.last_turn().added) == 1
+    assert len(thread.last_turn().added[0].callers) == 1
 
 
 def test_messenger_with_single_message():
@@ -56,7 +56,7 @@ def test_messenger_with_single_message():
         visible=False,
     )]
 
-    thread = MsgThread()
+    thread = GoThreadInfo()
     messenger = DefaultMessenger(thread=thread, functional_tokens=functional_tokens)
 
     content = "<moss>def main():\n    pass</moss>"
@@ -76,7 +76,7 @@ def test_messenger_with_func_token_visible():
         visible=True,
     )]
 
-    thread = MsgThread()
+    thread = GoThreadInfo()
     messenger = DefaultMessenger(
         thread=thread,
         functional_tokens=functional_tokens,

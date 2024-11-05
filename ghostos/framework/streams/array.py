@@ -1,7 +1,7 @@
 from typing import Tuple, Optional, Dict, List, Iterable, Callable
 from ghostos.core.messages import (
     Message, Stream, Receiver, Received,
-    DefaultMessageTypes,
+    MessageType,
 )
 import time
 
@@ -38,7 +38,7 @@ class _ArrayReceiver(Receiver):
     def add_item(self, item: Message) -> bool:
         if self._stopped:
             return False
-        if DefaultMessageTypes.is_protocol_message(item):
+        if MessageType.is_protocol_message(item):
             self.stop(item)
             return True
 
@@ -97,7 +97,7 @@ class _ArrayReceiver(Receiver):
         while idx < len(self._msg_ids):
             yield self._received[self._msg_ids[idx]]
             idx += 1
-        if self._final and DefaultMessageTypes.ERROR.match(self._final):
+        if self._final and MessageType.ERROR.match(self._final):
             yield _ArrayReceived(self._final, idle=self.idle)
         self._iterating = False
 
@@ -137,7 +137,7 @@ class _ArrayStream(Stream):
             return False
         if not self._timeleft.alive():
             e = TimeoutError(f"Timeout after {self._timeleft.passed()}")
-            self._receiver.stop(DefaultMessageTypes.ERROR.new(content=str(e)))
+            self._receiver.stop(MessageType.ERROR.new(content=str(e)))
             raise e
         if pack.chunk and not self._accept_chunks:
             return True
@@ -151,7 +151,7 @@ class _ArrayStream(Stream):
     def __exit__(self, exc_type, exc_val, exc_tb):
         item = None
         if exc_val:
-            item = DefaultMessageTypes.ERROR.new(content=str(exc_val))
+            item = MessageType.ERROR.new(content=str(exc_val))
         if not self._stopped:
             self._receiver.stop(item)
         self.stop()
@@ -179,12 +179,12 @@ class _ArrayReceived(Received):
         self._items: List[Dict] = [head.model_dump(exclude_defaults=True)]
         self._stopped = False
         self._tail: Optional[Message] = None
-        if head.is_complete() or DefaultMessageTypes.is_protocol_message(head):
+        if head.is_complete() or MessageType.is_protocol_message(head):
             self._tail = head.as_tail()
         self._destroyed = False
 
     def add_item(self, item: Message) -> None:
-        if item.is_complete() or DefaultMessageTypes.is_protocol_message(item):
+        if item.is_complete() or MessageType.is_protocol_message(item):
             self._tail = item.as_tail()
         else:
             self._items.append(item.model_dump(exclude_defaults=True))

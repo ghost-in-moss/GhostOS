@@ -11,7 +11,7 @@ class Moss(Parent):
     text_memory: Mem0TextMemory
 
 
-# <moss>
+# <moss-hide>
 
 def test_main(moss: Moss) -> int:
     """
@@ -49,7 +49,7 @@ def test_main(moss: Moss) -> int:
     history = m.history(memory_id=memory_id)
     print(history)
 
-# </moss>
+# </moss-hide>
 
 
 if __name__ == "__main__":

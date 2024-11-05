@@ -1,10 +1,10 @@
 from typing import Optional
 from ghostos.core.messages import Message, Role
-from ghostos.core.llms import ChatPreparer, Chat
+from ghostos.core.llms import PromptPipe, Prompt
 from ghostos.core.session import TaskPayload
 
 
-class OtherAgentOrTaskPreparer(ChatPreparer):
+class OtherAgentOrTaskPipe(PromptPipe):
     """
     调整 assistant name, 如果一条 assistant 消息的 name 与当前 name 相同则去掉.
     这样就会认为是自己的消息.
@@ -15,7 +15,7 @@ class OtherAgentOrTaskPreparer(ChatPreparer):
         self._task_id = task_id
         self._with_task_name = with_task_name
 
-    def prepare_chat(self, chat: Chat) -> Chat:
+    def process(self, chat: Prompt) -> Prompt:
         def filter_fn(message: Message) -> Optional[Message]:
             if message.role != Role.ASSISTANT.value:
                 return message

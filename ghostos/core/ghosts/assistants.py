@@ -1,6 +1,6 @@
 from typing import Optional, TypeVar, Generic, Type
 from abc import ABC, abstractmethod
-from ghostos.common import Identifiable, Identifier
+from ghostos.common import Identical, Identifier
 from ghostos.core.ghosts import Ghost
 from ghostos.core.ghosts.thoughts import Thought, ModelThought
 from ghostos.helpers import generate_import_path, md5, import_from_path
@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-class Assistant(Identifiable, ABC):
+class Assistant(Identical, ABC):
     """
     Assistant is a special thinking unit in Ghost.
     Each assistant has a unique identifier, is a singleton instance in the Process.

@@ -2,7 +2,7 @@ import inspect
 import re
 from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, is_typeddict
 from pydantic import BaseModel
-from ghostos.common import Identifiable, Descriptive
+from ghostos.common import Identical, Descriptive
 
 __all__ = [
 
@@ -351,21 +351,6 @@ def get_calling_modulename(skip: int = 0) -> Optional[str]:
         return mod
     return None
 
-
-def get_obj_desc(obj: Any) -> Optional[str]:
-    if isinstance(obj, Descriptive):
-        return obj.get_description()
-    if isinstance(obj, Identifiable):
-        return obj.identifier().description
-    if hasattr(obj, 'desc'):
-        return getattr(obj, 'desc', None)
-    if hasattr(obj, "description"):
-        return getattr(obj, 'description', None)
-    if hasattr(obj, "__desc__"):
-        attr = getattr(obj, "__desc__", None)
-        if attr:
-            return unwrap_str(attr)
-    return None
 
 
 def is_code_same_as_print(value: Any) -> bool:

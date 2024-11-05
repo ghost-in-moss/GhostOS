@@ -2,7 +2,7 @@ from typing import Optional
 from abc import ABC, abstractmethod
 from ghostos.entity import EntityMeta
 from ghostos.core.messages import Stream
-from ghostos.core.session import EventBus, Event, TaskRepo, Task, SessionProcess, GhostProcessRepo
+from ghostos.core.session import EventBus, Event, GoTasks, GoTaskStruct, GoProcess, GoProcesses
 from ghostos.core.ghosts import Ghost, GhostConf, Inputs
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.shutdown import Shutdown
@@ -43,7 +43,7 @@ class GhostOS(ABC):
             session_id: str,
             process_id: Optional[str] = None,
             task_id: Optional[str] = None,
-    ) -> Optional[SessionProcess]:
+    ) -> Optional[GoProcess]:
         """
         get a process from session_id, if not exists, create one.
         :param ghost_meta: to create ghost instance.
@@ -58,8 +58,8 @@ class GhostOS(ABC):
     def make_ghost(
             self, *,
             upstream: Stream,
-            process: SessionProcess,
-            task: Optional[Task] = None,
+            process: GoProcess,
+            task: Optional[GoTaskStruct] = None,
             task_id: Optional[str] = None,
     ) -> Ghost:
         """
@@ -145,18 +145,18 @@ class AbsGhostOS(GhostOS, ABC):
         """
         return self.container().force_fetch(EventBus)
 
-    def _processes(self) -> GhostProcessRepo:
-        return self.container().force_fetch(GhostProcessRepo)
+    def _processes(self) -> GoProcesses:
+        return self.container().force_fetch(GoProcesses)
 
-    def _tasks(self) -> TaskRepo:
-        return self.container().force_fetch(TaskRepo)
+    def _tasks(self) -> GoTasks:
+        return self.container().force_fetch(GoTasks)
 
     @abstractmethod
     def make_ghost(
             self, *,
             upstream: Stream,
-            process: SessionProcess,
-            task: Optional[Task] = None,
+            process: GoProcess,
+            task: Optional[GoTaskStruct] = None,
             task_id: Optional[str] = None,
     ) -> Ghost:
         """
@@ -170,11 +170,11 @@ class AbsGhostOS(GhostOS, ABC):
             session_id: str,
             process_id: Optional[str] = None,
             task_id: Optional[str] = None,
-    ) -> Optional[SessionProcess]:
+    ) -> Optional[GoProcess]:
         processes = self._processes()
         proc = processes.get_session_process(session_id)
         if proc is None or (process_id and process_id != proc.pid):
-            proc = SessionProcess.new(
+            proc = GoProcess.new(
                 session_id=session_id,
                 ghost_meta=ghost_meta,
                 process_id=process_id,

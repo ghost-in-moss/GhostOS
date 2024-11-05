@@ -1,7 +1,7 @@
 from typing import NamedTuple, List, Tuple
 from abc import ABC, abstractmethod
 from ghostos.core.messages.message import Message, Caller, Role
-from ghostos.core.messages.stream import Stream
+from ghostos.core.messages.transport import Stream
 
 __all__ = ['Messenger', 'Buffed']
 
