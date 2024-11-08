@@ -3,7 +3,7 @@ import os
 import yaml
 import importlib
 from ghostos.container import Container
-from ghostos.core.session import GoThreadInfo, EventTypes, thread_to_chat
+from ghostos.core.runtime import GoThreadInfo, EventTypes, thread_to_chat
 from ghostos.core.moss import MossRuntime, MossCompiler, PyContext
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.messages import Role, Message

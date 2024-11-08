@@ -11,15 +11,17 @@ import inspect
 import pickle
 
 __all__ = [
-    'Identifier', 'Identifiable', 'get_identifier',
-    'get_defined_prompt',
-    'to_entity_meta', 'from_entity_meta', 'get_entity',
-    'EntityMeta', 'Entity', 'EntityType',
+    'get_identifier',
+    'Identifier', 'Identifiable',
 
     'Identical', 'IdenticalClass',
     'identify_class', 'identify_class_id',
     'IdenticalObject',
 
+    'to_entity_meta', 'from_entity_meta', 'get_entity',
+    'EntityMeta', 'Entity', 'EntityType',
+
+    'get_defined_prompt',
     'Prompter', 'PrompterClass',
 
 ]
@@ -270,6 +272,11 @@ def to_entity_meta(value: Union[EntityType, Any]) -> EntityMeta:
             type=generate_import_path(value.__class__),
             content=value.model_dump_json(exclude_defaults=True).encode(),
         )
+    elif inspect.isfunction(value):
+        return EntityMeta(
+            type=generate_import_path(value),
+            content=bytes(),
+        )
     else:
         content = pickle.dumps(value)
         return EntityMeta(
@@ -298,7 +305,9 @@ def from_entity_meta(meta: EntityMeta) -> Any:
 
     if issubclass(cls, EntityMeta):
         return meta
-
+    elif inspect.isfunction(cls):
+        return cls
+    # method is prior
     elif hasattr(cls, "__from_entity_meta__"):
         return getattr(cls, "__from_entity_meta__")(meta)
 

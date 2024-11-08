@@ -6,7 +6,7 @@ from ghostos.common import EntityMeta
 from ghostos.core.messages import Message, copy_messages, Role
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Prompt
-from ghostos.core.session.events import Event, EventTypes
+from ghostos.core.runtime.events import Event, EventTypes
 from ghostos.helpers import uuid
 from contextlib import contextmanager
 

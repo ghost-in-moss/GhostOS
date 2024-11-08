@@ -28,10 +28,10 @@ class PyContext(BaseModel):
         description="if code given, use it instead of code from the module",
     )
 
-    injections: Dict[str, Injection] = Field(
-        default_factory=dict,
-        description="通过 python 引入的包, 类, 方法 等. 会注入到 MOSS 上, 同时会实现它.",
-    )
+    # injections: Dict[str, Injection] = Field(
+    #     default_factory=dict,
+    #     description="通过 python 引入的包, 类, 方法 等. 会注入到 MOSS 上, 同时会实现它.",
+    # )
     properties: Dict[str, Property] = Field(
         default_factory=dict,
         description="在上下文中定义的变量. 会注入到 MOSS 上. 修改后也会保存到 pycontext 里. ",

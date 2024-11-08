@@ -1,7 +1,7 @@
 from ghostos.framework.storage import MemStorage
 from ghostos.framework.tasks.storage_tasks import StorageGoTasksImpl
 from ghostos.framework.logger import FakeLogger
-from ghostos.core.session import GoTaskStruct
+from ghostos.core.runtime import GoTaskStruct
 from ghostos.entity import EntityMeta
 
 
@@ -10,7 +10,7 @@ def test_storage_tasks_impl():
     tasks = StorageGoTasksImpl(storage, FakeLogger())
     task = GoTaskStruct.new(
         task_id="task_id",
-        session_id="session_id",
+        shell_id="session_id",
         process_id="process_id",
         name="name",
         description="description",

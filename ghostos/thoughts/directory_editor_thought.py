@@ -43,7 +43,7 @@ from ghostos.libraries.file_editor import DirectoryEditorImpl
 # using TYPE_CHECKING to avoid reflect invalid importing to prompt.
 if TYPE_CHECKING:
     from ghostos.core.ghosts import Ghost
-    from ghostos.core.session import Event, Session, GoThreadInfo
+    from ghostos.core.runtime import Event, Session, GoThreadInfo
     from ghostos.core.llms import LLMApi
     from ghostos.core.moss import MossCompiler
 

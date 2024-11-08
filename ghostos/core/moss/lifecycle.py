@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 
 if TYPE_CHECKING:
     from ghostos.core.moss.prompts import AttrPrompts
-    from ghostos.core.moss.abc import MossPrompter, MossResult, MossRuntime, MossCompiler
+    from ghostos.core.moss.abc import MossPrompter, Execution, MossRuntime, MossCompiler
 
 """
 这个文件提供了 MOSS 生命周期的关键方法, 每一个都是可选的.
@@ -114,7 +114,7 @@ def __moss_exec__(
         local_kwargs: "Optional[Dict[str, Any]]" = None,
         args: Optional[List[Any]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
-) -> "MossResult":
+) -> "Execution":
     """
     基于 MOSS Runtime 执行一段代码, 并且调用目标方法或返回目标值.
     :param runtime: moss runtime
@@ -126,7 +126,7 @@ def __moss_exec__(
     :param kwargs: 从外部注入的参数变量.
     """
     from typing import Callable
-    from ghostos.core.moss.abc import MossResult
+    from ghostos.core.moss.abc import Execution
     pycontext = runtime.dump_pycontext()
     pycontext.execute_code = code
     pycontext.executed = False
@@ -174,4 +174,4 @@ def __moss_exec__(
     std_output = runtime.dump_std_output()
     pycontext = runtime.dump_pycontext()
     pycontext.executed = True
-    return MossResult(returns, std_output, pycontext)
+    return Execution(returns, std_output, pycontext)

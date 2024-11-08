@@ -6,7 +6,7 @@ from ghostos.common import Identical, Identifier
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.configs import Configs
-from ghostos.core.session import Session, Event
+from ghostos.core.runtime import Session, Event
 from ghostos.core.messages import Message, Role
 from ghostos.core.moss import MossCompiler
 from ghostos.core.llms import LLMs

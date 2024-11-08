@@ -1,8 +1,8 @@
 from ghostos.container import Container
 from ghostos.core.moss.abc import (
-    Moss, MossCompiler, MossRuntime, MossPrompter, MossResult,
+    Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
     AttrPrompts,
-    MOSS_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
+    MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
     MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT,
     moss_message,
 )
@@ -17,14 +17,13 @@ from ghostos.core.moss.functional_token import (
 
 __all__ = [
     # abstract contracts
-    Moss, MossCompiler, MossRuntime, MossPrompter, MossResult,
+    Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
     # constants
-    MOSS_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
+    MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
     MOSS_EXEC_EVENT, MOSS_PROMPT_EVENT, MOSS_COMPILE_EVENT, MOSS_ATTR_PROMPTS_EVENT,
     DEFAULT_MOSS_FUNCTIONAL_TOKEN,
     DEFAULT_MOSS_PROMPT_TEMPLATE,
     # methods
-    moss_message,
     get_default_moss_prompt,
     # types
     AttrPrompts,

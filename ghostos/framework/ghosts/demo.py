@@ -1,7 +1,7 @@
 from typing import Optional, List
 from ghostos.common import Identifier
 from ghostos.core.ghosts import GhostConf, Shell, Workspace
-from ghostos.core.session import GoProcess, GoTaskStruct
+from ghostos.core.runtime import GoProcess, GoTaskStruct
 from ghostos.contracts.modules import Modules
 from ghostos.core.messages import Stream
 from ghostos.framework.ghosts.basic import BasicGhost, InputsPipe

@@ -36,7 +36,7 @@ class Moss(Parent):
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ghostos.core.moss.abc import MossCompiler, MossRuntime, AttrPrompts, MossPrompter, MossResult
+    from ghostos.core.moss.abc import MossCompiler, MossRuntime, AttrPrompts, MossPrompter, Execution
 
 
 def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
@@ -81,7 +81,7 @@ def __moss_prompt__(prompter: "MossPrompter") -> str:
     return __moss_prompt__(prompter)
 
 
-def __moss_exec__(*args, **kwargs) -> "MossResult":
+def __moss_exec__(*args, **kwargs) -> "Execution":
     # 测试生命周期生效.
     Moss.life.append("__moss_exec__")
     from ghostos.core.moss.lifecycle import __moss_exec__

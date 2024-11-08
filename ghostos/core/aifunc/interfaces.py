@@ -4,7 +4,7 @@ from ghostos.core.aifunc.func import AIFunc, AIFuncResult
 from ghostos.core.moss.decorators import cls_source_code
 from ghostos.core.moss import MossCompiler, PyContext
 from ghostos.core.llms import LLMApi, Prompt
-from ghostos.core.session import GoThreadInfo
+from ghostos.core.runtime import GoThreadInfo
 from ghostos.core.messages import Message, Stream, Payload
 from ghostos.common import Identifier
 from ghostos.helpers import generate_import_path, uuid

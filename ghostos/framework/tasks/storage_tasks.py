@@ -1,6 +1,6 @@
 from typing import Optional, List, Iterable, Dict, Type
 import yaml
-from ghostos.core.session import TaskState, TaskBrief, GoTaskStruct, GoTasks
+from ghostos.core.runtime import TaskState, TaskBrief, GoTaskStruct, GoTasks
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage

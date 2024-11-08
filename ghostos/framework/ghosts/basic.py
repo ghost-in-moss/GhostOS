@@ -14,7 +14,7 @@ from ghostos.core.ghosts.schedulers import Replier
 from ghostos.core.llms import LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.messages import Caller
-from ghostos.core.session import (
+from ghostos.core.runtime import (
     Session, Event, EventTypes,
     EventBus, GoTasks, GoProcesses, GoThreads, Messenger,
     GoProcess, GoTaskStruct, GoThreadInfo,
@@ -220,7 +220,7 @@ class BasicGhost(Ghost, ABC):
                     meta = root_thought.to_entity_meta()
                     task = GoTaskStruct.new(
                         task_id=task_id,
-                        session_id=process.session_id,
+                        shell_id=process.session_id,
                         process_id=process.process_id,
                         name=identifier.name,
                         description=identifier.description,

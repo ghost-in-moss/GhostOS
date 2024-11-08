@@ -2,7 +2,7 @@ from typing import Tuple
 from ghostos.core.ghosts import MultiTask, Operator, Ghost, Thought, NewTask
 from ghostos.core.llms import Prompt
 from ghostos.core.messages import MessageKind, Role
-from ghostos.core.session.events import EventTypes
+from ghostos.core.runtime.events import EventTypes
 from ghostos.framework.operators import WaitOnTasksOperator
 from ghostos.helpers import yaml_pretty_dump
 

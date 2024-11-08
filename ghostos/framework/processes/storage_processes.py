@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Type
 import yaml
-from ghostos.core.session import GoProcess
-from ghostos.core.session.processes import GoProcesses
+from ghostos.core.runtime import GoProcess
+from ghostos.core.runtime.processes import GoProcesses
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.workspace import Workspace

@@ -1,7 +1,7 @@
 from typing import Optional
 from ghostos.core.messages import Message, Role
 from ghostos.core.llms import PromptPipe, Prompt
-from ghostos.core.session import TaskPayload
+from ghostos.core.runtime import TaskPayload
 
 
 class OtherAgentOrTaskPipe(PromptPipe):

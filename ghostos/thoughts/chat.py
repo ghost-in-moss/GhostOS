@@ -6,7 +6,7 @@ from ghostos.thoughts.basic import LLMThoughtDriver
 from pydantic import Field
 
 from ghostos.core.llms import LLMApi
-from ghostos.core.session import Event
+from ghostos.core.runtime import Event
 
 __all__ = ["ChatThought", "ChatThoughtDriver"]
 

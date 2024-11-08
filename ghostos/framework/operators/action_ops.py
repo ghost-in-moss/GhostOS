@@ -6,7 +6,7 @@ from ghostos.core.ghosts import (
 from ghostos.core.messages import (
     MessageKind, MessageKindParser, Role,
 )
-from ghostos.core.session import (
+from ghostos.core.runtime import (
     EventTypes,
     TaskState,
     GoTaskStruct,

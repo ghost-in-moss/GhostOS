@@ -18,7 +18,7 @@ from ghostos.helpers.modules import (
 )
 from ghostos.helpers.io import BufferPrint
 from ghostos.helpers.time import Timeleft
-from ghostos.helpers.hashes import md5
+from ghostos.helpers.hashes import md5, sha1, sha256
 from ghostos.helpers.trans import gettext, ngettext, get_current_locale, GHOSTOS_DOMAIN
 
 from ghostos.helpers.coding import reflect_module_code, unwrap

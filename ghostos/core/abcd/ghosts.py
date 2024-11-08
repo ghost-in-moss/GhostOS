@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 from ghostos.common import Identifier
-from .ghostos import Ghost, GhostDriver
 from pydantic import BaseModel
+from .concepts import Ghost, GhostDriver
 
 """
 Some ghost prototypes. 
 """
 
 
-class Agent(BaseModel, Ghost, ABC):
+class Agent(Ghost, ABC):
     """
     Agent is the base abstract of LLM-based conversational AI entity.
 
@@ -20,7 +20,7 @@ class Agent(BaseModel, Ghost, ABC):
     - system configurations, like thread truncating / authorities / welcome craft etc.
     """
 
-    Goal = None
+    Artifact = None
 
     @abstractmethod
     def __identifier__(self) -> Identifier:
@@ -51,7 +51,7 @@ class Thought(BaseModel, Ghost, ABC):
     Thought is a micro unit to processing thinking with current context;
     the Goal of the Thought is to produce a decision or suggestion, add them to the context.
     """
-    Goal = str
+    Artifact = str
 
     @abstractmethod
     def __identifier__(self) -> Identifier:

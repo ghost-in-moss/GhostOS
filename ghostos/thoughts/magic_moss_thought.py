@@ -7,7 +7,7 @@ from ghostos.thoughts.moss_thought import BasicMossThoughtDriver
 from ghostos.core.moss import PyContext, MossCompiler
 from ghostos.core.ghosts import Ghost, Action
 from ghostos.core.llms import LLMApi
-from ghostos.core.session import Event, Session, GoThreadInfo
+from ghostos.core.runtime import Event, Session, GoThreadInfo
 from ghostos.container import Provider
 import inspect
 from pydantic import Field

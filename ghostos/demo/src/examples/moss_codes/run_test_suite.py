@@ -1,4 +1,4 @@
-from ghostos.core.moss import moss_test_suite, MossResult
+from ghostos.core.moss import moss_test_suite, Execution
 from ghostos.libraries.file_editor import DirectoryEditor, DirectoryEditorImpl
 from ghostos.demo.src.examples.moss_codes import dir_editor_moss_code
 from os.path import dirname
@@ -7,7 +7,7 @@ if __name__ == '__main__':
     suite = moss_test_suite()
 
 
-    def show_test_result(case_name: str, result: MossResult):
+    def show_test_result(case_name: str, result: Execution):
         """
         callback method for each test case in the target moss module.
         :param case_name: name of the test case

@@ -1,6 +1,6 @@
 from ghostos.framework.messengers import Messenger, DefaultMessenger
 from ghostos.framework.streams import EmptyStream
-from ghostos.core.session.threads import GoThreadInfo
+from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos.core.messages import Message
 from ghostos.core.llms import FunctionalToken
 

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional, ClassVar, Dict, Type
-from ghostos.core.session import Event
+from ghostos.core.runtime import Event
 from ghostos.core.moss.decorators import cls_definition
 
 if TYPE_CHECKING:

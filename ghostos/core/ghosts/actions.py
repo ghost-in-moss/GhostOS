@@ -5,7 +5,7 @@ from ghostos.container import Container
 from ghostos.core.llms import Prompt, LLMFunc, PromptPipe
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.messages.message import Caller
-from ghostos.core.session import Session
+from ghostos.core.runtime import Session
 from ghostos.common import Identical, Identifier
 from pydantic import BaseModel
 

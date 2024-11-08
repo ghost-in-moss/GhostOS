@@ -1,6 +1,6 @@
 from typing import Optional, Generic, Iterable
 from abc import ABC, abstractmethod
-from ghostos.core.session import Event, thread_to_chat
+from ghostos.core.runtime import Event, thread_to_chat
 from ghostos.core.ghosts import Ghost, Operator, Action
 from ghostos.core.llms import LLMApi, PromptPipe, Prompt, run_prompt_pipeline
 from ghostos.core.messages import Role

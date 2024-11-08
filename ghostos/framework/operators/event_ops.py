@@ -3,7 +3,7 @@ from typing import Optional, ClassVar
 from ghostos.core.ghosts import (
     EventOperator, Ghost, Operator, get_event_operator
 )
-from ghostos.core.session import (
+from ghostos.core.runtime import (
     TaskState,
     EventTypes,
 )

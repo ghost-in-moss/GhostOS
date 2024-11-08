@@ -1,11 +1,11 @@
 from typing import Optional, Iterable, TYPE_CHECKING, Type, Dict, List
 from ghostos.container import Container, Provider
-from ghostos.core.session.messenger import Messenger, Buffed
+from ghostos.core.runtime.messenger import Messenger, Buffed
 from ghostos.core.messages import (
     Message, Payload, Attachment, Role, MessageType,
     Buffer, Stream,
 )
-from ghostos.core.session.threads import GoThreadInfo
+from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos.core.llms import FunctionalToken
 from ghostos.framework.messages.buffers import DefaultBuffer
 from ghostos.helpers import uuid

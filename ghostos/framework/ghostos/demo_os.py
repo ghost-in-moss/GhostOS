@@ -2,7 +2,7 @@ from typing import Optional, ClassVar, Dict
 
 from ghostos.core.ghosts import Ghost, GhostConf, Workspace, Shell
 from ghostos.core.messages import Stream
-from ghostos.core.session import GoProcess, GoTaskStruct
+from ghostos.core.runtime import GoProcess, GoTaskStruct
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.configs import Configs, YamlConfig
 

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from ghostos.core.ghosts import Ghost, Action, ModelThought, Operator
 from ghostos.core.llms import LLMApi
-from ghostos.core.session import Event, GoThreadInfo
+from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, MossRuntime, PyContext
 from ghostos.thoughts.basic import LLMThoughtDriver
 from ghostos.framework.actions import MossAction

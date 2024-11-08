@@ -3,7 +3,7 @@ from ghostos.core.messages import (
     MessageKind, Role, Stream, MessageKindParser, MessageType,
     Buffer, Payload, Attachment, Message,
 )
-from ghostos.core.session import (
+from ghostos.core.runtime import (
     Session,
     GoProcess, GoProcesses,
     GoThreadInfo, GoThreads,

@@ -8,7 +8,7 @@ from ghostos.core.llms import Prompt, FunctionalToken, PromptPipe
 from ghostos.core.messages import MessageType, Caller
 from ghostos.core.moss import MossRuntime, moss_message
 from ghostos.core.ghosts.operators import Operator
-from ghostos.core.session import Session
+from ghostos.core.runtime import Session
 from ghostos.common import Identifier
 from pydantic import BaseModel, Field
 from traceback import format_exc

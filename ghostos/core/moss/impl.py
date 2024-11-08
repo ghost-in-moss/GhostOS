@@ -6,7 +6,7 @@ import io
 from ghostos.container import Container, Provider
 from ghostos.core.moss.abc import (
     Moss,
-    MossCompiler, MossRuntime, MossPrompter, MOSS_NAME, MOSS_TYPE_NAME,
+    MossCompiler, MossRuntime, MossPrompter, MOSS_VALUE_NAME, MOSS_TYPE_NAME,
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
 from ghostos.contracts.modules import Modules, ImportWrapper
@@ -29,6 +29,7 @@ class MossCompilerImpl(MossCompiler):
         }
         self._injections: Dict[str, Any] = {}
         self._attr_prompts: List = []
+        self._destroyed = False
 
     def container(self) -> Container:
         return self._container
@@ -109,6 +110,9 @@ class MossCompilerImpl(MossCompiler):
         return code if code else ""
 
     def destroy(self) -> None:
+        if self._destroyed:
+            return
+        self._destroyed = True
         # container 先不 destroy.
         del self._container
         del self._pycontext
@@ -214,7 +218,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 # 依赖注入.
                 setattr(moss, name, value)
         self._moss = moss
-        self._compiled.__dict__[MOSS_NAME] = moss
+        self._compiled.__dict__[MOSS_VALUE_NAME] = moss
         self._compiled.__dict__[MOSS_TYPE_NAME] = moss_type
         self._compiled.__dict__["print"] = self._print
 

@@ -11,7 +11,7 @@ from ghostos.core.aifunc.func import (
 )
 from ghostos.core.llms import LLMs, Prompt
 from ghostos.core.moss.abc import MossRuntime
-from ghostos.core.session import GoThreadInfo, EventTypes, GoThreads, thread_to_chat
+from ghostos.core.runtime import GoThreadInfo, EventTypes, GoThreads, thread_to_chat
 from ghostos.core.messages import Role, Message, Stream
 from ghostos.container import Container
 

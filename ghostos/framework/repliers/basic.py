@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 from ghostos.core.ghosts import Operator
 from ghostos.core.ghosts.schedulers import Replier
 from ghostos.core.messages import Role
-from ghostos.core.session import GoTaskStruct
+from ghostos.core.runtime import GoTaskStruct
 from ghostos.framework.operators import WaitsOperator, ThinkOperator, FinishOperator
 from ghostos.helpers import yaml_pretty_dump
 

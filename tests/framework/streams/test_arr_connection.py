@@ -3,7 +3,7 @@ import time
 from ghostos.core.messages import Message
 from ghostos.framework.streams import new_connection, Stream
 from ghostos.framework.messengers import DefaultMessenger
-from ghostos.core.session import GoThreadInfo
+from ghostos.core.runtime import GoThreadInfo
 from ghostos.core.llms import FunctionalToken
 from threading import Thread
 

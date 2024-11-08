@@ -6,7 +6,7 @@ from ghostos.core.ghosts import (
     Ghost, GhostConf, Inputs,
     Shell, Thought
 )
-from ghostos.core.session import (
+from ghostos.core.runtime import (
     Event,
     GoProcess,
     GoTaskStruct, GoTasks,

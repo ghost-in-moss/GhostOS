@@ -2,7 +2,7 @@ from typing import Optional, List, NamedTuple
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.ghosts.thoughts import Thought, ThoughtDriver
-from ghostos.core.session import (
+from ghostos.core.runtime import (
     Event, EventTypes,
     GoTaskStruct, TaskState, GoTasks,
 )
@@ -53,7 +53,7 @@ class Utils:
         meta = root_thought.to_entity_meta()
         task = GoTaskStruct.new(
             task_id=task_id,
-            session_id=session.id(),
+            shell_id=session.id(),
             process_id=process.process_id,
             name=identifier.name,
             description=identifier.description,

@@ -2,7 +2,7 @@ from typing import Optional
 from abc import ABC, abstractmethod
 from ghostos.entity import EntityMeta
 from ghostos.core.messages import Stream
-from ghostos.core.session import EventBus, Event, GoTasks, GoTaskStruct, GoProcess, GoProcesses
+from ghostos.core.runtime import EventBus, Event, GoTasks, GoTaskStruct, GoProcess, GoProcesses
 from ghostos.core.ghosts import Ghost, GhostConf, Inputs
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.shutdown import Shutdown

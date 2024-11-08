@@ -66,9 +66,6 @@ class AssistantInfo(Identifier, BaseModel):
 
 class GoTaskStruct(BaseModel):
     # -- scope --- #
-    shell_id: str = Field(
-        description="shell id that task belongs.",
-    )
     process_id: str = Field(
         description="""
 the id of the process that the task belongs to.
@@ -98,7 +95,7 @@ Parent task id of the task.
 
     # --- state values --- #
 
-    pointer: EntityMeta = Field(
+    meta: EntityMeta = Field(
         description="the entity meta of the task handler",
     )
 
@@ -169,7 +166,7 @@ children task ids to wait
     def new(
             cls, *,
             task_id: str,
-            session_id: str,
+            shell_id: str,
             process_id: str,
             name: str,
             description: str,
@@ -178,7 +175,7 @@ children task ids to wait
     ) -> "GoTaskStruct":
         return GoTaskStruct(
             task_id=task_id,
-            session_id=session_id,
+            shell_id=shell_id,
             process_id=process_id,
             thread_id=task_id,
             parent=parent_task_id,
@@ -193,19 +190,19 @@ children task ids to wait
             name: str,
             description: str,
             meta: EntityMeta,
-            assistant: Optional[Identifier] = None,
     ) -> "GoTaskStruct":
         self.children.append(task_id)
-        return self.new(
+        child = self.new(
             task_id=task_id,
-            session_id=self.shell_id,
+            shell_id=self.shell_id,
             process_id=self.process_id,
             name=name,
             description=description,
             meta=meta,
             parent_task_id=self.task_id,
-            assistant=assistant,
         )
+        child.depth = self.depth + 1
+        return child
 
     def remove_child(self, child_task_id: str) -> bool:
         results = []
@@ -317,11 +314,10 @@ class GoTasks(ABC):
         pass
 
     @abstractmethod
-    def get_task(self, task_id: str, lock: bool) -> Optional[GoTaskStruct]:
+    def get_task(self, task_id: str) -> Optional[GoTaskStruct]:
         """
         使用 task id 来获取一个 task.
         :param task_id:
-        :param lock: 是否尝试对 task 上锁, 如果要求上锁但没成功, 返回 None.
         :return: if task is not Exists or locked failed
         """
         pass

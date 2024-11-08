@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Type
 
-from ghostos.core.session import Event
-from ghostos.core.session.events import EventBus
+from ghostos.core.runtime import Event
+from ghostos.core.runtime.events import EventBus
 from queue import Queue, Empty
 from ghostos.container import Provider, Container, BootstrappingProvider
 from ghostos.contracts.shutdown import Shutdown

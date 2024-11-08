@@ -4,7 +4,7 @@ import os
 import yaml
 from typing import List, Dict
 
-from ghostos.core.session import GoThreadInfo
+from ghostos.core.runtime import GoThreadInfo
 from logging.config import dictConfig
 from ghostos.core.llms import Prompt
 from ghostos.core.messages import Message

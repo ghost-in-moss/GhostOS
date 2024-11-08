@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -10,8 +10,6 @@ from contextlib import contextmanager
 __all__ = [
     'Event', 'EventBus', 'EventTypes',
 ]
-
-EVENT_ENTITY_TYPE = "ghostos.core.session.events.Event"
 
 
 class Event(BaseModel):
@@ -28,8 +26,13 @@ class Event(BaseModel):
     )
     type: str = Field(
         default="",
-        description="event type, by default the handler shall named on_{type}"
+        description="event type"
     )
+    attrs: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="event attributes that follow the types."
+    )
+
     task_id: str = Field(
         description="task id of which this event shall send to.",
     )
@@ -41,11 +44,11 @@ class Event(BaseModel):
         default=None,
         description="task name in which this event is fired",
     )
+
     reason: str = Field(
         default="",
         description="reason of the event, wrapped by system type message before the messages",
     )
-
     messages: List[Message] = Field(
         default_factory=list,
         description="list of messages sent by this event",

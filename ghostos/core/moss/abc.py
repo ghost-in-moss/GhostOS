@@ -1,5 +1,6 @@
+from __future__ import annotations
 import contextlib
-from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable
+from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable, Self
 from types import ModuleType
 from abc import ABC, abstractmethod
 from ghostos.container import Container, Provider, Factory, provide
@@ -8,7 +9,6 @@ from ghostos.core.moss.prompts import (
     AttrPrompts, reflect_module_locals, PROMPT_MAGIC_ATTR,
     compile_attr_prompts,
 )
-from ghostos.core.messages import Message, Role
 from ghostos.core.moss.decorators import cls_source_code
 from contextlib import contextmanager
 
@@ -53,11 +53,11 @@ pycontext = result.pycontext
 __all__ = [
     'Moss', 'attr',
     'MossCompiler', 'MossRuntime',
-    'MossResult', 'MossPrompter',
-    'moss_message',
+    'Execution', 'MossPrompter',
+    # 'moss_message',
     'AttrPrompts',
     'MOSS_COMPILE_EVENT', 'MOSS_PROMPT_EVENT', 'MOSS_EXEC_EVENT', 'MOSS_ATTR_PROMPTS_EVENT',
-    'MOSS_TYPE_NAME', 'MOSS_NAME',
+    'MOSS_TYPE_NAME', 'MOSS_VALUE_NAME',
     'MOSS_HIDDEN_MARK', 'MOSS_HIDDEN_UNMARK',
 ]
 
@@ -75,7 +75,7 @@ MOSS_EXEC_EVENT = "__moss_exec__"
 
 MOSS_TYPE_NAME = "Moss"
 
-MOSS_NAME = "moss"
+MOSS_VALUE_NAME = "moss"
 
 MOSS_HIDDEN_MARK = "# <moss-hide>"
 """ pycontext.module 源码某一行以这个标记开头, 其后的代码都不生成到 prompt 里. """
@@ -96,11 +96,11 @@ class Moss(ABC):
     pass
 
 
-def moss_message(content: str, memory: Optional[str] = None) -> Message:
-    """
-    default message type that MOSS execution generated
-    """
-    return Role.ASSISTANT.new(content=content, memory=memory, name="__moss__")
+class Injection(ABC):
+
+    @abstractmethod
+    def on_inject(self, compiler: MossCompiler, property_name: str) -> Self:
+        pass
 
 
 class MossCompiler(ABC):
@@ -149,10 +149,6 @@ class MossCompiler(ABC):
         :param kwargs: locals
         :return: self
         """
-        pass
-
-    @abstractmethod
-    def with_ignore_prompts(self, *attr_names) -> "MossCompiler":
         pass
 
     def register(self, provider: Provider) -> None:
@@ -222,13 +218,6 @@ class MossCompiler(ABC):
             # 手动管理一下, 避免外部解决内存泄漏的心智成本.
             self.destroy()
 
-    @contextmanager
-    def compile_ctx(self, modulename: Optional[str]):
-        runtime = self.compile(modulename)
-        yield runtime
-        # destroy it in case of memory leak
-        runtime.destroy()
-
     @abstractmethod
     def _compile(self, modulename: Optional[str] = None) -> ModuleType:
         """
@@ -251,6 +240,12 @@ class MossCompiler(ABC):
         主动做垃圾回收的准备, 避免 python 内存泄漏.
         """
         pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
 
 
 class MossPrompter(ABC):
@@ -433,7 +428,7 @@ class MossRuntime(ABC):
             local_kwargs: Optional[Dict[str, str]] = None,
             args: Optional[List[Any]] = None,
             kwargs: Optional[Dict[str, Any]] = None,
-    ) -> "MossResult":
+    ) -> "Execution":
         """
         基于 moos 提供的上下文, 运行一段代码.
         :param code: 需要运行的代码.
@@ -477,8 +472,14 @@ class MossRuntime(ABC):
         """
         pass
 
+    def __enter__(self):
+        return self
 
-class MossResult(NamedTuple):
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
+
+class Execution(NamedTuple):
     """
     result of the moss runtime execution.
     """

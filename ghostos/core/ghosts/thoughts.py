@@ -2,7 +2,7 @@ import inspect
 from typing import Optional, TypeVar, Generic, Type, Iterable
 from abc import ABC, abstractmethod
 from ghostos.entity import Entity, ModelEntity
-from ghostos.core.session import Event, GoThreadInfo, Session
+from ghostos.core.runtime import Event, GoThreadInfo, Session
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
 from ghostos.common import Identical, Identifier, PrompterClass

@@ -1,5 +1,5 @@
 from typing import List, Dict, Optional, Callable
-from ghostos.core.moss.abc import MossCompiler, MossResult
+from ghostos.core.moss.abc import MossCompiler, Execution
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.container import Container
 from queue import Queue
@@ -29,7 +29,7 @@ class MossTestSuite:
     def run_module_tests(
             self, *,
             modulename: str,
-            callback: Callable[[str, MossResult], None],
+            callback: Callable[[str, Execution], None],
             test_modulename: str = "__test__",
             targets: Optional[str] = None,
     ) -> None:
@@ -66,7 +66,7 @@ class MossTestSuite:
             target: str = "test_main",
             args: Optional[List[str]] = None,
             kwargs: Dict[str, str] = None,
-    ) -> MossResult:
+    ) -> Execution:
         """
         运行一个指定的 moss 测试.
         :param modulename: 想要测试的 moss 文件的模块路径.
@@ -86,7 +86,7 @@ class MossTestSuite:
             self, *,
             modulename: str,
             funcs: List[str],
-            callback: Callable[[str, MossResult], None],
+            callback: Callable[[str, Execution], None],
             test_module_name: str = "__test__",
     ) -> None:
         """

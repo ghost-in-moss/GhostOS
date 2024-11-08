@@ -1,5 +1,5 @@
 from ghostos.framework.eventbuses.memimpl import MemEventBusImpl
-from ghostos.core.session.events import EventTypes
+from ghostos.core.runtime.events import EventTypes
 
 
 def test_mem_impl_send_pop_event():
