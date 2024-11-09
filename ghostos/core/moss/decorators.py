@@ -1,6 +1,6 @@
 import inspect
 from typing import Callable, Optional, Any, Type
-from ghostos.core.moss.prompts import set_prompter, set_class_prompter
+from ghostos.prompter import set_prompter, set_class_prompter
 from ghostos.core.moss.utils import (
     get_callable_definition, make_class_prompt,
     strip_source_indent,
@@ -28,11 +28,10 @@ def no_prompt(func: Callable) -> Callable:
 no_prompt.__prompt__ = ""
 
 
-def cls_source_code(*, force: bool = False, doc: Optional[str] = None) -> DECORATOR:
+def cls_source_code(*, force: bool = False) -> DECORATOR:
     """
     decorator that add source code as prompt to the class
     :param force: if force true, add prompt event the prompter exists in target
-    :param doc: docstring that shall replace the source code's docstring
     """
 
     def decorator(cls: Type) -> Type:
@@ -57,7 +56,7 @@ def source_code(*, force: bool = False) -> DECORATOR:
         if not (inspect.isfunction(fn) or inspect.ismethod(fn)):
             raise AttributeError(f"fn '{fn}' has to be a function or method")
 
-        def prompter():
+        def prompter() -> str:
             source = inspect.getsource(fn)
             source = strip_source_indent(source)
             return source

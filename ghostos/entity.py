@@ -1,135 +1,158 @@
-from typing import Optional, TypedDict, Callable, Type, TypeVar
-from types import ModuleType
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-from typing_extensions import Required
-from ghostos.helpers import generate_import_path, import_from_path
+import json
+from abc import ABC, abstractmethod
+from typing import Union, Any, TypedDict, Required, Self, TypeVar, Type, Optional
+from types import ModuleType
 from pydantic import BaseModel
+from ghostos.helpers import generate_import_path, import_from_path, parse_import_module_and_spec
+from typing_extensions import Protocol
+import inspect
+import pickle
+import base64
+import yaml
 
 __all__ = [
-    'Entity', 'EntityMeta',
-    'EntityFactory',
-    'ModelEntity',
-    'EntityFactoryImpl',
-    'model_to_entity_meta',
-    'model_from_entity_meta',
+
+    'to_entity_meta', 'from_entity_meta', 'get_entity',
+    'is_entity_type',
+    'EntityMeta', 'Entity', 'EntityType', 'EntityClass',
+
 ]
 
 
-class EntityMeta(TypedDict, total=False):
-    """
-    meta-data that could:
-    1. transport as dict data, weak type-hint
-    2. be used to regenerate [Meta]
-    """
+class Entity(Protocol):
 
+    @abstractmethod
+    def __to_entity_meta__(self) -> EntityMeta:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __from_entity_meta__(cls, meta: EntityMeta) -> Self:
+        pass
+
+
+class EntityClass(ABC):
+
+    @abstractmethod
+    def __to_entity_meta__(self) -> EntityMeta:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __from_entity_meta__(cls, meta: EntityMeta) -> Self:
+        pass
+
+
+class EntityMeta(TypedDict):
+    """
+    I want python has an official way to marshal and unmarshal any instance and make it readable if allowed.
+    I found so many package-level implements like various kinds of Serializable etc.
+
+    So, I develop EntityMeta as a wrapper for any kind.
+    The EntityType will grow bigger with more marshaller, but do not affect who (me) is using the EntityMeta.
+
+    One day I can replace it with any better way inside the functions (but in-compatible)
+    """
     type: Required[str]
-    """ different type of entity use different EntityFactory to initialize from meta"""
-
-    data: Required[dict]
-    """ use dict to restore the serializable data"""
+    content: Required[str]
 
 
-def model_to_entity_meta(model: BaseModel) -> EntityMeta:
-    type_ = generate_import_path(type(model))
-    data = model.model_dump(exclude_defaults=True)
-    return EntityMeta(
-        type=type_,
-        data=data,
-    )
+EntityType = Union[Entity, EntityMeta, BaseModel]
 
 
-MODEL = TypeVar('MODEL', bound=BaseModel)
+def is_entity_type(value: Any) -> bool:
+    return hasattr(value, '__to_entity_meta__')
 
 
-def model_from_entity_meta(meta: EntityMeta, wrapper: Type[MODEL] = BaseModel) -> MODEL:
-    type_ = meta['type']
-    imported = import_from_path(type_)
-    if not issubclass(imported, wrapper):
-        raise TypeError(f"the type of the meta `{type_}` is not a subclass of `{wrapper}`")
-    return imported(**meta['data'])
+def to_entity_meta(value: Union[EntityType, Any]) -> EntityMeta:
+    if value is None:
+        return EntityMeta(
+            type="None",
+            content="",
+        )
+    elif value is True or value is False:
+        return EntityMeta(type="bool", content=str(value))
+    elif isinstance(value, int):
+        return EntityMeta(type="int", content=str(value))
+    elif isinstance(value, float):
+        return EntityMeta(type="float", content=str(value))
+    elif isinstance(value, list):
+        content = yaml.safe_dump(value)
+        return EntityMeta(type="list", content=content)
+    elif isinstance(value, dict):
+        content = yaml.safe_dump(value)
+        return EntityMeta(type="dict", content=content)
+    elif hasattr(value, '__to_entity_meta__'):
+        return getattr(value, '__to_entity_meta__')()
+    elif isinstance(value, BaseModel):
+        return EntityMeta(
+            type=generate_import_path(value.__class__),
+            content=value.model_dump_json(exclude_defaults=True),
+        )
+    elif inspect.isfunction(value):
+        return EntityMeta(
+            type=generate_import_path(value),
+            content="",
+        )
+    elif isinstance(value, BaseModel):
+        type_ = generate_import_path(value.__class__)
+        content = value.model_dump_json(exclude_defaults=True)
+        return EntityMeta(type=type_, content=content)
+    else:
+        content_bytes = pickle.dumps(value)
+        content = base64.encodebytes(content_bytes)
+        return EntityMeta(
+            type="pickle",
+            content=content.decode(),
+        )
 
 
-class Entity(ABC):
-    """
-    meta is a strong type-hint class that can generate meta-data to transport
-    """
-
-    @abstractmethod
-    def to_entity_data(self) -> dict:
-        pass
-
-    def to_entity_meta(self) -> EntityMeta:
-        """
-        generate transportable meta-data
-        """
-        type_ = generate_import_path(self.__class__)
-        data = self.to_entity_data()
-        return EntityMeta(type=type_, data=data)
-
-    @classmethod
-    @abstractmethod
-    def from_entity_meta(cls, factory: "EntityFactory", meta: EntityMeta) -> "Entity":
-        pass
+T = TypeVar("T")
 
 
-class ModelEntity(BaseModel, Entity, ABC):
-    """
-    Entity based on pydantic.BaseModel
-    """
-
-    def to_entity_data(self) -> dict:
-        return self.model_dump(exclude_none=True)
-
-    @classmethod
-    def from_entity_meta(cls, factory: "EntityFactory", meta: EntityMeta) -> "ModelEntity":
-        return cls(**meta['data'])
+def get_entity(meta: EntityMeta, expect: Type[T]) -> T:
+    entity = from_entity_meta(meta)
+    if not isinstance(entity, expect):
+        raise TypeError(f"Expected entity type {expect} but got {type(entity)}")
+    return entity
 
 
-E = TypeVar('E', bound=Entity)
+def from_entity_meta(meta: EntityMeta, module: Optional[ModuleType] = None) -> Any:
+    unmarshal_type = meta['type']
+    if unmarshal_type == "None":
+        return None
+    elif unmarshal_type == "int":
+        return int(meta['content'])
+    elif unmarshal_type == "bool":
+        return meta['content'] == "True"
+    elif unmarshal_type == "float":
+        return float(meta['content'])
+    elif unmarshal_type == "list" or unmarshal_type == "dict":
+        return yaml.safe_load(meta['content'])
+    elif unmarshal_type == 'pickle':
+        content = meta['content']
+        content_bytes = base64.decodebytes(content.encode())
+        return pickle.loads(content_bytes)
 
+    # raise if import error
+    cls = None
+    if module:
+        module_name, local_name = parse_import_module_and_spec(unmarshal_type)
+        if module_name == module.__name__:
+            cls = module.__dict__[local_name]
+    if cls is None:
+        cls = import_from_path(unmarshal_type)
 
-class EntityFactory(ABC):
-    """
-    Factory for Entity
-    """
+    if inspect.isfunction(cls):
+        return cls
+    # method is prior
+    elif hasattr(cls, "__from_entity_meta__"):
+        return getattr(cls, "__from_entity_meta__")(meta)
 
-    @abstractmethod
-    def new_entity(self, meta_data: EntityMeta) -> Optional[Entity]:
-        """
-        try to new an entity from meta-data
-        """
-        pass
+    elif issubclass(cls, BaseModel):
+        data = json.loads(meta["content"])
+        return cls(**data)
 
-    @abstractmethod
-    def force_new_entity(self, meta_data: EntityMeta, expect: Type[E]) -> E:
-        """
-        :param meta_data:
-        :param expect: expect entity type
-        :return: EntityType instance
-        :exception: TypeError
-        """
-        pass
-
-
-class EntityFactoryImpl(EntityFactory):
-
-    def __init__(self, importer: Optional[Callable[[str], ModuleType]] = None):
-        self._importer = importer
-
-    def new_entity(self, meta_data: EntityMeta) -> Optional[Entity]:
-        type_ = meta_data['type']
-        cls = import_from_path(type_, self._importer)
-        if cls is None:
-            return None
-        if not issubclass(cls, Entity):
-            raise TypeError(f"Entity type {type_} does not inherit from Entity")
-        return cls.from_entity_meta(self, meta_data)
-
-    def force_new_entity(self, meta_data: EntityMeta, expect: Type[E]) -> E:
-        entity = self.new_entity(meta_data)
-        if entity is None:
-            raise TypeError(f"meta data {meta_data['type']} can not be instanced")
-        if not isinstance(entity, expect):
-            raise TypeError(f"Entity type {meta_data['type']} does not match {expect}")
-        return entity
+    raise TypeError(f"unsupported entity meta type: {unmarshal_type}")

@@ -1,6 +1,6 @@
 from typing import Optional, Iterable, List, Callable, Self, ClassVar, Union, Type, TypeVar, Generic
 from abc import ABC, abstractmethod
-from ghostos.common import Identical, Identifier, EntityMeta, to_entity_meta, get_identifier
+from ghostos.identifier import Identical, Identifier, EntityMeta, to_entity_meta, get_identifier
 from ghostos.core.runtime import (
     Event, Session, GoTaskStruct, Runtime,
 )

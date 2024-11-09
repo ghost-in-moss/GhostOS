@@ -1,6 +1,6 @@
 from typing import TypeVar, Optional, Type, Union
 from ghostos.helpers import import_class_from_path, generate_import_path, md5
-from ghostos.common import get_identifier, to_entity_meta
+from ghostos.identifier import get_identifier, to_entity_meta
 from ghostos.core.runtime import Runtime, GoTaskStruct
 from .concepts import Ghost, GhostDriver
 

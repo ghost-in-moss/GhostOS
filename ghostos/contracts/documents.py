@@ -1,7 +1,7 @@
 from typing import List, Iterable
 from typing_extensions import Self
 from abc import ABC, abstractmethod
-from ghostos.common import Identical, Identifier
+from ghostos.identifier import Identical, Identifier
 
 
 class Documents(Identical, ABC):

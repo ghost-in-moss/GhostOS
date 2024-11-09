@@ -13,7 +13,7 @@ from ghostos.core.aifunc import (
 )
 import ghostos.core.aifunc.func as func
 import ghostos.core.aifunc.interfaces as interfaces
-from ghostos.common import Identifier
+from ghostos.identifier import Identifier
 from ghostos.helpers import (
     gettext as _,
     reflect_module_code,

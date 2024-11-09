@@ -1,12 +1,11 @@
 import inspect
-from types import ModuleType
 from ghostos.core.moss import prompts
 from ghostos.core.moss.prompts import reflect_module_locals, compile_attr_prompts
 
 import unittest
 
 from ghostos.core.moss.impl import MossRuntimeImpl
-from ghostos.core.moss.abc import (
+from ghostos.core.moss.abcd import (
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
 
@@ -22,15 +21,10 @@ def test_prompts_baseline():
         array.append((name, prompt))
         data[name] = prompt
     # 从 utils 模块里定义的.
-    assert "is_typing" in data
+    assert "get_callable_definition" in data
     # typing 库本身的不会出现.
     assert "Optional" not in data
     # 引用的抽象类应该存在.
-    assert "PromptAble" in data
-
-    prompt = compile_attr_prompts(ModuleType("test"), array)
-    assert "class PromptAble" in prompt
-
 
 
 def test_prompts_mark_judgement():
@@ -74,7 +68,7 @@ def test_prompts_mark_judgement():
         return "hidden"
     {MOSS_HIDDEN_UNMARK}
     print(foo())"""
-    assert parser(code3, exclude_moss_mark_code=False) == expected3
+    assert parser(code3, exclude_hide_code=False) == expected3
 
     # test_multiple_hidden_sections
     code4 = f"""def foo():

@@ -74,7 +74,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
 
         # prepare chat by actions
         for action in actions:
-            chat = action.process(chat)
+            chat = action.update_prompt(chat)
 
         # prepare llm api
         llm_api = self.get_llmapi(g)

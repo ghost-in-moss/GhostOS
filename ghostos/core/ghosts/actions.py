@@ -6,7 +6,7 @@ from ghostos.core.llms import Prompt, LLMFunc, PromptPipe
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.messages.message import Caller
 from ghostos.core.runtime import Session
-from ghostos.common import Identical, Identifier
+from ghostos.identifier import Identical, Identifier
 from pydantic import BaseModel
 
 __all__ = ['Action', 'ToolAction']
@@ -18,7 +18,7 @@ class Action(Identical, PromptPipe, ABC):
     """
 
     @abstractmethod
-    def process(self, chat: Prompt) -> Prompt:
+    def update_prompt(self, chat: Prompt) -> Prompt:
         """
         Action update the chat with messages, tool, functional_tokens, etc.
         :param chat: origin chat.
@@ -62,7 +62,7 @@ class ToolAction(Action, Generic[A], ABC):
         """
         pass
 
-    def process(self, chat: Prompt) -> Prompt:
+    def update_prompt(self, chat: Prompt) -> Prompt:
         """
         将工具注入到 chat.
         """

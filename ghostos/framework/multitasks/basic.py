@@ -12,7 +12,7 @@ class MultiTaskBasicImpl(MultiTask):
     def __init__(self, ghost: Ghost):
         self._ghost = ghost
 
-    def process(self, chat: Prompt) -> Prompt:
+    def update_prompt(self, chat: Prompt) -> Prompt:
         children = self._ghost.session().get_task_briefs(children=True)
         if not children:
             return chat

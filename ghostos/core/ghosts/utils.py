@@ -44,7 +44,7 @@ class Utils:
         initialize ghost
         """
         session = self.ghost.session()
-        process = session.process()
+        process = session.update_prompt()
         if process.initialized:
             return None
         task_id = process.main_task_id

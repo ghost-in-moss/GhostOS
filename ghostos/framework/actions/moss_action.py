@@ -9,7 +9,7 @@ from ghostos.core.messages import MessageType, Caller
 from ghostos.core.moss import MossRuntime, moss_message
 from ghostos.core.ghosts.operators import Operator
 from ghostos.core.runtime import Session
-from ghostos.common import Identifier
+from ghostos.identifier import Identifier
 from pydantic import BaseModel, Field
 from traceback import format_exc
 
@@ -116,7 +116,7 @@ At these scenarios you shall write target code as string, and using the librarie
             description=self._functional_token.description,
         )
 
-    def process(self, chat: Prompt) -> Prompt:
+    def update_prompt(self, chat: Prompt) -> Prompt:
         # update functional tokens
         function_token = self._functional_token
         chat.functional_tokens.append(function_token)
@@ -134,7 +134,7 @@ At these scenarios you shall write target code as string, and using the librarie
             if name.startswith("_"):
                 continue
             if isinstance(member, PromptPipe):
-                member.process(chat)
+                member.update_prompt(chat)
 
         return chat
 

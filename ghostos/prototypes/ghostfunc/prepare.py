@@ -1,6 +1,6 @@
 from typing import Optional
 from ghostos.container import Container
-from ghostos.core.moss import test_container, MossCompiler
+from ghostos.core.moss import moss_container, MossCompiler
 from ghostos.core.llms import LLMs
 from ghostos.framework.configs import ConfigsByStorageProvider
 from ghostos.framework.storage import FileStorageProvider
@@ -30,7 +30,7 @@ def init_ghost_func_container(
     :param container: parent container.
     """
     if container is None:
-        container = test_container()
+        container = moss_container()
     container.register(FileStorageProvider(workspace_dir))
     container.register(ConfigsByStorageProvider(configs_dir))
     container.register(ConfigBasedLLMsProvider(llm_conf_path))

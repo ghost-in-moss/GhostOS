@@ -15,7 +15,7 @@ class OtherAgentOrTaskPipe(PromptPipe):
         self._task_id = task_id
         self._with_task_name = with_task_name
 
-    def process(self, chat: Prompt) -> Prompt:
+    def update_prompt(self, chat: Prompt) -> Prompt:
         def filter_fn(message: Message) -> Optional[Message]:
             if message.role != Role.ASSISTANT.value:
                 return message

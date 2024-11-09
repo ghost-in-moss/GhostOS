@@ -1,53 +1,22 @@
 from __future__ import annotations
 
-import json
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Union, Callable, Any, TypedDict, Required, Self, TypeVar, Type
-from types import ModuleType
+from typing import Optional, Dict, Union, Callable, Any
 from pydantic import BaseModel, Field
-from ghostos.helpers import generate_import_path, import_from_path
+from ghostos.helpers import generate_import_path
 from typing_extensions import Protocol
 import inspect
-import pickle
 
 __all__ = [
     'get_identifier',
-    'Identifier', 'Identifiable',
+    'identify_class',
+    'identify_class_id',
 
+    'Identifier', 'Identifiable',
     'Identical', 'IdenticalClass',
-    'identify_class', 'identify_class_id',
     'IdenticalObject',
 
-    'to_entity_meta', 'from_entity_meta', 'get_entity',
-    'EntityMeta', 'Entity', 'EntityType',
-
-    'get_defined_prompt',
-    'Prompter', 'PrompterClass',
-
 ]
-
-
-def get_defined_prompt(value: Any) -> Union[str, None]:
-    if value is None:
-        return None
-    elif isinstance(value, Prompter):
-        return value.__prompt__()
-    elif issubclass(value, PrompterClass):
-        return value.__class_prompt__()
-
-    elif isinstance(value, type):
-        # class without __class_prompt__ is not defined as prompter
-        if hasattr(value, "__class_prompt___"):
-            return getattr(value, "__class_prompt___")()
-
-    elif hasattr(value, "__prompter__"):
-        prompter = getattr(value, "__prompter__")
-        if prompter.__self__ is not None:
-            return prompter()
-    elif isinstance(value, ModuleType) and '__prompt__' in value.__dict__:
-        prompter = value.__dict__['__prompt__']
-        return prompter()
-    return None
 
 
 def get_identifier(value: Any, throw: bool = False) -> Union[Identifier, None]:
@@ -190,129 +159,3 @@ def identify_class(cls: type) -> Identifier:
 
 def identify_class_id(cls: type) -> str:
     return generate_import_path(cls)
-
-
-# ---- prompt ---- #
-
-
-class Prompter(ABC):
-    """
-    拥有 __prompt__ 方法的类.
-    这里只是一个示范, 并不需要真正继承这个类, 只需要有 __prompt__ 方法或属性.
-    """
-
-    @abstractmethod
-    def __prompt__(self) -> str:
-        pass
-
-
-class PromptAbleObj(Protocol):
-    @abstractmethod
-    def __prompt__(self) -> str:
-        pass
-
-
-class PrompterClass(ABC):
-
-    @classmethod
-    @abstractmethod
-    def __class_prompt__(cls) -> str:
-        pass
-
-
-class PromptAbleClass(Protocol):
-
-    @classmethod
-    @abstractmethod
-    def __class_prompt__(cls) -> str:
-        pass
-
-
-PromptAble = Union[PromptAbleObj, PromptAbleClass]
-
-
-# ---- entity ---- #
-
-class Entity(Protocol):
-
-    @abstractmethod
-    def __to_entity_meta__(self) -> EntityMeta:
-        pass
-
-    @classmethod
-    @abstractmethod
-    def __from_entity_meta__(cls, meta: EntityMeta) -> Self:
-        pass
-
-
-class EntityMeta(TypedDict):
-    """
-    I want python has an official way to marshal and unmarshal any instance and make it readable if allowed.
-    I found so many package-level implements like various kinds of Serializable etc.
-
-    So, I develop EntityMeta as a wrapper for any kind.
-    The EntityType will grow bigger with more marshaller, but do not affect who (me) is using the EntityMeta.
-
-    One day I can replace it with any better way inside the functions (but in-compatible)
-    """
-    type: Required[str]
-    content: Required[bytes]
-
-
-EntityType = Union[Entity, EntityMeta, BaseModel]
-
-
-def to_entity_meta(value: Union[EntityType, Any]) -> EntityMeta:
-    if isinstance(value, EntityMeta):
-        return value
-    elif hasattr(value, '__to_entity_meta__'):
-        return getattr(value, '__to_entity_meta__')()
-    elif isinstance(value, BaseModel):
-        return EntityMeta(
-            type=generate_import_path(value.__class__),
-            content=value.model_dump_json(exclude_defaults=True).encode(),
-        )
-    elif inspect.isfunction(value):
-        return EntityMeta(
-            type=generate_import_path(value),
-            content=bytes(),
-        )
-    else:
-        content = pickle.dumps(value)
-        return EntityMeta(
-            type="pickle",
-            content=content,
-        )
-
-
-T = TypeVar("T")
-
-
-def get_entity(meta: EntityMeta, expect: Type[T]) -> T:
-    entity = from_entity_meta(meta)
-    if not isinstance(entity, expect):
-        raise TypeError(f"Expected entity type {expect} but got {type(entity)}")
-    return entity
-
-
-def from_entity_meta(meta: EntityMeta) -> Any:
-    unmarshal_type = meta['type']
-    if unmarshal_type == 'pickle':
-        return pickle.loads(meta['content'])
-
-    # raise if import error
-    cls = import_from_path(unmarshal_type)
-
-    if issubclass(cls, EntityMeta):
-        return meta
-    elif inspect.isfunction(cls):
-        return cls
-    # method is prior
-    elif hasattr(cls, "__from_entity_meta__"):
-        return getattr(cls, "__from_entity_meta__")(meta)
-
-    elif issubclass(cls, BaseModel):
-        data = json.loads(meta["content"])
-        return cls(**data)
-
-    raise TypeError(f"unsupported entity meta type: {unmarshal_type}")

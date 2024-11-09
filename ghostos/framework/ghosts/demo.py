@@ -1,5 +1,5 @@
 from typing import Optional, List
-from ghostos.common import Identifier
+from ghostos.identifier import Identifier
 from ghostos.core.ghosts import GhostConf, Shell, Workspace
 from ghostos.core.runtime import GoProcess, GoTaskStruct
 from ghostos.contracts.modules import Modules

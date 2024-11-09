@@ -2,7 +2,7 @@ from typing import Optional, TYPE_CHECKING, List, Tuple, Dict
 from abc import ABC, abstractmethod
 from ghostos.entity import ModelEntity, EntityMeta, EntityFactory
 from ghostos.container import Container
-from ghostos.common import Identical, Identifier
+from ghostos.identifier import Identical, Identifier
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.configs import Configs
@@ -146,7 +146,7 @@ class Ghost(ABC):
         ghost default actions
         """
         session = self.session()
-        if session.task().task_id == session.process().main_task_id:
+        if session.task().task_id == session.update_prompt().main_task_id:
             return list(self.shell().actions())
         return []
 

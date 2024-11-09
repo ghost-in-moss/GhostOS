@@ -8,7 +8,7 @@ from ghostos.core.runtime import GoThreadInfo
 from logging.config import dictConfig
 from ghostos.core.llms import Prompt
 from ghostos.core.messages import Message
-from ghostos.core.moss import test_container
+from ghostos.core.moss import moss_container
 from ghostos.core.aifunc import (
     DefaultAIFuncExecutorImpl, AIFunc, DefaultAIFuncDriverImpl, AIFuncExecutor,
     AIFuncResult,
@@ -51,7 +51,7 @@ def run_aifunc(
     init_logger(absolute_logger_conf)
 
     # prepare container
-    container = test_container()
+    container = moss_container()
     container.register(FileStorageProvider(root_dir))
     container.register(NamedLoggerProvider(logger_name=logger_name))
     container.register(MsgThreadRepoByStorageProvider(threads_dir=threads_path))

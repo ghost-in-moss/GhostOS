@@ -350,7 +350,7 @@ class BasicGhost(Ghost, ABC):
 
     def _make_trace(self, session: Session, shell: Shell) -> Dict:
         session_id = session.id()
-        process_id = session.process().process_id
+        process_id = session.update_prompt().process_id
         task_id = session.task().task_id
         identifier = self.conf().identifier()
         return {

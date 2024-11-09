@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Dict, Optional, Type
 
 from pydantic import BaseModel, Field
-from ghostos.common import Identical, Identifier
+from ghostos.identifier import Identical, Identifier
 from ghostos.core.messages import Caller
 
 

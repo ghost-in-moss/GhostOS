@@ -23,6 +23,7 @@ from ghostos.helpers.trans import gettext, ngettext, get_current_locale, GHOSTOS
 
 from ghostos.helpers.coding import reflect_module_code, unwrap
 from ghostos.helpers.openai import get_openai_key
+from ghostos.helpers.tree_sitter import tree_sitter_parse
 
 if TYPE_CHECKING:
     from typing import Callable

@@ -5,7 +5,7 @@ from ghostos.entity import Entity, ModelEntity
 from ghostos.core.runtime import Event, GoThreadInfo, Session
 from ghostos.core.ghosts.ghost import Ghost
 from ghostos.core.ghosts.operators import Operator
-from ghostos.common import Identical, Identifier, PrompterClass
+from ghostos.identifier import Identical, Identifier, PromptAbleClass
 from ghostos.helpers import uuid, generate_import_path
 from pydantic import Field
 
@@ -60,7 +60,7 @@ class Thought(ABC):
         return inspect.getsource(cls)
 
 
-class ModelThought(Thought, ModelEntity, PrompterClass, ABC):
+class ModelThought(Thought, ModelEntity, PromptAbleClass, ABC):
     """
     The abstract model of the thought based by pydantic.BaseModel.
     """
@@ -168,7 +168,7 @@ class BasicThoughtDriver(Generic[T], ThoughtDriver[T], ABC):
         thread = session.thread()
         task = session.task()
 
-        process_id = session.process().process_id
+        process_id = session.update_prompt().process_id
         task_name = task.name.replace("/", "_")
         task_name = task_name.replace(".", "_")
         thread.save_file = f"process_{process_id}/task_{task_name}_thread_{thread.id}.yml"

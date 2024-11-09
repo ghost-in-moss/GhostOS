@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from ghostos.common import Identifier
+from ghostos.identifier import Identifier
 from pydantic import BaseModel
-from .concepts import Ghost, GhostDriver
+from .concepts import Ghost
 
 """
 Some ghost prototypes. 

@@ -1,6 +1,6 @@
 from typing import Optional, TypeVar, Generic, Type
 from abc import ABC, abstractmethod
-from ghostos.common import Identical, Identifier
+from ghostos.identifier import Identical, Identifier
 from ghostos.core.ghosts import Ghost
 from ghostos.core.ghosts.thoughts import Thought, ModelThought
 from ghostos.helpers import generate_import_path, md5, import_from_path
@@ -46,7 +46,7 @@ class AssistantDriver(Generic[A], ABC):
         """
         generate unique task id for assistant instance in the process
         """
-        process_id = g.session().process().process_id
+        process_id = g.session().update_prompt().process_id
         name = self.assistant.identifier().name
         assistant_type = generate_import_path(type(self.assistant))
         thought_type = generate_import_path(type(self.root_thought(g)))

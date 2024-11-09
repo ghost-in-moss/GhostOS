@@ -2,7 +2,7 @@ import inspect
 from typing import List, Type, Dict, Set, Iterable, Optional
 from types import ModuleType
 
-from ghostos.common import Identifier, identify_class
+from ghostos.identifier import Identifier, identify_class
 from ghostos.core.aifunc import AIFunc, ExecFrame
 from ghostos.core.aifunc.interfaces import AIFuncRepository
 from ghostos.contracts.configs import YamlConfig, Configs

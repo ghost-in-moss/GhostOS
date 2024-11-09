@@ -71,7 +71,7 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         return g.llms().get_api(self.thought.llm_api_name)
 
     def new_task_id(self, g: Ghost) -> str:
-        process_id = g.session().process().process_id
+        process_id = g.session().update_prompt().process_id
         task_id = f"process_{process_id}_task_{self.thought.target_module}"
         # task_id in a same process will always be the same
         return md5(task_id)

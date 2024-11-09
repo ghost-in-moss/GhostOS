@@ -3,7 +3,7 @@ from typing import Callable, Type, Optional, TYPE_CHECKING
 from abc import ABC
 from pydantic import BaseModel
 from ghostos.helpers import generate_import_path, import_from_path
-from ghostos.common import PrompterClass
+from ghostos.identifier import PromptAbleClass
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.moss.utils import make_class_prompt, add_comment_mark
 from ghostos.core.moss.prompts import get_class_magic_prompt
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class AIFunc(PrompterClass, BaseModel, ABC):
+class AIFunc(PromptAbleClass, BaseModel, ABC):
     """
     Model interface for an AIFunc arguments, always followed by an AIFuncResult Model.
     The subclass of AIFunc can run in AIFuncCtx, if you are provided with them, you can use them if you need.
@@ -47,7 +47,7 @@ class AIFunc(PrompterClass, BaseModel, ABC):
         return generate_import_path(cls)
 
 
-class AIFuncResult(PrompterClass, BaseModel, ABC):
+class AIFuncResult(PromptAbleClass, BaseModel, ABC):
     """
     the AIFuncResult Model
     """

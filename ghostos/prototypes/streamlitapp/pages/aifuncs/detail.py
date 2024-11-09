@@ -21,7 +21,7 @@ from ghostos.core.aifunc import (
     get_aifunc_result_type,
     ExecFrame, ExecStep,
 )
-from ghostos.common import Identifier, identify_class
+from ghostos.identifier import Identifier, identify_class
 from ghostos.helpers import (
     uuid,
     gettext as _,

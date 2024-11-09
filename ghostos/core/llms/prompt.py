@@ -171,7 +171,7 @@ class PromptPipe(ABC):
     """
 
     @abstractmethod
-    def process(self, prompt: Prompt) -> Prompt:
+    def update_prompt(self, prompt: Prompt) -> Prompt:
         pass
 
 
@@ -180,7 +180,7 @@ def run_prompt_pipeline(prompt: Prompt, pipeline: Iterable[PromptPipe]) -> Promp
     通过多个 filter 来加工 chat.
     """
     for f in pipeline:
-        prompt = f.process(prompt)
+        prompt = f.update_prompt(prompt)
     return prompt
 
 

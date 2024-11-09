@@ -1,4 +1,4 @@
-from ghostos.core.moss.abc import Moss
+from ghostos.core.moss.abcd import Moss
 
 
 def plus(a: int, b: int) -> int:

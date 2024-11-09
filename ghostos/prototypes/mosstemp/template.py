@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 from ghostos.core.moss.lifecycle import (
     __moss_compile__ as __default_moss_compile__,
     __moss_attr_prompts__ as __default_moss_attr_prompts__,
-    __moss_prompt__ as __default_moss_prompt__,
+    __moss_code_prompt__ as __default_moss_prompt__,
     __moss_exec__ as __default_moss_exec__,
 )
 

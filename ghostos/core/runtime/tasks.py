@@ -3,7 +3,7 @@ from typing import Optional, List, Set, Iterable, ClassVar, Dict, Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
-from ghostos.common import Identifier, Identical, EntityMeta
+from ghostos.identifier import Identifier, Identical, EntityMeta
 from ghostos.core.messages import Payload
 from contextlib import contextmanager
 
@@ -116,8 +116,8 @@ Parent task id of the task.
         description="the global values that inherit from the parent task or shell",
     )
 
-    properties: Dict[str, Dict] = Field(
-        default_factory=dict,
+    props: Optional[EntityMeta] = Field(
+        default=None,
         description="the state data of the task handler"
     )
 

@@ -8,8 +8,10 @@ from enum import Enum
 
 _PythonParser = get_parser('python')
 
+__all__ = ['tree_sitter_parse']
 
-def parse(code: str) -> Tree:
+
+def tree_sitter_parse(code: str) -> Tree:
     return _PythonParser.parse(code)
 
 

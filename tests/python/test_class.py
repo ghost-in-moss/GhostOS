@@ -232,3 +232,10 @@ def test_protocol_and_abc():
 
     b = _Baz()
     assert b.foo == 1
+
+
+def test_attr_of_class():
+    class Foo:
+        foo = 1
+
+    assert Foo.foo == 1
