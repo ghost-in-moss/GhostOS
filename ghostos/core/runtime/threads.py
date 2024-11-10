@@ -2,7 +2,6 @@ from typing import Optional, List, Iterable, Dict, Any
 import time
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.identifier import EntityMeta
 from ghostos.core.messages import Message, copy_messages, Role
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Prompt

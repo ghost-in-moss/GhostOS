@@ -3,7 +3,8 @@ from typing import Optional, List, Set, Iterable, ClassVar, Dict, Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
-from ghostos.identifier import Identifier, Identical, EntityMeta
+from ghostos.identifier import Identifier, Identical
+from ghostos.entity import EntityMeta
 from ghostos.core.messages import Payload
 from contextlib import contextmanager
 

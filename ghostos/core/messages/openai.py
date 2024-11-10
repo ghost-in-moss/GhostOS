@@ -12,8 +12,8 @@ from openai.types.chat.chat_completion_user_message_param import ChatCompletionU
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 
-from ghostos.core.messages.message import Message, MessageType, Role, Caller, PayloadItem
-from ghostos.container import Provider, Container, INSTANCE
+from ghostos.core.messages import Message, MessageType, Role, Caller, Payload
+from ghostos.container import Provider, Container
 
 __all__ = [
     "OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider",
@@ -61,7 +61,7 @@ class OpenAIMessageParser(ABC):
         pass
 
 
-class CompletionUsagePayload(CompletionUsage, PayloadItem):
+class CompletionUsagePayload(CompletionUsage, Payload):
     """
     the strong-typed payload of OpenAI chat completion usage.
     """

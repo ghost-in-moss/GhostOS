@@ -9,7 +9,7 @@ from ghostos.core.messages import Message, Stream, Payload
 from ghostos.identifier import Identifier
 from ghostos.helpers import generate_import_path, uuid
 from ghostos.container import Container
-from ghostos.entity import EntityMeta, model_to_entity_meta, model_from_entity_meta
+from ghostos.entity import EntityMeta, to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 
 __all__ = [
@@ -144,7 +144,7 @@ class ExecFrame(BaseModel):
     @classmethod
     def from_func(cls, fn: AIFunc, depth: int = 0, parent_step_id: Optional[str] = None) -> "ExecFrame":
         return cls(
-            args=model_to_entity_meta(fn),
+            args=to_entity_meta(fn),
             parent_step=parent_step_id,
             depth=depth,
         )
@@ -153,15 +153,15 @@ class ExecFrame(BaseModel):
         return self.args['type']
 
     def get_args(self) -> AIFunc:
-        return model_from_entity_meta(self.args, AIFunc)
+        return get_entity(self.args, AIFunc)
 
     def set_result(self, result: AIFuncResult) -> None:
-        self.result = model_to_entity_meta(result)
+        self.result = to_entity_meta(result)
 
     def get_result(self) -> Optional[AIFuncResult]:
         if self.result is None:
             return None
-        return model_from_entity_meta(self.result, AIFuncResult)
+        return get_entity(self.result, AIFuncResult)
 
     def new_step(self) -> ExecStep:
         step = ExecStep(
