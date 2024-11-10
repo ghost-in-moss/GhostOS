@@ -115,7 +115,7 @@ class Context(Payload, Prompter, ABC):
     key = "ghostos_context"
 
     @abstractmethod
-    def self_prompt(self, container: Container, depth: int = 0) -> str:
+    def self_prompt(self, container: Container) -> str:
         """
         generate prompt from model values with libraries that container provides.
         :param container: IoC container provides library implementation.

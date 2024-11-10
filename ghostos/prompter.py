@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from typing import (
-    List, Self, Union, Callable, Any, Protocol,
+    List, Self, Union, Callable, Any, Protocol, Optional, Dict,
 )
 from abc import ABC, abstractmethod
 from types import ModuleType
@@ -10,13 +10,14 @@ from ghostos.container import Container
 from ghostos.helpers import generate_import_path
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from .entity import EntityClass, EntityMeta, from_entity_meta, to_entity_meta
 
 __all__ = [
     'get_defined_prompt',
     'set_prompter', 'set_class_prompter',
     'Prompter',
+    'GroupPrmt', 'ParagraphPrmt',
     'PromptAbleObj', 'PromptAbleClass',
 ]
 
@@ -75,21 +76,33 @@ class Prompter(BaseModel, EntityClass, ABC):
     is strong-typed model for runtime alternative properties of a ghost.
     """
 
-    __children__: List[Prompter] = []
+    prompt_priority: float = Field(0.0, description='Priority of the prompter.')
+
+    __children__: List[Prompter]
     """ children is fractal sub context nodes"""
+
+    __self_prompt__: Optional[str]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__children__ = []
+        self.__self_prompt__ = None
 
     def with_children(self, *children: Prompter) -> Prompter:
         self.__children__.extend(children)
         return self
 
     @abstractmethod
-    def self_prompt(self, container: Container, depth: int = 0) -> str:
+    def self_prompt(self, container: Container) -> str:
         """
         generate prompt by self, without children
         :param container:
-        :param depth:
         :return:
         """
+        pass
+
+    @abstractmethod
+    def get_title(self) -> str:
         pass
 
     def get_prompt(self, container: Container, depth: int = 0) -> str:
@@ -99,11 +112,26 @@ class Prompter(BaseModel, EntityClass, ABC):
         :param depth:
         :return:
         """
-        self_prompt = self.self_prompt(container, depth=depth)
-        prompts = [self_prompt]
+        title = self.get_title()
+        if title:
+            title = '#' * (depth + 1) + ' ' + title
+
+        if self.__self_prompt__ is not None:
+            self_prompt = self.__self_prompt__
+        else:
+            self_prompt = self.self_prompt(container)
+            self.__self_prompt__ = self_prompt
+
+        prompts = [title, self_prompt]
         for child in self.__children__:
-            prompts.append(child.get_prompt(container, depth=depth + 1))
-        return "\n\n".join([prompt.rstrip() for prompt in prompts])
+            child_prompt = child.get_prompt(container, depth=depth + 1)
+            prompts.append(child_prompt)
+        output = ""
+        for paragraph in prompts:
+            paragraph = paragraph.strip()
+            if paragraph:
+                output += "\n\n" + paragraph
+        return output.strip()
 
     def __to_entity_meta__(self) -> EntityMeta:
         type_ = generate_import_path(self.__class__)
@@ -125,6 +153,39 @@ class Prompter(BaseModel, EntityClass, ABC):
         for child in children_data:
             children.append(from_entity_meta(child))
         return result.with_children(*children)
+
+    def flatten(self, index: str = "") -> Dict[str, Self]:
+        if not index:
+            index = "0"
+        result = {index: self}
+        idx = 0
+        for child in self.__children__:
+            sub_index = index + "." + str(idx)
+            sub_flatten = child.flatten(sub_index)
+            for key in sub_flatten:
+                result[key] = sub_flatten[key]
+        return result
+
+
+class GroupPrmt(Prompter):
+    title: str = ""
+
+    def self_prompt(self, container: Container) -> str:
+        return ""
+
+    def get_title(self) -> str:
+        return self.title
+
+
+class ParagraphPrmt(Prompter):
+    title: str = ""
+    content: str = ""
+
+    def self_prompt(self, container: Container) -> str:
+        return self.content
+
+    def get_title(self) -> str:
+        return self.title
 
 
 class PromptAbleObj(ABC):

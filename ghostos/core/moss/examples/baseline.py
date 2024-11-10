@@ -24,8 +24,11 @@ def plus(a: int, b: int) -> int:
 class TestPrompter(Prompter):
     line: str = "TestPrompter"
 
-    def self_prompt(self, container: Container, depth: int = 0) -> str:
+    def self_prompt(self, container: Container) -> str:
         return self.line
+
+    def get_title(self) -> str:
+        return ""
 
 
 class Moss(Parent, ABC):

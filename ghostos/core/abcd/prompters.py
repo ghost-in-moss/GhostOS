@@ -12,5 +12,5 @@ class SystemPrompter(Prompter):
         description="meta prompt for agent",
     )
 
-    def self_prompt(self, container: Container, depth: int = 0) -> str:
+    def self_prompt(self, container: Container) -> str:
         return self.meta_prompt
