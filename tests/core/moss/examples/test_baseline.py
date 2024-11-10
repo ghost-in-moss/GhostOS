@@ -47,6 +47,9 @@ def test_baseline_exec():
     assert prompter is not None
     prompt = prompter.dump_context_prompt()
 
+    prompters = prompter.moss_injected_prompters()
+    assert "tester" in prompters
+
     # plus 方法存在.
     assert 'def plus' in prompt
     # 在 moss 标记内的不展示.
@@ -56,7 +59,6 @@ def test_baseline_exec():
     assert "def getsource(" not in prompt
     # 添加的意义不明的注释也应该存在了.
     assert "# hello world" in prompt
-    assert "TestPrompter" in prompt
 
     # assert moss
     moss = runtime.moss()
@@ -84,6 +86,7 @@ def test_baseline_exec():
     # 验证依赖注入.
     foo = getattr(moss, 'foo')
     Foo = runtime.module().__dict__['Foo']
+    assert Foo is baseline.Foo
     moss.fetch(Foo)
     assert foo is not None and isinstance(foo, Foo)
     assert foo.foo() == "hello"

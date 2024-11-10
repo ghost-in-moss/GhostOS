@@ -173,8 +173,9 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._built: bool = False
         self._moss_prompt: Optional[str] = None
         self._attr_prompts: Dict[str, str] = attr_prompts
-        self._moss: Moss = self._compile_moss()
         self._destroyed: bool = False
+        self._injected = set()
+        self._moss: Moss = self._compile_moss()
 
     def _compile_moss(self) -> Moss:
         moss_type = self.moss_type()
@@ -194,6 +195,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
 
         for name, injection in self._injections.items():
             setattr(moss, name, injection)
+            self._injected.add(name)
 
         # 初始化基于容器的依赖注入.
         typehints = get_type_hints(moss_type, localns=self._compiled.__dict__)
@@ -202,16 +204,13 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 continue
 
             # 已经有的就不再注入.
-            item = None
             if hasattr(moss, name):
-                item = getattr(moss, name)
-            if item is not None:
                 continue
-
             # 为 None 才依赖注入.
             value = self._container.force_fetch(typehint)
             # 依赖注入.
             setattr(moss, name, value)
+            self._injected.add(name)
 
         self._compiled.__dict__[MOSS_VALUE_NAME] = moss
         self._compiled.__dict__[MOSS_TYPE_NAME] = moss_type
@@ -233,11 +232,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         return self._moss
 
     def dump_pycontext(self) -> PyContext:
-        if not self._moss:
-            return self._pycontext
-        if self._moss.__pycontext__ is self._pycontext:
-            return self._pycontext
-        return self._moss.__pycontext__
+        return self._pycontext
 
     def dump_std_output(self) -> str:
         return self._runtime_std_output
@@ -256,24 +251,14 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         code = self._source_code
         return self._parse_pycontext_code(code, exclude_hide_code)
 
-    def moss_injections_prompt(self) -> str:
+    def moss_injected_prompters(self) -> Dict[str, Prompter]:
         moss = self.moss()
-        prompts = {}
-        for name, value in moss.__dict__.items():
-            if name.startswith('_'):
-                continue
-            key = f"Moss.{name}"
-            if isinstance(value, Prompter):
-                prompt = value.get_prompt(self.container())
-                prompts[key] = add_comment_mark(prompt)
-                continue
-            prompt = get_defined_prompt(value)
-            if prompt:
-                prompts[name] = add_comment_mark(prompt)
-        result = ""
-        for name, prompt in prompts.items():
-            result += f"# <attr name=`{name}`>\n{prompt}\n# </attr>\n"
-        return result.strip()
+        prompters = {}
+        for name in self._injected:
+            injection = getattr(moss, name)
+            if isinstance(injection, Prompter):
+                prompters[name] = injection
+        return prompters
 
     @staticmethod
     def _parse_pycontext_code(code: str, exclude_hide_code: bool = True) -> str:

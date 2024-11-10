@@ -7,7 +7,7 @@ from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.prompts import (
     AttrPrompts, reflect_module_locals, compile_attr_prompts
 )
-from ghostos.core.moss.decorators import cls_source_code
+from ghostos.prompter import Prompter
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -320,7 +320,7 @@ class MossPrompter(ABC):
         return compile_attr_prompts(prompts)
 
     @abstractmethod
-    def moss_injections_prompt(self) -> str:
+    def moss_injected_prompters(self) -> Dict[str, Prompter]:
         """
         prompt for moss injections.
         """

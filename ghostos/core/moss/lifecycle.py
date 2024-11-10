@@ -87,22 +87,10 @@ def __moss_code_prompt__(prompter: "MossPrompter") -> str:
 """
 '''
 
-    injection_prompt = prompter.moss_injections_prompt()
-    injection_prompt_part = ""
-    if injection_prompt:
-        injection_prompt = escape_string_quotes(injection_prompt, '"""')
-        injection_prompt_part = f'''
-# information about moss injections:
-"""
-{injection_prompt}
-"""
-'''
-
     # 生成完整的 prompt. 预计 MOSS 的描述已经在上下文里了.
     prompt = f"""
 {origin_code}
 {code_prompt_part}
-{injection_prompt_part}
 """
 
     return prompt
