@@ -14,7 +14,7 @@ def test_storage_tasks_impl():
         process_id="process_id",
         name="name",
         description="description",
-        meta=EntityMeta(type="type", data={}),
+        meta=EntityMeta(type="type", content=""),
     )
 
     t = tasks.get_task(task.task_id, False)

@@ -20,6 +20,7 @@ class MemStorage(Storage):
 
     def get(self, file_path: str) -> bytes:
         key = join(self._namespace, file_path)
+        key = key.lstrip('/')
         if key not in self._saved:
             raise KeyError(key)
         return self._saved.get(key)
@@ -30,6 +31,7 @@ class MemStorage(Storage):
 
     def put(self, file_path: str, content: bytes) -> None:
         key = join(self._namespace, file_path)
+        key = key.lstrip('/')
         self._saved[key] = content
 
     def dir(self, prefix_dir: str, recursive: bool, patten: Optional[str] = None) -> Iterable[str]:

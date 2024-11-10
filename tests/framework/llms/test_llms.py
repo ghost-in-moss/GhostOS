@@ -1,19 +1,43 @@
 import os
+
+import yaml
+
 from ghostos.container import Container
-from ghostos.core.llms import LLMsConfig, LLMs
+from ghostos.core.llms import LLMsConfig, ServiceConf, ModelConf, LLMs
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.framework.configs import ConfigsByStorageProvider
-from ghostos.framework.storage import FileStorageProvider
+from ghostos.framework.storage import MemStorage, Storage
 from ghostos.framework.llms import ConfigBasedLLMsProvider
 
 
 def _prepare_container() -> Container:
-    dirname = os.path.dirname
-    demo_dir = dirname(__file__) + "/../../../ghostos/demo/"
-    demo_dir = os.path.abspath(demo_dir)
     container = Container()
-    container.register(FileStorageProvider(demo_dir))
+    storage = MemStorage()
+    container.set(Storage, storage)
     container.register(ConfigsByStorageProvider('configs'))
+
+    data = LLMsConfig(
+        services=[
+            ServiceConf(
+                name='moonshot',
+                base_url="http://moonshot.com",
+                token="$MOONSHOT_TOKEN",
+            )
+        ],
+        default="moonshot-v1-32k",
+        models={
+            "moonshot-v1-32k": ModelConf(
+                model="moonshot-v1-32k",
+                service="moonshot"
+            ),
+            "gpt-4": dict(
+                model="moonshot-v1-32k",
+                service="moonshot"
+            )
+        }
+    )
+
+    storage.put("configs/llms_conf.yml", yaml.safe_dump(data.model_dump()).encode())
     return container
 
 
