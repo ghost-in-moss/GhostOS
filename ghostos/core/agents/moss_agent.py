@@ -1,4 +1,4 @@
-from typing import Union, Optional, Dict, Any, TypeVar, List, Self
+from typing import Union, Optional, Dict, Any, TypeVar, List, Self, Iterable
 from types import ModuleType
 
 from ghostos.identifier import Identifier
@@ -10,7 +10,11 @@ from ghostos.core.abcd import GhostDriver, Operator, Agent, Session, StateValue,
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, PyContext, Moss, MossRuntime
 from ghostos.core.messages import Message, Caller, Role
-from ghostos.core.llms import LLMs, LLMApi, Prompt, PromptPipe, LLMFunc
+from ghostos.core.llms import (
+    LLMs, LLMApi,
+    Prompt, PromptPipe, AssistantNamePipe, run_prompt_pipeline,
+    LLMFunc,
+)
 from .instructions import (
     GHOSTOS_INTRODUCTION, MOSS_INTRODUCTION, AGENT_INTRODUCTION, MOSS_FUNCTION_DESC,
     get_moss_context_prompter, get_agent_identity,
@@ -113,7 +117,8 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 instructions = self.get_instructions(session, rtm)
                 # prepare prompt
                 prompt = thread.to_prompt(instructions)
-                prompt = self.update_prompt_by_moss(rtm, prompt)
+                pipes = self.get_prompt_pipes(session.rtm)
+                prompt = run_prompt_pipeline(prompt, pipes)
 
                 # prepare actions
                 actions = self.get_actions(session, rtm)
@@ -161,6 +166,9 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         """
         moss_action = MossAction(runtime)
         return {moss_action.name(): moss_action}
+
+    def get_prompt_pipes(self, session: Session, runtime: MossRuntime) -> Iterable[PromptPipe]:
+        yield AssistantNamePipe(self.ghost.name)
 
     def get_llmapi(self, session: Session) -> LLMApi:
         llms = session.container.force_fetch(LLMs)

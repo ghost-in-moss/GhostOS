@@ -99,7 +99,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.framework.threads import GoThreads
     from ghostos.framework.tasks import GoTasks
     from ghostos.framework.eventbuses import EventBus
-    from ghostos.framework.llms import LLMs
+    from ghostos.framework.llms import LLMs, PromptStorage
     from ghostos.framework.logger import LoggerItf
     from ghostos.framework.documents import DocumentRegistry
     from ghostos.core.aifunc import AIFuncExecutor, AIFuncRepository
@@ -113,6 +113,8 @@ def default_application_contracts() -> Contracts:
         Pool,  # multi-thread or process pool to submit async tasks
         Shutdown,  # graceful shutdown register
         LLMs,  # LLMs interface
+        PromptStorage,
+
         LoggerItf,  # the logger instance of application
         Modules,  # the import_module proxy
         EntityFactory,  # wrap and un-wrap Entity class
@@ -158,7 +160,7 @@ def default_application_providers(
     from ghostos.framework.threads import MsgThreadsRepoByWorkSpaceProvider
     from ghostos.framework.tasks import WorkspaceTasksProvider
     from ghostos.framework.eventbuses import MemEventBusImplProvider
-    from ghostos.framework.llms import ConfigBasedLLMsProvider
+    from ghostos.framework.llms import ConfigBasedLLMsProvider, PromptStorageProvider
     from ghostos.framework.logger import NamedLoggerProvider
     from ghostos.framework.entities import EntityFactoryProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
@@ -189,6 +191,7 @@ def default_application_providers(
 
         # --- llm --- #
         ConfigBasedLLMsProvider(llms_conf_path),
+        PromptStorageProvider(),
 
         # --- basic library --- #
         EntityFactoryProvider(),

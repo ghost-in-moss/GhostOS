@@ -1,4 +1,3 @@
-import os
 from typing import List, Iterable, Union, Optional
 
 from openai import OpenAI
@@ -14,15 +13,18 @@ from ghostos.core.messages import (
     CompletionUsagePayload,
 )
 from ghostos.core.llms import (
-    LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
-    Prompt,
+    LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME,
+    Prompt, PromptPayload, PromptStorage,
     FunctionalToken,
 )
 from ghostos.container import Bootstrapper, Container
 
 import litellm
 
-__all__ = ['OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper', 'LitellmAdapter']
+__all__ = [
+    'OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper',
+    'LitellmAdapter', 'LiteLLMDriver',
+]
 
 
 class FunctionalTokenPrompt(str):
@@ -73,10 +75,13 @@ class OpenAIAdapter(LLMApi):
             service_conf: ServiceConf,
             model_conf: ModelConf,
             parser: OpenAIMessageParser,
+            storage: PromptStorage,
+            # deprecated:
             functional_token_prompt: Optional[str] = None,
     ):
         self._service = service_conf
         self._model = model_conf
+        self._storage: PromptStorage = storage
         http_client = None
         if service_conf.proxy:
             transport = SyncProxyTransport.from_url(service_conf.proxy)
@@ -102,29 +107,7 @@ class OpenAIAdapter(LLMApi):
     def text_completion(self, prompt: str) -> str:
         raise NotImplemented("text_completion is deprecated, implement it later")
 
-    # def get_embeddings(self, texts: List[str]) -> Embeddings:
-    #     try:
-    #         model = self._model.model
-    #         resp = self._client.embeddings.create(
-    #             input=texts,
-    #             model=model,
-    #             # todo: 未来再做更多细节.
-    #         )
-    #         result = []
-    #         for i, text in enumerate(texts):
-    #             embedding = resp.embeddings[i]
-    #             result.append(Embedding(
-    #                 text=text,
-    #                 embedding=embedding
-    #             ))
-    #         return Embeddings(result=result)
-    #
-    #     except Exception as e:
-    #         # todo: log
-    #         raise GhostOSIOError("failed to get text embedding", e)
-
     def _chat_completion(self, chat: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
-        # todo: try catch
         chat = self.parse_chat(chat)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = chat.get_messages()
@@ -147,35 +130,50 @@ class OpenAIAdapter(LLMApi):
         )
 
     def chat_completion(self, chat: Prompt) -> Message:
-        message: ChatCompletion = self._chat_completion(chat, stream=False)
-        pack = self._parser.from_chat_completion(message.choices[0].message)
-        # add completion usage
-        self._model.set(pack)
-        if message.usage:
-            usage = CompletionUsagePayload.from_usage(message.usage)
-            usage.set(pack)
+        try:
+            message: ChatCompletion = self._chat_completion(chat, stream=False)
+            chat.output = [message]
+            pack = self._parser.from_chat_completion(message.choices[0].message)
+            # add completion usage
+            self._model.set(pack)
+            if message.usage:
+                usage = CompletionUsagePayload.from_usage(message.usage)
+                usage.set(pack)
 
-        if not pack.is_complete():
-            pack.chunk = False
-        return pack
+            if not pack.is_complete():
+                pack.chunk = False
+            return pack
+        except Exception as e:
+            chat.error = str(e)
+            raise
+        finally:
+            self._storage.save(chat)
 
     def chat_completion_chunks(self, chat: Prompt) -> Iterable[Message]:
-        chunks: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
-        messages = self._parser.from_chat_completion_chunks(chunks)
-        first = True
-        for chunk in messages:
-            if first:
-                self._model.set(chunk)
-                first = False
-            yield chunk
+        try:
+            chunks: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
+            messages = self._parser.from_chat_completion_chunks(chunks)
+            prompt_payload = PromptPayload.from_prompt(chat)
+            output = []
+            for chunk in messages:
+                yield chunk
+                if chunk.is_complete():
+                    self._model.set(chunk)
+                    prompt_payload.set(chunk)
+                    output.append(chunk)
+            chat.output = output
+        except Exception as e:
+            chat.error = str(e)
+        finally:
+            self._storage.save(chat)
 
     def parse_chat(self, chat: Prompt) -> Prompt:
-        if not chat.functional_tokens:
-            return chat
-        prompt = FunctionalTokenPrompt(self._functional_token_prompt)
-        content = prompt.format_tokens(chat.functional_tokens)
-        message = MessageType.DEFAULT.new_system(content=content)
-        chat.system.append(message)
+        # if not chat.functional_tokens:
+        #     return chat
+        # prompt = FunctionalTokenPrompt(self._functional_token_prompt)
+        # content = prompt.format_tokens(chat.functional_tokens)
+        # message = MessageType.DEFAULT.new_system(content=content)
+        # chat.system.append(message)
         return chat
 
 
@@ -184,20 +182,17 @@ class OpenAIDriver(LLMDriver):
     adapter
     """
 
-    def __init__(self, parser: Optional[OpenAIMessageParser] = None):
+    def __init__(self, storage: PromptStorage, parser: Optional[OpenAIMessageParser] = None):
         if parser is None:
-            parser = DefaultOpenAIMessageParser()
+            parser = DefaultOpenAIMessageParser([])
         self._parser = parser
+        self._storage = storage
 
     def driver_name(self) -> str:
         return OPENAI_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
-        # todo: 不能这么 hack.
-        if service.name in ("anthropic", "deepseek"):
-            return LitellmAdapter(service, model, self._parser)
-
-        return OpenAIAdapter(service, model, self._parser)
+        return OpenAIAdapter(service, model, self._parser, self._storage)
 
 
 class LitellmAdapter(OpenAIAdapter):
@@ -221,8 +216,21 @@ class LitellmAdapter(OpenAIAdapter):
         return response.choices[0].message
 
 
+class LiteLLMDriver(OpenAIDriver):
+
+    def driver_name(self) -> str:
+        return LITELLM_DRIVER_NAME
+
+    def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
+        return LitellmAdapter(service, model, self._parser, self._storage)
+
+
 class OpenAIDriverBootstrapper(Bootstrapper):
 
     def bootstrap(self, container: Container) -> None:
         llms = container.force_fetch(LLMs)
-        llms.register_driver(OpenAIDriver())
+        storage = container.force_fetch(PromptStorage)
+        openai_driver = OpenAIDriver(storage)
+        lite_llm_driver = LiteLLMDriver(storage)
+        llms.register_driver(openai_driver)
+        llms.register_driver(lite_llm_driver)

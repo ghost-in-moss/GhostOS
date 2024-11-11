@@ -4,7 +4,7 @@ from typing_extensions import Self
 from ghostos.core.runtime import Event
 from ghostos.core.runtime.events import EventBus
 from queue import Queue, Empty
-from ghostos.container import Provider, Container, BootstrappingProvider
+from ghostos.container import Provider, Container, BootstrapProvider
 from ghostos.contracts.shutdown import Shutdown
 
 
@@ -73,7 +73,7 @@ class MemEventBusImpl(EventBus):
         del self._task_queues
 
 
-class MemEventBusImplProvider(BootstrappingProvider[EventBus]):
+class MemEventBusImplProvider(BootstrapProvider[EventBus]):
     """
     mem event bus provider
     """

@@ -65,12 +65,7 @@ class LLMApi(ABC):
             deliver.deliver(message)
             return
         items = self.chat_completion_chunks(chat)
-        # todo: payload 要计算 tokens
-        for item in items:
-            if item.is_complete():
-                # add model conf as message payload
-                self.get_model().set(item)
-            deliver.deliver(item)
+        deliver.send(items)
 
 
 class LLMDriver(ABC):

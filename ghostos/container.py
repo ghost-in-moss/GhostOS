@@ -7,7 +7,7 @@ import warnings
 
 __all__ = [
     "Container", "IoCContainer",
-    "Provider", "Factory", "Bootstrapper",
+    "Provider", "Factory", "Bootstrapper", "BootstrapProvider",
     "INSTANCE", "ABSTRACT",
     "ProviderAdapter", 'provide',
     'Contracts',
@@ -426,7 +426,7 @@ class Bootstrapper(metaclass=ABCMeta):
         pass
 
 
-class BootstrappingProvider(Generic[INSTANCE], Provider[INSTANCE], Bootstrapper, metaclass=ABCMeta):
+class BootstrapProvider(Generic[INSTANCE], Provider[INSTANCE], Bootstrapper, metaclass=ABCMeta):
     """
     将 bootstrapper 和 Provider 可以融合在一起.
     """

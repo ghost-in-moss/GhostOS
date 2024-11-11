@@ -8,11 +8,14 @@ from pydantic import BaseModel, Field
 from ghostos.core.messages import Payload
 
 __all__ = [
-    'ModelConf', 'ServiceConf', 'LLMsConfig', 'OPENAI_DRIVER_NAME',
+    'ModelConf', 'ServiceConf', 'LLMsConfig',
+    'OPENAI_DRIVER_NAME', 'LITELLM_DRIVER_NAME',
 ]
 
-OPENAI_DRIVER_NAME = "ghostos.llms.openai_driver"
+OPENAI_DRIVER_NAME = "openai_driver"
 """default llm driver name for OpenAI llm message protocol """
+
+LITELLM_DRIVER_NAME = "lite_llm_Driver"
 
 
 class ModelConf(Payload):
@@ -37,7 +40,11 @@ class ServiceConf(BaseModel):
     The service configuration of a llm.
     """
     name: str = Field(description="Service name")
-    driver: str = Field(default=OPENAI_DRIVER_NAME, description="the adapter driver name of this service. ")
+    driver: str = Field(
+        default=OPENAI_DRIVER_NAME,
+        description="the adapter driver name of this service. ",
+    )
+
     base_url: str = Field(description="llm service provider")
     token: str = Field(default="", description="token")
     proxy: Optional[str] = Field(default=None, description="proxy")

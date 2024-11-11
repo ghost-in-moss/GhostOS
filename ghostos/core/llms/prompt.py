@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import time
 from abc import ABC, abstractmethod
 
-from typing import List, Iterable, Optional, Union, Callable, Tuple
+from typing import List, Iterable, Optional, Union, Callable, Self
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
@@ -17,6 +18,7 @@ __all__ = [
     'Prompt', 'PromptPipe',
     'run_prompt_pipeline',
     'PromptStorage',
+    'PromptPayload',
 ]
 
 
@@ -27,7 +29,7 @@ class Prompt(BaseModel):
     模拟对话的上下文.
     """
     id: str = Field(default_factory=helpers.uuid, description="trace id")
-    description: str = Field(default="")
+    description: str = Field(default="description of this prompt")
 
     system: List[Message] = Field(default_factory=list, description="system messages")
     history: List[Message] = Field(default_factory=list)
@@ -39,6 +41,11 @@ class Prompt(BaseModel):
 
     # deprecated
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
+
+    # system info
+    output: List[Message] = Field(default_factory=list)
+    error: Optional[str] = Field(default=None, description="error message")
+    created: float = Field(default_factory=lambda: round(time.time(), 4))
 
     def system_prompt(self) -> str:
         contents = []
@@ -160,8 +167,12 @@ class Prompt(BaseModel):
 class PromptPayload(Payload):
     key = "prompt_info"
 
-    prompt_id: str = Field(description="created from prompt")
+    pid: str = Field(description="created from prompt")
     desc: str = Field(default="description of the prompt")
+
+    @classmethod
+    def from_prompt(cls, prompt: Prompt) -> Self:
+        return cls(pid=prompt.id, desc=prompt.description)
 
 
 class PromptPipe(ABC):
