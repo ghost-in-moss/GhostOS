@@ -1,5 +1,11 @@
-from ghostos.prompter import TextPrmt
+from ghostos.prompter import TextPrmt, PromptAbleClass, PromptAbleObj
 from ghostos.container import Container
+import inspect
+
+
+def test_is_abstract():
+    assert inspect.isabstract(PromptAbleObj)
+    assert inspect.isabstract(PromptAbleClass)
 
 
 def test_group_prompters():

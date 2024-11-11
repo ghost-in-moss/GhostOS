@@ -24,6 +24,8 @@ class Stream(Protocol):
         pass
 
     def deliver(self, message: Message) -> bool:
+        if not message.is_complete():
+            message = message.as_tail()
         return self.send([message])
 
     @abstractmethod

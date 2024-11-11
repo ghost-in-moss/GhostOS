@@ -421,6 +421,8 @@ class Session(Generic[G], ABC):
         def on_error(self, *messages: MessageKind) -> Operator:
             pass
 
+    stream: Stream
+
     scope: Scope
     """the running scope of the session"""
 
@@ -488,10 +490,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def messenger(
-            self, *,
-            remember: bool = True,
-    ) -> "Messenger":
+    def messenger(self) -> "Messenger":
         """
         Task 当前运行状态下, 向上游发送消息的 Messenger.
         每次会实例化一个 Messenger, 理论上不允许并行发送消息. 但也可能做一个技术方案去支持它.

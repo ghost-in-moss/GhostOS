@@ -43,6 +43,7 @@ class SequencePipe(Pipe):
         final: Optional[Message] = None
         for item in messages:
             if MessageType.is_protocol_message(item):
+                final = item
                 break
             if head is None:
                 if item.is_complete():

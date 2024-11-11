@@ -8,6 +8,7 @@ from ghostos.helpers import uuid
 __all__ = ['DefaultBuffer']
 
 
+# deprecated
 class DefaultBuffer(Buffer):
     """
     基于 Message 标准协议的默认 buffer.
@@ -19,7 +20,6 @@ class DefaultBuffer(Buffer):
             name: Optional[str] = None,
             role: str = Role.ASSISTANT.value,
             payloads: Optional[Iterable[Payload]] = None,
-            attachments: Optional[Iterable[Attachment]] = None,
             functional_tokens: Optional[Iterable[FunctionalToken]] = None,
     ):
         self._default_name = name
@@ -28,8 +28,6 @@ class DefaultBuffer(Buffer):
         """默认的角色"""
         self._payloads = list(payloads) if payloads else None
         """默认的 payloads"""
-        self._attachments = list(attachments) if attachments else None
-        """默认的 attachments"""
 
         self._buffering_message: Optional[Message] = None
         """正在 buff 的消息体. """
@@ -276,10 +274,6 @@ class DefaultBuffer(Buffer):
                 if not payload.exists(pack):
                     payload.set(pack)
 
-        # 添加默认的 attachments.
-        if self._attachments:
-            for attachment in self._attachments:
-                attachment.add(pack)
         return pack
 
     def _receive_head_pack(self, pack: "Message") -> Iterable[Message]:
@@ -295,7 +289,7 @@ class DefaultBuffer(Buffer):
             return None
 
         buffering = self._buffering_message
-        buffering.chunk = False
+        buffering = buffering.as_tail()
 
         if self._functional_token_starts:
             if self._buffering_token:

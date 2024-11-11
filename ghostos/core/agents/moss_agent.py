@@ -117,7 +117,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 instructions = self.get_instructions(session, rtm)
                 # prepare prompt
                 prompt = thread.to_prompt(instructions)
-                pipes = self.get_prompt_pipes(session.rtm)
+                pipes = self.get_prompt_pipes(session, rtm)
                 prompt = run_prompt_pipeline(prompt, pipes)
 
                 # prepare actions
@@ -129,11 +129,10 @@ class MossAgentDriver(GhostDriver[MossAgent]):
 
                 # call llm
                 llm = self.get_llmapi(session)
-                messenger = session.messenger()
-                llm.deliver_chat_completion(prompt, messenger)
+                messages = llm.deliver_chat_completion(prompt, not session.stream.completes_only())
+                messages, callers = session.respond(messages, remember=True)
 
                 # handle actions
-                messages, callers = messenger.flush()
                 for caller in callers:
                     if caller.name in actions:
                         action = actions[caller.name]

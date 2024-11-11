@@ -56,16 +56,15 @@ class LLMApi(ABC):
         """
         pass
 
-    def deliver_chat_completion(self, chat: Prompt, deliver: Stream) -> None:
+    def deliver_chat_completion(self, chat: Prompt, stream: bool) -> Iterable[Message]:
         """
         逐个发送消息的包.
         """
-        if deliver.completes_only():
+        if not stream:
             message = self.chat_completion(chat)
-            deliver.deliver(message)
-            return
-        items = self.chat_completion_chunks(chat)
-        deliver.send(items)
+            return [message]
+
+        yield from self.chat_completion_chunks(chat)
 
 
 class LLMDriver(ABC):
