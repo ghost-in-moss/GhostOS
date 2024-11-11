@@ -1,3 +1,4 @@
+from __future__ import annotations
 import enum
 import time
 from typing import Optional, Dict, Set, Iterable, Union, List, Any, ClassVar
@@ -121,19 +122,6 @@ class MessageType(str, enum.Enum):
     @classmethod
     def is_protocol_type(cls, value: str) -> bool:
         return value in {cls.ERROR, cls.FINAL}
-
-
-class Caller(BaseModel):
-    """
-    消息协议中用来描述一个工具或者function 的调用请求.
-    """
-    id: Optional[str] = Field(default=None, description="caller 的 id, 用来 match openai 的 tool call 协议. ")
-    name: str = Field(description="方法的名字.")
-    arguments: str = Field(description="方法的参数. ")
-    functional_token: bool = Field(default=False, description="caller 是否是基于协议生成的?")
-
-    def add(self, message: "Message") -> None:
-        message.callers.append(self)
 
 
 # the Message class is a container for every kind of message and it's chunks.
@@ -459,6 +447,67 @@ class MessageClass(ABC):
     @abstractmethod
     def to_openai_param(self) -> Dict:
         pass
+
+
+class Caller(BaseModel):
+    """
+    消息协议中用来描述一个工具或者function 的调用请求.
+    """
+    id: Optional[str] = Field(default=None, description="caller 的 id, 用来 match openai 的 tool call 协议. ")
+    name: str = Field(description="方法的名字.")
+    arguments: str = Field(description="方法的参数. ")
+    functional_token: bool = Field(default=False, description="caller 是否是基于协议生成的?")
+
+    def add(self, message: "Message") -> None:
+        message.callers.append(self)
+
+    def new_output(self, output: str) -> CallerOutput:
+        return CallerOutput(
+            call_id=self.id,
+            name=self.name,
+            content=output,
+        )
+
+
+class CallerOutput(BaseModel, MessageClass):
+    call_id: Optional[str] = Field(None, description="caller id")
+    name: str = Field(description="caller name")
+    content: Optional[str] = Field(description="caller output")
+
+    def to_message(self) -> Message:
+        return Message(
+            ref_id=self.call_id,
+            type=MessageType.FUNCTION_OUTPUT.value,
+            name=self.name,
+            role="",
+            content=self.content,
+        )
+
+    @classmethod
+    def from_message(cls, container: Message) -> Optional[Self]:
+        if container.type != MessageType.FUNCTION_OUTPUT.value:
+            return None
+        return cls(
+            call_id=container.ref_id,
+            name=container.name,
+            output=container.content,
+        )
+
+    def to_openai_param(self) -> Dict:
+        from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
+        from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
+        if self.call_id:
+            return ChatCompletionToolMessageParam(
+                content=self.content,
+                role="tool",
+                tool_call_id=self.call_id,
+            )
+        else:
+            return ChatCompletionFunctionMessageParam(
+                content=self.content,
+                name=self.name,
+                role="function",
+            )
 
 
 class MessageClasses:

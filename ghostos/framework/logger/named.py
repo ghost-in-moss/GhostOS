@@ -1,8 +1,7 @@
 from typing import Optional, Type
 
 from ghostos.container import Provider, Container
-from ghostos.contracts.logger import LoggerItf, LoggerWrapper
-from os.path import join
+from ghostos.contracts.logger import LoggerItf
 import logging
 
 __all__ = ['NamedLoggerProvider']

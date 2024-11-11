@@ -1,4 +1,4 @@
-from typing import Dict, SupportsAbs as _SupportsAbs
+from typing import Dict, SupportsAbs as _SupportsAbs, List
 import inspect
 
 
@@ -237,5 +237,42 @@ def test_protocol_and_abc():
 def test_attr_of_class():
     class Foo:
         foo = 1
+        bar: int
+        baz: int = 3
 
     assert Foo.foo == 1
+    assert Foo().foo == 1
+    assert not hasattr(Foo, "bar")
+    assert not hasattr(Foo(), "bar")
+    from typing import get_type_hints
+    props = get_type_hints(Foo)
+    assert "bar" in props
+    assert "baz" in props
+    assert hasattr(Foo, "baz")
+    assert hasattr(Foo(), "baz")
+
+
+def test_class_var_list():
+    class Foo:
+        foo: List[str] = []
+
+        def __init__(self, val: List[str]):
+            self.foo = val
+
+    f = Foo(["a", "b"])
+    assert f.foo == ["a", "b"]
+    assert Foo.foo == []
+    f2 = Foo([])
+    assert f.foo == ["a", "b"]
+    assert f2.foo == []
+
+    class Bar:
+        bar: List[str] = []
+
+        def __init__(self, val: List[str]):
+            self.bar.extend(val)
+
+    b = Bar(["a", "b"])
+    assert b.bar == ["a", "b"]
+    # be updated
+    assert Bar.bar == ["a", "b"]

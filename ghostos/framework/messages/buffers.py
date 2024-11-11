@@ -1,7 +1,7 @@
 import time
 from typing import Iterable, Optional, List, Dict, Set
 
-from ghostos.core.messages import Message, Caller, MessageType, Role, Payload, Attachment, Buffer, Flushed
+from ghostos.core.messages import Message, Caller, MessageType, Role, Payload, Buffer, Flushed
 from ghostos.core.llms import FunctionalToken
 from ghostos.helpers import uuid
 

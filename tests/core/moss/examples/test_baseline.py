@@ -45,9 +45,9 @@ def test_baseline_exec():
 
     prompter = runtime.prompter()
     assert prompter is not None
-    prompt = prompter.dump_context_prompt()
+    prompt = prompter.dump_code_context()
 
-    prompters = prompter.moss_injected_prompters()
+    prompters = prompter.moss_injected()
     assert "tester" in prompters
 
     # plus 方法存在.

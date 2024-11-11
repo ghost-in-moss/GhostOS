@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, List, Set, Dict, Type, ClassVar
+from typing import Optional, Iterable, List, Set, Dict, Type, ClassVar, Generator
 from abc import ABC, abstractmethod
 from tree_sitter_languages import get_parser
 from tree_sitter import (
@@ -8,11 +8,61 @@ from enum import Enum
 
 _PythonParser = get_parser('python')
 
-__all__ = ['tree_sitter_parse']
+__all__ = ['tree_sitter_parse', 'code_syntax_check']
 
 
 def tree_sitter_parse(code: str) -> Tree:
-    return _PythonParser.parse(code)
+    return _PythonParser.parse(code.encode())
+
+
+def code_syntax_check(code: str) -> Optional[str]:
+    try:
+        tree = tree_sitter_parse(code)
+    except Exception as e:
+        return f"parse code failed: {e}"
+
+    errors = []
+    travel_node_error(code, tree.root_node, errors)
+    if errors:
+        return "- " + "\n- ".join(errors)
+    return None
+
+
+def traverse_tree(tree: Tree) -> Generator[TreeSitterNode, None, None]:
+    cursor = tree.walk()
+
+    visited_children = False
+    while True:
+        if not visited_children:
+            yield cursor.node
+            if not cursor.goto_first_child():
+                visited_children = True
+        elif cursor.goto_next_sibling():
+            visited_children = False
+        elif not cursor.goto_parent():
+            break
+
+
+def travel_node_error(code: str, node: TreeSitterNode, errors: List[str]) -> None:
+    error = get_node_error(code, node)
+    if error is not None:
+        errors.append(error)
+        return
+    for child in node.children:
+        travel_node_error(code, child, errors)
+
+
+def get_node_error(code: str, node: TreeSitterNode) -> Optional[str]:
+    """
+    get all the errors when traversing a node
+    """
+    if node.is_error:
+        start_point_row, col = node.start_point
+        line_number = start_point_row + 1
+        line_content = code.splitlines()[line_number - 1]
+        # 这里假设错误分析就是节点的类型和文本内容
+        return f"Syntax Error at line {line_number}: `{line_content}`"
+    return None
 
 
 def get_error_nodes(node: TreeSitterNode) -> Iterable[TreeSitterNode]:

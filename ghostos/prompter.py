@@ -17,7 +17,7 @@ __all__ = [
     'get_defined_prompt',
     'set_prompter', 'set_class_prompter',
     'Prompter',
-    'GroupPrmt', 'ParagraphPrmt',
+    'TextPrmt',
     'PromptAbleObj', 'PromptAbleClass',
 ]
 
@@ -76,20 +76,19 @@ class Prompter(BaseModel, EntityClass, ABC):
     is strong-typed model for runtime alternative properties of a ghost.
     """
 
-    prompt_priority: float = Field(0.0, description='Priority of the prompter.')
+    priority: int = Field(default=0, description='Priority of this prompter.')
 
-    __children__: List[Prompter]
+    __children__: Optional[List[Prompter]] = None
     """ children is fractal sub context nodes"""
 
-    __self_prompt__: Optional[str]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__children__ = []
-        self.__self_prompt__ = None
+    __self_prompt__: Optional[str] = None
 
     def with_children(self, *children: Prompter) -> Prompter:
-        self.__children__.extend(children)
+        if self.__children__ is None:
+            self.__children__ = []
+        children = list(children)
+        if len(children) > 0:
+            self.__children__.extend(children)
         return self
 
     @abstractmethod
@@ -103,7 +102,13 @@ class Prompter(BaseModel, EntityClass, ABC):
 
     @abstractmethod
     def get_title(self) -> str:
+        """
+        the title of the prompt
+        """
         pass
+
+    def get_priority(self) -> int:
+        return 0
 
     def get_prompt(self, container: Container, depth: int = 0) -> str:
         """
@@ -112,26 +117,37 @@ class Prompter(BaseModel, EntityClass, ABC):
         :param depth:
         :return:
         """
+        if self.__self_prompt__ is not None:
+            return self.__self_prompt__
+
         title = self.get_title()
         if title:
             title = '#' * (depth + 1) + ' ' + title
 
-        if self.__self_prompt__ is not None:
-            self_prompt = self.__self_prompt__
-        else:
-            self_prompt = self.self_prompt(container)
-            self.__self_prompt__ = self_prompt
+        self_prompt = self.self_prompt(container)
+        prompts = []
+        if self_prompt:
+            prompts.append(self_prompt)
 
-        prompts = [title, self_prompt]
-        for child in self.__children__:
-            child_prompt = child.get_prompt(container, depth=depth + 1)
-            prompts.append(child_prompt)
+        if self.__children__ is not None:
+            for child in self.__children__:
+                child_prompt = child.get_prompt(container, depth=depth + 1)
+                if child_prompt:
+                    prompts.append(child_prompt)
+        # empty prompts
+        if not prompts:
+            return ""
+
+        # generate output prompt
+        prompts.insert(0, title)
         output = ""
         for paragraph in prompts:
             paragraph = paragraph.strip()
             if paragraph:
                 output += "\n\n" + paragraph
-        return output.strip()
+        self.__self_prompt__ = output.strip()
+        self.__children__ = None
+        return self.__self_prompt__
 
     def __to_entity_meta__(self) -> EntityMeta:
         type_ = generate_import_path(self.__class__)
@@ -167,17 +183,7 @@ class Prompter(BaseModel, EntityClass, ABC):
         return result
 
 
-class GroupPrmt(Prompter):
-    title: str = ""
-
-    def self_prompt(self, container: Container) -> str:
-        return ""
-
-    def get_title(self) -> str:
-        return self.title
-
-
-class ParagraphPrmt(Prompter):
+class TextPrmt(Prompter):
     title: str = ""
     content: str = ""
 

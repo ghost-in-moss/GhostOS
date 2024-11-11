@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 __all__ = [
     '__moss_compile__',
     '__moss_attr_prompts__',
-    '__moss_code_prompt__',
+    '__moss_code_context__',
     '__moss_exec__',
 ]
 
@@ -61,7 +61,7 @@ def __moss_attr_prompts__() -> "AttrPrompts":
     return []
 
 
-def __moss_code_prompt__(prompter: "MossPrompter") -> str:
+def __moss_code_context__(prompter: "MossPrompter") -> str:
     """
     使用 MOSS Runtime 生成 prompt 的方法.
     可选的魔术方法. 定义的话, runtime.moss_context_prompt 实际上会使用这个方法.

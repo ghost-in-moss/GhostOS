@@ -122,7 +122,7 @@ At these scenarios you shall write target code as string, and using the librarie
         chat.functional_tokens.append(function_token)
 
         # update code prompt as system message
-        code_prompt = self._moss_runtime.prompter().dump_context_prompt()
+        code_prompt = self._moss_runtime.prompter().dump_code_context()
         moss_instruction = self.template.format(code=code_prompt)
         moss_prompt = MessageType.DEFAULT.new_system(
             content=moss_instruction,

@@ -129,6 +129,8 @@ class EventTypes(str, Enum):
 
     ROTATE = "rotate"
 
+    ERROR = "error"
+
     # --- callback events --- #
 
     FINISH_CALLBACK = "finish_callback"
@@ -206,7 +208,7 @@ class EventBus(ABC):
         pass
 
     @abstractmethod
-    def pop_task_event(self, task_id: str, block: bool = False, timeout: float = 0.0) -> Optional[Event]:
+    def pop_task_event(self, task_id: str) -> Optional[Event]:
         """
         pop a task event by task_id.
         the canceled event has higher priority to others.
@@ -214,7 +216,7 @@ class EventBus(ABC):
         pass
 
     @abstractmethod
-    def pop_task_notification(self, block: bool = False, timeout: float = 0.0) -> Optional[str]:
+    def pop_task_notification(self) -> Optional[str]:
         """
         pop a task notification from the main queue.
         :return: task id or None if not found.

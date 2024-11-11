@@ -7,7 +7,6 @@ from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.prompts import (
     AttrPrompts, reflect_module_locals, compile_attr_prompts
 )
-from ghostos.prompter import Prompter
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -319,14 +318,7 @@ class MossPrompter(ABC):
         prompts = [(name, done[name]) for name in names]
         return compile_attr_prompts(prompts)
 
-    @abstractmethod
-    def moss_injected_prompters(self) -> Dict[str, Prompter]:
-        """
-        prompt for moss injections.
-        """
-        pass
-
-    def dump_context_prompt(self) -> str:
+    def dump_code_context(self) -> str:
         """
         获取 MOSS 运行时的完整 Python context 的 Prompt.
         这个 Prompt 包含以下几个部分:
@@ -334,13 +326,13 @@ class MossPrompter(ABC):
         2. pycontext_code_prompt: 对 predefined code 里各种引用类库的描述 prompt. 会包裹在 `\"""` 中展示.
         3. moss_prompt: moss 会注入到当前上下文里, 因此会生成 MOSS Prompt.
         """
-        from ghostos.core.moss.lifecycle import __moss_code_prompt__
+        from ghostos.core.moss.lifecycle import __moss_code_context__
         compiled = self.module()
         # 基于 moss prompter 来生成.
-        if hasattr(compiled, __moss_code_prompt__.__name__):
-            fn = getattr(compiled, __moss_code_prompt__.__name__)
+        if hasattr(compiled, __moss_code_context__.__name__):
+            fn = getattr(compiled, __moss_code_context__.__name__)
             return fn(self)
-        return __moss_code_prompt__(self)
+        return __moss_code_context__(self)
 
 
 class MossRuntime(ABC):
@@ -348,6 +340,13 @@ class MossRuntime(ABC):
     def container(self) -> Container:
         """
         MOSS 使用的依赖注入容器.
+        """
+        pass
+
+    @abstractmethod
+    def lint_exec_code(self, code: str) -> Optional[str]:
+        """
+        lint execution code and return error info if error occurs
         """
         pass
 
@@ -370,6 +369,13 @@ class MossRuntime(ABC):
         """
         返回运行时的上下文变量.
         其中一定包含 MOSS 类和注入的 moss 实例.
+        """
+        pass
+
+    @abstractmethod
+    def moss_injections(self) -> Dict[str, Any]:
+        """
+        get injections from moss
         """
         pass
 

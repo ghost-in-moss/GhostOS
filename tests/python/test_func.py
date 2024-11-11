@@ -9,3 +9,11 @@ def test_func_args():
 
     assert foo.__annotations__['bar'] is int
     assert foo.__annotations__['return'] is bool
+
+
+def test_func_iterable_args():
+    def foo(*args: int) -> int:
+        return len(list(args))
+
+    value = foo(1, 2, 3, *[4, 5, 6], 7, 8, *[9])
+    assert value == 9

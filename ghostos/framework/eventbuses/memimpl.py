@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Type
+from typing_extensions import Self
 
 from ghostos.core.runtime import Event
 from ghostos.core.runtime.events import EventBus
@@ -13,6 +14,12 @@ class MemEventBusImpl(EventBus):
         self._events: Dict[str, Event] = {}
         self._task_notification_queue = Queue()
         self._task_queues: Dict[str, Queue] = {}
+
+    def with_process_id(self, process_id: str) -> Self:
+        return self
+
+    def clear_all(self):
+        pass
 
     def send_event(self, e: Event, notify: bool) -> None:
         self._send_task_event(e)

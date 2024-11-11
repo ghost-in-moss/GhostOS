@@ -15,7 +15,7 @@ from ghostos.core.moss.prompts import get_defined_prompt
 from ghostos.core.moss.utils import add_comment_mark
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.prompter import Prompter
-from ghostos.helpers import generate_module_spec
+from ghostos.helpers import generate_module_spec, code_syntax_check
 from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"
@@ -190,6 +190,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         for name, prop in pycontext.iter_props(self._compiled):
             # 直接用 property 作为值.
             setattr(moss, name, prop)
+            self._injected.add(name)
 
         # 反向注入
 
@@ -222,6 +223,11 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
     def prompter(self) -> MossPrompter:
         return self
 
+    def lint_exec_code(self, code: str) -> Optional[str]:
+        source_code = self._source_code
+        new_code = source_code + "\n\n" + code.strip()
+        return code_syntax_check(new_code)
+
     def module(self) -> ModuleType:
         return self._compiled
 
@@ -251,13 +257,12 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         code = self._source_code
         return self._parse_pycontext_code(code, exclude_hide_code)
 
-    def moss_injected_prompters(self) -> Dict[str, Prompter]:
+    def moss_injections(self) -> Dict[str, Any]:
         moss = self.moss()
         prompters = {}
         for name in self._injected:
             injection = getattr(moss, name)
-            if isinstance(injection, Prompter):
-                prompters[name] = injection
+            prompters[name] = injection
         return prompters
 
     @staticmethod

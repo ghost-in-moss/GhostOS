@@ -90,8 +90,8 @@ def __moss_attr_prompts__() -> "AttrPrompts":
 
 def __moss_prompt__(prompter: "MossPrompter") -> str:
     # 测试生命周期生效.
-    from ghostos.core.moss.lifecycle import __moss_code_prompt__
-    return __moss_code_prompt__(prompter)
+    from ghostos.core.moss.lifecycle import __moss_code_context__
+    return __moss_code_context__(prompter)
 
 
 def __moss_exec__(*args, **kwargs) -> "Execution":

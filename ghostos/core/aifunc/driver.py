@@ -124,7 +124,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
         aifunc_class = aifunc_cls.__name__
         aifunc_result_type = get_aifunc_result_type(aifunc_cls)
         aifunc_result_class = aifunc_result_type.__name__
-        moss_code = runtime.prompter().dump_context_prompt()
+        moss_code = runtime.prompter().dump_code_context()
         prompt = default_aifunc_prompt(
             aifunc_class=aifunc_class,
             aifunc_result_class=aifunc_result_class,
