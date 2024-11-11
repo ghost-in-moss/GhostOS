@@ -146,15 +146,15 @@ class Prompter(BaseModel, EntityClass, ABC):
             if paragraph:
                 output += "\n\n" + paragraph
         self.__self_prompt__ = output.strip()
-        self.__children__ = None
         return self.__self_prompt__
 
     def __to_entity_meta__(self) -> EntityMeta:
         type_ = generate_import_path(self.__class__)
         ctx_data = self.model_dump(exclude_defaults=True)
         children_data = []
-        for child in self.__children__:
-            children_data.append(to_entity_meta(child))
+        if self.__children__ is not None:
+            for child in self.__children__:
+                children_data.append(to_entity_meta(child))
         data = {"ctx": ctx_data, "children": children_data}
         content = json.dumps(data)
         return EntityMeta(type=type_, content=content)

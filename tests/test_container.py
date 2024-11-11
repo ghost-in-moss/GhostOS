@@ -104,9 +104,6 @@ def test_provider_generic_types():
         def singleton(self) -> bool:
             return True
 
-        def contract(self) -> ABSTRACT:
-            return self.get_instance_type()
-
         def factory(self, con: Container) -> int:
             return 3
 
@@ -120,4 +117,3 @@ def test_provider_generic_types():
     assert p.singleton()
     assert p.factory(con) == 3
     assert p.contract() is int
-

@@ -1,5 +1,5 @@
 from typing import Optional, Type
-from ghostos.core.runtime import GoThreadInfo, GoThreads, SimpleMsgThread
+from ghostos.core.runtime import GoThreadInfo, GoThreads, ThreadHistory
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf

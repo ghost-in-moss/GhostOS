@@ -47,8 +47,8 @@ def test_baseline_exec():
     assert prompter is not None
     prompt = prompter.dump_code_context()
 
-    prompters = prompter.moss_injected()
-    assert "tester" in prompters
+    injection_prompt = prompter.moss_injections_prompt()
+    assert "tester" in injection_prompt
 
     # plus 方法存在.
     assert 'def plus' in prompt

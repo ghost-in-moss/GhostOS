@@ -7,7 +7,7 @@ from ghostos.core.llms import LLMsConfig, ServiceConf, ModelConf, LLMs
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.framework.configs import ConfigsByStorageProvider
 from ghostos.framework.storage import MemStorage, Storage
-from ghostos.framework.llms import ConfigBasedLLMsProvider
+from ghostos.framework.llms import ConfigBasedLLMsProvider, PromptStorage, PromptStorageImpl
 
 
 def _prepare_container() -> Container:
@@ -15,6 +15,7 @@ def _prepare_container() -> Container:
     storage = MemStorage()
     container.set(Storage, storage)
     container.register(ConfigsByStorageProvider('configs'))
+    container.set(PromptStorage, PromptStorageImpl(storage.sub_storage("prompts")))
 
     data = LLMsConfig(
         services=[

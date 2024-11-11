@@ -25,4 +25,3 @@ def test_group_prompters():
     assert "\n### 1.2.2\n" in p
     # test buffer is ok
     assert p == prompter.get_prompt(c)
-    assert prompter.__children__ is None

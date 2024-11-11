@@ -160,7 +160,7 @@ def default_application_providers(
     from ghostos.framework.threads import MsgThreadsRepoByWorkSpaceProvider
     from ghostos.framework.tasks import WorkspaceTasksProvider
     from ghostos.framework.eventbuses import MemEventBusImplProvider
-    from ghostos.framework.llms import ConfigBasedLLMsProvider, PromptStorageProvider
+    from ghostos.framework.llms import ConfigBasedLLMsProvider, PromptStorageInWorkspaceProvider
     from ghostos.framework.logger import NamedLoggerProvider
     from ghostos.framework.entities import EntityFactoryProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
@@ -191,7 +191,7 @@ def default_application_providers(
 
         # --- llm --- #
         ConfigBasedLLMsProvider(llms_conf_path),
-        PromptStorageProvider(),
+        PromptStorageInWorkspaceProvider(),
 
         # --- basic library --- #
         EntityFactoryProvider(),

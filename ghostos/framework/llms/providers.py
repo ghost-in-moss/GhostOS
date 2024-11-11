@@ -1,17 +1,17 @@
 from typing import Type, Optional
 
 from ghostos.contracts.configs import YamlConfig, Configs
-from ghostos.container import BootstrapProvider, Provider, Container
+from ghostos.container import Provider, Container
 from ghostos.core.llms import LLMs, LLMsConfig, PromptStorage
 from ghostos.framework.llms.llms import LLMsImpl
 from ghostos.framework.llms.openai_driver import OpenAIDriver, LiteLLMDriver
 from ghostos.framework.llms.prompt_storage_impl import PromptStorageImpl
 from ghostos.contracts.workspace import Workspace
 
-__all__ = ['ConfigBasedLLMsProvider', 'PromptStorageProvider']
+__all__ = ['ConfigBasedLLMsProvider', 'PromptStorageInWorkspaceProvider']
 
 
-class ConfigBasedLLMsProvider(BootstrapProvider[LLMs]):
+class ConfigBasedLLMsProvider(Provider[LLMs]):
     """
     基于 Config 来读取
     """
@@ -48,7 +48,7 @@ class ConfigBasedLLMsProvider(BootstrapProvider[LLMs]):
         return llms
 
 
-class PromptStorageProvider(Provider[PromptStorage]):
+class PromptStorageInWorkspaceProvider(Provider[PromptStorage]):
     def __init__(self, relative_path: str = "prompts"):
         self._relative_path = relative_path
 

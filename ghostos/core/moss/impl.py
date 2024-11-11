@@ -1,7 +1,6 @@
 import inspect
 from types import ModuleType
-from abc import abstractmethod
-from typing import Optional, Any, Dict, get_type_hints, Type, List, Protocol
+from typing import Optional, Any, Dict, get_type_hints, Type, List
 import io
 
 from ghostos.container import Container, Provider
@@ -11,10 +10,8 @@ from ghostos.core.moss.abcd import (
     MossCompiler, MossRuntime, MossPrompter, MOSS_VALUE_NAME, MOSS_TYPE_NAME,
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
-from ghostos.core.moss.prompts import get_defined_prompt
-from ghostos.core.moss.utils import add_comment_mark
 from ghostos.core.moss.pycontext import PyContext
-from ghostos.prompter import Prompter
+from ghostos.prompter import Prompter, TextPrmt
 from ghostos.helpers import generate_module_spec, code_syntax_check
 from contextlib import contextmanager, redirect_stdout
 
@@ -259,11 +256,26 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
 
     def moss_injections(self) -> Dict[str, Any]:
         moss = self.moss()
-        prompters = {}
+        injections = {}
         for name in self._injected:
             injection = getattr(moss, name)
-            prompters[name] = injection
-        return prompters
+            injections[name] = injection
+        return injections
+
+    def moss_injections_prompt(self) -> str:
+        injections = self.moss_injections()
+        children = []
+        container = self.container()
+        for name, injection in injections.items():
+            if isinstance(injection, Prompter):
+                children.append(TextPrmt(
+                    title=f"moss.{name}",
+                    content=injection.self_prompt(container),
+                ))
+        prompter = TextPrmt(
+            title="Moss Injections",
+        ).with_children(*children)
+        return prompter.get_prompt(container)
 
     @staticmethod
     def _parse_pycontext_code(code: str, exclude_hide_code: bool = True) -> str:

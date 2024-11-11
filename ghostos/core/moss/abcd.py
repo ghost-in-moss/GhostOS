@@ -334,6 +334,10 @@ class MossPrompter(ABC):
             return fn(self)
         return __moss_code_context__(self)
 
+    @abstractmethod
+    def moss_injections_prompt(self) -> str:
+        pass
+
 
 class MossRuntime(ABC):
     @abstractmethod

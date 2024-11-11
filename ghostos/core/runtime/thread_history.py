@@ -46,14 +46,14 @@ class SimpleTurn(BaseModel):
         )
 
 
-class SimpleMsgThread(BaseModel):
+class ThreadHistory(BaseModel):
     thread_id: str = Field(description="thread id that useful to save & read thread")
     extra: Dict[str, Any] = Field(default_factory=dict)
     last_turn_system_prompt: str = Field(defualt="", description="system prompt")
     turns: List[SimpleTurn] = Field(default_factory=list)
 
     @classmethod
-    def from_thread(cls, thread: GoThreadInfo) -> "SimpleMsgThread":
+    def from_thread(cls, thread: GoThreadInfo) -> "ThreadHistory":
         turns = []
         idx = 0
         for turn in thread.turns():
