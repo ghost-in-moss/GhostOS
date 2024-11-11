@@ -1,5 +1,5 @@
 import time
-from typing import Iterable, Optional, Type, ClassVar
+from typing import Iterable, Optional, Type, ClassVar, List
 from abc import ABC, abstractmethod
 from openai.types.chat.chat_completion_chunk import ChoiceDelta, ChatCompletionChunk
 from openai.types.completion_usage import CompletionUsage
@@ -12,8 +12,9 @@ from openai.types.chat.chat_completion_user_message_param import ChatCompletionU
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 
-from ghostos.core.messages import Message, MessageType, Role, Caller, Payload
+from ghostos.core.messages import Message, MessageType, Role, Caller, CallerOutput, Payload, MessageClass
 from ghostos.container import Provider, Container
+from ghostos.helpers import import_class_from_path
 
 __all__ = [
     "OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider",
@@ -88,11 +89,19 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     default implementation of OpenAIMessageParser
     """
 
+    def __init__(self, message_classes: List[Type[MessageClass]]):
+        self.message_classes = message_classes
+
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
-        if message.type == MessageType.CHAT_COMPLETION:
-            return self._parse_assistant_chat_completion(message)
-        else:
-            return self._parse_message(message)
+        if not message.is_complete():
+            return []
+
+        # message class first.
+        for message_class in self.message_classes:
+            wrapped = message_class.from_message(message)
+            if wrapped is not None:
+                return [wrapped.to_openai_param()]
+        return self._parse_message(message)
 
     def _parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         if message.role == Role.ASSISTANT:
@@ -105,11 +114,11 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             return [
                 ChatCompletionUserMessageParam(content=message.get_content(), name=message.name, role="user")
             ]
-        elif message.role == Role.FUNCTION:
+        elif message.type == MessageType.FUNCTION_OUTPUT:
             return [
                 ChatCompletionFunctionMessageParam(content=message.get_content(), name=message.name, role="function")
             ]
-        elif message.role == Role.TOOL:
+        elif message.role == MessageType.FUNCTION_CALL:
             return [
                 ChatCompletionToolMessageParam(
                     tool_call_id=message.ref_id,
@@ -158,12 +167,13 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         return [ChatCompletionAssistantMessageParam(
             content=content,
             role="assistant",
+            name=message.name if message.name else "",
             function_call=function_call,
             tool_calls=tool_calls,
         )]
 
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
-        pack = Message.new_tail(type_=MessageType.CHAT_COMPLETION, role=message.role, content=message.content)
+        pack = Message.new_tail(type_=MessageType.DEFAULT, role=message.role, content=message.content)
         if message.function_call:
             caller = Caller(
                 name=message.function_call.name,
@@ -184,29 +194,43 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
 
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         # 创建首包, 并发送.
-        first = True
+        buffer = None
         for item in messages:
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
-                pack = Message.new_chunk(role=Role.ASSISTANT.value, typ_=MessageType.CHAT_COMPLETION)
-                usage.set(pack)
-                yield pack
-            else:
+                chunk = Message.new_chunk(role=Role.ASSISTANT.value, typ_=MessageType.DEFAULT)
+                if usage:
+                    usage.set(chunk)
+            elif len(item.choices) > 0:
                 choice = item.choices[0]
                 delta = choice.delta
-                pack = self._new_pack_from_delta(delta, first)
-                yield pack
-            first = False
+                chunk = self._new_pack_from_delta(delta)
+            else:
+                continue
+
+            if buffer is None:
+                buffer = chunk.as_head(copy=True)
+                yield buffer.get_copy()
+            else:
+                patched = buffer.patch(chunk)
+                if not patched:
+                    yield buffer.as_tail()
+                    buffer = chunk.as_head(copy=True)
+                else:
+                    buffer = patched
+                yield chunk
+
+        if buffer:
+            yield buffer.as_tail(copy=False)
 
     @staticmethod
-    def _new_pack_from_delta(delta: ChoiceDelta, first: bool) -> Message:
-        if first:
-            pack = Message.new_head(role=Role.ASSISTANT.value, content=delta.content,
-                                    typ_=MessageType.CHAT_COMPLETION)
-        else:
-            pack = Message.new_chunk(role=Role.ASSISTANT.value, content=delta.content,
-                                     typ_=MessageType.CHAT_COMPLETION)
+    def _new_pack_from_delta(delta: ChoiceDelta) -> Message:
+        pack = Message.new_chunk(
+            role=Role.ASSISTANT.value,
+            content=delta.content,
+            typ_=MessageType.DEFAULT,
+        )
         # function call
         if delta.function_call:
             function_call = Caller(**delta.function_call.model_dump())
@@ -225,8 +249,20 @@ class DefaultOpenAIParserProvider(Provider[OpenAIMessageParser]):
     默认的 provider.
     """
 
+    def __init__(self, message_classes: Optional[List[str]] = None):
+        if message_classes is None:
+            classes = [
+                CallerOutput,
+            ]
+        else:
+            classes = []
+            for import_path in message_classes:
+                cls = import_class_from_path(import_path, MessageClass)
+                classes.append(cls)
+        self._message_classes = classes
+
     def singleton(self) -> bool:
         return True
 
     def factory(self, con: Container) -> Optional[OpenAIMessageParser]:
-        return DefaultOpenAIMessageParser()
+        return DefaultOpenAIMessageParser(self._message_classes)

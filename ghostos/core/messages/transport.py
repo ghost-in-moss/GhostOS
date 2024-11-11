@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Callable, List, Tuple
+from typing import Iterable, Optional, Callable, Tuple
 
 from typing_extensions import Protocol
 from collections import deque

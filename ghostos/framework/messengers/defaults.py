@@ -176,7 +176,7 @@ class DefaultMessenger(Messenger, Stream):
     #         return self._reduce_streaming_items()
 
     def _buff_then_deliver(self, pack: "Message") -> bool:
-        delivery = self._buffer.buff(pack)
+        delivery = self._buffer.add(pack)
         return self._deliver_to_upstream(delivery)
 
     def _deliver_to_upstream(self, delivery: Iterable[Message]) -> bool:

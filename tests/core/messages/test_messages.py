@@ -34,7 +34,7 @@ def test_message_with_full_type():
         msg = msg.patch(msg.new_chunk(content=c))
 
     last = msg.model_copy(update=dict(content="good"))
-    last.chunk = False
+    last.seq = "complete"
     buffed = msg.patch(last)
     assert buffed is not None and buffed.content == "good"
 

@@ -13,19 +13,19 @@ def test_default_buffer_baseline():
     content2 = "world"
 
     msg1 = Message.new_head()
-    sent = buffer.buff(msg1)
+    sent = buffer.add(msg1)
     i = 0
     for item in sent:
-        buffer2.buff(item)
+        buffer2.add(item)
         i += 1
     # 空首包也发送, 对齐 moonshot 协议.
     assert i == 1
 
     for c in content1:
         pack = Message.new_chunk(content=c)
-        sent = buffer.buff(pack)
+        sent = buffer.add(pack)
         for item in sent:
-            buffer2.buff(item)
+            buffer2.add(item)
 
     buffed = buffer.flush()
     assert len(buffed.messages) == 1
@@ -33,11 +33,11 @@ def test_default_buffer_baseline():
     assert buffed.messages[0].memory is None
 
     new_head = Message.new_head()
-    buffer2.buff(new_head)
+    buffer2.add(new_head)
 
     for c in content2:
         pack = Message.new_chunk(content=c)
-        buffer2.buff(pack)
+        buffer2.add(pack)
 
     buffed = buffer2.flush()
     print(buffed)
@@ -59,7 +59,7 @@ world
 
     for c in content:
         msg = Message.new_chunk(content=c)
-        buffer.buff(msg)
+        buffer.add(msg)
 
     flushed = buffer.flush()
     assert len(flushed.messages) == 1
@@ -77,7 +77,7 @@ def test_buffer_sent():
 
     for c in content:
         msg = Message.new_chunk(content=c)
-        sent = buffer.buff(msg)
+        sent = buffer.add(msg)
         for i in sent:
             assert not i.is_empty()
             if i.msg_id:
@@ -94,7 +94,7 @@ def test_buffer_sent_one_tail():
     tails = 0
     for c in content:
         msg = Message.new_chunk(content=c)
-        sent = buffer.buff(msg)
+        sent = buffer.add(msg)
         for i in sent:
             if not i.chunk:
                 tails += 1
@@ -124,7 +124,7 @@ def test_buffer_with_moss_token():
     content = "好的，我会帮你播放这首歌。\n\n>moss:\ndef main(os: MOSS) -> Operator:\n    # Search for the song \"七里香\" by 周杰伦\n    song_list = os.player.search(\"\", \"周杰伦\", \"七里香\")\n    \n    # Check if the song is found\n    if \"七里香\" in song_list:\n        # Play the song\n        playing = os.player.play(\"七里香\")\n        \n        # Check if the song is playing\n        if playing:\n            return\n      os.mindflow.finish(\"正在播放周杰伦的《七里香》。\")\n        else:\n            return os.mindflow.fail(\"无法播放周杰伦的《七里香》。\")\n    else:\n        return os.mindflow.fail(\"未找到周杰伦的《七里香》。\")"
     for c in content:
         p = Message.new_chunk(content=c)
-        buffer.buff(p)
+        buffer.add(p)
     buffed = buffer.flush()
     assert len(buffed.messages) == 1
     assert len(buffed.callers) == 1
@@ -144,7 +144,7 @@ def test_buffer_with_sep_content():
     content = "".join(contents)
     for c in contents:
         msg = Message.new_chunk(content=c)
-        buffer.buff(msg)
+        buffer.add(msg)
     flushed = buffer.flush()
     assert len(flushed.messages) == 1
     assert len(list(flushed.callers)) > 0
@@ -165,13 +165,13 @@ def test_buffer_with_sep_content():
 def test_buffer_with_tail_item():
     buffer = DefaultBuffer()
     header = Message.new_head(content="")
-    buffer.buff(header)
+    buffer.add(header)
     content = "hello"
     for c in content:
         msg = Message.new_chunk(content=c)
-        buffer.buff(msg)
+        buffer.add(msg)
     tail = Message.new_tail(content="hello world", msg_id=header.msg_id)
-    buffer.buff(tail)
+    buffer.add(tail)
     flushed = buffer.flush()
     assert len(flushed.messages) == 1
     assert flushed.messages[0].content == "hello world"
@@ -181,12 +181,12 @@ def test_buffer_header_with_payload():
     buffer = DefaultBuffer()
     header = Message.new_head(content="")
     header.payloads["foo"] = {}
-    buffer.buff(header)
+    buffer.add(header)
     content = "hello"
-    buffer.buff(Message.new_chunk(content=""))
+    buffer.add(Message.new_chunk(content=""))
     for c in content:
         msg = Message.new_chunk(content=c)
-        buffer.buff(msg)
+        buffer.add(msg)
     flushed = buffer.flush()
     assert len(flushed.messages) == 1
     assert flushed.messages[0].content == "hello"
@@ -206,7 +206,7 @@ def test_buffer_with_xml_functional_token():
     content = "".join(contents)
     for c in contents:
         msg = Message.new_chunk(content=c)
-        buffer.buff(msg)
+        buffer.add(msg)
     flushed = buffer.flush()
     assert len(flushed.messages) == 1
     assert len(list(flushed.callers)) > 0
@@ -233,7 +233,7 @@ def test_buffer_with_visible_functional_token():
     content = "".join(contents)
     for c in contents:
         msg = Message.new_chunk(content=c)
-        buffer.buff(msg)
+        buffer.add(msg)
     flushed = buffer.flush()
     assert len(flushed.messages) == 1
     assert len(list(flushed.callers)) > 0

@@ -28,7 +28,7 @@ class Buffer(ABC):
     """
 
     @abstractmethod
-    def buff(self, pack: "Message") -> List[Message]:
+    def add(self, pack: "Message") -> Iterable[Message]:
         """
         try to buff a message pack
         :return: the sending messages after the buffing. may be:

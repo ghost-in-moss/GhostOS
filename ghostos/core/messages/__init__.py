@@ -1,6 +1,6 @@
 from ghostos.core.messages.message import (
     Message, Role, MessageType,
-    Caller,
+    Caller, CallerOutput,
     MessageClass, MessageKind, MessageKindParser,
 )
 from ghostos.core.messages.payload import Payload
@@ -10,5 +10,4 @@ from ghostos.core.messages.openai import (
 )
 from ghostos.core.messages.buffers import Buffer, Flushed
 from ghostos.core.messages.helpers import copy_messages
-# from ghostos.core.messages.stream import Stream, Receiver, Received
 from ghostos.core.messages.transport import Stream, Receiver, new_arr_connection

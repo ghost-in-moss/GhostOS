@@ -5,7 +5,7 @@ from .message import Message, MessageClass, MessageType
 from pydantic import BaseModel, Field
 
 
-class DefaultMC(MessageClass):
+class DefaultMsgCls(MessageClass):
     message_type = MessageType.DEFAULT
     message: Message
 
@@ -25,7 +25,7 @@ class DefaultMC(MessageClass):
         raise NotImplementedError("todo")
 
 
-class VariableMC(MessageClass, BaseModel):
+class VariableMsgCls(MessageClass, BaseModel):
     """
     变量类型消息.
     """

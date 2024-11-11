@@ -87,7 +87,7 @@ class DefaultBuffer(Buffer):
         # 默认可以匹配任何一种 message 消息体.
         return True
 
-    def buff(self, pack: "Message") -> List[Message]:
+    def add(self, pack: "Message") -> List[Message]:
         # 获取buff 后需要发送的包.
         items = self._buff(pack)
         result = []

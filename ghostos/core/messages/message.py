@@ -12,7 +12,7 @@ __all__ = [
     "Message", "Role", "MessageType",
     "MessageClass",
     "MessageKind", "MessageKindParser",
-    "Caller",
+    "Caller", "CallerOutput",
 ]
 
 SeqType = Literal["head", "chunk", "complete"]
@@ -325,7 +325,7 @@ class Message(BaseModel):
             return None
         # if not a chunk, just return the tail message.
         # tail message may be changed by outside method such as moderation.
-        if not chunk.chunk:
+        if chunk.is_complete():
             return chunk.model_copy()
         # otherwise, update current one.
         self.update(chunk)
@@ -351,7 +351,6 @@ class Message(BaseModel):
 
     def as_tail(self, copy: bool = True) -> Self:
         item = self.as_head(copy)
-        item.chunk = False
         item.seq = "complete"
         return item
 
