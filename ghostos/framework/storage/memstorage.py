@@ -27,6 +27,7 @@ class MemStorage(Storage):
 
     def exists(self, file_path: str) -> bool:
         key = join(self._namespace, file_path)
+        key = key.lstrip('/')
         return key in self._saved
 
     def put(self, file_path: str, content: bytes) -> None:

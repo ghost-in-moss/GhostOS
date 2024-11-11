@@ -38,28 +38,15 @@ class GoThreadsByStorage(GoThreads):
         path = self._get_thread_filename(thread.id)
         saving = data_content.encode('utf-8')
         self._storage.put(path, saving)
-        # saving to special file
-        if thread.save_file and self._allow_saving_file:
-            simple = SimpleMsgThread.from_thread(thread)
-            simple_data = simple.model_dump(exclude_defaults=True)
-            content = yaml_pretty_dump(simple_data)
-            if thread.save_file.startswith('/'):
-                # saving to absolute path
-                saving_dir = os.path.dirname(thread.save_file)
-                if not os.path.exists(saving_dir):
-                    os.makedirs(saving_dir)
-                with open(thread.save_file, 'wb') as f:
-                    f.write(content.encode('UTF-8'))
-            else:
-                # saving to relative path
-                self._storage.put(thread.save_file, content.encode('UTF-8'))
 
     @staticmethod
     def _get_thread_filename(thread_id: str) -> str:
         return thread_id + ".thread.yml"
 
     def fork_thread(self, thread: GoThreadInfo) -> GoThreadInfo:
-        return thread.fork()
+        fork = thread.fork()
+        self.save_thread(fork)
+        return fork
 
 
 class MsgThreadRepoByStorageProvider(Provider[GoThreads]):
