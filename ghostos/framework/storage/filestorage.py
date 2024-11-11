@@ -24,6 +24,10 @@ class FileStorageImpl(FileStorage):
         with open(file_path, 'rb') as f:
             return f.read()
 
+    def remove(self, file_path: str) -> None:
+        file_path = self._join_file_path(file_path)
+        os.remove(file_path)
+
     def exists(self, file_path: str) -> bool:
         file_path = self._join_file_path(file_path)
         return os.path.exists(file_path)

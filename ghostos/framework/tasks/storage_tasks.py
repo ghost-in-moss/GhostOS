@@ -1,13 +1,69 @@
-from typing import Optional, List, Iterable, Dict, Type
+import time
+from typing import Optional, List, Iterable, Dict, Type, TypedDict
 import yaml
 from ghostos.core.runtime import TaskState, TaskBrief, GoTaskStruct, GoTasks
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage
 from ghostos.container import Provider, Container
+from ghostos.core.runtime.tasks import TaskLocker
 from ghostos.helpers import uuid
 
 __all__ = ['StorageGoTasksImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
+
+
+class SimpleStorageLocker(TaskLocker):
+    class LockData(TypedDict):
+        lock_id: str
+        created: float
+
+    def __init__(self, storage: Storage, task_id: str):
+        self.task_id = task_id
+        self.storage = storage
+        self.lock_id = uuid()
+        self._acquired = False
+
+    def acquire(self) -> bool:
+        filename = self.locker_file_name()
+        if self.storage.exists(filename):
+            content = self.storage.get(filename)
+            data = yaml.safe_load(content)
+            lock = self.LockData(**data)
+            now = time.time()
+            if lock['lock_id'] == self.lock_id or now - float(lock["created"]) > 100:
+                self.create_lock()
+                return True
+            return False
+
+        self.create_lock()
+        return True
+
+    def acquired(self) -> bool:
+        return self._acquired
+
+    def create_lock(self) -> None:
+        filename = self.locker_file_name()
+        lock = self.LockData(lock_id=self.lock_id, created=time.time())
+        content = yaml.safe_dump(lock)
+        self.storage.put(filename, content.encode())
+        self._acquired = True
+
+    def locker_file_name(self) -> str:
+        return f'{self.task_id}.lock'
+
+    def refresh(self) -> bool:
+        if not self._acquired:
+            return False
+        return self.acquire()
+
+    def release(self) -> bool:
+        if not self._acquired:
+            return False
+        filename = self.locker_file_name()
+        if self.refresh():
+            self.storage.remove(filename)
+            return True
+        return False
 
 
 class StorageGoTasksImpl(GoTasks):
@@ -15,13 +71,12 @@ class StorageGoTasksImpl(GoTasks):
     def __init__(self, storage: Storage, logger: LoggerItf):
         self._storage = storage
         self._logger = logger
-        self._locks: Dict[str, str] = {}
 
     def save_task(self, *tasks: GoTaskStruct) -> None:
         for task in tasks:
             filename = self._get_task_filename(task.task_id)
-            content = yaml.safe_dump(task.model_dump(exclude_defaults=True))
-            # todo: 正确的做法要先 check lock.
+            data = task.model_dump(exclude_defaults=True)
+            content = yaml.safe_dump(data)
             self._storage.put(filename, content.encode('utf-8'))
 
     @staticmethod
@@ -41,24 +96,13 @@ class StorageGoTasksImpl(GoTasks):
         filename = self._get_task_filename(task_id)
         return self._storage.exists(filename)
 
-    def get_task(self, task_id: str, lock: bool) -> Optional[GoTaskStruct]:
-        task = self._get_task(task_id)
-        if task is None:
-            return None
-        if lock:
-            if task.lock:
-                return None
-            task.lock = uuid()
-            self.save_task(task)
-            return task
-        else:
-            task.lock = None
-            return task
+    def get_task(self, task_id: str) -> Optional[GoTaskStruct]:
+        return self._get_task(task_id)
 
     def get_tasks(self, task_ids: List[str], states: Optional[List[TaskState]] = None) -> Iterable[GoTaskStruct]:
         states = set(states) if states else None
         for task_id in task_ids:
-            task = self.get_task(task_id, lock=False)
+            task = self.get_task(task_id)
             if states and task.state not in states:
                 continue
             yield task
@@ -67,24 +111,8 @@ class StorageGoTasksImpl(GoTasks):
         for task in self.get_tasks(task_ids, states):
             yield TaskBrief.from_task(task)
 
-    def unlock_task(self, task_id: str, lock: str) -> None:
-        task = self._get_task(task_id)
-        if task is None:
-            return
-        if task.lock == lock:
-            task.lock = None
-            self.save_task(task)
-
-    def refresh_task_lock(self, task_id: str, lock: str) -> Optional[str]:
-        task = self._get_task(task_id)
-        if task is None:
-            return uuid()
-        if task.lock or task.lock == lock:
-            lock = uuid()
-            task.lock = lock
-            self.save_task(task)
-            return lock
-        return None
+    def lock_task(self, task_id: str) -> TaskLocker:
+        return SimpleStorageLocker(self._storage, task_id)
 
 
 class StorageTasksImplProvider(Provider[GoTasks]):

@@ -24,6 +24,10 @@ class Storage(ABC):
         pass
 
     @abstractmethod
+    def remove(self, file_path: str) -> None:
+        pass
+
+    @abstractmethod
     def exists(self, file_path: str) -> bool:
         """
         if the object exists

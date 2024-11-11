@@ -30,6 +30,11 @@ class MemStorage(Storage):
         key = key.lstrip('/')
         return key in self._saved
 
+    def remove(self, file_path: str) -> None:
+        key = join(self._namespace, file_path)
+        key = key.lstrip('/')
+        del self._saved[key]
+
     def put(self, file_path: str, content: bytes) -> None:
         key = join(self._namespace, file_path)
         key = key.lstrip('/')

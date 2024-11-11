@@ -1,5 +1,5 @@
 import time
-from typing import Optional, List, Set, Iterable, ClassVar, Dict, Self
+from typing import Optional, List, ClassVar, Dict, Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -11,6 +11,7 @@ from contextlib import contextmanager
 __all__ = [
     'GoTaskStruct', 'TaskPayload', 'TaskBrief',
     'TaskState',
+    'TaskLocker',
     'GoTasks',
 ]
 
@@ -41,28 +42,7 @@ class TaskState(str, Enum):
 
     @classmethod
     def is_dead(cls, state: str) -> bool:
-        return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED, cls.KILLED}
-
-
-#
-# class WaitGroup(BaseModel):
-#     """
-#     await group of children tasks that will wake up the task.
-#     """
-#     tasks: Dict[str, bool] = Field(description="children task ids to wait")
-#
-#     def is_done(self) -> bool:
-#         for _, ok in self.tasks.items():
-#             if not ok:
-#                 return False
-#         return True
-
-
-class AssistantInfo(Identifier, BaseModel):
-    id: str = Field(description="id of the assistant")
-    name: str = Field(description="name of the assistant")
-    description: str = Field(description="description of the assistant")
-    meta_prompt: str = Field(description="meta prompt of the assistant")
+        return state in {cls.FINISHED, cls.FAILED, cls.CANCELLED}
 
 
 class GoTaskStruct(BaseModel):
@@ -99,6 +79,10 @@ Parent task id of the task.
     meta: EntityMeta = Field(
         description="the entity meta of the task handler",
     )
+    context: Optional[EntityMeta] = Field(
+        default=None,
+        description="the context entity",
+    )
 
     state: str = Field(
         default=TaskState.NEW.value,
@@ -124,11 +108,12 @@ Parent task id of the task.
 
     # --- brief --- #
     name: str = Field(
-        description="The name of the task. not very important"
+        description="The name of the task"
     )
-    purpose: str = Field(
-        description="The description of the task purpose"
+    description: str = Field(
+        description="The description of the task"
     )
+
     priority: float = Field(
         default=0.0,
         description="The priority of the task",
@@ -154,9 +139,6 @@ children task ids to wait
     )
 
     # --- system --- #
-    lock: Optional[str] = Field(
-        default=None,
-    )
 
     turns: int = Field(
         default=0,
@@ -167,22 +149,24 @@ children task ids to wait
     def new(
             cls, *,
             task_id: str,
-            shell_id: str,
             process_id: str,
             name: str,
             description: str,
             meta: EntityMeta,
+            context: Optional[EntityMeta] = None,
             parent_task_id: Optional[str] = None,
+            priority: float = 0.0,
     ) -> "GoTaskStruct":
         return GoTaskStruct(
             task_id=task_id,
-            shell_id=shell_id,
             process_id=process_id,
             thread_id=task_id,
             parent=parent_task_id,
             meta=meta,
+            context=context,
             name=name,
             description=description,
+            priority=priority,
         )
 
     def add_child(
@@ -191,15 +175,16 @@ children task ids to wait
             name: str,
             description: str,
             meta: EntityMeta,
+            context: Optional[EntityMeta] = None,
     ) -> "GoTaskStruct":
         self.children.append(task_id)
         child = self.new(
             task_id=task_id,
-            shell_id=self.shell_id,
             process_id=self.process_id,
             name=name,
             description=description,
             meta=meta,
+            context=context,
             parent_task_id=self.task_id,
         )
         child.depth = self.depth + 1
@@ -238,7 +223,6 @@ children task ids to wait
             update={
                 "updated": round(time.time(), 4),
                 "turns": self.turns + 1,
-
             },
             deep=True,
         )
@@ -247,7 +231,7 @@ children task ids to wait
 class TaskBrief(BaseModel, Identical):
     task_id: str = Field(description="the id of the task")
     name: str = Field(description="the name of the task")
-    purpose: str = Field(description="the purpose of the task")
+    description: str = Field(description="the purpose of the task")
     state: str = Field(description="the state of the task")
     status_desc: str = Field(description="the description of the task status")
 
@@ -294,12 +278,23 @@ class TaskLocker(ABC):
         pass
 
     @abstractmethod
+    def acquired(self) -> bool:
+        pass
+
+    @abstractmethod
     def refresh(self) -> bool:
         pass
 
     @abstractmethod
     def release(self) -> bool:
         pass
+
+    def __enter__(self) -> bool:
+        return self.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.acquired():
+            self.release()
 
 
 class GoTasks(ABC):
