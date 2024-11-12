@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
 from ghostos.core.messages.message import Message
+from ghostos.entity import EntityMeta
 from ghostos.helpers import uuid
 from contextlib import contextmanager
 
@@ -27,6 +28,9 @@ class Event(BaseModel):
     type: str = Field(
         default="",
         description="event type"
+    )
+    context: Optional[EntityMeta] = Field(
+        default=None,
     )
     attrs: Dict[str, Any] = Field(
         default_factory=dict,
@@ -52,6 +56,10 @@ class Event(BaseModel):
     messages: List[Message] = Field(
         default_factory=list,
         description="list of messages sent by this event",
+    )
+    history: Optional[List[Message]] = Field(
+        default=None,
+        description="if the event reset the history"
     )
     instruction: str = Field(
         default="",
@@ -93,6 +101,7 @@ class Event(BaseModel):
             instruction: str = "",
             eid: Optional[str] = None,
             payloads: Optional[Dict] = None,
+            context: Optional[EntityMeta] = None,
     ) -> "Event":
         id_ = eid if eid else uuid()
         type_ = event_type
@@ -107,6 +116,7 @@ class Event(BaseModel):
             instruction=instruction,
             messages=messages,
             payloads=payloads,
+            context=context,
         )
 
 
@@ -119,7 +129,7 @@ class EventTypes(str, Enum):
 
     CREATED = "created"
 
-    REQUEST = "request"
+    INPUT = "input"
 
     NOTIFY = "notify"
 
@@ -158,6 +168,7 @@ class EventTypes(str, Enum):
             instruction: str = "",
             eid: Optional[str] = None,
             payloads: Optional[Dict] = None,
+            context: Optional[EntityMeta] = None,
     ) -> Event:
         type_ = str(self.value)
         payloads = payloads if payloads is not None else {}
@@ -171,6 +182,7 @@ class EventTypes(str, Enum):
             messages=messages,
             eid=eid,
             payloads=payloads,
+            context=context,
         )
 
 

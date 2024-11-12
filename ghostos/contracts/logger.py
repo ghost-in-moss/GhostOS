@@ -1,11 +1,14 @@
 import logging
 from abc import abstractmethod
 from logging.config import dictConfig
-from logging import getLogger, LoggerAdapter
+from logging import getLogger, LoggerAdapter, Logger
 from typing import Protocol, Optional
 import yaml
 
-__all__ = ['LoggerItf', 'config_logging', 'get_logger', 'get_console_logger']
+__all__ = [
+    'LoggerItf', 'config_logging', 'get_logger', 'get_console_logger',
+    'wrap_logger',
+]
 
 
 class LoggerItf(Protocol):
@@ -94,6 +97,12 @@ class LoggerItf(Protocol):
 
 def get_logger(name: Optional[str] = None, extra: Optional[dict] = None) -> LoggerItf:
     return LoggerAdapter(getLogger(name), extra=extra)
+
+
+def wrap_logger(logger: LoggerItf, extra: dict) -> LoggerItf:
+    if isinstance(logger, LoggerAdapter) or isinstance(logger, Logger):
+        return LoggerAdapter(logger, extra)
+    return logger
 
 
 def config_logging(conf_path: str) -> None:

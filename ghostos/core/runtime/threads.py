@@ -1,4 +1,4 @@
-from typing import Optional, List, Iterable, Dict, Any
+from typing import Optional, List, Iterable, Dict, Any, Self
 import time
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
@@ -42,8 +42,13 @@ class Turn(BaseModel):
     extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 
     @classmethod
-    def new(cls, event: Optional[Event], *, turn_id: Optional[str] = None,
-            pycontext: Optional[PyContext] = None) -> "Turn":
+    def new(
+            cls,
+            event: Optional[Event],
+            *,
+            turn_id: Optional[str] = None,
+            pycontext: Optional[PyContext] = None,
+    ) -> "Turn":
         data = {"event": event}
         if turn_id is None and event is not None:
             turn_id = event.event_id
@@ -266,6 +271,15 @@ class GoThreadInfo(BaseModel):
         parent_id = self.id
         thread = self.model_copy(update=dict(id=tid, root_id=root_id, parent_id=parent_id), deep=True)
         return thread
+
+    def reset_history(self, messages: Iterable[Message]) -> Self:
+        forked = self.fork()
+        forked.history = []
+        forked.current = None
+        on_created = Turn.new(event=None)
+        on_created.append(*messages)
+        forked.on_created = on_created
+        return forked
 
     def thread_copy(self, update: Optional[dict] = None) -> "GoThreadInfo":
         return self.model_copy(update=update, deep=True)

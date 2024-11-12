@@ -204,6 +204,7 @@ class BasicSession(Session):
             self._firing_events.append(event)
         self._do_fire_events()
 
+
     def _do_create_tasks(self) -> None:
         if self._creating:
             self._tasks.save_task(*self._creating)

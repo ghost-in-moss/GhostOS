@@ -1,12 +1,13 @@
-from typing import TypeVar, Optional, Type, Union
-from ghostos.helpers import import_class_from_path, generate_import_path, md5
-from ghostos.identifier import get_identifier, to_entity_meta
+from typing import Optional, Type, Union
+from ghostos.helpers import import_class_from_path, md5
+from ghostos.identifier import get_identifier
 from ghostos.core.runtime import Runtime, GoTaskStruct
-from .concepts import Ghost, GhostDriver
+from ghostos.entity import to_entity_meta
+from .concepts import Ghost, GhostDriver, Session, Operator
+from ghostos.core.runtime import Event
 
 __all__ = [
-    'get_ghost_task', 'get_or_create_ghost_task',
-    'get_ghost_driver', 'get_ghost_driver_type',
+    'get_ghost_driver', 'get_ghost_driver_type', 'is_ghost',
 ]
 
 
@@ -43,68 +44,41 @@ def is_ghost(value) -> bool:
         return False
 
 
-def make_unique_ghost_id(
-        shell_id: str,
-        **scope_ids: str,
-) -> str:
-    """
-    make unique ghost id
-    :param shell_id: the shell id must exist.
-    :param scope_ids:
-    :return: md5 hash
-    """
-    ids = f"shell:{shell_id}"
-    keys = sorted(scope_ids.keys())
-    for key in keys:
-        scope = scope_ids[key]
-        ids += f":{key}:{scope}"
-    return md5(ids)
-
-
-def get_or_create_ghost_task(runtime: Runtime, ghost: Ghost, parent_task_id: Optional[str]) -> GoTaskStruct:
-    """
-    default way to find or create ghost task
-    :param runtime:
-    :param ghost:
-    :param parent_task_id:
-    :return:
-    """
-    task = get_ghost_task(runtime, ghost, parent_task_id)
-    if task is None:
-        task = make_ghost_task(runtime, ghost, parent_task_id)
-    return task
-
-
-def get_ghost_task(runtime: Runtime, ghost: Ghost, parent_task_id: Optional[str]) -> Union[GoTaskStruct, None]:
-    driver = get_ghost_driver(ghost)
-    task_id = driver.make_task_id(runtime, parent_task_id)
-    task = runtime.tasks.get_task(task_id)
-    if task is None:
+def fire_session_event(session: Session, event: Event) -> Optional[Operator]:
+    event, op = session.parse_event(event)
+    if op is not None:
+        return op
+    if event is None:
+        # if event is intercepted, stop the run.
         return None
-    # update task's meta from ghost.
-    task.meta = to_entity_meta(ghost)
-    return task
+    driver = get_ghost_driver(session.ghost)
+    return driver.on_event(session, event)
 
 
-def make_ghost_task(runtime: Runtime, ghost: Ghost, parent_task_id: Optional[str]) -> GoTaskStruct:
-    """
-    default way to create a task
-    :param runtime:
-    :param ghost:
-    :param parent_task_id:
-    :return:
-    """
-    driver = get_ghost_driver(ghost)
-    task_id = driver.make_task_id(runtime, parent_task_id)
-    id_ = get_identifier(ghost)
-    meta = to_entity_meta(ghost)
-    task_ = GoTaskStruct.new(
-        task_id=task_id,
-        shell_id=runtime.shell_id,
-        process_id=runtime.process_id,
-        name=id_.name,
-        description=id_.description,
-        meta=meta,
-        parent_task_id=parent_task_id
-    )
-    return task_
+class InitOperator(Operator):
+    def __init__(self, event: Event):
+        self.event = event
+
+    def run(self, session: Session) -> Union[Operator, None]:
+        return fire_session_event(session, self.event)
+
+    def destroy(self):
+        del self.event
+
+
+def run_session_event(session: Session, event: Event, max_step: int) -> None:
+    with session:
+        op = InitOperator(event)
+        step = 0
+        while op is not None:
+            step += 1
+            if step > max_step:
+                raise RuntimeError(f"Max step {max_step} reached")
+            if not session.refresh():
+                raise RuntimeError("Session refresh failed")
+            session.logger.info("start session op %s", op)
+            next_op = op.run(session)
+            session.logger.info("done session op %s", op)
+            op.destroy()
+            session.save()
+            op = next_op

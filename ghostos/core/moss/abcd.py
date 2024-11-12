@@ -54,6 +54,7 @@ __all__ = [
     'AttrPrompts',
     'MOSS_TYPE_NAME', 'MOSS_VALUE_NAME',
     'MOSS_HIDDEN_MARK', 'MOSS_HIDDEN_UNMARK',
+    'Injection',
 ]
 
 MOSS_TYPE_NAME = "Moss"
@@ -86,11 +87,18 @@ class Moss(ABC):
         """
         pass
 
+    @abstractmethod
+    def pprint(self, *args, **kwargs) -> None:
+        """
+        pretty printer
+        """
+        pass
+
 
 class Injection(ABC):
 
     @abstractmethod
-    def on_inject(self, compiler: MossCompiler, property_name: str) -> Self:
+    def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
         pass
 
 

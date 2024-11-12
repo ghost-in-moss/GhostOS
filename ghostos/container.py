@@ -80,6 +80,14 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_provider(self, abstract: Type[INSTANCE]) -> Optional[Provider[INSTANCE]]:
+        pass
+
+    @abstractmethod
+    def rebind(self, abstract: Type[INSTANCE]) -> None:
+        pass
+
+    @abstractmethod
     def fetch(self, abstract: Type[INSTANCE], strict: bool = False) -> Optional[INSTANCE]:
         """
         :param abstract: use type of the object (usually an abstract class) to fetch the implementation.
@@ -268,10 +276,6 @@ class Container(IoCContainer):
             self._register(provider)
 
     def _register(self, provider: Provider) -> None:
-        if isinstance(provider, Bootstrapper) and self._bootstrapped:
-            # 添加 bootstrapper.
-            provider.bootstrap(self)
-
         contract = provider.contract()
         self._bind_contract(contract)
         self._register_provider(contract, provider)
@@ -280,6 +284,9 @@ class Container(IoCContainer):
         for alias in provider.aliases():
             if alias not in self._bound:
                 self._bind_alias(alias, contract)
+        if isinstance(provider, Bootstrapper) and self._bootstrapped:
+            # 添加 bootstrapper.
+            provider.bootstrap(self)
 
     def _bind_alias(self, alias: Any, contract: Any) -> None:
         self._aliases[alias] = contract
@@ -314,6 +321,18 @@ class Container(IoCContainer):
                 raise TypeError(f"bound implements is not type of {abstract}")
             return instance
         return None
+
+    def get_provider(self, abstract: Type[INSTANCE]) -> Optional[Provider[INSTANCE]]:
+        if abstract in self._providers:
+            return self._providers[abstract]
+        if self.parent is not None:
+            return self.parent.get_provider(abstract)
+        return None
+
+    def rebind(self, abstract: Type[INSTANCE]) -> None:
+        provider = self.get_provider(abstract)
+        if provider is not None:
+            self.register(provider)
 
     def force_fetch(self, contract: Type[INSTANCE], strict: bool = False) -> INSTANCE:
         """

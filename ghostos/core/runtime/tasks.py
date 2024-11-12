@@ -47,6 +47,9 @@ class TaskState(str, Enum):
 
 class GoTaskStruct(BaseModel):
     # -- scope --- #
+    shell_id: str = Field(
+        description="the shell id of the task",
+    )
     process_id: str = Field(
         description="""
 the id of the process that the task belongs to.
@@ -83,12 +86,14 @@ Parent task id of the task.
         default=None,
         description="the context entity",
     )
+    state_values: Dict[str, EntityMeta] = Field(
+        default_factory=dict,
+        description="the state values of the task",
+    )
 
     state: str = Field(
         default=TaskState.NEW.value,
-        description="""
-    the state of the current task.
-    """
+        description="the state of the current task."
     )
 
     status_desc: str = Field(
@@ -144,12 +149,18 @@ children task ids to wait
         default=0,
         description="the turn number of the task runs",
     )
+    errors: int = Field(
+        default=0,
+        description="continual task errors count",
+    )
 
     @classmethod
     def new(
             cls, *,
             task_id: str,
+            shell_id: str,
             process_id: str,
+            depth: int,
             name: str,
             description: str,
             meta: EntityMeta,
@@ -159,7 +170,9 @@ children task ids to wait
     ) -> "GoTaskStruct":
         return GoTaskStruct(
             task_id=task_id,
+            shell_id=shell_id,
             process_id=process_id,
+            depth=depth,
             thread_id=task_id,
             parent=parent_task_id,
             meta=meta,
@@ -257,7 +270,7 @@ class TaskPayload(Payload):
     task_id: str = Field(description="the id of the task")
     task_name: str = Field(description="the name of the task")
     process_id: str = Field(description="the id of the process")
-    session_id: str = Field(description="the session id of the task")
+    shell_id: str = Field(description="the session id of the task")
     thread_id: str = Field(description="the id of the thread")
 
     @classmethod
@@ -265,7 +278,7 @@ class TaskPayload(Payload):
         return cls(
             task_id=task.task_id,
             task_name=task.name,
-            session_id=task.shell_id,
+            shell_id=task.shell_id,
             process_id=task.process_id,
             thread_id=task.thread_id,
         )

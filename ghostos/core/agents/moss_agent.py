@@ -93,7 +93,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         m = import_from_path(self.ghost.moss_module)
         return m
 
-    def get_goal(self, session: Session) -> Optional[MossAgent.GoalType]:
+    def get_artifact(self, session: Session) -> Optional[MossAgent.GoalType]:
         m = self.get_module()
         if __agent_goal__.__name__ not in m.__dict__:
             return None
