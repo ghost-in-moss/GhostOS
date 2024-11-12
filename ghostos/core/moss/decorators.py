@@ -1,6 +1,6 @@
 import inspect
 from typing import Callable, Optional, Any, Type
-from ghostos.prompter import set_prompter, set_class_prompter
+from ghostos.prompter import set_prompt, set_class_prompt
 from ghostos.core.moss.utils import (
     get_callable_definition, make_class_prompt,
     strip_source_indent,
@@ -40,7 +40,7 @@ def cls_source_code(*, force: bool = False) -> DECORATOR:
             source = strip_source_indent(source)
             return source
 
-        set_class_prompter(cls, prompter, force)
+        set_class_prompt(cls, prompter, force)
         return cls
 
     return decorator
@@ -61,7 +61,7 @@ def source_code(*, force: bool = False) -> DECORATOR:
             source = strip_source_indent(source)
             return source
 
-        set_prompter(fn, prompter, force)
+        set_prompt(fn, prompter, force)
         return fn
 
     return decorator
@@ -80,7 +80,7 @@ def definition(*, doc: Optional[str] = None, force: bool = False) -> FUNC_DECORA
                 prompt = get_callable_definition(fn, doc=doc)
                 return prompt
 
-            set_prompter(fn, prompter, force)
+            set_prompt(fn, prompter, force)
         else:
             raise AttributeError(f"fn '{fn}' has to be a function or method")
         return fn
@@ -102,7 +102,7 @@ def cls_definition(*, doc: Optional[str] = None, force: bool = False) -> CLASS_D
             prompt = make_class_prompt(source=source, doc=doc)
             return prompt
 
-        set_class_prompter(cls, prompter, force)
+        set_class_prompt(cls, prompter, force)
         return cls
 
     return wrapper
@@ -168,7 +168,7 @@ def cls_outline(*, doc: Optional[str] = None, force: bool = False) -> CLASS_DECO
             # 5. return
             return combined_prompt
 
-        set_class_prompter(cls, prompter, force)
+        set_class_prompt(cls, prompter, force)
         return cls
 
     return wrapper

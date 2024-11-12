@@ -7,7 +7,7 @@ from typing import (
 from abc import ABC, abstractmethod
 from ghostos.identifier import Identifiable
 from ghostos.entity import EntityType
-from ghostos.prompter import Prompter
+from ghostos.prompter import Prompter, DataPrompter, DataPrompterDriver
 from ghostos.core.runtime import (
     TaskState,
 )
@@ -16,7 +16,8 @@ from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload
 from ghostos.contracts.logger import LoggerItf
-from ghostos.container import Container
+from ghostos.container import Container, Provider
+from ghostos.identifier import get_identifier
 from pydantic import BaseModel
 
 """
@@ -89,6 +90,18 @@ class GhostDriver(Generic[G], ABC):
     def __init__(self, ghost: G) -> None:
         self.ghost = ghost
 
+    def make_task_id(self, parent_scope: Session.Scope) -> str:
+        from ghostos.helpers import md5
+        id_ = get_identifier(self.ghost)
+        if id_.id:
+            # if ghost instance has id, it is unique in process.
+            scope_ids = f"{parent_scope.process_id}-{id_.id}"
+        else:
+            # if ghost do not have id, it is unique to parent by name
+            scope_ids = f"{parent_scope.process_id}-{parent_scope.task_id}-{id_.name}"
+        # the task id point to a unique entity
+        return md5(scope_ids)
+
     @abstractmethod
     def get_goal(self, session: Session) -> Optional[G.Artifact]:
         """
@@ -108,24 +121,22 @@ class GhostDriver(Generic[G], ABC):
         pass
 
 
-class Context(Payload, Prompter, ABC):
+class Context(Payload, DataPrompter, ABC):
     """
-    context model that ghost care about
+    context prompter that generate prompt to provide information
+    the modeling defines strong-typed configuration to generate prompt.
     """
     key = "ghostos_context"
 
-    @abstractmethod
-    def self_prompt(self, container: Container) -> str:
-        """
-        generate prompt from model values with libraries that container provides.
-        :param container: IoC container provides library implementation.
-        :return: natural language prompt
-        """
-        pass
+    __driver__: Optional[Type[ContextDriver]] = None
 
-    @abstractmethod
-    def get_title(self) -> str:
-        pass
+
+class ContextDriver(DataPrompterDriver, ABC):
+    """
+    the context driver is separated from context data.
+    LLM see
+    """
+    pass
 
 
 class Operator(ABC):
@@ -180,6 +191,18 @@ class GhostOS(Protocol):
         pass
 
     @abstractmethod
+    def create_shell(
+            self,
+            shell_id: str,
+            process_id: Optional[str] = None,
+            *providers: Provider
+    ) -> Shell:
+        pass
+
+
+class Shell(Protocol):
+
+    @abstractmethod
     def send_event(self, event: Event) -> None:
         """
         send an event into the loop.
@@ -188,10 +211,10 @@ class GhostOS(Protocol):
         pass
 
     @abstractmethod
-    def converse(
+    def sync(
             self,
             ghost: G,
-            context: G.Props,
+            context: Union[G.Context, Prompter, None],
     ) -> Conversation[G]:
         """
         create a top-level conversation with a ghost.
@@ -204,9 +227,9 @@ class GhostOS(Protocol):
     def call(
             self,
             ghost: G,
-            props: G.Props,
+            context: G.Context,
             instructions: Optional[Iterable[Message]] = None,
-            *,
+            *prompters: Prompter,
             timeout: float = 0.0,
     ) -> Tuple[Union[G.Artifact, None], TaskState]:
         """
@@ -258,8 +281,8 @@ class Conversation(Protocol[G]):
     def respond(
             self,
             inputs: Iterable[Message],
-            context: Optional[Prompter] = None,
-            *,
+            context: G.Context,
+            *prompters: Prompter,
             history: Optional[Iterable[Message]] = None,
     ) -> Iterable[Message]:
         """
@@ -376,7 +399,8 @@ class Session(Generic[G], ABC):
         """
         scope of the session.
         """
-        root_id: str
+        shell_id: str
+        process_id: str
         task_id: str
         parent_task_id: Optional[str] = None
 

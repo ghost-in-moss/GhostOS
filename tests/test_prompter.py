@@ -1,4 +1,7 @@
-from ghostos.prompter import TextPrmt, PromptAbleClass, PromptAbleObj
+from ghostos.prompter import (
+    TextPrmt, PromptAbleClass, PromptAbleObj,
+    InspectPrmt,
+)
 from ghostos.container import Container
 import inspect
 
@@ -25,3 +28,12 @@ def test_group_prompters():
     assert "\n### 1.2.2\n" in p
     # test buffer is ok
     assert p == prompter.get_prompt(c)
+
+
+def test_inspect_prompters():
+    prmt = InspectPrmt()
+    prmt.inspect_source(InspectPrmt)
+    prmt.inspect_source(test_group_prompters)
+    c = Container()
+    prompt = prmt.get_prompt(c)
+    assert f":{test_group_prompters.__name__}" in prompt

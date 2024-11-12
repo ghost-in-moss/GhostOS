@@ -4,6 +4,7 @@ from ghostos.core.moss.utils import (
     get_callable_definition,
 )
 from ghostos.prompter import get_defined_prompt
+from pydantic import BaseModel
 import inspect
 
 """
@@ -44,7 +45,9 @@ name 是为了去重, prompt 应该就是原有的 prompt.
 多条 prompt 用 "\n\n".join(prompts) 的方式拼接. 
 """
 
-ignore_modules = {"pydantic"}
+ignore_modules = {
+    "pydantic",
+}
 
 
 def reflect_module_locals(
@@ -104,8 +107,10 @@ def reflect_module_attr(
         return None
     elif value_modulename == current_module:
         return None
-    elif value_modulename in ignore_modules:
-        return None
+    for ignore_module_name in ignore_modules:
+        if value_modulename.startswith(ignore_module_name):
+            return None
+
     return get_prompt(value)
 
 
@@ -124,9 +129,10 @@ def get_prompt(value: Any) -> Optional[str]:
 
     if inspect.isclass(value):
         # only reflect abstract class
-        if inspect.isabstract(value):
+        if inspect.isabstract(value) or issubclass(value, BaseModel):
             source = inspect.getsource(value)
-            return source
+            if source:
+                return source
     elif inspect.isfunction(value) or inspect.ismethod(value):
         # 默认都给方法展示 definition.
         return get_callable_definition(value)

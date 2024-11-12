@@ -60,7 +60,7 @@ def get_module_spec(module, spec: str) -> Optional[Any]:
 def generate_module_spec(value: Any) -> Tuple[str, Optional[str]]:
     if inspect.ismodule(value):
         return value.__name__, None
-    elif inspect.isclass(value):
+    elif inspect.isclass(value) or inspect.isfunction(value):
         module = getattr(value, '__module__', '')
         spec = getattr(value, '__qualname__', getattr(value, '__name__', ""))
         return module, spec

@@ -2,22 +2,22 @@ from __future__ import annotations
 
 import inspect
 from typing import (
-    List, Self, Union, Callable, Any, Protocol, Optional, Dict,
+    List, Self, Union, Callable, Any, Protocol, Optional, Dict, TypeVar, Type, Generic,
 )
 from abc import ABC, abstractmethod
-from types import ModuleType
+from types import ModuleType, FunctionType
 from ghostos.container import Container
-from ghostos.helpers import generate_import_path
-import json
-
+from ghostos.helpers import generate_import_path, import_class_from_path, import_from_path
 from pydantic import BaseModel, Field
-from .entity import EntityClass, EntityMeta, from_entity_meta, to_entity_meta
+from ghostos.entity import EntityClass, EntityMeta, from_entity_meta, to_entity_meta
+import json
 
 __all__ = [
     'get_defined_prompt',
-    'set_prompter', 'set_class_prompter',
-    'Prompter',
+    'set_prompt', 'set_class_prompt',
+    'Prompter', 'DataPrompter', 'DataPrompterDriver',
     'TextPrmt',
+    'InspectPrmt',
     'PromptAbleObj', 'PromptAbleClass',
 ]
 
@@ -54,12 +54,12 @@ def get_defined_prompt_attr(value: Any) -> Union[None, str, Callable[[], str]]:
     return None
 
 
-def set_prompter(obj: Any, prompter: Union[Callable[[], str], str], force: bool = False) -> None:
+def set_prompt(obj: Any, prompter: Union[Callable[[], str], str], force: bool = False) -> None:
     if force or not hasattr(obj, '__prompt__'):
         setattr(obj, '__prompt__', prompter)
 
 
-def set_class_prompter(cls: type, prompter: Union[Callable[[], str], str], force: bool = False) -> None:
+def set_class_prompt(cls: type, prompter: Union[Callable[[], str], str], force: bool = False) -> None:
     if hasattr(cls, '__class__prompt__'):
         fn = getattr(cls, '__class_prompt__')
         cls_name = generate_import_path(cls)
@@ -71,7 +71,9 @@ def set_class_prompter(cls: type, prompter: Union[Callable[[], str], str], force
     setattr(cls, '__class_prompt__', prompter)
 
 
-class Prompter(BaseModel, EntityClass, ABC):
+# ---- prompter ---- #
+
+class Prompter(EntityClass, ABC):
     """
     is strong-typed model for runtime alternative properties of a ghost.
     """
@@ -139,7 +141,8 @@ class Prompter(BaseModel, EntityClass, ABC):
             return ""
 
         # generate output prompt
-        prompts.insert(0, title)
+        if title:
+            prompts.insert(0, title)
         output = ""
         for paragraph in prompts:
             paragraph = paragraph.strip()
@@ -150,7 +153,7 @@ class Prompter(BaseModel, EntityClass, ABC):
 
     def __to_entity_meta__(self) -> EntityMeta:
         type_ = generate_import_path(self.__class__)
-        ctx_data = self.model_dump(exclude_defaults=True)
+        ctx_data = self.__to_entity_meta_data__()
         children_data = []
         if self.__children__ is not None:
             for child in self.__children__:
@@ -159,12 +162,21 @@ class Prompter(BaseModel, EntityClass, ABC):
         content = json.dumps(data)
         return EntityMeta(type=type_, content=content)
 
+    @abstractmethod
+    def __to_entity_meta_data__(self) -> Dict[str, Any]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __from_entity_meta_data__(cls, data: Dict[str, Any]) -> Self:
+        pass
+
     @classmethod
     def __from_entity_meta__(cls, meta: EntityMeta) -> Self:
         data = json.loads(meta["content"])
         ctx_data = data["ctx"]
         children_data = data["children"]
-        result = cls(**ctx_data)
+        result = cls.__from_entity_meta_data__(ctx_data)
         children = []
         for child in children_data:
             children.append(from_entity_meta(child))
@@ -183,7 +195,61 @@ class Prompter(BaseModel, EntityClass, ABC):
         return result
 
 
-class TextPrmt(Prompter):
+class ModelPrompter(BaseModel, Prompter, ABC):
+
+    def __to_entity_meta_data__(self) -> Dict[str, Any]:
+        return self.model_dump(exclude_defaults=True)
+
+    @classmethod
+    def __from_entity_meta_data__(cls, data: Dict[str, Any]) -> Self:
+        return cls(**data)
+
+
+class DataPrompter(ModelPrompter, ABC):
+    __driver__: Optional[Type[DataPrompterDriver]] = None
+
+    def get_driver(self) -> DataPrompterDriver:
+        driver = self.__driver__
+        if driver is None:
+            driver_path = generate_import_path(self.__class__) + "Driver"
+            driver = import_class_from_path(driver_path, DataPrompterDriver)
+        return driver(self)
+
+    def self_prompt(self, container: Container) -> str:
+        """
+        generate prompt from model values with libraries that container provides.
+        :param container: IoC container provides library implementation.
+        :return: natural language prompt
+        """
+        return self.get_driver().self_prompt(container)
+
+    def get_title(self) -> str:
+        return self.get_driver().get_title()
+
+
+D = TypeVar("D", bound=DataPrompter)
+
+
+class DataPrompterDriver(Generic[D], ABC):
+
+    def __init__(self, data: D):
+        self.data = data
+
+    @abstractmethod
+    def self_prompt(self, container: Container) -> str:
+        """
+        generate prompt from model values with libraries that container provides.
+        :param container: IoC container provides library implementation.
+        :return: natural language prompt
+        """
+        pass
+
+    @abstractmethod
+    def get_title(self) -> str:
+        pass
+
+
+class TextPrmt(ModelPrompter):
     title: str = ""
     content: str = ""
 
@@ -193,6 +259,52 @@ class TextPrmt(Prompter):
     def get_title(self) -> str:
         return self.title
 
+
+class InspectPrmt(DataPrompter):
+    title: str = Field(
+        default="Code Inspection",
+        description="The title of the inspect prompt.",
+    )
+    source_target: List[str] = Field(
+        default_factory=list,
+        description="Inspect source code of these targets. ",
+    )
+
+    def inspect_source(self, target: Union[type, Callable, str]) -> Self:
+        if not isinstance(target, str):
+            target = generate_import_path(target)
+        self.source_target.append(target)
+        return self
+
+
+class InspectPrmtDriver(DataPrompterDriver[InspectPrmt]):
+
+    def self_prompt(self, container: Container) -> str:
+        prompts = {}
+        for target in self.data.source_target:
+            got = import_from_path(target)
+            source = inspect.getsource(got)
+            prompts[target] = source
+
+        result = ""
+        for target, source in prompts.items():
+            source = source.strip()
+            if not source:
+                continue
+            result += f"""
+
+source code of `{target}`:
+```python
+{source}
+```
+"""
+        return result.strip()
+
+    def get_title(self) -> str:
+        pass
+
+
+# ---- prompt-able ---- #
 
 class PromptAbleObj(ABC):
     """
