@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import (
     Type, Generic, Protocol, ClassVar, TypeVar,
-    Tuple, Optional, Iterable, List, Self, Union, Dict,
+    Tuple, Optional, Iterable, List, Self, Union, Dict, Any
 )
 
 from abc import ABC, abstractmethod
@@ -14,7 +14,7 @@ from ghostos.core.runtime import (
 from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
-from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload
+from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload, Receiver
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
 from ghostos.identifier import get_identifier
@@ -52,7 +52,7 @@ and the Most valuable features about ghost are:
 
 __all__ = (
     "Ghost", "Session", "GhostDriver", "GhostOS", "Operator", "StateValue", "Action",
-    "Shell", "Operation", "Scope", "Conversation",
+    "Shell", "Operation", "Scope", "Conversation", "Background",
 )
 
 
@@ -204,6 +204,7 @@ class GhostOS(Protocol):
     @abstractmethod
     def create_shell(
             self,
+            name: str,
             shell_id: str,
             process_id: Optional[str] = None,
             *providers: Provider
@@ -211,7 +212,26 @@ class GhostOS(Protocol):
         pass
 
 
-class Shell(Protocol):
+class Background(ABC):
+
+    @abstractmethod
+    def on_error(self, error: Exception) -> bool:
+        pass
+
+    @abstractmethod
+    def on_event(self, event: Event, retriever: Receiver) -> None:
+        pass
+
+    @abstractmethod
+    def stopped(self) -> bool:
+        pass
+
+    @abstractmethod
+    def halt(self) -> int:
+        pass
+
+
+class Shell(ABC):
 
     @abstractmethod
     def container(self) -> Container:
@@ -249,6 +269,7 @@ class Shell(Protocol):
             instructions: Optional[Iterable[Message]] = None,
             prompters: Optional[List[Prompter]] = None,
             timeout: float = 0.0,
+            stream: Optional[Stream] = None,
     ) -> Tuple[Union[G.Artifact, None], TaskState]:
         """
         run a ghost task until it stopped,
@@ -256,11 +277,7 @@ class Shell(Protocol):
         pass
 
     @abstractmethod
-    def background_run_event(
-            self,
-            *,
-            timeout: float = 0.0,
-    ) -> Union[Event, None]:
+    def run_background_event(self, background: Optional[Background] = None) -> Union[Event, None]:
         """
         run the event loop for the ghosts in the Shell.
         1. pop task notification.
@@ -270,9 +287,16 @@ class Shell(Protocol):
         5. send a task notification after handling, make sure someone check the task events are empty.
         only the tasks that depth > 0 have notifications.
         background run itself is blocking method, run it in a separate thread for parallel execution.
-        :param timeout:
         :return: the handled event
         """
+        pass
+
+    @abstractmethod
+    def background_run(self, worker: int = 4, background: Optional[Background] = None) -> None:
+        pass
+
+    @abstractmethod
+    def close(self):
         pass
 
 
@@ -289,19 +313,31 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def task(self) -> GoTaskStruct:
+        pass
+
+    @abstractmethod
+    def get_artifact(self) -> Tuple[Union[G.Artifact, None], TaskState]:
+        pass
+
+    @abstractmethod
+    def ask(self, query: str, user_name: str = "") -> Receiver:
+        pass
+
+    @abstractmethod
     def respond(
             self,
             inputs: Iterable[Message],
             context: Optional[G.Context] = None,
             history: Optional[List[Message]] = None,
-    ) -> Iterable[Message]:
+    ) -> Receiver:
         """
         create response immediately by inputs. the inputs will change to event.
         """
         pass
 
     @abstractmethod
-    def respond_event(self, event: Event) -> Iterable[Message]:
+    def respond_event(self, event: Event) -> Receiver:
         """
         create response to the event immediately
         :param event:
@@ -314,6 +350,10 @@ class Conversation(Protocol[G]):
         """
         pop event of the current task
         """
+        pass
+
+    @abstractmethod
+    def send_event(self, event: Event) -> None:
         pass
 
     @abstractmethod
@@ -342,7 +382,7 @@ class Conversation(Protocol[G]):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.close():
+        if self.closed():
             return
         if exc_val is not None:
             return self.fail(exc_val)
@@ -410,10 +450,10 @@ class Operation(ABC):
         pass
 
     @abstractmethod
-    def fail(self, status: str = "", *replies: MessageKind) -> Operator:
+    def fail(self, reason: str = "", *replies: MessageKind) -> Operator:
         """
         self task failed.
-        :param status: describe status of the task
+        :param reason: describe status of the task
         :param replies: replies to parent task or user
         """
         pass
@@ -428,7 +468,14 @@ class Operation(ABC):
         pass
 
     @abstractmethod
-    def observe(self, *messages: MessageKind) -> Operator:
+    def observe(self, *messages: MessageKind, instruction: str = "", sync: bool = False) -> Operator:
+        """
+        observer std output and values
+        :param messages: observation info.
+        :param instruction: instruction when receive the observation.
+        :param sync: if True, observe immediately, otherwise check other event first
+        :return:
+        """
         pass
 
     @abstractmethod
@@ -519,6 +566,9 @@ class Session(Generic[G], ABC):
 
     @abstractmethod
     def save(self):
+        """
+        save status.
+        """
         pass
 
     @abstractmethod
@@ -616,33 +666,9 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def fail(self, err: Optional[Exception]) -> bool:
-        """
-        任务执行异常的处理. 需要判断任务是致命的, 还是可以恢复.
-        :param err:
-        :return:
-        """
+    def __enter__(self):
         pass
 
     @abstractmethod
-    def done(self) -> None:
-        pass
-
-    @abstractmethod
-    def destroy(self) -> None:
-        """
-        手动清理数据, 方便垃圾回收.
-        """
-        pass
-
-    def __enter__(self) -> "Session":
-        return self
-
     def __exit__(self, exc_type, exc_val, exc_tb):
-        intercept = None
-        if exc_val is not None:
-            intercept = self.fail(exc_val)
-        else:
-            self.done()
-        self.destroy()
-        return intercept
+        pass

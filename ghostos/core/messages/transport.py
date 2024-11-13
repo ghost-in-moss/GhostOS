@@ -103,6 +103,10 @@ class Receiver(Protocol):
     def close(self):
         pass
 
+    @abstractmethod
+    def wait(self):
+        pass
+
     def __enter__(self):
         return self
 
@@ -177,6 +181,10 @@ class ArrayReceiver(Receiver):
 
     def error(self) -> Optional[Message]:
         return self._error
+
+    def wait(self):
+        while not self._done and not self._closed and not self._error:
+            time.sleep(self._idle)
 
     def close(self):
         if self._closed:

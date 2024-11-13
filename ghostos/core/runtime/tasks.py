@@ -47,6 +47,11 @@ class TaskState(str, Enum):
 
 class GoTaskStruct(BaseModel):
     # -- scope --- #
+    task_id: str = Field(
+        description="""
+        the id of the task. 
+        """,
+    )
     shell_id: str = Field(
         description="the shell id of the task",
     )
@@ -55,11 +60,7 @@ class GoTaskStruct(BaseModel):
 the id of the process that the task belongs to.
 """,
     )
-    task_id: str = Field(
-        description="""
-    the id of the task. 
-    """,
-    )
+
     thread_id: str = Field(
         description="""
 the id of the thread that contains the context of the task.

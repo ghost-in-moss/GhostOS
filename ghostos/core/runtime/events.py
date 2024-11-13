@@ -102,6 +102,7 @@ class Event(BaseModel):
             eid: Optional[str] = None,
             payloads: Optional[Dict] = None,
             context: Optional[EntityMeta] = None,
+            history: Optional[List[Message]] = None,
     ) -> "Event":
         id_ = eid if eid else uuid()
         type_ = event_type
@@ -117,6 +118,7 @@ class Event(BaseModel):
             messages=messages,
             payloads=payloads,
             context=context,
+            history=history,
         )
 
 
@@ -169,6 +171,7 @@ class EventTypes(str, Enum):
             eid: Optional[str] = None,
             payloads: Optional[Dict] = None,
             context: Optional[EntityMeta] = None,
+            history: Optional[List[Message]] = None,
     ) -> Event:
         type_ = str(self.value)
         payloads = payloads if payloads is not None else {}
@@ -183,6 +186,7 @@ class EventTypes(str, Enum):
             eid=eid,
             payloads=payloads,
             context=context,
+            history=history,
         )
 
 

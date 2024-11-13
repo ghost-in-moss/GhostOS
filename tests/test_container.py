@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, get_args, get_origin
 
-from ghostos.container import Container, Provider, ABSTRACT
+from ghostos.container import Container, Provider, provide
 
 
 def test_container_baseline():
@@ -117,3 +117,21 @@ def test_provider_generic_types():
     assert p.singleton()
     assert p.factory(con) == 3
     assert p.contract() is int
+
+
+def test_provide_with_lambda():
+    container = Container()
+    container.register(provide(int)(lambda c: 10))
+    container.register(provide(str)(lambda c: "hello"))
+
+    assert container.force_fetch(int) == 10
+    assert container.force_fetch(str) == "hello"
+
+
+def test_provide_in_loop():
+    container = Container()
+    for a, fn in {int: lambda c: 10, str: lambda c: "hello"}.items():
+        container.register(provide(a)(fn))
+
+    assert container.force_fetch(int) == 10
+    assert container.force_fetch(str) == "hello"

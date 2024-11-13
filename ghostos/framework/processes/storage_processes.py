@@ -5,8 +5,8 @@ from ghostos.core.runtime.processes import GoProcesses
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.workspace import Workspace
-from threading import Lock
 from ghostos.container import Provider, Container
+from ghostos.helpers import yaml_pretty_dump
 
 __all__ = ['StorageGoProcessesImpl', 'StorageProcessImplProvider', 'WorkspaceProcessesProvider']
 
@@ -17,7 +17,6 @@ class StorageGoProcessesImpl(GoProcesses):
     def __init__(self, storage: Storage, logger: LoggerItf):
         self._storage = storage
         self._logger = logger
-        self._lock = Lock()
 
     def _get_session_process_map(self) -> Dict[str, str]:
         filename = self.session_map_name
@@ -28,40 +27,23 @@ class StorageGoProcessesImpl(GoProcesses):
         return {}
 
     @staticmethod
-    def _get_process_filename(process_id: str) -> str:
-        return f"{process_id}.process.yml"
+    def _get_process_filename(shell_id: str) -> str:
+        return f"{shell_id}.process.yml"
 
-    def get_process(self, process_id: str) -> Optional[GoProcess]:
-        filename = self._get_process_filename(process_id)
-        if self._storage.exists(filename):
-            content = self._storage.get(filename)
-            data = yaml.safe_load(content)
-            process = GoProcess(**data)
-            return process
-        return None
-
-    def _save_session_process_map(self, session_map: Dict[str, str]) -> None:
-        content = yaml.safe_dump(session_map)
-        filename = self.session_map_name
-        self._storage.put(filename, content.encode("utf-8"))
-
-    def get_session_process(self, session_id: str) -> Optional[GoProcess]:
-        m = self._get_session_process_map()
-        process_id = m.get(session_id, None)
-        if process_id is None:
+    def get_process(self, shell_id: str) -> Optional[GoProcess]:
+        filename = self._get_process_filename(shell_id)
+        if not self._storage.exists(filename):
             return None
-        return self.get_process(process_id)
+        content = self._storage.get(filename)
+        data = yaml.safe_load(content)
+        process = GoProcess(**data)
+        return process
 
     def save_process(self, process: GoProcess) -> None:
-        session_id = process.session_id
-        process_id = process.process_id
-        with self._lock:
-            m = self._get_session_process_map()
-            m[session_id] = process_id
-            self._save_session_process_map(m)
-        content = yaml.safe_dump(process.model_dump(exclude_defaults=True))
-        filename = self._get_process_filename(process_id)
-        self._storage.put(filename, content.encode("utf-8"))
+        filename = self._get_process_filename(process.shell_id)
+        data = process.model_dump(exclude_defaults=True)
+        content = yaml_pretty_dump(data)
+        self._storage.put(filename, content.encode())
 
 
 class StorageProcessImplProvider(Provider[GoProcesses]):

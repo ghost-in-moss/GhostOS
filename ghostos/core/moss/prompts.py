@@ -5,6 +5,7 @@ from ghostos.core.moss.utils import (
 )
 from ghostos.prompter import get_defined_prompt
 from pydantic import BaseModel
+from dataclasses import is_dataclass
 import inspect
 
 """
@@ -129,7 +130,7 @@ def get_prompt(value: Any) -> Optional[str]:
 
     if inspect.isclass(value):
         # only reflect abstract class
-        if inspect.isabstract(value) or issubclass(value, BaseModel):
+        if inspect.isabstract(value) or issubclass(value, BaseModel) or is_dataclass(value):
             source = inspect.getsource(value)
             if source:
                 return source

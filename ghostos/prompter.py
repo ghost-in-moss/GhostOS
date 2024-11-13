@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import inspect
 from typing import (
-    List, Self, Union, Callable, Any, Protocol, Optional, Dict, TypeVar, Type, Generic,
+    List, Self, Union, Callable, Any, Protocol, Optional, Dict, TypeVar, Type, Generic, Set,
 )
 from abc import ABC, abstractmethod
-from types import ModuleType, FunctionType
+from types import ModuleType
 from ghostos.container import Container
 from ghostos.helpers import generate_import_path, import_class_from_path, import_from_path
 from pydantic import BaseModel, Field
@@ -80,17 +80,22 @@ class Prompter(EntityClass, ABC):
 
     priority: int = Field(default=0, description='Priority of this prompter.')
 
-    __children__: Optional[List[Prompter]] = None
+    __children__: Optional[Set[Prompter]] = None
     """ children is fractal sub context nodes"""
 
     __self_prompt__: Optional[str] = None
 
-    def with_children(self, *children: Prompter) -> Prompter:
-        if self.__children__ is None:
-            self.__children__ = []
+    def with_children(self, *children: Prompter) -> Self:
         children = list(children)
         if len(children) > 0:
-            self.__children__.extend(children)
+            self.add_child(*children)
+        return self
+
+    def add_child(self, *prompters: Prompter) -> Self:
+        if self.__children__ is None:
+            self.__children__ = set()
+        for prompter in prompters:
+            self.__children__.add(prompter)
         return self
 
     @abstractmethod
@@ -110,7 +115,7 @@ class Prompter(EntityClass, ABC):
         pass
 
     def get_priority(self) -> int:
-        return 0
+        return self.priority
 
     def get_prompt(self, container: Container, depth: int = 0) -> str:
         """
@@ -123,8 +128,10 @@ class Prompter(EntityClass, ABC):
             return self.__self_prompt__
 
         title = self.get_title()
+        depth = depth
         if title:
             title = '#' * (depth + 1) + ' ' + title
+            depth = depth + 1
 
         self_prompt = self.self_prompt(container)
         prompts = []
@@ -133,7 +140,7 @@ class Prompter(EntityClass, ABC):
 
         if self.__children__ is not None:
             for child in self.__children__:
-                child_prompt = child.get_prompt(container, depth=depth + 1)
+                child_prompt = child.get_prompt(container, depth=depth)
                 if child_prompt:
                     prompts.append(child_prompt)
         # empty prompts

@@ -1,9 +1,10 @@
-from typing import Optional, List, Iterable, Tuple, Self, TypeVar, Dict, Union
+from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union
 
-from dataclasses import dataclass
 from ghostos.core.abcd.concepts import Session, Ghost, GhostDriver, Shell, Scope, Operation, Operator
 from ghostos.core.abcd.utils import get_ghost_driver
-from ghostos.core.messages import MessageKind, Message, Caller, Stream, Role, MessageKindParser
+from ghostos.core.messages import (
+    MessageKind, Message, Caller, Stream, Role, MessageKindParser, MessageType
+)
 from ghostos.core.runtime import (
     TaskBrief, GoTaskStruct, TaskLocker, TaskPayload, GoTasks, TaskState,
     EventBus, Event, EventTypes,
@@ -12,10 +13,11 @@ from ghostos.core.runtime import (
 )
 from ghostos.prompter import Prompter
 from ghostos.contracts.logger import wrap_logger, LoggerItf
-from ghostos.container import Container
+from ghostos.container import Container, provide, Contracts
 from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
 from ghostos.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
+from .operation import OperationImpl
 
 G = TypeVar("G", bound=Ghost)
 
@@ -30,17 +32,22 @@ class EmptyOperator(Operator):
 
 
 class SessionImpl(Session[G]):
+    contracts = Contracts([
+        GoThreads,
+        GoTasks,
+        EventBus,
+    ])
 
     def __init__(
             self,
             container: Container,
-            stream: Stream,
+            stream: Optional[Stream],
             task: GoTaskStruct,
             locker: TaskLocker,
             max_errors: int,
     ):
         # session level container
-        self.container = Container(parent=container)
+        self.container = container
         self.upstream = stream
         self.task = task
         self.locker = locker
@@ -76,7 +83,20 @@ class SessionImpl(Session[G]):
         self._failed = False
         self._done = False
         self._destroyed = False
-        self.refresh()
+        self._bootstrap()
+        if not self.refresh():
+            raise RuntimeError(f"Failed to start session")
+
+    def _bootstrap(self):
+        self.contracts.validate(self.container)
+        self.container.set(Session, self)
+        self.container.set(LoggerItf, self.logger)
+        self.container.set(Scope, self.scope)
+        self.container.register(provide(GoTaskStruct, False)(lambda c: self.task))
+        self.container.register(provide(GoThreadInfo, False)(lambda c: self.thread))
+        self.container.register(provide(Operation, False)(lambda c: self.operates()))
+        self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
+        self.container.bootstrap()
 
     @staticmethod
     def unmarshal_state(task: GoTaskStruct) -> Dict[str, EntityType]:
@@ -91,7 +111,12 @@ class SessionImpl(Session[G]):
             return False
         return self.locker.acquired() and self.upstream.alive()
 
+    def _validate_alive(self):
+        if not self.is_alive():
+            raise RuntimeError(f"Session is not alive")
+
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
+        self._validate_alive()
         driver = get_ghost_driver(self.ghost)
         # always let ghost driver decide event handling logic first.
         event = driver.parse_event(self, event)
@@ -102,12 +127,6 @@ class SessionImpl(Session[G]):
             self.thread.new_turn(event)
             return None, None
 
-        if EventTypes.ERROR.value == event.type:
-            self.task.error += 1
-            if self.task.errors > self._max_errors:
-                # if reach max errors, fail the task
-                return None, self.operates().fail("task failed too much, exceeds max errors")
-
         if EventTypes.INPUT.value == event.type:
             # only input event can reset errors.
             self.task.errors = 0
@@ -117,10 +136,17 @@ class SessionImpl(Session[G]):
                 self.thread = self.thread.reset_history(event.history)
                 event.history = []
 
+        # other event
         elif self.task.is_dead():
             # dead task can only respond event from parent input.
             self.thread.new_turn(event)
             return None, EmptyOperator()
+
+        if EventTypes.ERROR.value == event.type:
+            self.task.error += 1
+            if self.task.errors > self._max_errors:
+                # if reach max errors, fail the task
+                return None, self.operates().fail("task failed too much, exceeds max errors")
 
         if EventTypes.CANCEL.value == event.type:
             # cancel self and all subtasks.
@@ -144,7 +170,8 @@ class SessionImpl(Session[G]):
         return event, None
 
     def operates(self) -> Operation:
-        pass
+        self._validate_alive()
+        return OperationImpl(self._message_parser)
 
     def get_context(self) -> Optional[Prompter]:
         if self.task.context is None:
@@ -157,19 +184,22 @@ class SessionImpl(Session[G]):
     def refresh(self) -> bool:
         if self._failed or self._destroyed or not self.is_alive():
             return False
-        if self.locker.refresh():
-            self._fetched_task_briefs = {}
-            self._firing_events = []
-            self._creating_tasks = {}
-            self._saving_threads = {}
-            self.subtasks = {}
-            self.task = self.task.new_turn()
-            if len(self.task.children) > 0:
-                self.subtasks = self.get_task_briefs(*self.task.children)
-            return True
-        return False
+        return self.locker.refresh()
+
+    def _reset(self):
+        self._fetched_task_briefs = {}
+        self._firing_events = []
+        self._creating_tasks = {}
+        self._saving_threads = {}
+        self.subtasks = {}
+        self.task = self.task.new_turn()
+        if len(self.task.children) > 0:
+            subtasks = self.get_task_briefs(*self.task.children)
+            subtasks = sorted(subtasks.items(), key=lambda x: x.updated)
+            self.subtasks = {tid: t for tid, t in subtasks}
 
     def messenger(self) -> Messenger:
+        self._validate_alive()
         task_payload = TaskPayload.from_task(self.task)
         identity = get_identifier(self.ghost)
         return DefaultMessenger(
@@ -180,6 +210,7 @@ class SessionImpl(Session[G]):
         )
 
     def respond(self, messages: Iterable[MessageKind], remember: bool = True) -> Tuple[List[Message], List[Caller]]:
+        self._validate_alive()
         messenger = self.messenger()
         messenger.send(messages)
         messages, callers = messenger.flush()
@@ -188,6 +219,7 @@ class SessionImpl(Session[G]):
         return messages, callers
 
     def cancel_subtask(self, ghost: G, reason: str = "") -> None:
+        self._validate_alive()
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self.scope)
         tasks = self.container.force_fetch(GoTasks)
@@ -204,6 +236,7 @@ class SessionImpl(Session[G]):
         self.fire_events(event)
 
     def send_subtask(self, ghost: G, *messages: MessageKind, ctx: Optional[G.Context] = None) -> None:
+        self._validate_alive()
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self.scope)
         tasks = self.container.force_fetch(GoTasks)
@@ -235,6 +268,7 @@ class SessionImpl(Session[G]):
             task_name: Optional[str] = None,
             task_description: Optional[str] = None,
     ) -> None:
+        self._validate_alive()
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self.scope)
         identifier = get_identifier(self.ghost)
@@ -255,17 +289,21 @@ class SessionImpl(Session[G]):
         self._creating_tasks[task_id] = task
 
     def create_threads(self, *threads: GoThreadInfo) -> None:
+        self._validate_alive()
         for t in threads:
             self._saving_threads[t.id] = t
 
     def call(self, ghost: G, ctx: G.Props) -> G.Artifact:
+        self._validate_alive()
         shell = self.container.force_fetch(Shell)
         return shell.call(ghost, ctx)
 
     def fire_events(self, *events: "Event") -> None:
+        self._validate_alive()
         self._firing_events.extend(events)
 
     def get_task_briefs(self, *task_ids: str) -> Dict[str, TaskBrief]:
+        self._validate_alive()
         ids = set(task_ids)
         result = {}
         fetch = []
@@ -283,12 +321,13 @@ class SessionImpl(Session[G]):
         return result
 
     def save(self) -> None:
+        self._validate_alive()
         self._update_subtasks()
         self._update_state_changes()
         self._do_create_tasks()
         self._do_save_threads()
         self._do_fire_events()
-        self.refresh()
+        self._reset()
 
     def _update_subtasks(self):
         children = []
@@ -336,24 +375,34 @@ class SessionImpl(Session[G]):
             bus.send_event(e, notify)
         self._firing_events = []
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_val is not None:
+            intercepted = self.fail(exc_val)
+            self.destroy()
+            return intercepted
+        else:
+            self.save()
+            self.destroy()
+
     def fail(self, err: Optional[Exception]) -> bool:
         if self._failed:
             return True
         self._failed = True
         self.logger.error("Session failed: %s", err)
+        if self.upstream is not None:
+            message = MessageType.ERROR.new(content=str(err))
+            self.upstream.deliver(message)
         return False
-
-    def done(self) -> None:
-        if not self.is_alive():
-            return
-        self._done = True
-        self.save()
-        self.destroy()
 
     def destroy(self) -> None:
         if self._destroyed:
             return
         self._destroyed = True
+        self.locker.release()
+        del self.locker
         self.container.destroy()
         del self.container
         del self._firing_events

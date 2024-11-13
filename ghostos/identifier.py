@@ -19,10 +19,17 @@ __all__ = [
 ]
 
 
-def get_identifier(value: Any, throw: bool = False) -> Union[Identifier, None]:
+def get_identifier(value: Any) -> Identifier:
     """
     get identifier or not from any value
     """
+    id_ = try_get_identifier(value)
+    if id_ is None:
+        raise AttributeError(f'{value} is not an identifier')
+    return id_
+
+
+def try_get_identifier(value: Any, throw: bool = False) -> Union[Identifier, None]:
     try:
         if value is None:
             return None
