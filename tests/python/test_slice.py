@@ -42,3 +42,15 @@ def test_array_insert_more_than_pointed():
     a = [1, 2, 3, 4]
     a[1:3] = [5, 6, 7, 8]
     assert a == [1, 5, 6, 7, 8, 4]
+
+
+def test_sort_dicts():
+    cases = [
+        {'a': 1, 'b': 2, 'c': 3, 'd': 4},
+        {'a': 2, 'b': 2, 'c': 3, 'd': 4},
+        {'a': 3, 'b': 2, 'c': 3, 'd': 4},
+        {'a': 4, 'b': 2, 'c': 3, 'd': 4},
+    ]
+    values = sorted(cases, key=lambda x: x['a'], reverse=True)
+    actual = [c['a'] for c in values]
+    assert actual == [4, 3, 2, 1]

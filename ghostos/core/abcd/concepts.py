@@ -52,7 +52,8 @@ and the Most valuable features about ghost are:
 
 __all__ = (
     "Ghost", "Session", "GhostDriver", "GhostOS", "Operator", "StateValue", "Action",
-    "Shell", "Taskflow", "Scope", "Conversation", "Background",
+    "Shell", "Scope", "Conversation", "Background",
+    "Taskflow", "Subtasks",
 )
 
 
@@ -470,8 +471,6 @@ class Session(Generic[G], ABC):
     task: GoTaskStruct
     """current task"""
 
-    subtasks: Dict[str, TaskBrief]
-
     thread: GoThreadInfo
     """thread info of the task"""
 
@@ -533,6 +532,10 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
+    def subtasks(self) -> Subtasks:
+        pass
+
+    @abstractmethod
     def messenger(self) -> "Messenger":
         """
         Task 当前运行状态下, 向上游发送消息的 Messenger.
@@ -557,6 +560,9 @@ class Session(Generic[G], ABC):
             self,
             *threads: GoThreadInfo,
     ) -> None:
+        pass
+
+    def create_tasks(self, *tasks: GoTaskStruct) -> None:
         pass
 
     @abstractmethod

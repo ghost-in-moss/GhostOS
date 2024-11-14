@@ -1,6 +1,8 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any
 
-from ghostos.core.abcd.concepts import Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator
+from ghostos.core.abcd.concepts import (
+    Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks
+)
 from ghostos.core.abcd.utils import get_ghost_driver
 from ghostos.core.messages import (
     MessageKind, Message, Caller, Stream, Role, MessageKindParser, MessageType
@@ -19,6 +21,7 @@ from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityT
 from ghostos.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
 from .taskflow_impl import TaskflowImpl
+from .subtasks_impl import SubtasksImpl
 
 G = TypeVar("G", bound=Ghost)
 
@@ -82,7 +85,6 @@ class SessionImpl(Session[G]):
         self._creating_tasks: Dict[str, GoTaskStruct] = {}
         self._firing_events: List[Event] = []
         self._saving_threads: Dict[str, GoThreadInfo] = {}
-        self.subtasks = {}
         self._failed = False
         self._done = False
         self._destroyed = False
@@ -99,6 +101,7 @@ class SessionImpl(Session[G]):
         self.container.register(provide(GoTaskStruct, False)(lambda c: self.task))
         self.container.register(provide(GoThreadInfo, False)(lambda c: self.thread))
         self.container.register(provide(Taskflow, False)(lambda c: self.taskflow()))
+        self.container.register(provide(Subtasks, False)(lambda c: self.subtasks()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
         self.container.bootstrap()
 
@@ -160,9 +163,9 @@ class SessionImpl(Session[G]):
             self.task.errors = 0
             self.thread.new_turn(event)
             self.task.state = TaskState.CANCELLED
-            for child in self.subtasks.values():
+            for child_id in self.task.children:
                 event = EventTypes.CANCEL.new(
-                    task_id=child.task_id,
+                    task_id=child_id,
                     messages=[],
                     from_task_id=self.task.task_id,
                     from_task_name=self.task.name,
@@ -179,6 +182,9 @@ class SessionImpl(Session[G]):
     def taskflow(self) -> Taskflow:
         self._validate_alive()
         return TaskflowImpl(self, self._message_parser)
+
+    def subtasks(self) -> Subtasks:
+        return SubtasksImpl(self)
 
     def get_context(self) -> Optional[Prompter]:
         if self.task.context is None:
@@ -198,12 +204,7 @@ class SessionImpl(Session[G]):
         self._firing_events = []
         self._creating_tasks = {}
         self._saving_threads = {}
-        self.subtasks = {}
         self.task = self.task.new_turn()
-        if len(self.task.children) > 0:
-            subtasks = self.get_task_briefs(*self.task.children)
-            subtasks = sorted(subtasks.items(), key=lambda x: x.updated)
-            self.subtasks = {tid: t for tid, t in subtasks}
 
     def messenger(self) -> Messenger:
         self._validate_alive()
@@ -242,58 +243,10 @@ class SessionImpl(Session[G]):
         )
         self.fire_events(event)
 
-    def send_subtask(self, ghost: G, *messages: MessageKind, ctx: Optional[G.Context] = None) -> None:
+    def create_tasks(self, *tasks: GoTaskStruct) -> None:
         self._validate_alive()
-        driver = get_ghost_driver(ghost)
-        task_id = driver.make_task_id(self.scope)
-        tasks = self.container.force_fetch(GoTasks)
-        subtask = tasks.get_task(task_id)
-
-        event_messages = list(self._message_parser.parse(messages))
-        if subtask is None:
-            self.create_subtask(ghost, ctx)
-            event = EventTypes.CREATED.new(
-                task_id=task_id,
-                messages=event_messages,
-                from_task_id=self.task.task_id,
-                from_task_name=self.task.name,
-            )
-            self.fire_events(event)
-        else:
-            event = EventTypes.INPUT.new(
-                task_id=task_id,
-                messages=event_messages,
-                from_task_id=self.task.task_id,
-                from_task_name=self.task.name,
-            )
-            self.fire_events(event)
-
-    def create_subtask(
-            self,
-            ghost: G,
-            ctx: G.Context,
-            task_name: Optional[str] = None,
-            task_description: Optional[str] = None,
-    ) -> None:
-        self._validate_alive()
-        driver = get_ghost_driver(ghost)
-        task_id = driver.make_task_id(self.scope)
-        identifier = get_identifier(self.ghost)
-        task_name = task_name or identifier.name
-        task_description = task_description or identifier.description
-        context_meta = to_entity_meta(ctx) if ctx is not None else None
-        task = GoTaskStruct.new(
-            task_id=task_id,
-            shell_id=self.task.shell_id,
-            process_id=self.task.process_id,
-            depth=self.task.depth + 1,
-            name=task_name,
-            description=task_description,
-            meta=to_entity_meta(ghost),
-            context=context_meta,
-            parent_task_id=self.task.task_id,
-        )
-        self._creating_tasks[task_id] = task
+        for task in tasks:
+            self._creating_tasks[task.task_id] = task
 
     def create_threads(self, *threads: GoThreadInfo) -> None:
         self._validate_alive()
@@ -337,8 +290,11 @@ class SessionImpl(Session[G]):
         self._reset()
 
     def _update_subtasks(self):
-        children = []
-        for tid, tb in self.subtasks.items():
+        children = self.task.children
+        if len(children) == 0:
+            return
+        tasks = self.get_task_briefs(*children)
+        for tid, tb in tasks:
             if TaskState.is_dead(tb.state):
                 continue
             children.append(tid)
@@ -413,7 +369,6 @@ class SessionImpl(Session[G]):
         self.container.destroy()
         del self.container
         del self._firing_events
-        del self.subtasks
         del self.task
         del self.thread
         del self._fetched_task_briefs

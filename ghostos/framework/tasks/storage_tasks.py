@@ -77,6 +77,7 @@ class StorageGoTasksImpl(GoTasks):
             filename = self._get_task_filename(task.task_id)
             data = task.model_dump(exclude_defaults=True)
             content = yaml.safe_dump(data)
+            task.updated = int(time.time())
             self._storage.put(filename, content.encode('utf-8'))
 
     @staticmethod

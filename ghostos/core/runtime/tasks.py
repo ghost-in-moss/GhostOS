@@ -135,12 +135,12 @@ children task ids to wait
     )
 
     # --- time related --- #
-    created: float = Field(
-        default_factory=lambda: round(time.time(), 4),
+    created: int = Field(
+        default_factory=lambda: int(round(time.time(), 0)),
         description="The time the task was created.",
     )
-    updated: float = Field(
-        default=0.0,
+    updated: int = Field(
+        default=0,
         description="The time the task was updated.",
     )
 
@@ -248,6 +248,8 @@ class TaskBrief(BaseModel, Identical):
     description: str = Field(description="the purpose of the task")
     state: str = Field(description="the state of the task")
     status_desc: str = Field(description="the description of the task status")
+    created: int = Field(description="the time the task was created")
+    updated: int = Field(description="the time that task was updated")
 
     def is_overdue(self) -> bool:
         now = time.time()
