@@ -89,11 +89,12 @@ def default_application_contracts() -> Contracts:
     Application level contracts
     """
     from ghostos.core.moss import MossCompiler
+    from ghostos.core.messages.openai import OpenAIMessageParser
     from ghostos.contracts.pool import Pool
     from ghostos.contracts.shutdown import Shutdown
     from ghostos.contracts.modules import Modules
     from ghostos.contracts.workspace import Workspace
-    from ghostos.entity import EntityFactory
+    from ghostos.contracts.variables import Variables
     from ghostos.framework.configs import Configs
     from ghostos.framework.processes import GoProcesses
     from ghostos.framework.threads import GoThreads
@@ -108,6 +109,7 @@ def default_application_contracts() -> Contracts:
         # workspace contracts
         Workspace,  # application workspace implementation
         Configs,  # application configs repository
+        Variables,
 
         # system contracts
         Pool,  # multi-thread or process pool to submit async tasks
@@ -117,9 +119,11 @@ def default_application_contracts() -> Contracts:
 
         LoggerItf,  # the logger instance of application
         Modules,  # the import_module proxy
-        EntityFactory,  # wrap and un-wrap Entity class
 
         DocumentRegistry,
+
+        # messages
+        OpenAIMessageParser,
 
         # moss
         MossCompiler,
@@ -154,6 +158,7 @@ def default_application_providers(
     from ghostos.contracts.shutdown import ShutdownProvider
     from ghostos.contracts.modules import DefaultModulesProvider
     from ghostos.core.moss import DefaultMOSSProvider
+    from ghostos.core.messages.openai import DefaultOpenAIParserProvider
     from ghostos.framework.workspaces import BasicWorkspaceProvider
     from ghostos.framework.configs import WorkspaceConfigsProvider
     from ghostos.framework.processes import WorkspaceProcessesProvider
@@ -162,7 +167,7 @@ def default_application_providers(
     from ghostos.framework.eventbuses import MemEventBusImplProvider
     from ghostos.framework.llms import ConfigBasedLLMsProvider, PromptStorageInWorkspaceProvider
     from ghostos.framework.logger import NamedLoggerProvider
-    from ghostos.framework.entities import EntityFactoryProvider
+    from ghostos.framework.variables import WorkspaceVariablesProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
     from ghostos.framework.documents import ConfiguredDocumentRegistryProvider
     return [
@@ -180,6 +185,10 @@ def default_application_providers(
         WorkspaceProcessesProvider(runtime_processes_dir),
         WorkspaceTasksProvider(runtime_tasks_dir),
         ConfiguredDocumentRegistryProvider("documents_registry.yml"),
+        WorkspaceVariablesProvider(),
+
+        # --- messages --- #
+        DefaultOpenAIParserProvider(),
 
         # --- session ---#
         MsgThreadsRepoByWorkSpaceProvider(runtime_threads_dir),
@@ -194,7 +203,6 @@ def default_application_providers(
         PromptStorageInWorkspaceProvider(),
 
         # --- basic library --- #
-        EntityFactoryProvider(),
         DefaultModulesProvider(),
         ShutdownProvider(),
         # WorkspaceTranslationProvider("translations"),

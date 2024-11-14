@@ -9,7 +9,8 @@ from types import ModuleType
 from ghostos.container import Container
 from ghostos.helpers import generate_import_path, import_class_from_path, import_from_path
 from pydantic import BaseModel, Field
-from ghostos.entity import EntityClass, EntityMeta, from_entity_meta, to_entity_meta
+from ghostos.entity import EntityMeta, from_entity_meta, to_entity_meta
+
 import json
 
 __all__ = [
@@ -22,8 +23,8 @@ __all__ = [
 ]
 
 
-def get_defined_prompt(value: Any) -> Union[str, None]:
-    attr = get_defined_prompt_attr(value)
+def get_defined_prompt(value: Any, container: Optional[Container] = None) -> Union[str, None]:
+    attr = get_defined_prompt_attr(value, container)
     if attr is None:
         return None
     if isinstance(attr, str):
@@ -31,11 +32,13 @@ def get_defined_prompt(value: Any) -> Union[str, None]:
     return attr()
 
 
-def get_defined_prompt_attr(value: Any) -> Union[None, str, Callable[[], str]]:
+def get_defined_prompt_attr(value: Any, container: Optional[Container] = None) -> Union[None, str, Callable[[], str]]:
     if value is None:
         return None
     elif isinstance(value, PromptAbleObj):
         return value.__prompt__
+    elif isinstance(value, Prompter) and container is not None:
+        return value.get_prompt(container)
 
     elif isinstance(value, type):
         if issubclass(value, PromptAbleClass):
@@ -73,14 +76,14 @@ def set_class_prompt(cls: type, prompter: Union[Callable[[], str], str], force: 
 
 # ---- prompter ---- #
 
-class Prompter(EntityClass, ABC):
+class Prompter(ABC):
     """
     is strong-typed model for runtime alternative properties of a ghost.
     """
 
     priority: int = Field(default=0, description='Priority of this prompter.')
 
-    __children__: Optional[Set[Prompter]] = None
+    __children__: Optional[List[Prompter]] = None
     """ children is fractal sub context nodes"""
 
     __self_prompt__: Optional[str] = None
@@ -93,9 +96,9 @@ class Prompter(EntityClass, ABC):
 
     def add_child(self, *prompters: Prompter) -> Self:
         if self.__children__ is None:
-            self.__children__ = set()
+            self.__children__ = []
         for prompter in prompters:
-            self.__children__.add(prompter)
+            self.__children__.append(prompter)
         return self
 
     @abstractmethod
@@ -158,37 +161,6 @@ class Prompter(EntityClass, ABC):
         self.__self_prompt__ = output.strip()
         return self.__self_prompt__
 
-    def __to_entity_meta__(self) -> EntityMeta:
-        type_ = generate_import_path(self.__class__)
-        ctx_data = self.__to_entity_meta_data__()
-        children_data = []
-        if self.__children__ is not None:
-            for child in self.__children__:
-                children_data.append(to_entity_meta(child))
-        data = {"ctx": ctx_data, "children": children_data}
-        content = json.dumps(data)
-        return EntityMeta(type=type_, content=content)
-
-    @abstractmethod
-    def __to_entity_meta_data__(self) -> Dict[str, Any]:
-        pass
-
-    @classmethod
-    @abstractmethod
-    def __from_entity_meta_data__(cls, data: Dict[str, Any]) -> Self:
-        pass
-
-    @classmethod
-    def __from_entity_meta__(cls, meta: EntityMeta) -> Self:
-        data = json.loads(meta["content"])
-        ctx_data = data["ctx"]
-        children_data = data["children"]
-        result = cls.__from_entity_meta_data__(ctx_data)
-        children = []
-        for child in children_data:
-            children.append(from_entity_meta(child))
-        return result.with_children(*children)
-
     def flatten(self, index: str = "") -> Dict[str, Self]:
         if not index:
             index = "0"
@@ -204,12 +176,27 @@ class Prompter(EntityClass, ABC):
 
 class ModelPrompter(BaseModel, Prompter, ABC):
 
-    def __to_entity_meta_data__(self) -> Dict[str, Any]:
-        return self.model_dump(exclude_defaults=True)
+    def __to_entity_meta__(self) -> EntityMeta:
+        type_ = generate_import_path(self.__class__)
+        ctx_data = self.model_dump(exclude_defaults=True)
+        children_data = []
+        if self.__children__ is not None:
+            for child in self.__children__:
+                children_data.append(to_entity_meta(child))
+        data = {"ctx": ctx_data, "children": children_data}
+        content = json.dumps(data)
+        return EntityMeta(type=type_, content=content)
 
     @classmethod
-    def __from_entity_meta_data__(cls, data: Dict[str, Any]) -> Self:
-        return cls(**data)
+    def __from_entity_meta__(cls, meta: EntityMeta) -> Self:
+        data = json.loads(meta["content"])
+        ctx_data = data["ctx"]
+        children_data = data["children"]
+        result = cls(**ctx_data)
+        children = []
+        for child in children_data:
+            children.append(from_entity_meta(child))
+        return result.with_children(*children)
 
 
 class DataPrompter(ModelPrompter, ABC):

@@ -1,17 +1,19 @@
 from __future__ import annotations
 import enum
 import time
-from typing import Optional, Dict, Set, Iterable, Union, List, Any, ClassVar
+from typing import Optional, Dict, Set, Iterable, Union, List, Any, ClassVar, Type
 from typing_extensions import Self, Literal
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.helpers import uuid
+from ghostos.container import Container
+from ghostos.entity import EntityType
 from copy import deepcopy
 
 __all__ = [
     "Message", "Role", "MessageType",
-    "MessageClass",
-    "MessageKind", "MessageKindParser",
+    "MessageClass", "MessageClassesParser",
+    "MessageKind",
     "Caller", "CallerOutput",
 ]
 
@@ -427,7 +429,7 @@ class MessageClass(ABC):
     A message class with every field that is strong-typed
     the payloads and attachments shall parse to dict when generate to a Message.
     """
-    message_type: ClassVar[Union[MessageType, str]]
+    __message_type__: ClassVar[Union[MessageType, str]]
 
     @abstractmethod
     def to_message(self) -> Message:
@@ -444,7 +446,7 @@ class MessageClass(ABC):
         pass
 
     @abstractmethod
-    def to_openai_param(self) -> Dict:
+    def to_openai_param(self, container: Optional[Container]) -> List[Dict]:
         pass
 
 
@@ -469,6 +471,8 @@ class Caller(BaseModel):
 
 
 class CallerOutput(BaseModel, MessageClass):
+    __message_type__ = MessageType.FUNCTION_OUTPUT.value
+
     call_id: Optional[str] = Field(None, description="caller id")
     name: str = Field(description="caller name")
     content: Optional[str] = Field(description="caller output")
@@ -492,7 +496,7 @@ class CallerOutput(BaseModel, MessageClass):
             output=container.content,
         )
 
-    def to_openai_param(self) -> Dict:
+    def to_openai_param(self, container: Optional[Container]) -> Dict:
         from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
         from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
         if self.call_id:
@@ -509,75 +513,28 @@ class CallerOutput(BaseModel, MessageClass):
             )
 
 
-class MessageClasses:
+class MessageClassesParser:
     def __init__(
             self,
-            classes: Iterable[MessageClass],
+            classes: Iterable[Type[MessageClass]],
     ) -> None:
-        self.classes = {str(cls.message_type): cls for cls in classes}
+        self.classes = {str(cls.__message_type__): cls for cls in classes}
 
-    def parse(self, messages: List[Message]) -> List[MessageClass]:
-        result = []
-        for message in messages:
-            if not message.is_complete():
-                continue
-            if message.type not in self.classes:
-                continue
-            cls = self.classes[message.type]
-            item = cls.from_message(message)
-            if item is not None:
-                result.append(item)
-        return result
-
-    def to_openai_params(self, messages: List[Message]) -> List[Dict]:
-        parsed = self.parse(messages)
-        result = []
-        for message in parsed:
-            result.append(message.to_openai_param())
-        return result
-
-
-MessageKind = Union[Message, MessageClass, str]
-"""sometimes we need three forms of the message to define an argument or property."""
-
-
-class MessageKindParser:
-    """
-    middleware that parse weak MessageKind into Message chunks
-    """
-
-    def __init__(
-            self, *,
-            name: Optional[str] = None,
-            role: str = Role.ASSISTANT.value,
-            ref_id: Optional[str] = None,
-    ) -> None:
-        self.role = role
-        self.ref_id = ref_id
-        self.name = name
-
-    def parse(self, messages: Iterable[MessageKind]) -> Iterable[Message]:
-        for item in messages:
-            if isinstance(item, Message):
-                yield self._with_ref(item)
-            if isinstance(item, MessageClass):
-                msg = item.to_message()
-                yield self._with_ref(msg)
-            if isinstance(item, str):
-                if not item:
-                    # exclude empty message
-                    continue
-                msg = Message.new_tail(content=item, role=self.role)
-                yield self._with_ref(msg)
-            else:
-                # todo: 需要日志?
-                pass
-
-    def _with_ref(self, item: Message) -> Message:
-        if self.ref_id is not None:
-            item.ref_id = self.ref_id
-        if not item.role and self.role:
-            item.role = self.role
-        if not item.name and self.name:
-            item.name = self.name
+    def parse(self, message: Message) -> Optional[MessageClass]:
+        if not message.is_complete():
+            return None
+        if message.type not in self.classes:
+            return None
+        cls = self.classes[message.type]
+        item = cls.from_message(message)
         return item
+
+    def to_openai_params(self, message: Message, container: Optional[Container]) -> Optional[List[Dict]]:
+        parsed = self.parse(message)
+        if parsed is None:
+            return None
+        return parsed.to_openai_param(container)
+
+
+MessageKind = Union[Message, MessageClass, str, EntityType]
+"""sometimes we need three forms of the message to define an argument or property."""

@@ -1,6 +1,6 @@
-from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union
+from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any
 
-from ghostos.core.abcd.concepts import Session, Ghost, GhostDriver, Shell, Scope, Operation, Operator
+from ghostos.core.abcd.concepts import Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator
 from ghostos.core.abcd.utils import get_ghost_driver
 from ghostos.core.messages import (
     MessageKind, Message, Caller, Stream, Role, MessageKindParser, MessageType
@@ -13,11 +13,12 @@ from ghostos.core.runtime import (
 )
 from ghostos.prompter import Prompter
 from ghostos.contracts.logger import wrap_logger, LoggerItf
+from ghostos.contracts.variables import Variables
 from ghostos.container import Container, provide, Contracts
 from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
 from ghostos.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
-from .operation import OperationImpl
+from .taskflow_impl import TaskflowImpl
 
 G = TypeVar("G", bound=Ghost)
 
@@ -69,7 +70,9 @@ class SessionImpl(Session[G]):
         self.ghost: G = get_entity(self.task.meta, Ghost)
         self.ghost_driver: GhostDriver[G] = self.ghost.Driver(self.ghost)
         identifier = get_identifier(self.ghost)
+        variables = container.force_fetch(Variables)
         self._message_parser = MessageKindParser(
+            variables,
             name=identifier.name,
             role=Role.ASSISTANT.value,
         )
@@ -92,9 +95,10 @@ class SessionImpl(Session[G]):
         self.container.set(Session, self)
         self.container.set(LoggerItf, self.logger)
         self.container.set(Scope, self.scope)
+        self.container.set(MessageKindParser, self._message_parser)
         self.container.register(provide(GoTaskStruct, False)(lambda c: self.task))
         self.container.register(provide(GoThreadInfo, False)(lambda c: self.thread))
-        self.container.register(provide(Operation, False)(lambda c: self.operates()))
+        self.container.register(provide(Taskflow, False)(lambda c: self.taskflow()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
         self.container.bootstrap()
 
@@ -114,6 +118,9 @@ class SessionImpl(Session[G]):
     def _validate_alive(self):
         if not self.is_alive():
             raise RuntimeError(f"Session is not alive")
+
+    def to_messages(self, values: Iterable[Union[MessageKind, Any]]) -> List[Message]:
+        return list(self._message_parser.parse(values))
 
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
         self._validate_alive()
@@ -146,7 +153,7 @@ class SessionImpl(Session[G]):
             self.task.error += 1
             if self.task.errors > self._max_errors:
                 # if reach max errors, fail the task
-                return None, self.operates().fail("task failed too much, exceeds max errors")
+                return None, self.taskflow().fail("task failed too much, exceeds max errors")
 
         if EventTypes.CANCEL.value == event.type:
             # cancel self and all subtasks.
@@ -169,9 +176,9 @@ class SessionImpl(Session[G]):
         event.context = None
         return event, None
 
-    def operates(self) -> Operation:
+    def taskflow(self) -> Taskflow:
         self._validate_alive()
-        return OperationImpl(self._message_parser)
+        return TaskflowImpl(self, self._message_parser)
 
     def get_context(self) -> Optional[Prompter]:
         if self.task.context is None:
@@ -414,3 +421,6 @@ class SessionImpl(Session[G]):
         del self.ghost
         del self.ghost_driver
         del self.scope
+
+    def __del__(self):
+        self.destroy()

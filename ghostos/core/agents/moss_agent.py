@@ -306,7 +306,7 @@ class MossAction(Action, PromptPipe):
                 message = caller.new_output(output)
                 if op is None:
                     # if std output is not empty, and op is none, observe the output as default.
-                    return session.operates().observe(message)
+                    return session.taskflow().think(message)
                 else:
                     session.respond([message], remember=True)
             return op
@@ -317,4 +317,4 @@ class MossAction(Action, PromptPipe):
     @staticmethod
     def fire_error(session: Session, caller: Caller, error: str) -> Operator:
         message = caller.new_output(error)
-        return session.operates().on_error(message)
+        return session.taskflow().error(message)

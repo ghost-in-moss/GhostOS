@@ -139,10 +139,6 @@ def new_moss_stub(cls: Type[Moss], container: Container, pycontext: PyContext, p
                 self.__pycontext__.set_prop(_name, _value)
             self.__dict__[_name] = _value
 
-        def destroy(self) -> None:
-            del self.__pycontext__
-            del self.__container__
-
     stub = MossType()
     # 反向注入.
     for name, value in cls.__dict__.items():
@@ -193,6 +189,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             if isinstance(injected, Injection):
                 injected.on_inject(self, attr_name)
             setattr(moss, attr_name, injected)
+            self._injected.add(attr_name)
 
         # 初始化 pycontext variable
         for name, prop in pycontext.iter_props(self._compiled):
@@ -321,14 +318,20 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         if self._destroyed:
             return
         self._destroyed = True
-        if hasattr(self._moss, "destroy"):
-            self._moss.destroy()
+        data = self._moss.__dict__
+        for val in data.values():
+            if isinstance(val, Injection):
+                val.on_destroy()
+        self._moss.__dict__ = {}
         self._container.destroy()
         del self._container
         del self._injections
         del self._compiled
         del self._moss
         del self._pycontext
+
+    def __del__(self):
+        self.destroy()
 
 
 class DefaultMOSSProvider(Provider[MossCompiler]):

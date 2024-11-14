@@ -81,7 +81,7 @@ class ShellImpl(Shell):
             notify = task.depth > 0
         self._eventbus.send_event(event, notify)
 
-    def sync(self, ghost: G, context: Union[G.Context, None]) -> Conversation:
+    def sync(self, ghost: G, context: Optional[G.Context] = None) -> Conversation:
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self._scope)
         task = self._tasks.get_task(task_id)
@@ -122,9 +122,9 @@ class ShellImpl(Shell):
 
     def call(
             self,
-            ghost: G, context: G.Context,
+            ghost: G,
+            context: Optional[G.Context] = None,
             instructions: Optional[Iterable[Message]] = None,
-            prompters: Optional[List[Prompter]] = None,
             timeout: float = 0.0,
             stream: Optional[Stream] = None,
     ) -> Tuple[Union[G.Artifact, None], TaskState]:
@@ -158,17 +158,10 @@ class ShellImpl(Shell):
     def create_root_task(
             self,
             ghost: G,
-            context: G.Context,
-            prompters: Optional[List[Prompter]] = None,
+            context: Optional[G.Context],
     ) -> GoTaskStruct:
         task_id = uuid()
         id_ = get_identifier(ghost)
-        if prompters:
-            if context is None:
-                context = TextPrmt().with_children(*prompters)
-            elif isinstance(context, Prompter):
-                context = context.add_child(*prompters)
-
         context_meta = to_entity_meta(context) if context else None
         task = GoTaskStruct.new(
             task_id=task_id,
@@ -198,7 +191,7 @@ class ShellImpl(Shell):
             self._eventbus.clear_task(task_id)
             return None
 
-        conversation = self.sync_task(task, False, True)
+        conversation = self.sync_task(task, throw=False, is_background=True)
         if conversation is None:
             return None
 

@@ -1,7 +1,7 @@
 from ghostos.container import Container
 from ghostos.core.moss.abcd import (
     Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
-    AttrPrompts,
+    AttrPrompts, Injection,
     MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
 from ghostos.core.moss.impl import DefaultMOSSProvider

@@ -6,11 +6,12 @@ from httpx_socks import SyncProxyTransport
 from openai import NOT_GIVEN
 from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
+from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from ghostos.core.messages import (
-    Message, OpenAIMessageParser, DefaultOpenAIMessageParser, MessageType,
-    CompletionUsagePayload,
+    Message, OpenAIMessageParser, DefaultOpenAIMessageParser,
+    CompletionUsagePayload, Role,
 )
 from ghostos.core.llms import (
     LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME,
@@ -107,11 +108,14 @@ class OpenAIAdapter(LLMApi):
     def text_completion(self, prompt: str) -> str:
         raise NotImplemented("text_completion is deprecated, implement it later")
 
+    def parse_message_params(self, messages: List[Message]) -> List[ChatCompletionMessageParam]:
+        return list(self._parser.parse_message_list(messages))
+
     def _chat_completion(self, chat: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         chat = self.parse_chat(chat)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = chat.get_messages()
-        messages = self._parser.parse_message_list(messages)
+        messages = self.parse_message_params(messages)
         if not messages:
             raise AttributeError("empty chat!!")
         return self._client.chat.completions.create(
@@ -184,7 +188,7 @@ class OpenAIDriver(LLMDriver):
 
     def __init__(self, storage: PromptStorage, parser: Optional[OpenAIMessageParser] = None):
         if parser is None:
-            parser = DefaultOpenAIMessageParser([])
+            parser = DefaultOpenAIMessageParser(None, None)
         self._parser = parser
         self._storage = storage
 
@@ -202,7 +206,7 @@ class LitellmAdapter(OpenAIAdapter):
 
     def _chat_completion(self, chat: Prompt, stream: bool) -> ChatCompletion:
         messages = chat.get_messages()
-        messages = self._parser.parse_message_list(messages)
+        messages = self.parse_message_params(messages)
         response = litellm.completion(
             model=self._model.model,
             messages=list(messages),
@@ -214,6 +218,19 @@ class LitellmAdapter(OpenAIAdapter):
             api_key=self._service.token,
         )
         return response.choices[0].message
+
+    def parse_message_params(self, messages: List[Message]) -> List[ChatCompletionMessageParam]:
+        parsed = super().parse_message_params(messages)
+        outputs = []
+        count = 0
+        for message in parsed:
+            # filter all the system message to __system__ user message.
+            if count > 0 and "role" in message and message["role"] == Role.SYSTEM.value:
+                message["role"] = Role.USER.value
+                message["name"] = "__system__"
+            outputs.append(message)
+            count += 1
+        return outputs
 
 
 class LiteLLMDriver(OpenAIDriver):

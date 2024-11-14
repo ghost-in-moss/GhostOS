@@ -8,7 +8,7 @@ from typing_extensions import Protocol
 import inspect
 
 __all__ = [
-    'get_identifier',
+    'get_identifier', 'try_get_identifier',
     'identify_class',
     'identify_class_id',
 

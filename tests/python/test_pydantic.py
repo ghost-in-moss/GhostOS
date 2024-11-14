@@ -164,3 +164,14 @@ def test_multi_type_attr():
 
     unmarshalled = Baz(**data)
     assert not isinstance(unmarshalled.baz[0], Foo)
+
+
+def test_model_with_subclass():
+    class Foo(BaseModel):
+        class Bar(BaseModel):
+            bar: str = "hello"
+
+        bar: Bar = Field(default_factory=Bar)
+
+    f = Foo()
+    assert f.bar.bar == "hello"

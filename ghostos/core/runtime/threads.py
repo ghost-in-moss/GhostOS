@@ -36,8 +36,8 @@ class Turn(BaseModel):
         default_factory=PyContext,
         description="The PyContext instance",
     )
-    created: float = Field(
-        default_factory=lambda: round(time.time(), 4),
+    created: int = Field(
+        default_factory=lambda: int(round(time.time(), 0)),
     )
     extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 

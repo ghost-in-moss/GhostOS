@@ -1,7 +1,11 @@
 from ghostos.core.messages.message import (
     Message, Role, MessageType,
     Caller, CallerOutput,
-    MessageClass, MessageKind, MessageKindParser,
+    MessageClass, MessageKind,
+    MessageClassesParser,
+)
+from ghostos.core.messages.message_classes import (
+    MessageKindParser, VariableMessage,
 )
 from ghostos.core.messages.payload import Payload
 from ghostos.core.messages.openai import (

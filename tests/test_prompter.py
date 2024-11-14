@@ -1,5 +1,5 @@
 from ghostos.prompter import (
-    TextPrmt, PromptAbleClass, PromptAbleObj,
+    TextPrmt, PromptAbleClass, PromptAbleObj, ModelPrompter,
     InspectPrmt,
 )
 from ghostos.container import Container
@@ -37,3 +37,17 @@ def test_inspect_prompters():
     c = Container()
     prompt = prmt.get_prompt(c)
     assert f":{test_group_prompters.__name__}" in prompt
+
+
+def test_model_prompters():
+    class TestPrompter(ModelPrompter):
+        line: str = "TestPrompter"
+
+        def self_prompt(self, container: Container) -> str:
+            return self.line
+
+        def get_title(self) -> str:
+            return ""
+
+    t = TestPrompter()
+    assert "TestPrompter" in t.get_prompt(Container())

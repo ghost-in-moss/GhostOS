@@ -101,6 +101,10 @@ class Injection(ABC):
     def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
         pass
 
+    @abstractmethod
+    def on_destroy(self) -> None:
+        pass
+
 
 class MossCompiler(ABC):
     """

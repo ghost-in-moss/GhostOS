@@ -1,4 +1,3 @@
-import time
 from typing import Iterable, Optional, Type, ClassVar, List
 from abc import ABC, abstractmethod
 from openai.types.chat.chat_completion_chunk import ChoiceDelta, ChatCompletionChunk
@@ -12,7 +11,12 @@ from openai.types.chat.chat_completion_user_message_param import ChatCompletionU
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 
-from ghostos.core.messages import Message, MessageType, Role, Caller, CallerOutput, Payload, MessageClass
+from ghostos.core.messages import (
+    Message, MessageType, Role, Caller, Payload, MessageClass, MessageClassesParser
+)
+from ghostos.core.messages.message_classes import (
+    CallerOutput, VariableMessage,
+)
 from ghostos.container import Provider, Container
 from ghostos.helpers import import_class_from_path
 
@@ -28,7 +32,10 @@ class OpenAIMessageParser(ABC):
     """
 
     @abstractmethod
-    def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
+    def parse_message(
+            self,
+            message: Message,
+    ) -> Iterable[ChatCompletionMessageParam]:
         """
         parse a Message to OpenAI chat completion message form.
         OpenAI's input message (ChatCompletionXXXParam) are different to ChatCompletion types,
@@ -89,19 +96,28 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     default implementation of OpenAIMessageParser
     """
 
-    def __init__(self, message_classes: List[Type[MessageClass]]):
-        self.message_classes = message_classes
+    def __init__(
+            self,
+            message_classes: Optional[List[Type[MessageClass]]],
+            container: Optional[Container],
+    ):
+        if message_classes is None:
+            message_classes = [
+                CallerOutput,
+                VariableMessage,
+            ]
+        self.class_parser = MessageClassesParser(message_classes)
+        self.container = container
 
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         if not message.is_complete():
             return []
 
-        # message class first.
-        for message_class in self.message_classes:
-            wrapped = message_class.from_message(message)
-            if wrapped is not None:
-                return [wrapped.to_openai_param()]
-        return self._parse_message(message)
+        wrapped = self.class_parser.to_openai_params(message, self.container)
+        if wrapped is not None:
+            yield from wrapped
+        else:
+            yield from self._parse_message(message)
 
     def _parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         if message.role == Role.ASSISTANT:
@@ -250,11 +266,8 @@ class DefaultOpenAIParserProvider(Provider[OpenAIMessageParser]):
     """
 
     def __init__(self, message_classes: Optional[List[str]] = None):
-        if message_classes is None:
-            classes = [
-                CallerOutput,
-            ]
-        else:
+        classes = None
+        if message_classes is not None:
             classes = []
             for import_path in message_classes:
                 cls = import_class_from_path(import_path, MessageClass)
@@ -265,4 +278,4 @@ class DefaultOpenAIParserProvider(Provider[OpenAIMessageParser]):
         return True
 
     def factory(self, con: Container) -> Optional[OpenAIMessageParser]:
-        return DefaultOpenAIMessageParser(self._message_classes)
+        return DefaultOpenAIMessageParser(self._message_classes, con)

@@ -52,7 +52,7 @@ and the Most valuable features about ghost are:
 
 __all__ = (
     "Ghost", "Session", "GhostDriver", "GhostOS", "Operator", "StateValue", "Action",
-    "Shell", "Operation", "Scope", "Conversation", "Background",
+    "Shell", "Taskflow", "Scope", "Conversation", "Background",
 )
 
 
@@ -252,7 +252,7 @@ class Shell(ABC):
     def sync(
             self,
             ghost: G,
-            context: Union[G.Context, None],
+            context: Optional[G.Context] = None,
     ) -> Conversation[G]:
         """
         create a top-level conversation with a ghost.
@@ -265,9 +265,8 @@ class Shell(ABC):
     def call(
             self,
             ghost: G,
-            context: G.Context,
+            context: Optional[G.Context] = None,
             instructions: Optional[Iterable[Message]] = None,
-            prompters: Optional[List[Prompter]] = None,
             timeout: float = 0.0,
             stream: Optional[Stream] = None,
     ) -> Tuple[Union[G.Artifact, None], TaskState]:
@@ -434,55 +433,6 @@ class StateValue(ABC):
         return value
 
 
-class Operation(ABC):
-    """
-    default operations
-    """
-
-    # --- 基本操作 --- #
-    @abstractmethod
-    def finish(self, status: str = "", *replies: MessageKind) -> Operator:
-        """
-        finish self task
-        :param status: describe status of the task
-        :param replies: replies to parent task or user
-        """
-        pass
-
-    @abstractmethod
-    def fail(self, reason: str = "", *replies: MessageKind) -> Operator:
-        """
-        self task failed.
-        :param reason: describe status of the task
-        :param replies: replies to parent task or user
-        """
-        pass
-
-    @abstractmethod
-    def wait(self, status: str = "", *replies: MessageKind) -> Operator:
-        """
-        wait for the parent task or user to provide more information or further instruction.
-        :param status: describe current status
-        :param replies: question, inform or
-        """
-        pass
-
-    @abstractmethod
-    def observe(self, *messages: MessageKind, instruction: str = "", sync: bool = False) -> Operator:
-        """
-        observer std output and values
-        :param messages: observation info.
-        :param instruction: instruction when receive the observation.
-        :param sync: if True, observe immediately, otherwise check other event first
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def on_error(self, *messages: MessageKind) -> Operator:
-        pass
-
-
 class Scope(BaseModel):
     """
     scope of the session.
@@ -540,6 +490,10 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
+    def to_messages(self, values: Iterable[Union[MessageKind, Any]]) -> List[Message]:
+        pass
+
+    @abstractmethod
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
         pass
 
@@ -572,7 +526,10 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def operates(self) -> Operation:
+    def taskflow(self) -> Taskflow:
+        """
+        basic library to operates the current task
+        """
         pass
 
     @abstractmethod
@@ -592,41 +549,6 @@ class Session(Generic[G], ABC):
     ) -> Tuple[List[Message], List[Caller]]:
         """
         发送消息, 但不影响运行状态.
-        """
-        pass
-
-    @abstractmethod
-    def cancel_subtask(self, ghost: G, reason: str = "") -> None:
-        """
-        取消子任务.
-        :param ghost:
-        :param reason:
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def send_subtask(self, ghost: G, *messages: MessageKind, ctx: Optional[G.Props] = None) -> None:
-        """
-        发送消息给子任务. 如果子任务不存在, 会创建.
-        子任务会通过 event 与父任务通讯.
-        :param ghost:
-        :param messages:
-        :param ctx:
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def create_subtask(
-            self,
-            ghost: G,
-            ctx: G.Context,
-            task_name: Optional[str] = None,
-            task_description: Optional[str] = None,
-    ) -> None:
-        """
-        创建子任务并运行.
         """
         pass
 
@@ -671,4 +593,116 @@ class Session(Generic[G], ABC):
 
     @abstractmethod
     def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+class Taskflow(Prompter, ABC):
+    """
+    default operations
+    """
+    MessageKind = Union[str, Message, Any]
+    """message kind shall be string or serializable object"""
+
+    # --- 基本操作 --- #
+    @abstractmethod
+    def finish(self, status: str = "", *replies: MessageKind) -> Operator:
+        """
+        finish self task
+        :param status: describe status of the task
+        :param replies: replies to parent task or user
+        """
+        pass
+
+    @abstractmethod
+    def fail(self, reason: str = "", *replies: MessageKind) -> Operator:
+        """
+        self task failed.
+        :param reason: describe status of the task
+        :param replies: replies to parent task or user
+        """
+        pass
+
+    @abstractmethod
+    def wait(self, status: str = "", *replies: MessageKind) -> Operator:
+        """
+        wait for the parent task or user to provide more information or further instruction.
+        :param status: describe current status
+        :param replies: question, inform or
+        """
+        pass
+
+    @abstractmethod
+    def think(self, *messages: MessageKind, instruction: str = "", sync: bool = False) -> Operator:
+        """
+        start next round thinking on messages
+        :param messages: observe target
+        :param instruction: instruction when receive the observation.
+        :param sync: if True, observe immediately, otherwise check other event first
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def observe(self, **kwargs) -> Operator:
+        """
+        observe values
+        :param kwargs:
+        :return:
+        """
+
+    @abstractmethod
+    def error(self, *messages: MessageKind) -> Operator:
+        pass
+
+
+class Subtasks(Prompter, ABC):
+    """
+    library that can handle async subtasks by other ghost instance.
+    """
+    MessageKind = Union[str, Message, Any]
+    """message kind shall be string or serializable object"""
+
+    @abstractmethod
+    def cancel(self, name: str, reason: str = "") -> None:
+        """
+        cancel an exists subtask
+        :param name: name of the task
+        :param reason: the reason to cancel it
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def send(
+            self,
+            name: str,
+            *messages: MessageKind,
+            ctx: Optional[Ghost.Context] = None,
+    ) -> None:
+        """
+        send message to an existing subtask
+        :param name: name of the subtask
+        :param messages: the messages to the subtask
+        :param ctx: if given, update the ghost context of the task
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def create(
+            self,
+            ghost: Ghost,
+            instruction: str = "",
+            ctx: Optional[Ghost.Context] = None,
+            task_name: Optional[str] = None,
+            task_description: Optional[str] = None,
+    ) -> None:
+        """
+        create subtask from a ghost instance
+        :param ghost: the ghost instance that handle the task
+        :param instruction: instruction to the ghost
+        :param ctx: the context that the ghost instance needed
+        :param task_name: if not given, use the ghost's name as the task name
+        :param task_description: if not given, use the ghost's description as the task description
+        """
         pass

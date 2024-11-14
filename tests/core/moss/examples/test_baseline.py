@@ -48,6 +48,7 @@ def test_baseline_exec():
     prompt = prompter.dump_code_context()
 
     injection_prompt = prompter.moss_injections_prompt()
+    print("++++", injection_prompt)
     assert "tester" in injection_prompt
 
     # plus 方法存在.
