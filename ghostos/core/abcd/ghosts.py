@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import ClassVar, Type
 from ghostos.identifier import Identifier
 from pydantic import BaseModel
 from .concepts import Ghost
@@ -51,7 +52,7 @@ class Thought(BaseModel, Ghost, ABC):
     Thought is a micro unit to processing thinking with current context;
     the Goal of the Thought is to produce a decision or suggestion, add them to the context.
     """
-    Artifact = str
+    Artifact: ClassVar = str
 
     @abstractmethod
     def __identifier__(self) -> Identifier:

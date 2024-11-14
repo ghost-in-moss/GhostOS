@@ -67,7 +67,7 @@ You are equipped with MultiTask library. You have created the async tasks below:
         tasks = session.get_task_briefs(children=True)
         for task in tasks:
             if task.name == task_name:
-                event = EventTypes.REQUEST.new(
+                event = EventTypes.ROTATE.new(
                     task_id=task.id,
                     from_task_id=from_task_id,
                     messages=messages,

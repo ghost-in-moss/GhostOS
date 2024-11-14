@@ -180,7 +180,7 @@ class OnInputOperator(OnUpstreamEventOperator):
     """
     接受到上游的输入.
     """
-    event_type: ClassVar[str] = EventTypes.REQUEST.value
+    event_type: ClassVar[str] = EventTypes.ROTATE.value
     default_state: ClassVar[str] = TaskState.WAITING.value
 
 

@@ -6,7 +6,6 @@ from typing import Union, Any, TypedDict, Required, Self, TypeVar, Type, Optiona
 from types import ModuleType
 from pydantic import BaseModel
 from ghostos.helpers import generate_import_path, import_from_path, parse_import_module_and_spec
-from typing_extensions import Protocol
 import inspect
 import pickle
 import base64
@@ -21,7 +20,7 @@ __all__ = [
 ]
 
 
-class Entity(Protocol):
+class Entity(ABC):
 
     @abstractmethod
     def __to_entity_meta__(self) -> EntityMeta:

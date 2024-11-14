@@ -35,7 +35,7 @@ class EmptyOperator(Operator):
         pass
 
 
-class SessionImpl(Session[G]):
+class SessionImpl(Session[Ghost]):
     contracts = Contracts([
         GoThreads,
         GoTasks,
@@ -191,7 +191,7 @@ class SessionImpl(Session[G]):
             return None
         return get_entity(self.task.context, Prompter)
 
-    def get_artifact(self) -> G.Artifact:
+    def get_artifact(self) -> Ghost.Artifact:
         return self.ghost_driver.get_artifact(self)
 
     def refresh(self) -> bool:
@@ -253,7 +253,7 @@ class SessionImpl(Session[G]):
         for t in threads:
             self._saving_threads[t.id] = t
 
-    def call(self, ghost: G, ctx: G.Props) -> G.Artifact:
+    def call(self, ghost: Ghost, ctx: Ghost.Context) -> Ghost.Artifact:
         self._validate_alive()
         shell = self.container.force_fetch(Shell)
         return shell.call(ghost, ctx)

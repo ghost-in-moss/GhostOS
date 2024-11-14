@@ -5,8 +5,8 @@ from typing import (
 )
 
 from abc import ABC, abstractmethod
-from ghostos.identifier import Identifiable
-from ghostos.entity import EntityType
+from ghostos.identifier import Identical
+from ghostos.entity import EntityType, Entity
 from ghostos.prompter import Prompter, DataPrompter, DataPrompterDriver
 from ghostos.core.runtime import (
     TaskState,
@@ -57,7 +57,7 @@ __all__ = (
 )
 
 
-class Ghost(Identifiable, EntityType, ABC):
+class Ghost(Identical, Entity, ABC):
     """
     the class defines the model of a kind of ghosts.
     four parts included:
@@ -67,10 +67,10 @@ class Ghost(Identifiable, EntityType, ABC):
     4. driver is
     """
 
-    Artifact: ClassVar[Union[Type, None]] = None
+    Artifact: ClassVar[Optional[Type]] = None
     """ the model of the ghost's artifact, is completing during runtime"""
 
-    Context: ClassVar[Type[Context], None] = None
+    Context: ClassVar[Optional[Type[Context]]] = None
     """ the model of the ghost's context, is completing during runtime'"""
 
     Driver: Type[GhostDriver] = None

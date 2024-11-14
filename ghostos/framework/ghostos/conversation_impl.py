@@ -17,6 +17,8 @@ from ghostos.entity import to_entity_meta
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
 
+__all__ = ["ConversationImpl", "ConversationConf", "Conversation"]
+
 
 class ConversationConf(BaseModel):
     message_receiver_idle: float = Field(
@@ -75,7 +77,7 @@ class ConversationImpl(Conversation[G]):
     def task(self) -> GoTaskStruct:
         return self._tasks.get_task(self._scope.task_id)
 
-    def get_artifact(self) -> Tuple[Union[G.Artifact, None], TaskState]:
+    def get_artifact(self) -> Tuple[Union[Ghost.Artifact, None], TaskState]:
         task = self.task()
         session = self._create_session(task, self._locker, None)
         with session:
@@ -88,7 +90,7 @@ class ConversationImpl(Conversation[G]):
     def respond(
             self,
             inputs: Iterable[Message],
-            context: Optional[G.Context] = None,
+            context: Optional[Ghost.Context] = None,
             history: Optional[List[Message]] = None,
     ) -> Receiver:
         self._validate_closed()

@@ -107,7 +107,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             )
             messages.append(system_message)
 
-        event = EventTypes.REQUEST.new(
+        event = EventTypes.ROTATE.new(
             task_id="",
             from_task_id="",
             messages=messages,

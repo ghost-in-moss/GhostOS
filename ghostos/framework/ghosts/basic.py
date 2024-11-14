@@ -295,7 +295,7 @@ class BasicGhost(Ghost, ABC):
                 messages=inputs.messages,
             )
         else:
-            event = EventTypes.REQUEST.new(
+            event = EventTypes.ROTATE.new(
                 task_id=self.session().task().task_id,
                 messages=inputs.messages,
             )

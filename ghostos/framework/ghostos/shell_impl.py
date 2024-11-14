@@ -10,15 +10,15 @@ from ghostos.core.runtime import (
     GoTasks, TaskState, GoTaskStruct,
 )
 from ghostos.core.messages import Stream
-from ghostos.prompter import Prompter
 from ghostos.container import Provider
 from ghostos.helpers import uuid, Timeleft
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
-from ghostos.prompter import TextPrmt
 from pydantic import BaseModel, Field
 from threading import Thread
 from .conversation_impl import ConversationImpl, ConversationConf
+
+__all__ = ['ShellConf', 'ShellImpl', 'Shell']
 
 
 class ShellConf(BaseModel):
@@ -81,7 +81,7 @@ class ShellImpl(Shell):
             notify = task.depth > 0
         self._eventbus.send_event(event, notify)
 
-    def sync(self, ghost: G, context: Optional[G.Context] = None) -> Conversation:
+    def sync(self, ghost: Ghost, context: Optional[Ghost.Context] = None) -> Conversation:
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self._scope)
         task = self._tasks.get_task(task_id)
@@ -122,12 +122,12 @@ class ShellImpl(Shell):
 
     def call(
             self,
-            ghost: G,
-            context: Optional[G.Context] = None,
+            ghost: Ghost,
+            context: Optional[Ghost.Context] = None,
             instructions: Optional[Iterable[Message]] = None,
             timeout: float = 0.0,
             stream: Optional[Stream] = None,
-    ) -> Tuple[Union[G.Artifact, None], TaskState]:
+    ) -> Tuple[Union[Ghost.Artifact, None], TaskState]:
 
         def send_message(receiver: Receiver):
             with receiver:
@@ -157,8 +157,8 @@ class ShellImpl(Shell):
 
     def create_root_task(
             self,
-            ghost: G,
-            context: Optional[G.Context],
+            ghost: Ghost,
+            context: Optional[Ghost.Context],
     ) -> GoTaskStruct:
         task_id = uuid()
         id_ = get_identifier(ghost)

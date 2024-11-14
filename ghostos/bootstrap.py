@@ -1,5 +1,6 @@
 from typing import List, Optional
 from os.path import dirname, join
+from ghostos.core.abcd import GhostOS
 from ghostos.container import Container, Provider, Contracts
 from ghostos.contracts.logger import config_logging
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
@@ -103,6 +104,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.framework.llms import LLMs, PromptStorage
     from ghostos.framework.logger import LoggerItf
     from ghostos.framework.documents import DocumentRegistry
+    from ghostos.framework.ghostos import GhostOS
     from ghostos.core.aifunc import AIFuncExecutor, AIFuncRepository
 
     return Contracts([
@@ -137,6 +139,9 @@ def default_application_contracts() -> Contracts:
         GoThreads,  # application threads repository
         GoTasks,  # application tasks repository
         EventBus,  # application session eventbus
+
+        # root
+        GhostOS,
     ])
 
 
@@ -168,6 +173,7 @@ def default_application_providers(
     from ghostos.framework.llms import ConfigBasedLLMsProvider, PromptStorageInWorkspaceProvider
     from ghostos.framework.logger import NamedLoggerProvider
     from ghostos.framework.variables import WorkspaceVariablesProvider
+    from ghostos.framework.ghostos import GhostOSProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
     from ghostos.framework.documents import ConfiguredDocumentRegistryProvider
     return [
@@ -210,6 +216,8 @@ def default_application_providers(
         # --- aifunc --- #
         DefaultAIFuncExecutorProvider(),
         AIFuncRepoByConfigsProvider(runtime_frame_dir="aifunc_frames"),
+
+        GhostOSProvider()
     ]
 
 
@@ -221,6 +229,15 @@ def make_app_container(
         app_providers: Optional[List[Provider]] = None,
         app_contracts: Optional[Contracts] = None,
 ) -> Container:
+    """
+    make application global container
+    :param app_dir:
+    :param logging_conf_path:
+    :param dotenv_file_path:
+    :param app_providers:
+    :param app_contracts:
+    :return:
+    """
     # load env from dotenv file
     dotenv.load_dotenv(dotenv_path=join(app_dir, dotenv_file_path))
     logging_conf_path = join(app_dir, logging_conf_path)
@@ -250,6 +267,12 @@ application_container = make_app_container(application_dir)
 
 ghost_func = init_ghost_func(application_container)
 """ the default ghost func on default container"""
+
+
+def get_ghostos(container: Optional[Container] = None) -> GhostOS:
+    if container is None:
+        container = application_container
+    return container.force_fetch(GhostOS)
 
 
 def reset(con: Container) -> None:

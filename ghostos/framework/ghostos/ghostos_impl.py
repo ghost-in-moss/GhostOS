@@ -1,11 +1,18 @@
 from typing import Optional, Dict
 
 from ghostos.core.abcd.concepts import GhostOS, Shell
-from ghostos.core.runtime import GoProcesses, GoProcess
-from ghostos.container import Container, Provider
+from ghostos.core.runtime import GoProcesses, GoProcess, GoThreads, GoTasks, EventBus
+from ghostos.container import Container, Provider, Contracts, INSTANCE
 from ghostos.contracts.configs import Configs, YamlConfig
-from pydantic import BaseModel, Field
+from ghostos.contracts.modules import Modules
+from ghostos.contracts.pool import Pool
+from ghostos.contracts.variables import Variables
+from ghostos.contracts.workspace import Workspace
+from ghostos.contracts.logger import LoggerItf
+from pydantic import Field
 from .shell_impl import ShellImpl, ShellConf
+
+__all__ = ['GhostOS', "GhostOSImpl", "GhostOSConfig", "GhostOSProvider"]
 
 
 class GhostOSConfig(YamlConfig):
@@ -16,11 +23,24 @@ class GhostOSConfig(YamlConfig):
 
 
 class GhostOSImpl(GhostOS):
+    contracts: Contracts([
+        GoProcesses,
+        GoTasks,
+        GoThreads,
+        EventBus,
+        LoggerItf,
+        Configs,
+        Modules,
+        Pool,
+        Variables,
+        Workspace,
+    ])
 
     def __init__(
             self,
             container: Container,
     ):
+        self.contracts.validate(container)
         self._container = container
         self._processes = container.force_fetch(GoProcesses)
         self._configs = container.force_fetch(Configs)
@@ -54,3 +74,11 @@ class GhostOSImpl(GhostOS):
             process=process,
             *providers,
         )
+
+
+class GhostOSProvider(Provider[GhostOS]):
+    def singleton(self) -> bool:
+        return True
+
+    def factory(self, con: Container) -> Optional[INSTANCE]:
+        return GhostOSImpl(con)
