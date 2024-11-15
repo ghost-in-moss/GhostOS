@@ -58,10 +58,10 @@ if __name__ == '__main__':
         console.print(Panel(
             Markdown(
                 f"""
-    ```json
-    {frame.model_dump_json(indent=2)}
-    ```
-    """
+```json
+{frame.model_dump_json(indent=2)}
+```
+"""
             ),
             title="frame details",
         ))
@@ -84,6 +84,3 @@ if __name__ == '__main__':
             ),
             title="result error",
         ))
-
-
-

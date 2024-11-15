@@ -26,3 +26,6 @@ loggers:
   console:
     handlers: [ console ]
     level: DEBUG
+  ghostos:
+    handlers: [ console ]
+    level: INFO

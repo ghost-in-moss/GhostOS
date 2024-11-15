@@ -22,7 +22,7 @@ class Documents(Identical, ABC):
     def description(self) -> str:
         pass
 
-    def identifier(self) -> Identifier:
+    def __identifier__(self) -> Identifier:
         return Identifier(
             id=self.directory(),
             name=self.domain(),

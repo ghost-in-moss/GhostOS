@@ -255,7 +255,7 @@ class TaskBrief(BaseModel, Identical):
         now = time.time()
         return now - self.updated > self.overdue
 
-    def identifier(self) -> Identifier:
+    def __identifier__(self) -> Identifier:
         return Identifier(
             id=self.id,
             name=self.name,

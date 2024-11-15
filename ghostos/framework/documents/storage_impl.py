@@ -91,7 +91,7 @@ class StorageDocumentsRegistry(DocumentRegistry):
 
     def list_domains(self) -> List[Identifier]:
         for domain in self._documents.values():
-            yield domain.identifier()
+            yield domain.__identifier__()
 
 
 class StorageDocumentsConfig(YamlConfig):

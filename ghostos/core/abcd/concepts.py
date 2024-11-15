@@ -57,7 +57,7 @@ __all__ = (
 )
 
 
-class Ghost(Identical, Entity, ABC):
+class Ghost(Identical, ABC):
     """
     the class defines the model of a kind of ghosts.
     four parts included:

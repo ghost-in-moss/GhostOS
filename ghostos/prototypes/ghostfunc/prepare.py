@@ -45,4 +45,6 @@ def init_ghost_func(
     :param container: application container.
     """
     ghost_func_contracts.validate(container)
-    return GhostFunc(container)
+    self_container = Container(parent=container)
+    self_container.bootstrap()
+    return GhostFunc(self_container)

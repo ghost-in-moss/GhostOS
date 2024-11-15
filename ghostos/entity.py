@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Union, Any, TypedDict, Required, Self, TypeVar, Type, Optional
+from typing import Union, Any, TypedDict, Required, Self, TypeVar, Type, Optional, Protocol
 from types import ModuleType
 from pydantic import BaseModel
 from ghostos.helpers import generate_import_path, import_from_path, parse_import_module_and_spec
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class Entity(ABC):
+class Entity(Protocol):
 
     @abstractmethod
     def __to_entity_meta__(self) -> EntityMeta:

@@ -70,7 +70,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
 
         # prepare actions
         actions = list(self.actions(g, e))
-        action_map = {action.identifier().name: action for action in actions}
+        action_map = {action.__identifier__().name: action for action in actions}
 
         # prepare chat by actions
         for action in actions:

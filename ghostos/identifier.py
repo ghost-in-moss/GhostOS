@@ -38,7 +38,7 @@ def try_get_identifier(value: Any, throw: bool = False) -> Union[Identifier, Non
             return value
         # explicit identifiable object
         elif isinstance(value, Identical):
-            return value.identifier()
+            return value.__identifier__()
         # explicit identifiable class
         elif issubclass(value, IdenticalClass):
             return value.class_identifier()
@@ -115,7 +115,7 @@ class Identical(ABC):
     """
 
     @abstractmethod
-    def identifier(self) -> Identifier:
+    def __identifier__(self) -> Identifier:
         pass
 
 

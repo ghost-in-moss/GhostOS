@@ -85,7 +85,7 @@ class FunctionalToken(Identical, BaseModel):
             functional_token=True,
         )
 
-    def identifier(self) -> Identifier:
+    def __identifier__(self) -> Identifier:
         """
         identifier of the functional token.
         """

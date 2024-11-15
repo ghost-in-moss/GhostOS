@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from pydantic.errors import PydanticSchemaGenerationError
-from typing import TypedDict, Required, Iterable, List, Optional
+from typing import TypedDict, Required, Iterable, List, Optional, Protocol
 from typing_extensions import Literal
 
 
