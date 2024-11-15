@@ -2,7 +2,7 @@ from __future__ import annotations
 import inspect
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable
-from typing import get_args, get_origin
+from typing import get_args, get_origin, ClassVar
 import warnings
 
 __all__ = [
@@ -137,6 +137,7 @@ class Container(IoCContainer):
     - 对于 MOSS 而言, Container 也是必要的. 这样可以只把 interface 暴露给 LLM, 但又可以让它使用实例.
     - 仍然需要考虑加入 RAG Memories 来支持. 获取做到 OS 层.
     """
+    instance_count: ClassVar[int] = 0
 
     def __init__(self, parent: Optional[Container] = None):
         # container extended by children container
@@ -157,6 +158,10 @@ class Container(IoCContainer):
         self._aliases: Dict[Any, Any] = {}
         self._destroyed: bool = False
         self._shutdown: List[Callable[[], None]] = []
+        Container.instance_count += 1
+
+    def __del__(self):
+        Container.instance_count -= 1
 
     def bootstrap(self) -> None:
         """
@@ -198,7 +203,7 @@ class Container(IoCContainer):
         self._check_destroyed()
         return contract in self._bound or (self.parent is not None and self.parent.bound(contract))
 
-    def get(self, abstract: Union[Type[INSTANCE]]) -> Optional[INSTANCE]:
+    def get(self, abstract: Union[Type[INSTANCE], Any]) -> Optional[INSTANCE]:
         """
         get bound instance or initialize one from registered factory or provider.
 

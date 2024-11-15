@@ -175,6 +175,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._destroyed: bool = False
         self._injected = set()
         self._moss: Moss = self._compile_moss()
+        MossRuntime.instance_count += 1
+
+    def __del__(self):
+        MossRuntime.instance_count -= 1
 
     def _compile_moss(self) -> Moss:
         moss_type = self.moss_type()
@@ -329,9 +333,6 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         del self._compiled
         del self._moss
         del self._pycontext
-
-    def __del__(self):
-        self.destroy()
 
 
 class DefaultMOSSProvider(Provider[MossCompiler]):

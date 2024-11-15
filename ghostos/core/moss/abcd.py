@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable, Self, TypeVar
+from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable, Self, TypeVar, ClassVar
 from types import ModuleType
 from abc import ABC, abstractmethod
 from ghostos.container import Container, Provider, Factory, provide
@@ -352,6 +352,8 @@ class MossPrompter(ABC):
 
 
 class MossRuntime(ABC):
+    instance_count: ClassVar[int] = 0
+
     @abstractmethod
     def container(self) -> Container:
         """

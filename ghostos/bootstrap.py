@@ -73,7 +73,12 @@ __all__ = [
     'application_dir',
     'default_application_contracts',
     'default_application_providers',
+
+    'GHOSTOS_VERSION',
 ]
+
+GHOSTOS_VERSION_KEY = "ghostos_version"
+GHOSTOS_VERSION = "0.1.0"
 
 # --- prepare application paths --- #
 
@@ -258,6 +263,7 @@ def make_app_container(
     # contracts validation
     app_contracts.validate(_container)
     # bootstrap.
+    _container.set(GHOSTOS_VERSION_KEY, GHOSTOS_VERSION)
     _container.bootstrap()
     return _container
 

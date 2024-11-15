@@ -1,8 +1,9 @@
-from ghostos.core.moss import moss_container, pycontext
-from ghostos.core.moss.abcd import MossCompiler, Moss, MOSS_TYPE_NAME
+from ghostos.core.moss import moss_container
+from ghostos.core.moss.abcd import MossCompiler, Moss, MOSS_TYPE_NAME, MossRuntime
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.examples import baseline
 from ghostos.contracts.modules import ImportWrapper
+from ghostos.container import Container
 
 
 def test_baseline_exec():
@@ -130,3 +131,31 @@ def test_baseline_with_pycontext_code():
     line = "print('hello')"
     compiler.join_context(PyContext(module=baseline.__name__, code=line))
     assert line in compiler.pycontext_code()
+
+
+def test_moss_gc():
+    from threading import Thread
+    from gc import collect
+    container = moss_container()
+    assert Container.instance_count == 2
+
+    def run(c: Container):
+        compiler = container.force_fetch(MossCompiler)
+        compiler = compiler.join_context(PyContext(module=baseline.__name__))
+        runtime = compiler.compile("__test__")
+        assert MossRuntime.instance_count > 0
+        with runtime:
+            runtime.execute(target="test_main", local_args=["moss"])
+
+    threads = []
+    for i in range(10):
+        t = Thread(target=run, args=(container,))
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
+
+    # assert gc success
+    collect()
+    assert MossRuntime.instance_count == 0
+    assert Container.instance_count < 10

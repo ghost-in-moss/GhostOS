@@ -135,3 +135,9 @@ def test_provide_in_loop():
 
     assert container.force_fetch(int) == 10
     assert container.force_fetch(str) == "hello"
+
+
+def test_container_set_str():
+    container = Container()
+    container.set("foo", "bar")
+    assert container.get("foo") == "bar"
