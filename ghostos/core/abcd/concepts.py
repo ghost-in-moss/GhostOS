@@ -317,6 +317,10 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def thread(self) -> GoThreadInfo:
+        pass
+
+    @abstractmethod
     def get_artifact(self) -> Tuple[Union[G.Artifact, None], TaskState]:
         pass
 
@@ -454,6 +458,7 @@ class Session(Generic[G], ABC):
     Session 在运行周期里不会立刻调用底层 IO 存储消息, 而是要等一个周期正常结束.
     这是为了减少运行时错误对状态机造成的副作用.
     """
+    instance_count: ClassVar[int] = 0
 
     stream: Stream
 
@@ -494,6 +499,14 @@ class Session(Generic[G], ABC):
 
     @abstractmethod
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
+        pass
+
+    @abstractmethod
+    def system_log(self, log: str) -> None:
+        """
+        log system info, save to thread as a system message
+        :param log: log info
+        """
         pass
 
     @abstractmethod

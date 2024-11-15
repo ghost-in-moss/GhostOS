@@ -85,12 +85,18 @@ class SessionImpl(Session[Ghost]):
         self._creating_tasks: Dict[str, GoTaskStruct] = {}
         self._firing_events: List[Event] = []
         self._saving_threads: Dict[str, GoThreadInfo] = {}
+        self._system_logs: List[str] = []
         self._failed = False
         self._done = False
         self._destroyed = False
         self._bootstrap()
         if not self.refresh():
             raise RuntimeError(f"Failed to start session")
+        Session.instance_count += 1
+
+    def __del__(self):
+        # for gc test
+        Session.instance_count -= 1
 
     def _bootstrap(self):
         self.contracts.validate(self.container)
@@ -179,6 +185,9 @@ class SessionImpl(Session[Ghost]):
         event.context = None
         return event, None
 
+    def system_log(self, log: str) -> None:
+        self._system_logs.append(log)
+
     def taskflow(self) -> Taskflow:
         self._validate_alive()
         return TaskflowImpl(self, self._message_parser)
@@ -204,6 +213,7 @@ class SessionImpl(Session[Ghost]):
         self._firing_events = []
         self._creating_tasks = {}
         self._saving_threads = {}
+        self._system_logs = []
         self.task = self.task.new_turn()
 
     def messenger(self) -> Messenger:
@@ -302,12 +312,18 @@ class SessionImpl(Session[Ghost]):
 
     def _update_state_changes(self) -> None:
         task = self.task
-        task.thread_id = self.thread.id
         task.meta = to_entity_meta(self.ghost)
         state_values = {}
         for name, value in self.state:
             state_values[name] = to_entity_meta(value)
         thread = self.thread
+        # update system log
+        if len(self._system_logs) > 0:
+            content = "\n".join(self._system_logs)
+            message = Role.SYSTEM.new(content=content)
+            thread.append(message)
+
+        task.thread_id = thread.id
         task.state_values = state_values
         tasks = self.container.force_fetch(GoTasks)
         threads = self.container.force_fetch(GoThreads)

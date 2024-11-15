@@ -10,6 +10,7 @@ from ghostos.core.messages import (
 from ghostos.core.runtime import (
     Event, EventTypes, EventBus,
     GoTaskStruct, TaskLocker, GoTasks, TaskState,
+    GoThreadInfo, GoThreads,
 )
 from ghostos.contracts.pool import Pool
 from ghostos.contracts.logger import LoggerItf, wrap_logger
@@ -62,6 +63,7 @@ class ConversationImpl(Conversation[G]):
         self._is_background = is_background
         self._locker = task_locker
         self._tasks = container.force_fetch(GoTasks)
+        self._threads = container.force_fetch(GoThreads)
         self._eventbus = container.force_fetch(EventBus)
         self._closed = False
         self._bootstrap()
@@ -76,6 +78,11 @@ class ConversationImpl(Conversation[G]):
 
     def task(self) -> GoTaskStruct:
         return self._tasks.get_task(self._scope.task_id)
+
+    def thread(self) -> GoThreadInfo:
+        task = self.task()
+        thread_id = task.thread_id
+        return self._threads.get_thread(thread_id, create=True)
 
     def get_artifact(self) -> Tuple[Union[Ghost.Artifact, None], TaskState]:
         task = self.task()
@@ -174,6 +181,7 @@ class ConversationImpl(Conversation[G]):
         self._container.destroy()
         del self._container
         del self._tasks
+        del self._threads
         del self._eventbus
         del self._pool
         del self._logger
