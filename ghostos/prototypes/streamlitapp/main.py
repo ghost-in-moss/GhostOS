@@ -12,7 +12,8 @@ __all__ = [
     "streamlit_contracts",
     "container_contracts",
     "SingletonContracts",
-    "run_ghostos_streamlit_app",
+    "Singleton",
+    "main_run",
 ]
 
 SINGLETONS = List[Singleton]
@@ -51,7 +52,7 @@ def boot(fn: BOOTSTRAP) -> None:
     st.session_state[BOOTSTRAPPED_KEY] = True
 
 
-def run_ghostos_streamlit_app(bootstrap: BOOTSTRAP) -> None:
+def main_run(bootstrap: BOOTSTRAP) -> None:
     """
     run streamlit application with outside bootstrap function.
     :param bootstrap: a bootstrap function defined outside the streamlit app run

@@ -6,12 +6,15 @@ from tree_sitter import (
 )
 from enum import Enum
 
-_PythonParser = get_parser('python')
+_PythonParser = None
 
 __all__ = ['tree_sitter_parse', 'code_syntax_check']
 
 
 def tree_sitter_parse(code: str) -> Tree:
+    global _PythonParser
+    if _PythonParser is None:
+        _PythonParser = get_parser('python')
     return _PythonParser.parse(code.encode())
 
 

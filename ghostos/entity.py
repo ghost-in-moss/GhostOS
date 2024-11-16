@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Union, Any, TypedDict, Required, Self, TypeVar, Type, Optional, Protocol
 from types import ModuleType
 from pydantic import BaseModel
-from ghostos.helpers import generate_import_path, import_from_path, parse_import_module_and_spec
+from ghostos.helpers import generate_import_path, import_from_path, parse_import_path_module_and_attr_name
 import inspect
 import pickle
 import base64
@@ -138,7 +138,7 @@ def from_entity_meta(meta: EntityMeta, module: Optional[ModuleType] = None) -> A
     # raise if import error
     cls = None
     if module:
-        module_name, local_name = parse_import_module_and_spec(unmarshal_type)
+        module_name, local_name = parse_import_path_module_and_attr_name(unmarshal_type)
         if module_name == module.__name__:
             cls = module.__dict__[local_name]
     if cls is None:

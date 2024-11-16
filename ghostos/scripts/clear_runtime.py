@@ -67,8 +67,8 @@ def main():
         "--cache", "-c",
         action="store_true",
     )
-    from ghostos.bootstrap import application_dir
-    runtime_dir = join(application_dir, "runtime")
+    from ghostos.bootstrap import workspace_dir
+    runtime_dir = join(workspace_dir, "runtime")
     parsed = parser.parse_args(sys.argv[1:])
     _all = parsed.all
     print(f"Clearing runtime files in {runtime_dir}")

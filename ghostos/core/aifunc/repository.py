@@ -9,7 +9,7 @@ from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.workspace import Workspace
-from ghostos.helpers import generate_module_spec
+from ghostos.helpers import generate_module_and_attr_name
 from ghostos.container import Provider, Container
 from pydantic import Field
 from os.path import join
@@ -99,7 +99,7 @@ class AIFuncRepoByConfigs(AIFuncRepository):
     def validate(self) -> None:
         identifiers = {}
         for key, val in self.conf.identifiers.items():
-            modulename, attr_name = generate_module_spec(val.id)
+            modulename, attr_name = generate_module_and_attr_name(val.id)
             try:
                 mod = self.modules.import_module(modulename)
                 if key not in mod.__dict__:

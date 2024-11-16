@@ -7,14 +7,16 @@ __all__ = [
     'import_from_path',
     'import_class_from_path',
     'get_calling_modulename',
-    'get_module_spec',
+    'get_module_attr',
     'generate_import_path',
-    'generate_module_spec',
+    'generate_module_and_attr_name',
     'join_import_module_and_spec',
     'is_method_belongs_to_class',
-    'parse_import_module_and_spec',
+    'parse_import_path_module_and_attr_name',
     'rewrite_module',
     'rewrite_module_by_path',
+    'create_module',
+    'create_and_bind_module',
 ]
 
 Importer = Callable[[str], ModuleType]
@@ -38,18 +40,18 @@ def import_from_path(module_spec: str, importer: Optional[Importer] = None) -> A
     spec = parts[1] if len(parts) > 1 else None
     imported_module = importer(module)
     if spec:
-        return get_module_spec(imported_module.__dict__, spec)
+        return get_module_attr(imported_module.__dict__, spec)
     return imported_module
 
 
-def get_module_spec(module, spec: str) -> Optional[Any]:
-    parts = spec.split('.')
+def get_module_attr(module, attr_name: str) -> Optional[Any]:
+    parts = attr_name.split('.')
     value = module
     for part in parts:
         if value is None:
-            raise AttributeError(f'Module has no attribute {spec}')
+            raise AttributeError(f'Module has no attribute {attr_name}')
         if part == "<locals>":
-            raise AttributeError(f'local attribute {spec} is not support yet')
+            raise AttributeError(f'local attribute {attr_name} is not support yet')
         if isinstance(value, Dict):
             value = value.get(part)
         else:
@@ -57,18 +59,20 @@ def get_module_spec(module, spec: str) -> Optional[Any]:
     return value
 
 
-def generate_module_spec(value: Any) -> Tuple[str, Optional[str]]:
+def generate_module_and_attr_name(value: Any) -> Tuple[str, Optional[str]]:
     if inspect.ismodule(value):
         return value.__name__, None
     elif inspect.isclass(value) or inspect.isfunction(value):
-        module = getattr(value, '__module__', '')
-        spec = getattr(value, '__qualname__', getattr(value, '__name__', ""))
-        return module, spec
+        modulename = getattr(value, '__module__', '')
+        if modulename.endswith(".__init__"):
+            modulename = modulename[:-len(".__init__")]
+        attr_name = getattr(value, '__qualname__', getattr(value, '__name__', ""))
+        return modulename, attr_name
     else:
         raise AttributeError(f'value {value} should be module or class to generate module spec')
 
 
-def parse_import_module_and_spec(import_path: str) -> Tuple[str, Optional[str]]:
+def parse_import_path_module_and_attr_name(import_path: str) -> Tuple[str, Optional[str]]:
     """
     parse import_path to modulename and spec
     :param import_path: pattern is `module:spec`
@@ -80,8 +84,28 @@ def parse_import_module_and_spec(import_path: str) -> Tuple[str, Optional[str]]:
     return parts[0], parts[1]
 
 
+def create_module(module_name: str, file_path: str):
+    from importlib import util
+
+    # 加载模块
+    spec = util.spec_from_file_location(module_name, file_path)
+    module = util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
+
+def create_and_bind_module(modulename: str, filename: str, force: bool = False):
+    from sys import modules
+    if not force and modulename in modules:
+        return modules[modulename]
+    module = create_module(modulename, filename)
+    modules[modulename] = module
+    return module
+
+
 def generate_import_path(value: Any) -> str:
-    module, spec = generate_module_spec(value)
+    module, spec = generate_module_and_attr_name(value)
     return join_import_module_and_spec(module, spec)
 
 

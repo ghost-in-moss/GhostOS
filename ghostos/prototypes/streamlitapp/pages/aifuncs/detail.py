@@ -1,7 +1,7 @@
 from typing import Type
 import streamlit as st
 import streamlit_react_jsonschema as srj
-from ghostos.prototypes.streamlitapp.navigation import AIFuncListRoute, AIFuncDetailRoute
+from ghostos.prototypes.streamlitapp.pages.router import AIFuncListRoute, AIFuncDetailRoute
 from ghostos.prototypes.streamlitapp.resources import (
     get_container,
 )
@@ -30,7 +30,7 @@ from ghostos.helpers import (
     gettext as _,
     import_from_path,
     import_class_from_path, generate_import_path,
-    parse_import_module_and_spec,
+    parse_import_path_module_and_attr_name,
     Timeleft,
 )
 import inspect
@@ -54,7 +54,7 @@ def render_header(fn: Type[AIFunc]) -> Identifier:
 
 def render_source(route: AIFuncDetailRoute, fn: Type[AIFunc]):
     # prepare
-    module_name, attr_name = parse_import_module_and_spec(route.aifunc_id)
+    module_name, attr_name = parse_import_path_module_and_attr_name(route.aifunc_id)
     mod = import_from_path(module_name)
     result_type = get_aifunc_result_type(fn)
     idt = identify_class(fn)
@@ -212,7 +212,7 @@ def main():
     render_sidebar()
 
     if not route.aifunc_id:
-        st.error("No AI Functions found")
+        st.error(f"AI Function {route.aifunc_id} found")
         return
     try:
         fn = import_class_from_path(route.aifunc_id, AIFunc)

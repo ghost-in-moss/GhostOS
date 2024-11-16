@@ -145,7 +145,8 @@ class Route(SessionStateValue, BaseModel, ABC):
     def get(cls, session_state: MutableMapping) -> Optional[Self]:
         key = cls.session_state_key()
         if key in session_state:
-            return session_state[key]
+            data = session_state[key]
+            return cls(**data)
         return None
 
     @classmethod
@@ -153,13 +154,12 @@ class Route(SessionStateValue, BaseModel, ABC):
         return cls()
 
     def bind(self, session_state: MutableMapping) -> None:
+        from ghostos.container import get_caller_info
         key = self.session_state_key()
-        session_state[key] = self
-        current = generate_import_path(Route)
-        session_state[current] = self.label()
+        session_state[key] = self.model_dump(exclude_defaults=True)
 
     @classmethod
-    def current_page_label(cls) -> str:
+    def label_of_current_page(cls) -> str:
         current = generate_import_path(Route)
         if current in st.session_state:
             return st.session_state[current]
@@ -172,9 +172,10 @@ class Router:
             self,
             routes: List[Route], *,
             home: str,
-            navigator_names: List[str],
+            navigator_page_names: List[str],
             default_menu: Dict[str, Union[sac.MenuItem, Dict, None]],
             default_sidebar_buttons: List[str],
+            current_page: str = None,
     ):
         self.routes: Dict[str, Route] = {}
         self.routes_order = []
@@ -182,7 +183,13 @@ class Router:
         self.append(*routes)
         self.default_menu_tree = default_menu
         self.default_sidebar_buttons = default_sidebar_buttons
-        self.default_navigator_names = navigator_names
+        self.default_navigator_names = navigator_page_names
+        self.current_page = current_page if current_page is not None else self.home
+
+    def with_current(self, route: Route) -> Self:
+        self.current_page = route.label()
+        self.routes[route.label()] = route
+        return self
 
     def append(self, *routes: Route):
         for route in routes:
@@ -207,13 +214,16 @@ class Router:
         if names is None:
             names = self.routes_order
         idx = 0
+        if default is None:
+            default = self.current_page
+
         for name in names:
             route = self.routes[name]
-            if default is None:
-                is_default = idx == 0
-            else:
-                is_default = name == default
+            is_default = name == default
             idx += 1
+            if is_default:
+                route.bind(st.session_state)
+                st.session_state["hello"] = route.model_dump()
             page = route.page(default=is_default)
             pages.append(page)
         return pages

@@ -109,7 +109,7 @@ def default_router() -> Router:
             AIFuncDetailRoute(),
         ],
         home=Home.label(),
-        navigator_names=[
+        navigator_page_names=[
             GhostOSHost.label(),
             AIFuncListRoute.label(),
         ],

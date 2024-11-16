@@ -13,7 +13,7 @@ from ghostos.core.moss.abcd import (
 )
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.prompter import Prompter, TextPrmt
-from ghostos.helpers import generate_module_spec, code_syntax_check
+from ghostos.helpers import generate_module_and_attr_name, code_syntax_check
 from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"
@@ -183,7 +183,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
     def _compile_moss(self) -> Moss:
         moss_type = self.moss_type()
         if not issubclass(moss_type, Moss):
-            raise TypeError(f"Moss type {moss_type} is not subclass of {generate_module_spec(Moss)}")
+            raise TypeError(f"Moss type {moss_type} is not subclass of {generate_module_and_attr_name(Moss)}")
 
         # 创建 stub.
         pycontext = self._pycontext

@@ -1,6 +1,5 @@
 from typing import Optional
 from ghostos.core.aifunc import AIFunc, AIFuncResult
-from ghostos.demo.aifuncs.utils import get_weather
 from pydantic import Field
 
 

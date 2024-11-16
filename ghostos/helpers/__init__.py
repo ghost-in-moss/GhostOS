@@ -5,16 +5,18 @@ from ghostos.helpers.yaml import yaml_pretty_dump, yaml_multiline_string_pipe
 from ghostos.helpers.modules import (
     import_from_path,
     import_class_from_path,
-    parse_import_module_and_spec,
+    parse_import_path_module_and_attr_name,
     join_import_module_and_spec,
-    get_module_spec,
-    generate_module_spec,
+    get_module_attr,
+    generate_module_and_attr_name,
     generate_import_path,
     Importer,
     is_method_belongs_to_class,
     get_calling_modulename,
     rewrite_module,
     rewrite_module_by_path,
+    create_module,
+    create_and_bind_module,
 )
 from ghostos.helpers.io import BufferPrint
 from ghostos.helpers.time import Timeleft

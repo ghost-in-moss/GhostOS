@@ -21,7 +21,7 @@ handlers:
 
 loggers:
   debug:
-    handlers: [ debug_file ]
+    handlers: [ console ]
     level: DEBUG
   console:
     handlers: [ console ]

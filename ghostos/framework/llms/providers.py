@@ -1,5 +1,4 @@
 from typing import Type, Optional
-
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.container import Provider, Container
 from ghostos.core.llms import LLMs, LLMsConfig, PromptStorage

@@ -1,8 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from os.path import dirname, join
+
 from ghostos.core.abcd import GhostOS
+
 from ghostos.container import Container, Provider, Contracts
-from ghostos.contracts.logger import config_logging
+
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
 import dotenv
 import os
@@ -42,6 +44,7 @@ import os
 
 
 __all__ = [
+    'expect_workspace_dir',
 
     # >>> container
     # GhostOS use IoC Container to manage dependency injections at everywhere.
@@ -70,7 +73,7 @@ __all__ = [
     'reset',
 
     # default configuration
-    'application_dir',
+    'workspace_dir',
     'default_application_contracts',
     'default_application_providers',
 
@@ -83,8 +86,15 @@ GHOSTOS_VERSION = "0.1.0"
 # --- prepare application paths --- #
 
 
-application_dir = join(dirname(dirname(__file__)), 'app')
+workspace_dir = join(dirname(dirname(__file__)), '.ghostos')
 """application root directory path"""
+
+
+def expect_workspace_dir() -> Tuple[str, bool]:
+    from os.path import join, exists, abspath, isdir
+    from os import getcwd
+    expect_dir = join(getcwd(), ".ghostos")
+    return abspath(expect_dir), exists(expect_dir) and isdir(expect_dir)
 
 
 # --- default providers --- #
@@ -228,32 +238,26 @@ def default_application_providers(
 
 # --- system bootstrap --- #
 def make_app_container(
-        app_dir: str,
-        logging_conf_path: str = "configs/logging.yml",
+        workspace_path: str,
         dotenv_file_path: str = ".env",
         app_providers: Optional[List[Provider]] = None,
         app_contracts: Optional[Contracts] = None,
 ) -> Container:
     """
     make application global container
-    :param app_dir:
-    :param logging_conf_path:
+    :param workspace_path:
     :param dotenv_file_path:
     :param app_providers:
     :param app_contracts:
     :return:
     """
     # load env from dotenv file
-    dotenv.load_dotenv(dotenv_path=join(app_dir, dotenv_file_path))
-    logging_conf_path = join(app_dir, logging_conf_path)
+    dotenv.load_dotenv(dotenv_path=join(workspace_path, dotenv_file_path))
     # default logger name for GhostOS application
     logger_name = os.environ.get("LoggerName", "debug")
-    # initialize logging configs
-    config_logging(logging_conf_path)
-    # todo: i18n install
 
     if app_providers is None:
-        app_providers = default_application_providers(root_dir=application_dir, logger_name=logger_name)
+        app_providers = default_application_providers(root_dir=workspace_path, logger_name=logger_name)
     if app_contracts is None:
         app_contracts = default_application_contracts()
 
@@ -268,7 +272,7 @@ def make_app_container(
     return _container
 
 
-application_container = make_app_container(application_dir)
+application_container = make_app_container(workspace_dir)
 """ the global static application container. reset it before application usage"""
 
 ghost_func = init_ghost_func(application_container)
@@ -299,10 +303,10 @@ def reset_at(app_dir: str) -> None:
     reset application with default configuration at specified app directory
     only run once if app_dir is the same
     """
-    global application_dir
-    if app_dir == application_dir:
+    global workspace_dir
+    if app_dir == workspace_dir:
         return
-    application_dir = app_dir
+    workspace_dir = app_dir
     _container = make_app_container(app_dir)
     reset(_container)
 

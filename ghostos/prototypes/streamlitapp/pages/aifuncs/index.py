@@ -1,5 +1,5 @@
 from typing import Iterable
-from ghostos.prototypes.streamlitapp.navigation import AIFuncListRoute, AIFuncDetailRoute
+from ghostos.prototypes.streamlitapp.pages.router import AIFuncListRoute, AIFuncDetailRoute
 from ghostos.prototypes.streamlitapp.resources import (
     get_container,
     get_app_conf,

@@ -1,8 +1,6 @@
 from typing import Optional
 from ghostos.core.aifunc import AIFunc, AIFuncResult, AIFuncCtx
 from ghostos.core.moss import Moss as Parent
-from ghostos.demo.aifuncs.weather import WeatherAIFunc, WeatherAIFuncResult
-from ghostos.demo.aifuncs.news import NewsAIFunc, NewsAIFuncResult
 from pydantic import Field
 
 

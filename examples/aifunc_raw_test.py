@@ -14,7 +14,7 @@ Print out almost every thing.
 
 if __name__ == '__main__':
     from ghostos.bootstrap import application_container
-    from ghostos.demo.aifuncs.agentic import AgentFn
+    from ghostos.app.aifuncs_demo import AgentFn
     from rich.console import Console
     from rich.markdown import Markdown
     from rich.panel import Panel
