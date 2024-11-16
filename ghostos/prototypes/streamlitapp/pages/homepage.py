@@ -1,9 +1,9 @@
-from ghostos.helpers import gettext as _, get_current_locale
+from ghostos.helpers import gettext as _
 
 
 def home():
     import streamlit as st
-    from ghostos.prototypes.streamlitapp.widgets import application_navigator_menu
+    from ghostos.prototypes.streamlitapp.widgets.navigators import application_navigator_menu
 
     st.title(_("GhostOS Homepage"))
     with st.expander(_("App Menu"), expanded=True):

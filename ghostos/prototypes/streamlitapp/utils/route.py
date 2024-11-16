@@ -197,6 +197,12 @@ class Router:
         route.render_page_link(use_container_width=True)
 
     def pages(self, default: Optional[str] = None, names: Optional[List[str]] = None) -> List[st.Page]:
+        """
+        render sidebar pages
+        :param default:
+        :param names:
+        :return:
+        """
         pages = []
         if names is None:
             names = self.routes_order
@@ -218,6 +224,9 @@ class Router:
             disabled: Optional[Set[str]] = None,
             use_container_width: bool = True,
     ) -> None:
+        """
+        render streamlit page link buttons
+        """
         for name in names:
             route = self.routes[name]
             is_disabled = disabled is not None and name in disabled
@@ -231,24 +240,19 @@ class Router:
             disabled: Optional[Set[str]] = None,
             use_container_width: bool = True,
     ):
+        """
+        render default page links built buttons
+        """
         self.render_page_links(
             names=self.default_navigator_names,
             disabled=disabled,
             use_container_width=use_container_width,
         )
 
-    def render_default_sidebar_buttons(
-            self,
-            disabled: Optional[Set[str]] = None,
-            use_container_width: bool = True,
-    ) -> None:
-        self.render_page_links(
-            names=self.routes_order,
-            disabled=disabled,
-            use_container_width=use_container_width,
-        )
-
-    def antd_menu_items(self, node_tree: Dict[str, Union[sac.MenuItem, Dict, None]]) -> List[sac.MenuItem]:
+    def _antd_menu_items(self, node_tree: Dict[str, Union[sac.MenuItem, Dict, None]]) -> List[sac.MenuItem]:
+        """
+        return antd menu items from routes.
+        """
         result = []
         for label in node_tree:
             item = node_tree[label]
@@ -261,13 +265,13 @@ class Router:
                 route = self.routes[label]
                 children = None
                 if isinstance(item, dict) and len(item) > 0:
-                    children = self.antd_menu_items(item)
+                    children = self._antd_menu_items(item)
                 menu_item = route.antd_menu_item(children)
                 result.append(menu_item)
         return result
 
     def default_antd_menu_items(self) -> List[sac.MenuItem]:
-        return self.antd_menu_items(self.default_menu_tree)
+        return self._antd_menu_items(self.default_menu_tree)
 
     def render_antd_menu(self, items: List[sac.MenuItem]) -> Optional[Route]:
         choose = sac.menu(items, index=-1)

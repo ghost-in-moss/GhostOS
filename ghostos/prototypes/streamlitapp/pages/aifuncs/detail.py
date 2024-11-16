@@ -1,17 +1,20 @@
-import inspect
-from typing import List, Iterable, Tuple, Type, Optional
+from typing import Type
 import streamlit as st
 import streamlit_react_jsonschema as srj
 from ghostos.prototypes.streamlitapp.navigation import AIFuncListRoute, AIFuncDetailRoute
 from ghostos.prototypes.streamlitapp.resources import (
     get_container,
 )
-from ghostos.prototypes.streamlitapp.widgets import (
+from ghostos.prototypes.streamlitapp.widgets.docs import (
     help_document, markdown_document,
-    render_message,
+)
+from ghostos.prototypes.streamlitapp.widgets.exec_frame import (
     render_exec_frame_tree,
-    render_pycontext,
     flatten_exec_frame_tree,
+)
+from ghostos.prototypes.streamlitapp.widgets.moss import render_pycontext
+from ghostos.prototypes.streamlitapp.widgets.messages import (
+    render_message,
     render_messages,
 )
 from ghostos.core.messages import new_arr_connection

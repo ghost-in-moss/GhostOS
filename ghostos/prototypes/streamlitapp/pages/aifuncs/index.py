@@ -5,7 +5,7 @@ from ghostos.prototypes.streamlitapp.resources import (
     get_app_conf,
     get_app_docs,
 )
-from ghostos.prototypes.streamlitapp.widgets import (
+from ghostos.prototypes.streamlitapp.widgets.dialogs import (
     open_code_dialog
 )
 from ghostos.core.aifunc import (
