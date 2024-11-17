@@ -54,6 +54,7 @@ __all__ = (
     "Ghost", "Session", "GhostDriver", "GhostOS", "Operator", "StateValue", "Action",
     "Shell", "Scope", "Conversation", "Background",
     "Taskflow", "Subtasks",
+    "Context",
 )
 
 

@@ -2,7 +2,7 @@ from ghostos.core.aifunc import AIFuncRepoByConfigsProvider, AIFuncRepository, A
 from ghostos.framework.configs import Configs, MemoryConfigs
 from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.container import Container
-from ghostos.demo import aifuncs
+from ghostos.app import aifuncs_demo
 
 
 def test_aifunc_repository():
@@ -16,7 +16,7 @@ def test_aifunc_repository():
     container.bootstrap()
 
     repo = container.force_fetch(AIFuncRepository)
-    result = repo.scan(str(aifuncs.__name__), recursive=True, save=False)
+    result = repo.scan(str(aifuncs_demo.__name__), recursive=True, save=False)
     assert len(result) > 1
 
 

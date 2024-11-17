@@ -42,7 +42,7 @@ class LLMThought(Thought[Operator]):
     def __init__(
             self,
             llm_api: str = "",
-            message_stage: Optional[str] = "",
+            message_stage: str = "",
             *actions: Action,
             model: Optional[ModelConf] = None,
             service: Optional[ServiceConf] = None,
@@ -68,16 +68,8 @@ class LLMThought(Thought[Operator]):
         llm_api = self.get_llm_api(session)
 
         streaming = not session.stream.completes_only()
-        if self.message_stage:
-            stages = ["", self.message_stage]
-        elif self.message_stage is None:
-            stages = []
-        else:
-            stages = [""]
-
-        stage_prompt = prompt.filter_stages(stages)
-        items = llm_api.deliver_chat_completion(stage_prompt, streaming)
-        messages, callers = session.respond(items, self.message_stage or "")
+        items = llm_api.deliver_chat_completion(prompt, streaming)
+        messages, callers = session.respond(items, self.message_stage)
         prompt.added.extend(messages)
 
         for caller in callers:
