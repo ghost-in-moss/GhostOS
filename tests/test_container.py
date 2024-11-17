@@ -141,3 +141,24 @@ def test_container_set_str():
     container = Container()
     container.set("foo", "bar")
     assert container.get("foo") == "bar"
+
+
+def test_container_inherit():
+    class Foo:
+        def __init__(self, foo: int):
+            self.foo = foo
+
+    class Bar:
+        def __init__(self, foo: Foo):
+            self.foo = foo
+
+        bar: str = "hello"
+
+    container = Container()
+    container.register(provide(Bar, singleton=False)(lambda c: Bar(c.force_fetch(Foo))))
+    sub_container = Container(container)
+    # sub container register Foo that Bar needed
+    sub_container.register(provide(Foo, singleton=False)(lambda c: Foo(2)))
+    bar = sub_container.force_fetch(Bar)
+    assert bar.bar == "hello"
+    assert bar.foo.foo == 2

@@ -139,7 +139,7 @@ class Container(IoCContainer):
     """
     instance_count: ClassVar[int] = 0
 
-    def __init__(self, parent: Optional[Container] = None):
+    def __init__(self, parent: Optional[Container] = None, inherit: bool = True):
         # container extended by children container
         if parent is not None:
             if not isinstance(parent, Container):
@@ -158,10 +158,21 @@ class Container(IoCContainer):
         self._aliases: Dict[Any, Any] = {}
         self._destroyed: bool = False
         self._shutdown: List[Callable[[], None]] = []
+        if inherit and parent is not None:
+            self._inherit(parent)
+
         Container.instance_count += 1
 
     def __del__(self):
         Container.instance_count -= 1
+
+    def _inherit(self, parent: Container):
+        """
+        inherit none singleton provider from parent
+        """
+        for provider in parent.providers(recursively=True):
+            if not provider.singleton() and not isinstance(provider, Bootstrapper):
+                self._register(provider)
 
     def bootstrap(self) -> None:
         """
@@ -190,7 +201,7 @@ class Container(IoCContainer):
         self._check_destroyed()
         self._set_instance(abstract, instance)
 
-    def _bind_contract(self, abstract: ABSTRACT) -> None:
+    def _add_bound_contract(self, abstract: ABSTRACT) -> None:
         """
         添加好绑定关系, 方便快速查找.
         """
@@ -282,7 +293,7 @@ class Container(IoCContainer):
 
     def _register(self, provider: Provider) -> None:
         contract = provider.contract()
-        self._bind_contract(contract)
+        self._add_bound_contract(contract)
         self._register_provider(contract, provider)
 
         # additional bindings
@@ -355,7 +366,7 @@ class Container(IoCContainer):
         """
         设定常量.
         """
-        self._bind_contract(abstract)
+        self._add_bound_contract(abstract)
         self._instances[abstract] = instance
 
     def contracts(self, recursively: bool = True) -> Iterable[ABSTRACT]:
@@ -369,6 +380,18 @@ class Container(IoCContainer):
                 if contract not in done:
                     done.add(contract)
                     yield contract
+
+    def providers(self, recursively: bool = True) -> Iterable[Provider]:
+        self._check_destroyed()
+        done = set()
+        for provider in self._providers.values():
+            done.add(provider.contract())
+            yield provider
+        if recursively and self.parent is not None:
+            for provider in self.parent.providers():
+                if provider.contract() not in done:
+                    done.add(provider.contract())
+                    yield provider
 
     def _check_destroyed(self) -> None:
         if self._destroyed:

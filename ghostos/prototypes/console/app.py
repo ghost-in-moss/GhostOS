@@ -5,8 +5,7 @@ import asyncio
 from typing import Optional, List
 
 from ghostos.core.messages import Message, Role, MessageType
-from ghostos.core.ghosts import Inputs
-from ghostos.framework.streams import QueueStream
+from ghostos.core.abcd import GhostOS
 from ghostos.framework.messages import TaskPayload
 from ghostos.helpers import uuid
 from threading import Thread
@@ -78,21 +77,18 @@ class ConsolePrototype:
 
     def _start_background(self):
         while not self._stopped:
-            stream = self._stream()
             handled = self._os.background_run(stream)
             if not handled:
                 time.sleep(1)
             elif not self._debug:
-                self._console.print(f"handled event {handled.type}: task_id {handled.task_id}; event_id {handled.event_id};")
+                self._console.print(
+                    f"handled event {handled.type}: task_id {handled.task_id}; event_id {handled.event_id};")
             else:
                 self._console.print(Panel(
                     Markdown(f"```json\n{handled.model_dump_json(indent=2)}\n```"),
                     title="handle event",
                     border_style="yellow",
                 ))
-
-    def _stream(self) -> QueueStream:
-        return QueueStream(self._main_queue, accept_chunks=False)
 
     async def _main(self):
         self._welcome()
