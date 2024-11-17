@@ -129,7 +129,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
 
                 # call llm
                 llm = self.get_llmapi(session)
-                messages = llm.deliver_chat_completion(prompt, not session.stream.completes_only())
+                messages = llm.deliver_chat_completion(prompt, not session.upstream.completes_only())
                 messages, callers = session.respond(messages, remember=True)
 
                 # handle actions

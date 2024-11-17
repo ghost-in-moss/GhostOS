@@ -63,7 +63,7 @@ class SessionImpl(Session[Ghost]):
             shell_id=task.shell_id,
             process_id=task.process_id,
             task_id=task.task_id,
-            parent_task_id=task.parent_task_id,
+            parent_task_id=task.parent,
         )
         logger = container.force_fetch(LoggerItf)
         self.logger = wrap_logger(
@@ -72,7 +72,7 @@ class SessionImpl(Session[Ghost]):
         )
 
         self.ghost: G = get_entity(self.task.meta, Ghost)
-        self.ghost_driver: GhostDriver[G] = self.ghost.DriverType(self.ghost)
+        self.ghost_driver: GhostDriver[G] = get_ghost_driver(self.ghost)
         identifier = get_identifier(self.ghost)
         variables = container.force_fetch(Variables)
         self._message_parser = MessageKindParser(
@@ -371,12 +371,13 @@ class SessionImpl(Session[Ghost]):
         else:
             self.save()
             self.destroy()
+            return None
 
     def fail(self, err: Optional[Exception]) -> bool:
         if self._failed:
             return True
         self._failed = True
-        self.logger.error("Session failed: %s", err)
+        self.logger.exception("Session failed: %s", err)
         if self.upstream is not None:
             message = MessageType.ERROR.new(content=str(err))
             self.upstream.deliver(message)

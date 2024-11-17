@@ -78,8 +78,7 @@ class MessageType(str, enum.Enum):
             memory: Optional[str] = None,
             name: Optional[str] = None,
     ) -> "Message":
-        chunk = not self.is_protocol_type(self.value)
-        return Message(content=content, memory=memory, name=name, type=self.value, role=role, chunk=chunk)
+        return Message(content=content, memory=memory, name=name, type=self.value, role=role).as_tail()
 
     def new_assistant(
             self, *,
@@ -106,7 +105,7 @@ class MessageType(str, enum.Enum):
 
     @classmethod
     def final(cls):
-        return Message(type=cls.FINAL.value, role=Role.ASSISTANT.value, chunk=False)
+        return Message(type=cls.FINAL.value, role="").as_tail()
 
     def match(self, message: "Message") -> bool:
         return message.type == self.value
@@ -407,7 +406,7 @@ class Message(BaseModel):
         """
         complete message is not a chunk one
         """
-        return self.seq == "complete"
+        return self.seq == "complete" or MessageType.is_protocol_type(self.type)
 
     def is_head(self) -> bool:
         return self.seq == "head"

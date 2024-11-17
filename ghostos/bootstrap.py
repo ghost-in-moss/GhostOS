@@ -1,10 +1,8 @@
 from typing import List, Optional, Tuple
 from os.path import dirname, join
-
 from ghostos.abcd import GhostOS
-
+from ghostos.contracts.logger import config_logging
 from ghostos.container import Container, Provider, Contracts
-
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
 
 import dotenv
@@ -241,22 +239,20 @@ def default_application_providers(
 # --- system bootstrap --- #
 def make_app_container(
         workspace_path: str,
+        logger_conf_path: str = "logging.yml",
         dotenv_file_path: str = ".env",
         app_providers: Optional[List[Provider]] = None,
         app_contracts: Optional[Contracts] = None,
 ) -> Container:
     """
     make application global container
-    :param workspace_path:
-    :param dotenv_file_path:
-    :param app_providers:
-    :param app_contracts:
-    :return:
     """
     # load env from dotenv file
     dotenv.load_dotenv(dotenv_path=join(workspace_path, dotenv_file_path))
     # default logger name for GhostOS application
-    logger_name = os.environ.get("LoggerName", "debug")
+    logger_name = os.environ.get("LoggerName", "ghostos")
+    logger_filename = join(workspace_path, logger_conf_path)
+    config_logging(logger_filename)
 
     if app_providers is None:
         app_providers = default_application_providers(root_dir=workspace_path, logger_name=logger_name)

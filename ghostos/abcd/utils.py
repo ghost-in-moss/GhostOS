@@ -47,6 +47,7 @@ def is_ghost(value) -> bool:
 def fire_session_event(session: Session, event: Event) -> Optional[Operator]:
     event, op = session.parse_event(event)
     if op is not None:
+        session.logger.info("session event is intercepted and op %s is returned", op)
         return op
     if event is None:
         # if event is intercepted, stop the run.
@@ -67,19 +68,18 @@ class InitOperator(Operator):
 
 
 def run_session_event(session: Session, event: Event, max_step: int) -> None:
-    with session:
-        op = InitOperator(event)
-        step = 0
-        while op is not None:
-            step += 1
-            if step > max_step:
-                raise RuntimeError(f"Max step {max_step} reached")
-            if not session.refresh():
-                raise RuntimeError("Session refresh failed")
-            session.logger.info("start session op %s", op)
-            next_op = op.run(session)
-            session.logger.info("done session op %s", op)
-            op.destroy()
-            # session do save after each op
-            session.save()
-            op = next_op
+    op = InitOperator(event)
+    step = 0
+    while op is not None:
+        step += 1
+        if step > max_step:
+            raise RuntimeError(f"Max step {max_step} reached")
+        if not session.refresh():
+            raise RuntimeError("Session refresh failed")
+        session.logger.info("start session op %s", op)
+        next_op = op.run(session)
+        session.logger.info("done session op %s", op)
+        op.destroy()
+        # session do save after each op
+        session.save()
+        op = next_op

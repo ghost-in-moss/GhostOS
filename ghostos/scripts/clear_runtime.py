@@ -67,6 +67,14 @@ def main():
         "--cache", "-c",
         action="store_true",
     )
+    parser.add_argument(
+        "--prompts", "-m",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--logs", "-l",
+        action="store_true",
+    )
     from ghostos.bootstrap import workspace_dir
     runtime_dir = join(workspace_dir, "runtime")
     parsed = parser.parse_args(sys.argv[1:])
@@ -87,6 +95,14 @@ def main():
         print(f"clear runtime/threads files: {cleared}")
     if _all or parsed.cache:
         cleared = clear_directory(join(runtime_dir, "cache"), recursive=True)
+        done += 1
+        print(f"clear runtime/cache files: {cleared}")
+    if _all or parsed.prompts:
+        cleared = clear_directory(join(runtime_dir, "prompts"), recursive=True)
+        done += 1
+        print(f"clear runtime/cache files: {cleared}")
+    if _all or parsed.logs:
+        cleared = clear_directory(join(runtime_dir, "logs"), recursive=True)
         done += 1
         print(f"clear runtime/cache files: {cleared}")
 

@@ -91,6 +91,7 @@ class ConversationImpl(Conversation[G]):
             return session.get_artifact(), TaskState(session.task.state)
 
     def talk(self, query: str, user_name: str = "") -> Receiver:
+        self._logger.info("talk to user %s", user_name)
         message = Role.USER.new(content=query, name=user_name)
         return self.respond([message])
 
@@ -129,15 +130,22 @@ class ConversationImpl(Conversation[G]):
             raise RuntimeError(f"Conversation is closed")
 
     def _submit_session_event(self, event: Event, stream: Stream) -> None:
-        with stream:
-            task = self._tasks.get_task(event.task_id)
-            session = self._create_session(task, self._locker, stream)
-            with session:
-                try:
+        self._logger.debug("submit session event")
+        try:
+            with stream:
+                task = self._tasks.get_task(event.task_id)
+                session = self._create_session(task, self._locker, stream)
+                self._logger.debug(
+                    f"create session from event id %s, task_id is %s",
+                    event.event_id, task.task_id,
+                )
+                with session:
                     run_session_event(session, event, self._conf.max_session_step)
-                    self._eventbus.notify_task(event.task_id)
-                except Exception as e:
-                    self.fail(error=e)
+        except Exception as e:
+            self._logger.exception(e)
+            self.fail(error=e)
+        finally:
+            self._eventbus.notify_task(event.task_id)
 
     def _create_session(
             self,

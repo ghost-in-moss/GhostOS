@@ -1,10 +1,8 @@
 from ghostos.abcd import Ghost
-
 from ghostos.scripts.cli.utils import (
     check_ghostos_workspace_exists,
     parse_args_modulename_or_filename, get_or_create_module_from_name,
 )
-
 from ghostos.bootstrap import make_app_container, get_ghostos
 
 
@@ -35,11 +33,11 @@ def main():
         "console",
     )
     conversation = shell.sync(ghost)
+    exit(0)
     with conversation:
-        print(conversation.task())
-        exit(0)
         receiver = conversation.talk("hello")
         with receiver:
             messages = receiver.wait()
-            print(messages)
+            for item in messages:
+                print(item.get_content())
     shell.close()

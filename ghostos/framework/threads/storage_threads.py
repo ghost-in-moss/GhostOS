@@ -26,6 +26,10 @@ class GoThreadsByStorage(GoThreads):
     def get_thread(self, thread_id: str, create: bool = False) -> Optional[GoThreadInfo]:
         path = self._get_thread_filename(thread_id)
         if not self._storage.exists(path):
+            if create:
+                thread = GoThreadInfo(id=thread_id)
+                self.save_thread(thread)
+                return thread
             return None
         content = self._storage.get(path)
         data = yaml.safe_load(content)

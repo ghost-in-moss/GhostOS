@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from ghostos.abcd import GhostOS, Shell
 from ghostos.core.runtime import GoProcesses, GoProcess, GoThreads, GoTasks, EventBus
@@ -53,8 +53,9 @@ class GhostOSImpl(GhostOS):
             self,
             name: str,
             shell_id: str,
+            *,
+            providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
-            *providers: Provider,
     ) -> Shell:
         if name not in self._ghostos_config.shells:
             raise NotImplementedError(f"Shell `{name}` not implemented")
@@ -68,11 +69,12 @@ class GhostOSImpl(GhostOS):
 
         # prepare container
         container = Container(parent=self._container)
+        providers = providers or []
         return ShellImpl(
             config=shell_conf,
             container=container,
             process=process,
-            *providers,
+            providers=providers,
         )
 
 

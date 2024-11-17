@@ -1,7 +1,8 @@
 import time
 from typing import Union, Optional, Iterable, List, Tuple, TypeVar
 
-from ghostos.container import Container
+from ghostos.contracts.logger import LoggerItf
+from ghostos.container import Container, Provider
 from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
 from ghostos.abcd.utils import get_ghost_driver
 from ghostos.core.messages import Message, Receiver
@@ -10,7 +11,6 @@ from ghostos.core.runtime import (
     GoTasks, TaskState, GoTaskStruct,
 )
 from ghostos.core.messages import Stream
-from ghostos.container import Provider
 from ghostos.helpers import uuid, Timeleft
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
@@ -41,17 +41,14 @@ class ShellImpl(Shell):
             config: ShellConf,
             container: Container,
             process: GoProcess,
-            *providers: Provider,
+            providers: List[Provider],
     ):
         self._conf = config
         # prepare container
         for provider in providers:
             container.register(provider)
         self._container = container
-        # bind self
-        self._container.set(Shell, self)
-        self._container.set(ShellImpl, self)
-        self._container.set(ShellConf, config)
+
         self._shell_id = process.shell_id
         self._process_id = process.process_id
         self._scope = Scope(
@@ -64,7 +61,12 @@ class ShellImpl(Shell):
         self._workers: List[Thread] = []
         self._closed = False
         self._background_started = False
+        self._logger = container.force_fetch(LoggerItf)
         # bootstrap the container.
+        # bind self
+        self._container.set(Shell, self)
+        self._container.set(ShellImpl, self)
+        self._container.set(ShellConf, config)
         self._container.bootstrap()
 
     def container(self) -> Container:
@@ -81,9 +83,13 @@ class ShellImpl(Shell):
     def sync(self, ghost: Ghost, context: Optional[Ghost.ContextType] = None) -> Conversation:
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self._scope)
+        self._logger.debug("sync ghost with task id %s", task_id)
+
         task = self._tasks.get_task(task_id)
         if task is None:
             task = self.create_root_task(ghost, context)
+            self._logger.info("create root task task id %s for ghost", task_id)
+
         task.meta = to_entity_meta(ghost)
         if context is not None:
             task.context = to_entity_meta(context)

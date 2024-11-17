@@ -54,4 +54,6 @@ class DefaultPoolProvider(Provider[Pool]):
         return Pool
 
     def factory(self, con: Container) -> Optional[Pool]:
-        return DefaultPool(self.size)
+        p = DefaultPool(self.size)
+        con.add_shutdown(p.shutdown)
+        return p

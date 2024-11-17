@@ -86,3 +86,9 @@ class DefaultMessenger(Messenger):
         if self._upstream is not None:
             return self._upstream.error()
         return None
+
+    def closed(self) -> bool:
+        return self._upstream is None or self._upstream.closed()
+
+
+

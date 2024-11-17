@@ -9,6 +9,8 @@ import time
 
 __all__ = ["Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_arr_connection"]
 
+from ghostos.helpers import Timeleft
+
 
 class Stream(Protocol):
     """
@@ -60,11 +62,15 @@ class Stream(Protocol):
     def error(self) -> Optional[Message]:
         pass
 
+    @abstractmethod
+    def closed(self) -> bool:
+        pass
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> Optional[bool]:
-        if not self.alive():
+        if self.closed():
             return None
         intercept = None
         if exc_val is not None:
@@ -92,7 +98,7 @@ class Receiver(Protocol):
         pass
 
     @abstractmethod
-    def done(self) -> bool:
+    def closed(self) -> bool:
         pass
 
     @abstractmethod
@@ -111,7 +117,7 @@ class Receiver(Protocol):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> Optional[bool]:
-        if self.done():
+        if self.closed():
             return None
         intercept = None
         if exc_val is not None:
@@ -122,11 +128,15 @@ class Receiver(Protocol):
 
 class ArrayReceiver(Receiver):
 
-    def __init__(self, alive: Callable[[], bool], idle: float = 0.1, complete_only: bool = False):
-        self._check_alive = alive
+    def __init__(
+            self,
+            timeleft: Timeleft,
+            idle: float = 0.1,
+            complete_only: bool = False,
+    ):
+        self._timeleft = timeleft
         self._idle = idle
         self._chunks = deque()
-        self._completes = []
         self._closed = False
         self._done = False
         self._error: Optional[Message] = None
@@ -135,15 +145,13 @@ class ArrayReceiver(Receiver):
     def recv(self) -> Iterable[Message]:
         if self._closed:
             raise RuntimeError("Receiver is closed")
-        alive = self._check_alive
         while not self._done:
             if len(self._chunks) > 0:
                 item = self._chunks.popleft()
                 yield item
                 continue
-            is_alive = alive()
-            if not is_alive:
-                self._error = MessageType.ERROR.new(content="Receiver is closed")
+            if not self._timeleft.alive():
+                self._error = MessageType.ERROR.new(content=f"Timeout after {self._timeleft.passed()}")
                 self._done = True
                 break
             if self._idle:
@@ -155,59 +163,59 @@ class ArrayReceiver(Receiver):
             yield self._error
 
     def add(self, message: Message) -> bool:
-        if self._closed or self._done:
-            return False
-        if not self._check_alive():
+        if self._closed:
             return False
         if MessageType.is_protocol_message(message):
             self._done = True
             if MessageType.ERROR.match(message):
                 self._error = message
             return True
+
+        elif self._done or not self._timeleft.alive():
+            return False
         else:
             if message.is_complete() or not self._complete_only:
                 self._chunks.append(message)
-            if message.is_complete():
-                self._completes.append(message.get_copy())
             return True
 
     def cancel(self):
         self._done = True
 
     def fail(self, error: str) -> bool:
+        if self._error is not None:
+            return False
         self._done = True
         self._error = MessageType.ERROR.new(content=error)
         return False
 
-    def done(self) -> bool:
-        return self._done
+    def closed(self) -> bool:
+        return self._closed
 
     def error(self) -> Optional[Message]:
         return self._error
 
     def wait(self) -> List[Message]:
-        while not self._done and not self._closed and not self._error:
-            time.sleep(self._idle)
-        completes = self._completes.copy()
-        if self._error is not None:
-            completes.append(self._error)
+        items = list(self.recv())
+        completes = []
+        for item in items:
+            if item.is_complete():
+                completes.append(item)
         return completes
 
     def close(self):
         if self._closed:
             return
+        self._closed = True
         self._done = True
-        self._error = None
         self._chunks = []
-        self._completes = []
-        del self._check_alive
+        self._timeleft = None
 
 
 class ArrayStream(Stream):
 
     def __init__(self, receiver: ArrayReceiver, complete_only: bool):
         self._receiver = receiver
-        self._alive = not receiver.done()
+        self._alive = not receiver.closed()
         self._closed = False
         self._error: Optional[Message] = None
         self._complete_only = complete_only
@@ -238,30 +246,33 @@ class ArrayStream(Stream):
     def alive(self) -> bool:
         if not self._alive:
             return False
-        if self._receiver.done():
+        if self._receiver.closed():
             self._alive = False
         return self._alive
 
     def close(self):
         if self._closed:
             return
-        if self._alive:
+        self._closed = True
+        if self._error:
+            self._receiver.add(self._error)
+        else:
             self._receiver.add(MessageType.final())
         self._alive = False
-        self._closed = True
         del self._receiver
 
     def fail(self, error: str) -> bool:
         if self._error is not None:
             return False
         self._error = MessageType.ERROR.new(content=error)
-        if self._alive:
-            self._receiver.add(self._error)
         self._alive = False
         return False
 
     def error(self) -> Optional[Message]:
         return self._error
+
+    def closed(self) -> bool:
+        return self._closed
 
 
 def new_arr_connection(
@@ -279,12 +290,6 @@ def new_arr_connection(
     """
     from ghostos.helpers import Timeleft
     timeleft = Timeleft(timeout)
-
-    def alive_check() -> bool:
-        if not timeleft.alive():
-            return False
-        return True
-
-    receiver = ArrayReceiver(alive_check, idle, complete_only)
+    receiver = ArrayReceiver(timeleft, idle, complete_only)
     stream = ArrayStream(receiver, complete_only)
     return stream, receiver

@@ -16,7 +16,7 @@ class Timeleft:
         return timeleft
 
     def alive(self) -> bool:
-        return self.timeout < 0 or self.passed() < self.timeout
+        return self.timeout <= 0 or self.passed() < self.timeout
 
     def passed(self) -> float:
         now = time.time()

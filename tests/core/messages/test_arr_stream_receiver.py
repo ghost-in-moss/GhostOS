@@ -1,5 +1,5 @@
 from typing import Iterable
-from ghostos.core.messages.transport import new_arr_connection, Stream, Receiver
+from ghostos.core.messages.transport import new_arr_connection, Stream
 from ghostos.core.messages.message import Message
 from threading import Thread
 import time
@@ -16,7 +16,7 @@ def iter_content(content: str, gap: float) -> Iterable[Message]:
 def test_new_connection_baseline():
     stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
     assert stream.alive()
-    assert not retriever.done()
+    assert not retriever.closed()
     content = "hello world, ha ha ha ha"
 
     def send_data(s: Stream, c: str):
@@ -59,9 +59,10 @@ def test_new_connection_timeout():
     t.start()
     with retriever:
         messages = list(retriever.recv())
-        assert retriever.done()
+        assert retriever.closed()
         assert retriever.error() is not None
         assert not stream.alive()
+        assert len(messages) > 0
     t.join()
 
 
@@ -101,9 +102,11 @@ def test_new_connection_timeout():
     t.start()
     with retriever:
         messages = list(retriever.recv())
-        assert retriever.done()
-        assert retriever.error() is not None
-        assert not stream.alive()
+
+    assert retriever.closed()
+    assert retriever.error() is not None
+    assert not stream.alive()
+    assert messages[-1] is retriever.error()
     t.join()
 
 
@@ -122,3 +125,37 @@ def test_new_connection_sync():
     assert messages[len(content)].is_complete()
     assert messages[len(content)].content == content
     assert messages[3].get_seq() == "chunk"
+
+
+def test_new_connection_wait():
+    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    content = "hello world"
+
+    def send_data(s: Stream, c: str):
+        with s:
+            s.send(iter_content(c, 0.02))
+
+    t = Thread(target=send_data, args=(stream, content))
+    t.start()
+    with retriever:
+        retriever.wait()
+    t.join()
+
+
+def test_new_connection_with_pool():
+    from ghostos.contracts.pool import DefaultPool
+    pool = DefaultPool(10)
+    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    content = "hello world"
+
+    def send_data(s: Stream, c: str):
+        with s:
+            s.send(iter_content(c, 0.02))
+
+    pool.submit(send_data, stream, content)
+
+    with retriever:
+        messages = retriever.wait()
+        assert len(messages) == 1
+    assert retriever.error() is None
+    pool.shutdown(wait=True)

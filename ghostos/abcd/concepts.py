@@ -215,8 +215,9 @@ class GhostOS(Protocol):
             self,
             name: str,
             shell_id: str,
+            *,
+            providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
-            *providers: Provider
     ) -> Shell:
         pass
 
@@ -468,7 +469,7 @@ class Session(Generic[G], ABC):
     """
     instance_count: ClassVar[int] = 0
 
-    stream: Stream
+    upstream: Stream
 
     scope: Scope
     """the running scope of the session"""

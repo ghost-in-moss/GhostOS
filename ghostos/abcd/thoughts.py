@@ -67,7 +67,7 @@ class LLMThought(Thought[Operator]):
                 prompt = action.update_prompt(prompt)
         llm_api = self.get_llm_api(session)
 
-        streaming = not session.stream.completes_only()
+        streaming = not session.upstream.completes_only()
         items = llm_api.deliver_chat_completion(prompt, streaming)
         messages, callers = session.respond(items, self.message_stage)
         prompt.added.extend(messages)
