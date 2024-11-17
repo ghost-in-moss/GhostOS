@@ -6,7 +6,7 @@ from typing import (
 
 from abc import ABC, abstractmethod
 from ghostos.identifier import Identical
-from ghostos.entity import EntityType, Entity
+from ghostos.entity import EntityType, EntityClass
 from ghostos.prompter import Prompter, DataPrompter, DataPrompterDriver
 from ghostos.core.runtime import (
     TaskState,
@@ -57,7 +57,7 @@ __all__ = (
 )
 
 
-class Ghost(Identical, ABC):
+class Ghost(Identical, EntityClass, ABC):
     """
     the class defines the model of a kind of ghosts.
     four parts included:
@@ -114,6 +114,13 @@ class GhostDriver(Generic[G], ABC):
 
         The AI behind a ghost is not supposed to operate the session object,
         but work on the goal through functions or Moss Injections.
+        """
+        pass
+
+    @abstractmethod
+    def providers(self) -> Iterable[Provider]:
+        """
+        ghost return session level container providers
         """
         pass
 

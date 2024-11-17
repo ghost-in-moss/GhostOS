@@ -109,6 +109,9 @@ class SessionImpl(Session[Ghost]):
         self.container.register(provide(Taskflow, False)(lambda c: self.taskflow()))
         self.container.register(provide(Subtasks, False)(lambda c: self.subtasks()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
+        # bind ghost providers.
+        for provider in self.ghost_driver.providers():
+            self.container.register(provider)
         self.container.bootstrap()
 
     @staticmethod
@@ -392,6 +395,3 @@ class SessionImpl(Session[Ghost]):
         del self.ghost
         del self.ghost_driver
         del self.scope
-
-    def __del__(self):
-        self.destroy()

@@ -44,6 +44,20 @@ class EntityClass(ABC):
         pass
 
 
+class ModelEntity(BaseModel, EntityClass, ABC):
+
+    def __to_entity_meta__(self) -> EntityMeta:
+        return EntityMeta(
+            type=generate_import_path(self.__class__),
+            content=self.model_dump_json(exclude_defaults=True),
+        )
+
+    @classmethod
+    def __from_entity_meta__(cls, meta: EntityMeta) -> Self:
+        data = json.loads(meta['content'])
+        return cls(**data)
+
+
 class EntityMeta(TypedDict):
     """
     I want python has an official way to marshal and unmarshal any instance and make it readable if allowed.
