@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Callable, Tuple
+from typing import Iterable, Optional, Callable, Tuple, List
 
 from typing_extensions import Protocol
 from collections import deque
@@ -104,7 +104,7 @@ class Receiver(Protocol):
         pass
 
     @abstractmethod
-    def wait(self):
+    def wait(self) -> List[Message]:
         pass
 
     def __enter__(self):
@@ -126,6 +126,7 @@ class ArrayReceiver(Receiver):
         self._check_alive = alive
         self._idle = idle
         self._chunks = deque()
+        self._completes = []
         self._closed = False
         self._done = False
         self._error: Optional[Message] = None
@@ -166,6 +167,8 @@ class ArrayReceiver(Receiver):
         else:
             if message.is_complete() or not self._complete_only:
                 self._chunks.append(message)
+            if message.is_complete():
+                self._completes.append(message.get_copy())
             return True
 
     def cancel(self):
@@ -182,9 +185,13 @@ class ArrayReceiver(Receiver):
     def error(self) -> Optional[Message]:
         return self._error
 
-    def wait(self):
+    def wait(self) -> List[Message]:
         while not self._done and not self._closed and not self._error:
             time.sleep(self._idle)
+        completes = self._completes.copy()
+        if self._error is not None:
+            completes.append(self._error)
+        return completes
 
     def close(self):
         if self._closed:
@@ -192,6 +199,7 @@ class ArrayReceiver(Receiver):
         self._done = True
         self._error = None
         self._chunks = []
+        self._completes = []
         del self._check_alive
 
 

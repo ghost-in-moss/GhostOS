@@ -21,8 +21,6 @@ class Agent(Ghost, ABC):
     - system configurations, like thread truncating / authorities / welcome craft etc.
     """
 
-    Artifact = None
-
     @abstractmethod
     def __identifier__(self) -> Identifier:
         pass
@@ -42,7 +40,7 @@ class Thought(BaseModel, Ghost, ABC):
     Thought is a micro unit to processing thinking with current context;
     the Goal of the Thought is to produce a decision or suggestion, add them to the context.
     """
-    Artifact: ClassVar = str
+    ArtifactType: ClassVar = str
 
     @abstractmethod
     def __identifier__(self) -> Identifier:

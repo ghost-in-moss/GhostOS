@@ -42,7 +42,7 @@ class SubtasksImpl(Subtasks):
             self,
             name: str,
             *messages: Subtasks.MessageKind,
-            ctx: Optional[Ghost.Context] = None,
+            ctx: Optional[Ghost.ContextType] = None,
     ) -> None:
         subtasks = self.get_subtasks()
         if name not in subtasks:
@@ -63,7 +63,7 @@ class SubtasksImpl(Subtasks):
             self,
             ghost: Ghost,
             instruction: str = "",
-            ctx: Optional[Ghost.Context] = None,
+            ctx: Optional[Ghost.ContextType] = None,
             task_name: Optional[str] = None,
             task_description: Optional[str] = None,
     ) -> None:

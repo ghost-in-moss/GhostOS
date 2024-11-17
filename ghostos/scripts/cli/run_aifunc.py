@@ -59,7 +59,7 @@ def main():
     # argument check
     args = argv[1:]
     if len(args) <= 0:
-        raise ValueError("At least one argument (python file or module) is required")
+        raise ValueError("At least one argument (python filename or modulename) is required")
     filename_or_modulename = args[0]
     found = find_aifunc_by_name(filename_or_modulename)
     if found.aifunc is None:

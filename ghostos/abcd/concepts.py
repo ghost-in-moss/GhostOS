@@ -68,13 +68,13 @@ class Ghost(Identical, EntityClass, ABC):
     4. driver is
     """
 
-    Artifact: ClassVar[Optional[Type]] = None
+    ArtifactType: ClassVar[Optional[Type]] = None
     """ the model of the ghost's artifact, is completing during runtime"""
 
-    Context: ClassVar[Optional[Type[Context]]] = None
+    ContextType: ClassVar[Optional[Type[ContextType]]] = None
     """ the model of the ghost's context, is completing during runtime'"""
 
-    Driver: Type[GhostDriver] = None
+    DriverType: ClassVar[Optional[Type[GhostDriver]]] = None
     """ separate ghost's methods to the driver class, make sure the ghost is simple and clear to other ghost"""
 
 
@@ -108,7 +108,7 @@ class GhostDriver(Generic[G], ABC):
         return md5(scope_ids)
 
     @abstractmethod
-    def get_artifact(self, session: Session) -> Optional[G.Artifact]:
+    def get_artifact(self, session: Session) -> Optional[G.ArtifactType]:
         """
         generate the ghost goal from session_state
         may be the Goal Model is a SessionStateValue that bind to it.
@@ -261,7 +261,7 @@ class Shell(ABC):
     def sync(
             self,
             ghost: G,
-            context: Optional[G.Context] = None,
+            context: Optional[G.ContextType] = None,
     ) -> Conversation[G]:
         """
         create a top-level conversation with a ghost.
@@ -274,11 +274,11 @@ class Shell(ABC):
     def call(
             self,
             ghost: G,
-            context: Optional[G.Context] = None,
+            context: Optional[G.ContextType] = None,
             instructions: Optional[Iterable[Message]] = None,
             timeout: float = 0.0,
             stream: Optional[Stream] = None,
-    ) -> Tuple[Union[G.Artifact, None], TaskState]:
+    ) -> Tuple[Union[G.ArtifactType, None], TaskState]:
         """
         run a ghost task until it stopped,
         """
@@ -329,18 +329,18 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def get_artifact(self) -> Tuple[Union[G.Artifact, None], TaskState]:
+    def get_artifact(self) -> Tuple[Union[G.ArtifactType, None], TaskState]:
         pass
 
     @abstractmethod
-    def ask(self, query: str, user_name: str = "") -> Receiver:
+    def talk(self, query: str, user_name: str = "") -> Receiver:
         pass
 
     @abstractmethod
     def respond(
             self,
             inputs: Iterable[Message],
-            context: Optional[G.Context] = None,
+            context: Optional[G.ContextType] = None,
             history: Optional[List[Message]] = None,
     ) -> Receiver:
         """
@@ -525,7 +525,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def get_artifact(self) -> G.Artifact:
+    def get_artifact(self) -> G.ArtifactType:
         """
         :return: the current state of the ghost goal
         """
@@ -587,7 +587,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def call(self, ghost: G, ctx: G.Context) -> G.Artifact:
+    def call(self, ghost: G, ctx: G.ContextType) -> G.ArtifactType:
         """
         创建一个子任务, 阻塞并等待它完成.
         :param ghost:
@@ -704,7 +704,7 @@ class Subtasks(Prompter, ABC):
             self,
             name: str,
             *messages: MessageKind,
-            ctx: Optional[Ghost.Context] = None,
+            ctx: Optional[Ghost.ContextType] = None,
     ) -> None:
         """
         send message to an existing subtask
@@ -720,7 +720,7 @@ class Subtasks(Prompter, ABC):
             self,
             ghost: Ghost,
             instruction: str = "",
-            ctx: Optional[Ghost.Context] = None,
+            ctx: Optional[Ghost.ContextType] = None,
             task_name: Optional[str] = None,
             task_description: Optional[str] = None,
     ) -> None:

@@ -27,7 +27,7 @@ class MossAgent(BaseModel, Agent):
     Basic Agent that turn a python module into a conversational agent.
     """
 
-    Artifact = None
+    ArtifactType = None
     """ subclass of MossAgent could have a GoalType, default is None"""
 
     moss_module: str = Field(description="Moss module name for the agent")

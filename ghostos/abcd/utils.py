@@ -15,8 +15,8 @@ def get_ghost_driver_type(ghost: Ghost) -> Type[GhostDriver]:
     """
     get ghost driver instance by default protocol
     """
-    if ghost.Driver is not None:
-        return ghost.Driver
+    if ghost.DriverType is not None:
+        return ghost.DriverType
     name = ghost.__class__.__name__
     module_name = ghost.__class__.__module__
     import_path = f"{module_name}:{name}Driver"

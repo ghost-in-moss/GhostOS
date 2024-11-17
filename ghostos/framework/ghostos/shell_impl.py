@@ -22,9 +22,6 @@ __all__ = ['ShellConf', 'ShellImpl', 'Shell']
 
 
 class ShellConf(BaseModel):
-    persona: str = Field(
-        description="the persona of the shell root agents",
-    )
     max_session_steps: int = Field(
         default=10,
     )
@@ -81,7 +78,7 @@ class ShellImpl(Shell):
             notify = task.depth > 0
         self._eventbus.send_event(event, notify)
 
-    def sync(self, ghost: Ghost, context: Optional[Ghost.Context] = None) -> Conversation:
+    def sync(self, ghost: Ghost, context: Optional[Ghost.ContextType] = None) -> Conversation:
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self._scope)
         task = self._tasks.get_task(task_id)
@@ -91,9 +88,7 @@ class ShellImpl(Shell):
         if context is not None:
             task.context = to_entity_meta(context)
         conversation = self.sync_task(task, throw=True, is_background=False)
-        if context is not None:
-            return conversation
-        raise RuntimeError(f'Cannot sync ghost')
+        return conversation
 
     def sync_task(
             self,
@@ -123,11 +118,11 @@ class ShellImpl(Shell):
     def call(
             self,
             ghost: Ghost,
-            context: Optional[Ghost.Context] = None,
+            context: Optional[Ghost.ContextType] = None,
             instructions: Optional[Iterable[Message]] = None,
             timeout: float = 0.0,
             stream: Optional[Stream] = None,
-    ) -> Tuple[Union[Ghost.Artifact, None], TaskState]:
+    ) -> Tuple[Union[Ghost.ArtifactType, None], TaskState]:
 
         def send_message(receiver: Receiver):
             with receiver:
@@ -152,13 +147,13 @@ class ShellImpl(Shell):
                     r = conversation.respond_event(e)
                     send_message(r)
                 else:
-                    conversation.ask("continue to fulfill your task or fail")
+                    conversation.talk("continue to fulfill your task or fail")
             return conversation.get_artifact()
 
     def create_root_task(
             self,
             ghost: Ghost,
-            context: Optional[Ghost.Context],
+            context: Optional[Ghost.ContextType],
     ) -> GoTaskStruct:
         task_id = uuid()
         id_ = get_identifier(ghost)

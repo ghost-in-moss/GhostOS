@@ -6,6 +6,7 @@ from ghostos.abcd import GhostOS
 from ghostos.container import Container, Provider, Contracts
 
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
+
 import dotenv
 import os
 
@@ -78,6 +79,7 @@ __all__ = [
     'default_application_providers',
 
     'GHOSTOS_VERSION',
+    'get_ghostos',
 ]
 
 GHOSTOS_VERSION_KEY = "ghostos_version"

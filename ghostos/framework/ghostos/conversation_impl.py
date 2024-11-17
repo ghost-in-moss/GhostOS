@@ -55,7 +55,7 @@ class ConversationImpl(Conversation[G]):
             shell_id=task.shell_id,
             process_id=task.process_id,
             task_id=task.task_id,
-            parent_task_id=task.parent_task_id,
+            parent_task_id=task.parent,
         )
         self._pool = self._container.force_fetch(Pool)
         logger = container.force_fetch(LoggerItf)
@@ -84,20 +84,20 @@ class ConversationImpl(Conversation[G]):
         thread_id = task.thread_id
         return self._threads.get_thread(thread_id, create=True)
 
-    def get_artifact(self) -> Tuple[Union[Ghost.Artifact, None], TaskState]:
+    def get_artifact(self) -> Tuple[Union[Ghost.ArtifactType, None], TaskState]:
         task = self.task()
         session = self._create_session(task, self._locker, None)
         with session:
             return session.get_artifact(), TaskState(session.task.state)
 
-    def ask(self, query: str, user_name: str = "") -> Receiver:
+    def talk(self, query: str, user_name: str = "") -> Receiver:
         message = Role.USER.new(content=query, name=user_name)
         return self.respond([message])
 
     def respond(
             self,
             inputs: Iterable[Message],
-            context: Optional[Ghost.Context] = None,
+            context: Optional[Ghost.ContextType] = None,
             history: Optional[List[Message]] = None,
     ) -> Receiver:
         self._validate_closed()

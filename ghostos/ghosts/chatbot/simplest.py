@@ -1,4 +1,4 @@
-from typing import Union, Iterable
+from typing import Union, Iterable, ClassVar
 
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
 from ghostos.abcd.thoughts import LLMThought
@@ -8,10 +8,10 @@ from ghostos.core.messages import Role
 from ghostos.entity import ModelEntity
 from ghostos.prompter import TextPrmt, Prompter
 from ghostos.identifier import Identifier
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 
-class Chatbot(Agent, ModelEntity):
+class Chatbot(ModelEntity, Agent):
     """
     simplest chatbot that can chat only
     """
@@ -19,10 +19,11 @@ class Chatbot(Agent, ModelEntity):
     description: str = Field(description="description of the chatbot")
     persona: str = Field(description="persona of the chatbot")
     instruction: str = Field(description="instruction of the chatbot")
-    llm_api: str = Field(description="llm api of the chatbot")
+    llm_api: str = Field(default="", description="llm api of the chatbot")
 
-    Artifact = None
-    Context = None
+    ArtifactType: ClassVar = None
+    ContextType: ClassVar = None
+    DriverType: ClassVar = None
 
     def __identifier__(self) -> Identifier:
         return Identifier(
@@ -59,11 +60,3 @@ class ChatbotDriver(GhostDriver[Chatbot]):
         if op is not None:
             return op
         return session.taskflow().wait()
-
-
-__ghost__ = Chatbot(
-    name="jojo",
-    description="a chatbot for baseline test",
-    persona="you are an LLM-driven cute girl, named jojo",
-    instruction="remember talk to user with user's language."
-)

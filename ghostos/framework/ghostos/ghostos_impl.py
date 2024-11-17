@@ -16,14 +16,14 @@ __all__ = ['GhostOS', "GhostOSImpl", "GhostOSConfig", "GhostOSProvider"]
 
 
 class GhostOSConfig(YamlConfig):
-    relative_path = "ghostos.yml"
+    relative_path = "ghostos_conf.yml"
     shells: Dict[str, ShellConf] = Field(
         description="the shell configurations",
     )
 
 
 class GhostOSImpl(GhostOS):
-    contracts: Contracts([
+    contracts: Contracts = Contracts([
         GoProcesses,
         GoTasks,
         GoThreads,

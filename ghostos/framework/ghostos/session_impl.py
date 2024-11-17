@@ -72,7 +72,7 @@ class SessionImpl(Session[Ghost]):
         )
 
         self.ghost: G = get_entity(self.task.meta, Ghost)
-        self.ghost_driver: GhostDriver[G] = self.ghost.Driver(self.ghost)
+        self.ghost_driver: GhostDriver[G] = self.ghost.DriverType(self.ghost)
         identifier = get_identifier(self.ghost)
         variables = container.force_fetch(Variables)
         self._message_parser = MessageKindParser(
@@ -205,7 +205,7 @@ class SessionImpl(Session[Ghost]):
             return None
         return get_entity(self.task.context, Prompter)
 
-    def get_artifact(self) -> Ghost.Artifact:
+    def get_artifact(self) -> Ghost.ArtifactType:
         return self.ghost_driver.get_artifact(self)
 
     def refresh(self) -> bool:
@@ -269,7 +269,7 @@ class SessionImpl(Session[Ghost]):
         for t in threads:
             self._saving_threads[t.id] = t
 
-    def call(self, ghost: Ghost, ctx: Ghost.Context) -> Ghost.Artifact:
+    def call(self, ghost: Ghost, ctx: Ghost.ContextType) -> Ghost.ArtifactType:
         self._validate_alive()
         shell = self.container.force_fetch(Shell)
         return shell.call(ghost, ctx)
