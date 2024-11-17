@@ -20,8 +20,6 @@ from ghostos.core.llms import (
 )
 from ghostos.container import Bootstrapper, Container
 
-import litellm
-
 __all__ = [
     'OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper',
     'LitellmAdapter', 'LiteLLMDriver',
@@ -205,6 +203,7 @@ class LitellmAdapter(OpenAIAdapter):
     """
 
     def _chat_completion(self, chat: Prompt, stream: bool) -> ChatCompletion:
+        import litellm
         messages = chat.get_messages()
         messages = self.parse_message_params(messages)
         response = litellm.completion(
