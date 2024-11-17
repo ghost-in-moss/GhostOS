@@ -28,16 +28,6 @@ class Agent(Ghost, ABC):
         pass
 
 
-class ChatBot(Agent, ABC):
-    """
-    Chatbot is the simplest kind of the Agents.
-    Typical Chatbot is Customer Service or Internet search.
-    Chat only means the most needed feature is to create a dialog-related but alternative context,
-    for LLM in-context learning.
-    """
-    pass
-
-
 class UserProxy(Ghost, ABC):
     """
     LLM-based UserProxy can understand human language and translate the user intends to system actions.

@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 
-from ghostos.core.abcd.concepts import GhostOS, Shell
+from ghostos.abcd import GhostOS, Shell
 from ghostos.core.runtime import GoProcesses, GoProcess, GoThreads, GoTasks, EventBus
 from ghostos.container import Container, Provider, Contracts, INSTANCE
 from ghostos.contracts.configs import Configs, YamlConfig

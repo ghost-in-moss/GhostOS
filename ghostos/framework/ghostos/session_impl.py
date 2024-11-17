@@ -1,9 +1,9 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any
 
-from ghostos.core.abcd.concepts import (
+from ghostos.abcd import (
     Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks
 )
-from ghostos.core.abcd.utils import get_ghost_driver
+from ghostos.abcd import get_ghost_driver
 from ghostos.core.messages import (
     MessageKind, Message, Caller, Stream, Role, MessageKindParser, MessageType
 )
@@ -22,6 +22,7 @@ from ghostos.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
 from .taskflow_impl import TaskflowImpl
 from .subtasks_impl import SubtasksImpl
+from threading import Lock
 
 G = TypeVar("G", bound=Ghost)
 
@@ -90,6 +91,7 @@ class SessionImpl(Session[Ghost]):
         self._done = False
         self._destroyed = False
         self._bootstrap()
+        self._thread_locker = Lock()
         if not self.refresh():
             raise RuntimeError(f"Failed to start session")
         Session.instance_count += 1
@@ -219,7 +221,7 @@ class SessionImpl(Session[Ghost]):
         self._system_logs = []
         self.task = self.task.new_turn()
 
-    def messenger(self) -> Messenger:
+    def messenger(self, stage: str = "") -> Messenger:
         self._validate_alive()
         task_payload = TaskPayload.from_task(self.task)
         identity = get_identifier(self.ghost)
@@ -228,16 +230,17 @@ class SessionImpl(Session[Ghost]):
             name=identity.name,
             role=Role.ASSISTANT.value,
             payloads=[task_payload],
+            stage=stage,
         )
 
-    def respond(self, messages: Iterable[MessageKind], remember: bool = True) -> Tuple[List[Message], List[Caller]]:
+    def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[Caller]]:
         self._validate_alive()
-        messenger = self.messenger()
-        messenger.send(messages)
-        messages, callers = messenger.flush()
-        if remember:
+        with self._thread_locker:
+            messenger = self.messenger(stage)
+            messenger.send(messages)
+            messages, callers = messenger.flush()
             self.thread.append(*messages)
-        return messages, callers
+            return messages, callers
 
     def cancel_subtask(self, ghost: G, reason: str = "") -> None:
         self._validate_alive()

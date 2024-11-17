@@ -556,7 +556,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def messenger(self) -> "Messenger":
+    def messenger(self, stage: str = "") -> "Messenger":
         """
         Task 当前运行状态下, 向上游发送消息的 Messenger.
         每次会实例化一个 Messenger, 理论上不允许并行发送消息. 但也可能做一个技术方案去支持它.
@@ -568,7 +568,7 @@ class Session(Generic[G], ABC):
     def respond(
             self,
             messages: Iterable[MessageKind],
-            remember: bool = True,
+            stage: str = "",
     ) -> Tuple[List[Message], List[Caller]]:
         """
         发送消息, 但不影响运行状态.

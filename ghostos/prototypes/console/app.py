@@ -5,7 +5,7 @@ import asyncio
 from typing import Optional, List
 
 from ghostos.core.messages import Message, Role, MessageType
-from ghostos.core.abcd import GhostOS
+from ghostos.abcd import GhostOS
 from ghostos.framework.messages import TaskPayload
 from ghostos.helpers import uuid
 from threading import Thread

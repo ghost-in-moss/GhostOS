@@ -11,7 +11,7 @@ from ghostos.core.aifunc.func import (
 )
 from ghostos.core.llms import LLMs, Prompt
 from ghostos.core.moss.abcd import MossRuntime
-from ghostos.core.runtime import GoThreadInfo, EventTypes, GoThreads, thread_to_chat
+from ghostos.core.runtime import GoThreadInfo, EventTypes, GoThreads, thread_to_prompt
 from ghostos.core.messages import Role, Message, Stream
 from ghostos.container import Container
 
@@ -168,7 +168,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
 
         # build chat
         self.on_system_messages(systems)
-        chat = thread_to_chat(thread.id, systems, thread)
+        chat = thread_to_prompt(thread.id, systems, thread)
         step.chat = chat.model_copy(deep=True)
         # on_chat hook
         self.on_chat(chat)

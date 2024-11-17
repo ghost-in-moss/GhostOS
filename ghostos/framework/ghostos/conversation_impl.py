@@ -1,8 +1,8 @@
 from typing import Optional, Iterable, List, TypeVar, Tuple, Union
 
 from ghostos.container import Container
-from ghostos.core.abcd.concepts import Conversation, Scope, Ghost
-from ghostos.core.abcd.utils import run_session_event
+from ghostos.abcd import Conversation, Scope, Ghost
+from ghostos.abcd import run_session_event
 from ghostos.core.messages import (
     Message, Role,
     Stream, Receiver, new_arr_connection,

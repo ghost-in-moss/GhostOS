@@ -15,7 +15,9 @@ __all__ = [
 
     'to_entity_meta', 'from_entity_meta', 'get_entity',
     'is_entity_type',
-    'EntityMeta', 'Entity', 'EntityType', 'EntityClass',
+    'EntityMeta',
+    'Entity', 'EntityType',
+    'EntityClass', 'ModelEntity',
 
 ]
 

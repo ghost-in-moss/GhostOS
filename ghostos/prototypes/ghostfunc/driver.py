@@ -4,7 +4,7 @@ import yaml
 import importlib
 
 from ghostos.container import Container
-from ghostos.core.runtime import GoThreadInfo, EventTypes, thread_to_chat
+from ghostos.core.runtime import GoThreadInfo, EventTypes, thread_to_prompt
 from ghostos.core.moss import MossRuntime, MossCompiler, PyContext
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.messages import Role, Message
@@ -216,7 +216,7 @@ class GhostFuncDriver:
 
     def _run_turn(self, thread: GoThreadInfo, args: List[Any], kwargs: Dict[str, Any]) -> Tuple[Any, bool]:
         pycontext = thread.last_turn().pycontext
-        chat = thread_to_chat(thread.id, [], thread)
+        chat = thread_to_prompt(thread.id, [], thread)
         llm_api = self._get_llm_api()
         message = llm_api.chat_completion(chat)
         thread.append(message)
@@ -267,8 +267,8 @@ class GhostFuncDriver:
         return result, True
 
     def _ask_confirm_error(self, thread: GoThreadInfo, error: Exception) -> bool:
-        chat = thread_to_chat(thread.id, [], thread)
-        chat.appending.append(
+        chat = thread_to_prompt(thread.id, [], thread)
+        chat.added.append(
             Role.SYSTEM.new(
                 content=f"Catch Error: {error} \nIf the error is expected, return `ok`, otherwise return `false`"
             )

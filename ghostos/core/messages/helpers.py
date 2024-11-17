@@ -1,4 +1,4 @@
-from typing import Iterable, List, Union, Dict
+from typing import Iterable, List, Union, Dict, Optional
 from ghostos.core.messages.message import Message, Role, MessageClass
 
 __all__ = [
@@ -6,13 +6,16 @@ __all__ = [
 ]
 
 
-def copy_messages(messages: Iterable[Message]) -> List[Message]:
+def copy_messages(messages: Iterable[Message], stages: Optional[List[str]] = None) -> List[Message]:
     """
     syntax sugar for copy
     """
     result = []
+    if stages:
+        stages = set(stages)
     for message in messages:
-        result.append(message.get_copy())
+        if not stages or message.stage in stages:
+            result.append(message.get_copy())
     return result
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from abc import ABC, abstractmethod
 
-from typing import List, Iterable, Optional, Union, Callable, Self
+from typing import List, Iterable, Optional, Union, Callable, Self, Set
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
@@ -34,7 +34,7 @@ class Prompt(BaseModel):
     system: List[Message] = Field(default_factory=list, description="system messages")
     history: List[Message] = Field(default_factory=list)
     inputs: List[Message] = Field(default_factory=list, description="input messages")
-    appending: List[Message] = Field(default_factory=list, description="appending messages")
+    added: List[Message] = Field(default_factory=list, description="appending messages")
 
     functions: List[LLMFunc] = Field(default_factory=list)
     function_call: Optional[str] = Field(default=None, description="function call")
@@ -55,33 +55,33 @@ class Prompt(BaseModel):
                 contents.append(message.get_content())
         return "\n\n".join(contents)
 
-    def get_messages(self, with_system: bool = True) -> List[Message]:
+    def get_messages(self, with_system: bool = True, stages: Optional[List[str]] = None) -> List[Message]:
         """
         返回所有的消息.
         """
         messages = []
+        if stages:
+            stage_set = set(stages)
+        else:
+            stage_set = set()
+
         # combine system messages into one
         if with_system and self.system:
             system_message = Role.SYSTEM.new(content=self.system_prompt())
-            messages.append(system_message)
+            messages = join_messages_by_stages(messages, stage_set, system_message)
         if self.history:
-            messages.extend(self.history)
+            messages = join_messages_by_stages(messages, stage_set, *self.history)
         if self.inputs:
-            messages.extend(self.inputs)
-        if self.appending:
-            messages.extend(self.appending)
-        results = []
-        for message in messages:
-            if message.is_empty():
-                continue
-            results.append(message)
-        return results
+            messages = join_messages_by_stages(messages, stage_set, *self.inputs)
+        if self.added:
+            messages = join_messages_by_stages(messages, stage_set, *self.added)
+        return messages
 
     def filter_messages(self, filter_: Callable[[Message], Optional[Message]]) -> None:
         self.system = self._filter_messages(self.system, filter_)
         self.history = self._filter_messages(self.history, filter_)
         self.inputs = self._filter_messages(self.inputs, filter_)
-        self.appending = self._filter_messages(self.appending, filter_)
+        self.added = self._filter_messages(self.added, filter_)
         return
 
     @staticmethod
@@ -128,33 +128,44 @@ class Prompt(BaseModel):
     def add(self, messages: Iterable[Message]) -> Iterable[Message]:
         for msg in messages:
             if msg.is_complete():
-                self.appending.append(msg.get_copy())
+                self.added.append(msg.get_copy())
             yield msg
+
+    def filter_stages(self, stages: Optional[List[str]] = None) -> Self:
+        if not stages:
+            return self
+        stages = set(stages)
+        copied = self.model_copy(deep=True)
+        if stages:
+            copied.history = join_messages_by_stages([],  stages, *copied.history)
+            copied.inputs = join_messages_by_stages([], stages, *copied.inputs)
+            copied.added = join_messages_by_stages([], stages, *copied.added)
+        return copied
 
     def fork(
             self,
             inputs: List[Message],
+            *,
             system: Optional[List[Message]] = None,
             description: str = "",
             prompt_id: Optional[str] = None,
             functions: Optional[List[Function]] = None,
             function_call: Optional[str] = None,
+            stages: Optional[List[str]] = None,
     ) -> Prompt:
         """
         fork current prompt.
         """
         prompt_id = prompt_id or helpers.uuid()
         description = description
-        copied = self.model_copy(update={
-            "id": prompt_id,
-            "description": description,
-        }, deep=True)
-        if copied.inputs:
+        copied = self.filter_stages(stages)
+        copied.id = prompt_id
+        copied.description = description
+        if inputs:
             copied.history.extend(copied.inputs)
+            copied.history.extend(copied.added)
             copied.inputs = inputs
-        if copied.appending:
-            copied.history.extend(copied.appending)
-            copied.appending = []
+            copied.added = []
         if system:
             copied.system = system
         if functions:
@@ -193,6 +204,15 @@ def run_prompt_pipeline(prompt: Prompt, pipeline: Iterable[PromptPipe]) -> Promp
     for f in pipeline:
         prompt = f.update_prompt(prompt)
     return prompt
+
+
+def join_messages_by_stages(messages: List[Message], stages: Set[str], *join: Message) -> List[Message]:
+    for msg in join:
+        if msg.is_empty() or not msg.is_complete():
+            continue
+        if not stages or msg.stage in stages:
+            messages.append(msg)
+    return messages
 
 
 class PromptStorage(ABC):

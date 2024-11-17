@@ -2,8 +2,8 @@ import time
 from typing import Union, Optional, Iterable, List, Tuple, TypeVar
 
 from ghostos.container import Container
-from ghostos.core.abcd.concepts import Shell, Conversation, Ghost, Scope, Background
-from ghostos.core.abcd.utils import get_ghost_driver
+from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
+from ghostos.abcd import get_ghost_driver
 from ghostos.core.messages import Message, Receiver
 from ghostos.core.runtime import (
     Event, GoProcess, EventBus,

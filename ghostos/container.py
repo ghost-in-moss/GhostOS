@@ -120,6 +120,10 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def providers(self, recursively: bool = True) -> Iterable[Provider]:
+        pass
+
+    @abstractmethod
     def destroy(self) -> None:
         """
         Manually delete the container to prevent memory leaks.
@@ -171,7 +175,7 @@ class Container(IoCContainer):
         inherit none singleton provider from parent
         """
         for provider in parent.providers(recursively=True):
-            if not provider.singleton() and not isinstance(provider, Bootstrapper):
+            if not provider.inheritable() and not isinstance(provider, Bootstrapper):
                 self._register(provider)
 
     def bootstrap(self) -> None:
@@ -427,6 +431,12 @@ class Provider(Generic[INSTANCE], metaclass=ABCMeta):
         if singleton, return True.
         """
         pass
+
+    def inheritable(self) -> bool:
+        """
+        if the provider is inheritable to sub container
+        """
+        return not self.singleton()
 
     def contract(self) -> ABSTRACT:
         """

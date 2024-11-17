@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple
 from os.path import dirname, join
 
-from ghostos.core.abcd import GhostOS
+from ghostos.abcd import GhostOS
 
 from ghostos.container import Container, Provider, Contracts
 

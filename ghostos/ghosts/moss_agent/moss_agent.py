@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from ghostos.helpers import import_from_path
 from ghostos.prompter import TextPrmt, Prompter
-from ghostos.core.abcd import GhostDriver, Operator, Agent, Session, StateValue, Action
+from ghostos.abcd import GhostDriver, Operator, Agent, Session, StateValue, Action
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, PyContext, Moss, MossRuntime
 from ghostos.core.messages import Message, Caller, Role

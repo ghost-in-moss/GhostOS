@@ -175,3 +175,17 @@ def test_model_with_subclass():
 
     f = Foo()
     assert f.bar.bar == "hello"
+
+
+def test_model_with_none_model_object():
+    class Foo:
+        foo = 123
+
+    err = None
+    try:
+
+        class Bar(BaseModel):
+            foo: Foo
+    except PydanticSchemaGenerationError as e:
+        err = e
+    assert err is not None

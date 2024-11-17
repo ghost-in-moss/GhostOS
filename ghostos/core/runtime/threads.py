@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 __all__ = [
     'GoThreads', 'GoThreadInfo', 'Turn',
-    'thread_to_chat',
+    'thread_to_prompt',
 ]
 
 
@@ -63,13 +63,13 @@ class Turn(BaseModel):
         if pycontext is not None:
             self.pycontext = pycontext
 
-    def event_messages(self) -> Iterable[Message]:
+    def event_messages(self, show_instruction: bool = False) -> Iterable[Message]:
         if not self.event:
             return []
-        yield from self.iter_event_message(self.event)
+        yield from self.iter_event_message(self.event, show_instruction)
 
     @staticmethod
-    def iter_event_message(event: Event) -> Iterable[Message]:
+    def iter_event_message(event: Event, show_instruction: bool = True) -> Iterable[Message]:
         if event is None:
             return []
 
@@ -86,7 +86,7 @@ class Turn(BaseModel):
                 yield message
 
         # instruction after messages.
-        if event.instruction:
+        if show_instruction and event.instruction:
             yield Role.new_system(content=event.instruction)
 
     def messages(self) -> Iterable[Message]:
@@ -284,34 +284,37 @@ class GoThreadInfo(BaseModel):
     def thread_copy(self, update: Optional[dict] = None) -> "GoThreadInfo":
         return self.model_copy(update=update, deep=True)
 
-    def to_prompt(self, system: List[Message]) -> Prompt:
+    def to_prompt(self, system: List[Message], stages: Optional[List[str]] = None) -> Prompt:
         turn_id = self.last_turn().turn_id
         history = list(self.get_history_messages())
         inputs = []
         appending = []
         current_turn = self.current
         if current_turn is not None:
-            inputs = list(current_turn.event_messages())
+            inputs = list(current_turn.event_messages(show_instruction=True))
             appending = current_turn.added
 
         prompt = Prompt(
             description=f"created from thread {self.id} turn {turn_id}",
             system=system,
-            history=copy_messages(history),
-            inputs=copy_messages(inputs),
-            appending=copy_messages(appending),
+            history=copy_messages(history, stages),
+            inputs=copy_messages(inputs, stages),
+            added=copy_messages(appending, stages),
         )
         return prompt
 
 
-def thread_to_chat(chat_id: str, system: List[Message], thread: GoThreadInfo) -> Prompt:
+def thread_to_prompt(
+        prompt_id: str,
+        system: List[Message],
+        thread: GoThreadInfo,
+        stages: Optional[List[str]] = None
+) -> Prompt:
     """
     将 thread 转换成基准的 chat.
-    :param chat_id:
-    :param system:
-    :param thread:
-    :return:
     """
+    if stages is None:
+        stages = [""]
     history = list(thread.get_history_messages())
     inputs = []
     appending = []
@@ -320,14 +323,14 @@ def thread_to_chat(chat_id: str, system: List[Message], thread: GoThreadInfo) ->
         inputs = list(current_turn.event_messages())
         appending = current_turn.added
 
-    chat = Prompt(
-        id=chat_id,
+    prompt = Prompt(
+        id=prompt_id,
         system=system,
-        history=copy_messages(history),
-        inputs=copy_messages(inputs),
-        appending=copy_messages(appending),
+        history=copy_messages(history, stages),
+        inputs=copy_messages(inputs, stages),
+        added=copy_messages(appending, stages),
     )
-    return chat
+    return prompt
 
 
 class GoThreads(ABC):
