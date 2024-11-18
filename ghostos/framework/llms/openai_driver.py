@@ -1,5 +1,4 @@
 from typing import List, Iterable, Union, Optional
-import time
 from openai import OpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
@@ -9,6 +8,7 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 from ghostos.contracts.logger import LoggerItf
+from ghostos.helpers import timestamp
 from ghostos.core.messages import (
     Message, OpenAIMessageParser, DefaultOpenAIMessageParser,
     CompletionUsagePayload, Role,
@@ -119,7 +119,7 @@ class OpenAIAdapter(LLMApi):
         if not messages:
             raise AttributeError("empty chat!!")
         try:
-            prompt.run_start = round(time.time(), 4)
+            prompt.run_start = timestamp()
             self._logger.info(f"start chat completion for prompt {prompt.id}")
             return self._client.chat.completions.create(
                 messages=messages,
@@ -137,7 +137,7 @@ class OpenAIAdapter(LLMApi):
             )
         finally:
             self._logger.info(f"end chat completion for prompt {prompt.id}")
-            prompt.run_end = round(time.time(), 4)
+            prompt.run_end = timestamp()
 
     def chat_completion(self, prompt: Prompt) -> Message:
         try:

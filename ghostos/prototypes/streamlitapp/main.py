@@ -71,8 +71,8 @@ def main_run(bootstrap: BOOTSTRAP) -> None:
     with st.sidebar:
         router.render_homepage()
         # render page links
-        with st.expander(label=_("Navigator"), expanded=False, icon=":material/menu:"):
-            router.render_navigator(use_container_width=True)
+        # with st.expander(label=_("Navigator"), expanded=False, icon=":material/menu:"):
+        #     router.render_navigator(use_container_width=True)
         # with helper mode toggle
         # open_navigator = st.button(
         #     label=_("GhostOS Navigator"),
@@ -89,7 +89,7 @@ def main_run(bootstrap: BOOTSTRAP) -> None:
                 label=_("Debug Mode"),
                 tips=_("switch debug mode at every page"),
             )
-        st.subheader(_("page menu"))
+        st.subheader(_("Menu"))
 
     # global navigator dialog
     # if open_navigator:

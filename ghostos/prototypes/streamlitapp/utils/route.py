@@ -184,7 +184,7 @@ class Router:
         self.default_menu_tree = default_menu
         self.default_sidebar_buttons = default_sidebar_buttons
         self.default_navigator_names = navigator_page_names
-        self.current_page = current_page if current_page is not None else self.home
+        self.current_page: str = current_page if current_page is not None else self.home
 
     def with_current(self, route: Route) -> Self:
         self.current_page = route.label()

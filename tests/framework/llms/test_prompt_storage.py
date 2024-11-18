@@ -13,4 +13,6 @@ def test_prompt_storage_baseline():
 
     prompts.save(prompt)
     got = prompts.get(id_)
+    assert got.inputs == prompt.inputs
+    assert got.id == prompt.id
     assert got == prompt

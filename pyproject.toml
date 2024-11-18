@@ -45,6 +45,7 @@ clear_runtime = "ghostos.scripts.clear_runtime:main"
 hello = "ghostos.scripts.cli.run_helloworld:main"
 aifunc = "ghostos.scripts.cli.run_aifunc:main"
 console = "ghostos.scripts.cli.run_console:main"
+ghost = "ghostos.scripts.cli.run_streamlit_ghost:main"
 
 [build-system]
 requires = ["poetry-core"]

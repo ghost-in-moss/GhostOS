@@ -2,6 +2,8 @@ from typing import Optional, List
 from ghostos.prototypes.streamlitapp.utils.route import Route, Router, Link
 from ghostos.core.messages import Message
 from ghostos.core.aifunc import ExecFrame
+from ghostos.abcd import Ghost
+from ghostos.entity import EntityMeta, from_entity_meta, get_entity
 from enum import Enum
 from pydantic import Field
 
@@ -9,16 +11,33 @@ from pydantic import Field
 class PagePath(str, Enum):
     HOMEPAGE = "ghostos.prototypes.streamlitapp.pages.homepage"
     AIFUNCS = "ghostos.prototypes.streamlitapp.pages.aifuncs"
+    GHOSTOS = "ghostos.prototypes.streamlitapp.pages.ghosts"
 
     def suffix(self, attr_name: str):
         return self.value + attr_name
+
+
+# --- ghosts --- #
+
+class GhostChatPage(Route):
+    link = Link(
+        name="ghost_chat",
+        import_path=PagePath.GHOSTOS.suffix(".chat:main"),
+        streamlit_icon=":material/smart_toy:",
+        button_help="todo",
+        antd_icon="robot",
+    )
+    ghost_meta: Optional[EntityMeta] = Field(default=None, description="ghost meta")
+
+    def get_ghost(self) -> Ghost:
+        return get_entity(self.ghost_meta, Ghost)
 
 
 # --- home --- #
 
 class Home(Route):
     link = Link(
-        name="Home",
+        name="GhostOS",
         import_path=PagePath.HOMEPAGE.suffix(":home"),
         streamlit_icon=":material/home:",
         button_help="help",
@@ -107,6 +126,7 @@ def default_router() -> Router:
             GhostOSHost(),
             AIFuncListRoute(),
             AIFuncDetailRoute(),
+            GhostChatPage(),
         ],
         home=Home.label(),
         navigator_page_names=[

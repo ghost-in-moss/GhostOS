@@ -59,8 +59,9 @@ class GhostOSImpl(GhostOS):
             process_id: Optional[str] = None,
     ) -> Shell:
         if name not in self._ghostos_config.shells:
-            raise NotImplementedError(f"Shell `{name}` not implemented")
-        shell_conf = self._ghostos_config.shells[name]
+            shell_conf = ShellConf()
+        else:
+            shell_conf = self._ghostos_config.shells[name]
         process = self._processes.get_process(shell_id)
         if process is None:
             process = GoProcess.new(shell_id=shell_id, process_id=process_id)

@@ -12,6 +12,7 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from pydantic import BaseModel, Field
 from ghostos import helpers
 from ghostos.core.messages import Message, Role, Payload
+from ghostos.helpers import timestamp
 from .configs import ModelConf
 from .tools import LLMFunc, FunctionalToken
 
@@ -46,10 +47,10 @@ class Prompt(BaseModel):
     # system info
     output: List[Message] = Field(default_factory=list)
     error: Optional[str] = Field(default=None, description="error message")
-    created: float = Field(default_factory=lambda: round(time.time(), 4))
+    created: int = Field(default_factory=timestamp)
     model: Optional[ModelConf] = Field(default=None, description="model conf")
-    run_start: float = Field(default=0.0, description="start time")
-    run_end: float = Field(default=0.0, description="end time")
+    run_start: int = Field(default=0, description="start time")
+    run_end: int = Field(default=0, description="end time")
 
     def system_prompt(self) -> str:
         contents = []
