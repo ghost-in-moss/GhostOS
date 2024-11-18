@@ -100,11 +100,11 @@ def main():
     if _all or parsed.prompts:
         cleared = clear_directory(join(runtime_dir, "prompts"), recursive=True)
         done += 1
-        print(f"clear runtime/cache files: {cleared}")
+        print(f"clear runtime/prompts files: {cleared}")
     if _all or parsed.logs:
         cleared = clear_directory(join(runtime_dir, "logs"), recursive=True)
         done += 1
-        print(f"clear runtime/cache files: {cleared}")
+        print(f"clear runtime/logs files: {cleared}")
 
     if not done:
         print(f"no files cleared. please check arguments by '-h' option")
