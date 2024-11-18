@@ -53,6 +53,7 @@ def fire_session_event(session: Session, event: Event) -> Optional[Operator]:
         # if event is intercepted, stop the run.
         return None
     driver = get_ghost_driver(session.ghost)
+    session.thread = driver.truncate(session)
     return driver.on_event(session, event)
 
 

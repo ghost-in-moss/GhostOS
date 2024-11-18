@@ -1,10 +1,11 @@
 from typing import Union, Iterable, ClassVar
 
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
-from ghostos.abcd.thoughts import LLMThought
+from ghostos.abcd.thoughts import LLMThought, Thought
 from ghostos.container import Provider
-from ghostos.core.runtime import Event
+from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.messages import Role
+from ghostos.core.llms import Prompt
 from ghostos.entity import ModelEntity
 from ghostos.prompter import TextPrmt, Prompter
 from ghostos.identifier import Identifier
@@ -20,6 +21,7 @@ class Chatbot(ModelEntity, Agent):
     persona: str = Field(description="persona of the chatbot")
     instruction: str = Field(description="instruction of the chatbot")
     llm_api: str = Field(default="", description="llm api of the chatbot")
+    history_turns: int = Field(default=20, description="history turns of thread max turns")
 
     ArtifactType: ClassVar = None
     ContextType: ClassVar = None
@@ -51,11 +53,35 @@ class ChatbotDriver(GhostDriver[Chatbot]):
         )
 
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
-        thought = LLMThought(llm_api=self.ghost.llm_api)
+        method = getattr(self, f"on_{event.type}", None)
+        if method is not None:
+            return method(session, event)
+        return self.default_handle_event(session, event)
 
+    def thought(self, session: Session) -> Thought:
+        thought = LLMThought(llm_api=self.ghost.llm_api)
+        return thought
+
+    def prompt(self, session: Session) -> Prompt:
         system_prompter = self.get_system_prompter()
         system_message = Role.SYSTEM.new(content=system_prompter.get_prompt(session.container))
         prompt = session.thread.to_prompt([system_message])
+        return prompt
+
+    def truncate(self, session: Session) -> GoThreadInfo:
+        thread = session.thread
+        thread.history = thread.history[-self.ghost.history_turns:]
+        return thread
+
+    def default_handle_event(self, session: Session, event: Event) -> Union[Operator, None]:
+        # update session thread
+        session.thread.new_turn(event)
+        # get thought
+        thought = self.thought(session)
+        # get prompt
+        prompt = self.prompt(session)
+
+        # take action
         prompt, op = thought.think(session, prompt)
         if op is not None:
             return op

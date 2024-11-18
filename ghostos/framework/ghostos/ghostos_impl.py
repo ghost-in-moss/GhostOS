@@ -42,6 +42,7 @@ class GhostOSImpl(GhostOS):
     ):
         self.contracts.validate(container)
         self._container = container
+        self._logger = self._container.force_fetch(LoggerItf)
         self._processes = container.force_fetch(GoProcesses)
         self._configs = container.force_fetch(Configs)
         self._ghostos_config = self._configs.get(GhostOSConfig)
@@ -63,8 +64,12 @@ class GhostOSImpl(GhostOS):
         process = self._processes.get_process(shell_id)
         if process is None:
             process = GoProcess.new(shell_id=shell_id, process_id=process_id)
+            self._logger.info(f"Created shell `{shell_id}` process `{process_id}`")
         elif process_id is not None and process.process_id != process_id:
             process = GoProcess.new(shell_id=shell_id, process_id=process_id)
+            self._logger.info(f"Created shell `{shell_id}` new process `{process_id}`")
+        else:
+            self._logger.info(f"get shell `{shell_id}` new process `{process.process_id}`")
         self._processes.save_process(process)
 
         # prepare container

@@ -31,7 +31,7 @@ class LLMApi(ABC):
         pass
 
     @abstractmethod
-    def parse_chat(self, chat: Prompt) -> Prompt:
+    def parse_prompt(self, prompt: Prompt) -> Prompt:
         """
         parse chat by llm api default logic. Functional tokens for example.
         this method is used to test.

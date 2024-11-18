@@ -12,6 +12,7 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from pydantic import BaseModel, Field
 from ghostos import helpers
 from ghostos.core.messages import Message, Role, Payload
+from .configs import ModelConf
 from .tools import LLMFunc, FunctionalToken
 
 __all__ = [
@@ -46,6 +47,9 @@ class Prompt(BaseModel):
     output: List[Message] = Field(default_factory=list)
     error: Optional[str] = Field(default=None, description="error message")
     created: float = Field(default_factory=lambda: round(time.time(), 4))
+    model: Optional[ModelConf] = Field(default=None, description="model conf")
+    run_start: float = Field(default=0.0, description="start time")
+    run_end: float = Field(default=0.0, description="end time")
 
     def system_prompt(self) -> str:
         contents = []
@@ -137,7 +141,7 @@ class Prompt(BaseModel):
         stages = set(stages)
         copied = self.model_copy(deep=True)
         if stages:
-            copied.history = join_messages_by_stages([],  stages, *copied.history)
+            copied.history = join_messages_by_stages([], stages, *copied.history)
             copied.inputs = join_messages_by_stages([], stages, *copied.inputs)
             copied.added = join_messages_by_stages([], stages, *copied.added)
         return copied

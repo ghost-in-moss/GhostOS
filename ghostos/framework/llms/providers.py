@@ -7,6 +7,7 @@ from ghostos.framework.llms.llms import LLMsImpl
 from ghostos.framework.llms.openai_driver import OpenAIDriver, LiteLLMDriver
 from ghostos.framework.llms.prompt_storage_impl import PromptStorageImpl
 from ghostos.contracts.workspace import Workspace
+from ghostos.contracts.logger import LoggerItf
 
 __all__ = ['ConfigBasedLLMsProvider', 'PromptStorageInWorkspaceProvider']
 
@@ -35,11 +36,12 @@ class ConfigBasedLLMsProvider(Provider[LLMs]):
 
         configs = con.force_fetch(Configs)
         storage = con.force_fetch(PromptStorage)
+        logger = con.force_fetch(LoggerItf)
         parser = con.get(OpenAIMessageParser)
 
         conf = configs.get(LLMsYamlConfig)
-        openai_driver = OpenAIDriver(storage, parser)
-        lite_llm_driver = LiteLLMDriver(storage, parser)
+        openai_driver = OpenAIDriver(storage, logger, parser)
+        lite_llm_driver = LiteLLMDriver(storage, logger, parser)
 
         # register default drivers.
         llms = LLMsImpl(conf=conf, default_driver=openai_driver)

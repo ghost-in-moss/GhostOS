@@ -40,7 +40,7 @@ class ConsoleApp(Background):
         self._ghost = ghost
         self._username = username
         self._shell_name = shell_name
-        self._shell_id = shell_id if shell_id else uuid()
+        self._shell_id = shell_id if shell_id else shell_name
         self._process_id = process_id
         self._console = Console()
         self._logger = get_console_logger()
@@ -51,7 +51,7 @@ class ConsoleApp(Background):
         self._debug = debug
         self._worker_num = worker_num
         if not welcome_user_message:
-            welcome_user_message = "the conversation is going to begin, please welcome user and introduce your self"
+            welcome_user_message = "the conversation is going to begin, please welcome user"
         self._welcome_user_message = welcome_user_message
         self._on_create_message = on_create_message
         self._main_task_id = ""

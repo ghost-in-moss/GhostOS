@@ -68,9 +68,11 @@ class LLMThought(Thought[Operator]):
         llm_api = self.get_llm_api(session)
 
         streaming = not session.upstream.completes_only()
+        session.logger.info(f"start llm thinking on prompt {prompt.id}")
         items = llm_api.deliver_chat_completion(prompt, streaming)
         messages, callers = session.respond(items, self.message_stage)
         prompt.added.extend(messages)
+        session.logger.info(f"llm thinking on prompt {prompt.id} is done")
 
         for caller in callers:
             if caller.name in self.actions:

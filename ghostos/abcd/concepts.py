@@ -11,6 +11,7 @@ from ghostos.prompter import Prompter, DataPrompter, DataPrompterDriver
 from ghostos.core.runtime import (
     TaskState,
 )
+from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
@@ -139,6 +140,14 @@ class GhostDriver(Generic[G], ABC):
         """
         all the state machine is only handling session event with the predefined operators.
         """
+        pass
+
+    @abstractmethod
+    def truncate(self, session: Session) -> GoThreadInfo:
+        pass
+
+    @abstractmethod
+    def prompt(self, session: Session) -> Prompt:
         pass
 
 

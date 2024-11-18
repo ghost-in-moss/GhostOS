@@ -148,6 +148,8 @@ def get_debug_logger(
         _debug_file_handler = logging.FileHandler("debug.log")
         if debug:
             _debug_file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)")
+        _debug_file_handler.setFormatter(formatter)
         logger.addHandler(_debug_file_handler)
     return LoggerAdapter(logger, extra=extra)
 

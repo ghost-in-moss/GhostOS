@@ -1,5 +1,5 @@
 from typing import List, Iterable, Union, Optional
-
+import time
 from openai import OpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
@@ -8,7 +8,7 @@ from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
-
+from ghostos.contracts.logger import LoggerItf
 from ghostos.core.messages import (
     Message, OpenAIMessageParser, DefaultOpenAIMessageParser,
     CompletionUsagePayload, Role,
@@ -75,12 +75,14 @@ class OpenAIAdapter(LLMApi):
             model_conf: ModelConf,
             parser: OpenAIMessageParser,
             storage: PromptStorage,
+            logger: LoggerItf,
             # deprecated:
             functional_token_prompt: Optional[str] = None,
     ):
         self._service = service_conf
         self._model = model_conf
         self._storage: PromptStorage = storage
+        self._logger = logger
         http_client = None
         if service_conf.proxy:
             transport = SyncProxyTransport.from_url(service_conf.proxy)
@@ -109,32 +111,38 @@ class OpenAIAdapter(LLMApi):
     def parse_message_params(self, messages: List[Message]) -> List[ChatCompletionMessageParam]:
         return list(self._parser.parse_message_list(messages))
 
-    def _chat_completion(self, chat: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
-        chat = self.parse_chat(chat)
+    def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
+        prompt = self.parse_prompt(prompt)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
-        messages = chat.get_messages()
+        messages = prompt.get_messages()
         messages = self.parse_message_params(messages)
         if not messages:
             raise AttributeError("empty chat!!")
-        return self._client.chat.completions.create(
-            messages=messages,
-            model=self._model.model,
-            function_call=chat.get_openai_function_call(),
-            functions=chat.get_openai_functions(),
-            tools=chat.get_openai_tools(),
-            max_tokens=self._model.max_tokens,
-            temperature=self._model.temperature,
-            n=self._model.n,
-            timeout=self._model.timeout,
-            stream=stream,
-            stream_options=include_usage,
-            **self._model.kwargs,
-        )
-
-    def chat_completion(self, chat: Prompt) -> Message:
         try:
-            message: ChatCompletion = self._chat_completion(chat, stream=False)
-            chat.output = [message]
+            prompt.run_start = round(time.time(), 4)
+            self._logger.info(f"start chat completion for prompt {prompt.id}")
+            return self._client.chat.completions.create(
+                messages=messages,
+                model=self._model.model,
+                function_call=prompt.get_openai_function_call(),
+                functions=prompt.get_openai_functions(),
+                tools=prompt.get_openai_tools(),
+                max_tokens=self._model.max_tokens,
+                temperature=self._model.temperature,
+                n=self._model.n,
+                timeout=self._model.timeout,
+                stream=stream,
+                stream_options=include_usage,
+                **self._model.kwargs,
+            )
+        finally:
+            self._logger.info(f"end chat completion for prompt {prompt.id}")
+            prompt.run_end = round(time.time(), 4)
+
+    def chat_completion(self, prompt: Prompt) -> Message:
+        try:
+            message: ChatCompletion = self._chat_completion(prompt, stream=False)
+            prompt.output = [message]
             pack = self._parser.from_chat_completion(message.choices[0].message)
             # add completion usage
             self._model.set(pack)
@@ -146,16 +154,16 @@ class OpenAIAdapter(LLMApi):
                 pack.chunk = False
             return pack
         except Exception as e:
-            chat.error = str(e)
+            prompt.error = str(e)
             raise
         finally:
-            self._storage.save(chat)
+            self._storage.save(prompt)
 
-    def chat_completion_chunks(self, chat: Prompt) -> Iterable[Message]:
+    def chat_completion_chunks(self, prompt: Prompt) -> Iterable[Message]:
         try:
-            chunks: Iterable[ChatCompletionChunk] = self._chat_completion(chat, stream=True)
+            chunks: Iterable[ChatCompletionChunk] = self._chat_completion(prompt, stream=True)
             messages = self._parser.from_chat_completion_chunks(chunks)
-            prompt_payload = PromptPayload.from_prompt(chat)
+            prompt_payload = PromptPayload.from_prompt(prompt)
             output = []
             for chunk in messages:
                 yield chunk
@@ -163,20 +171,16 @@ class OpenAIAdapter(LLMApi):
                     self._model.set(chunk)
                     prompt_payload.set(chunk)
                     output.append(chunk)
-            chat.output = output
+            prompt.output = output
         except Exception as e:
-            chat.error = str(e)
+            prompt.error = str(e)
+            raise
         finally:
-            self._storage.save(chat)
+            self._storage.save(prompt)
 
-    def parse_chat(self, chat: Prompt) -> Prompt:
-        # if not chat.functional_tokens:
-        #     return chat
-        # prompt = FunctionalTokenPrompt(self._functional_token_prompt)
-        # content = prompt.format_tokens(chat.functional_tokens)
-        # message = MessageType.DEFAULT.new_system(content=content)
-        # chat.system.append(message)
-        return chat
+    def parse_prompt(self, prompt: Prompt) -> Prompt:
+        prompt.model = self._model
+        return prompt
 
 
 class OpenAIDriver(LLMDriver):
@@ -184,17 +188,18 @@ class OpenAIDriver(LLMDriver):
     adapter
     """
 
-    def __init__(self, storage: PromptStorage, parser: Optional[OpenAIMessageParser] = None):
+    def __init__(self, storage: PromptStorage, logger: LoggerItf, parser: Optional[OpenAIMessageParser] = None):
         if parser is None:
             parser = DefaultOpenAIMessageParser(None, None)
         self._parser = parser
         self._storage = storage
+        self._logger = logger
 
     def driver_name(self) -> str:
         return OPENAI_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
-        return OpenAIAdapter(service, model, self._parser, self._storage)
+        return OpenAIAdapter(service, model, self._parser, self._storage, self._logger)
 
 
 class LitellmAdapter(OpenAIAdapter):
@@ -245,8 +250,9 @@ class OpenAIDriverBootstrapper(Bootstrapper):
 
     def bootstrap(self, container: Container) -> None:
         llms = container.force_fetch(LLMs)
+        logger = container.force_fetch(LoggerItf)
         storage = container.force_fetch(PromptStorage)
-        openai_driver = OpenAIDriver(storage)
-        lite_llm_driver = LiteLLMDriver(storage)
+        openai_driver = OpenAIDriver(storage, logger)
+        lite_llm_driver = LiteLLMDriver(storage, logger)
         llms.register_driver(openai_driver)
         llms.register_driver(lite_llm_driver)
