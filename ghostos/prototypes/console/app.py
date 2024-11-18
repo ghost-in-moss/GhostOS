@@ -72,6 +72,7 @@ class ConsoleApp(Background):
     def run(self):
         # self._shell.background_run(self._worker_num)
         self._shell.submit(self._print_output)
+        self._shell.background_run(self._worker_num, self)
         asyncio.run(self._main())
 
     def close(self):

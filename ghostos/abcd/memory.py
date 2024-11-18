@@ -2,25 +2,32 @@ from abc import ABC, abstractmethod
 from typing import Type, Iterable
 from ghostos.entity import EntityClass
 from ghostos.identifier import Identifier, Identical
-from .concepts import Scope
+from ghostos.helpers import generate_import_path
+from .concepts import Session, Scope
 
 
 class Memory(EntityClass, Identical, ABC):
+    """
+    memory element
+    """
 
     @abstractmethod
-    def make_id(self, scope: Scope) -> str:
+    def make_id(self, session: Session) -> str:
         """
-        memory instance is unique to a certain scope by generate unique id from scope ids.
-        :param scope:
+        memory instance is unique to session, usually create unique id from session scope
         :return:
         """
         pass
+
+    @classmethod
+    def memory_kind(cls) -> str:
+        return generate_import_path(cls)
 
 
 class Memories(ABC):
 
     @abstractmethod
-    def match(self, memory_type: Type[Memory]) -> bool:
+    def match(self, memory_kind: str) -> bool:
         pass
 
     @abstractmethod
