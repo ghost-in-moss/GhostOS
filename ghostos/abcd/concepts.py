@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import (
-    Type, Generic, Protocol, ClassVar, TypeVar,
+    Type, Generic, Protocol, ClassVar, TypeVar, Callable,
     Tuple, Optional, Iterable, List, Self, Union, Dict, Any
 )
 
@@ -303,6 +303,10 @@ class Shell(ABC):
 
     @abstractmethod
     def background_run(self, worker: int = 4, background: Optional[Background] = None) -> None:
+        pass
+
+    @abstractmethod
+    def submit(self, caller: Callable, *args, **kwargs):
         pass
 
     @abstractmethod

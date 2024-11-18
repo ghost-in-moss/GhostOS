@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from pydantic.errors import PydanticSchemaGenerationError
-from typing import TypedDict, Required, Iterable, List, Optional, Protocol
+from typing import TypedDict, Required, Iterable, List, Optional, ClassVar, Type
 from typing_extensions import Literal
 from datetime import datetime
 
@@ -198,3 +198,18 @@ def test_datetime_model():
 
     f = Foo()
     assert f.time.timestamp() > 0
+
+
+def test_model_with_subclass_define():
+    class Foo(BaseModel):
+        foo: int = 123
+        BarType: ClassVar[Optional[Type]] = None
+
+    class Foo2(Foo):
+        class BarType(BaseModel):
+            bar: int = 123
+
+        bar: BarType = Field(default_factory=BarType)
+
+    foo2 = Foo2()
+    assert foo2.bar.bar == 123

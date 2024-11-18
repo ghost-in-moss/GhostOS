@@ -7,7 +7,7 @@ from os import path
 import yaml
 
 __all__ = [
-    'LoggerItf', 'config_logging', 'get_logger', 'get_console_logger',
+    'LoggerItf', 'config_logging', 'get_logger', 'get_console_logger', 'get_debug_logger',
     'wrap_logger',
 ]
 
@@ -127,13 +127,28 @@ def get_console_logger(
 ) -> LoggerItf:
     logger = getLogger(name)
     if not logger.hasHandlers():
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
         _console_handler = logging.StreamHandler()
         if debug:
             _console_handler.setLevel(logging.DEBUG)
         _console_formatter = PleshakovFormatter()
         _console_handler.setFormatter(_console_formatter)
         logger.addHandler(_console_handler)
+    return LoggerAdapter(logger, extra=extra)
+
+
+def get_debug_logger(
+        name: str = "__ghostos_debug__",
+        extra: Optional[dict] = None,
+        debug: bool = False,
+) -> LoggerItf:
+    logger = getLogger(name)
+    if not logger.hasHandlers():
+        logger.setLevel(logging.INFO)
+        _debug_file_handler = logging.FileHandler("debug.log")
+        if debug:
+            _debug_file_handler.setLevel(logging.DEBUG)
+        logger.addHandler(_debug_file_handler)
     return LoggerAdapter(logger, extra=extra)
 
 

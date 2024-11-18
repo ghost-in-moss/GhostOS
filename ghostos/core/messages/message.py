@@ -116,6 +116,10 @@ class MessageType(str, enum.Enum):
         return pack.type == cls.FINAL.value
 
     @classmethod
+    def is_text(cls, message: Message) -> bool:
+        return message.type == cls.TEXT.value or message.type == cls.DEFAULT.value
+
+    @classmethod
     def is_protocol_message(cls, message: Optional["Message"]) -> bool:
         if message is None:
             return True

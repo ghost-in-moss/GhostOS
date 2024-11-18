@@ -1,7 +1,8 @@
 import time
-from typing import Union, Optional, Iterable, List, Tuple, TypeVar
+from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable
 
 from ghostos.contracts.logger import LoggerItf
+from ghostos.contracts.pool import Pool
 from ghostos.container import Container, Provider
 from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
 from ghostos.abcd.utils import get_ghost_driver
@@ -58,7 +59,6 @@ class ShellImpl(Shell):
         )
         self._eventbus = container.force_fetch(EventBus)
         self._tasks = container.force_fetch(GoTasks)
-        self._workers: List[Thread] = []
         self._closed = False
         self._background_started = False
         self._logger = container.force_fetch(LoggerItf)
@@ -218,15 +218,18 @@ class ShellImpl(Shell):
             finally:
                 self._eventbus.notify_task(self._scope.task_id)
 
+    def submit(self, caller: Callable, *args, **kwargs):
+        pool = self.container().force_fetch(Pool)
+        pool.submit(caller, *args, **kwargs)
+
     def background_run(self, worker: int = 4, background: Optional[Background] = None) -> None:
         self._validate_closed()
         if self._background_started:
             raise RuntimeError(f'background run already started')
 
         for i in range(worker):
-            t = Thread(target=self._run_background_worker, args=(background,))
-            t.start()
-            self._workers.append(t)
+            pool = self.container().force_fetch(Pool)
+            pool.submit(self._run_background_worker, background)
 
     def _run_background_worker(self, background: Optional[Background] = None):
         def is_stopped() -> bool:
@@ -267,11 +270,9 @@ class ShellImpl(Shell):
         if self._closed:
             return
         self._closed = True
-        if self._workers:
-            for t in self._workers:
-                t.join()
+        pool = self.container().force_fetch(Pool)
+        pool.shutdown()
         self._container.destroy()
         del self._container
-        del self._workers
         del self._eventbus
         del self._tasks

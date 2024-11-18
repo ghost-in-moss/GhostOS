@@ -4,6 +4,7 @@ from ghostos.scripts.cli.utils import (
     parse_args_modulename_or_filename, get_or_create_module_from_name,
 )
 from ghostos.bootstrap import make_app_container, get_ghostos
+from ghostos.prototypes.console import ConsoleApp
 
 
 def get_ghost() -> Ghost:
@@ -28,16 +29,5 @@ def main():
     ghost = get_ghost()
     container = make_app_container(workspace_dir)
     ghostos = get_ghostos(container)
-    shell = ghostos.create_shell(
-        "console",
-        "console",
-    )
-    conversation = shell.sync(ghost)
-    exit(0)
-    with conversation:
-        receiver = conversation.talk("hello")
-        with receiver:
-            messages = receiver.wait()
-            for item in messages:
-                print(item.get_content())
-    shell.close()
+    app = ConsoleApp(ghostos=ghostos, ghost=ghost, username="")
+    app.run()

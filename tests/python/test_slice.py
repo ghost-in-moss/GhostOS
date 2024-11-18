@@ -54,3 +54,9 @@ def test_sort_dicts():
     values = sorted(cases, key=lambda x: x['a'], reverse=True)
     actual = [c['a'] for c in values]
     assert actual == [4, 3, 2, 1]
+
+
+def test_arr_tail():
+    arr = [1, 2, 3, 4]
+    assert arr[-2:] == [3, 4]
+    assert arr[-20:] == [1, 2, 3, 4]

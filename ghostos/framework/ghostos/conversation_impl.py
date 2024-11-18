@@ -117,6 +117,10 @@ class ConversationImpl(Conversation[G]):
             timeout: float = 0.0,
     ) -> Receiver:
         self._validate_closed()
+        # complete task_id
+        if not event.task_id:
+            event.task_id = self._scope.task_id
+
         stream, retriever = new_arr_connection(
             timeout=timeout,
             idle=self._conf.message_receiver_idle,
