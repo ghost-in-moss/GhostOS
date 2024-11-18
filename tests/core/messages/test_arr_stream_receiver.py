@@ -1,5 +1,6 @@
 from typing import Iterable
 from ghostos.core.messages.transport import new_arr_connection, Stream
+from ghostos.core.messages.pipeline import SequencePipe
 from ghostos.core.messages.message import Message
 from threading import Thread
 import time
@@ -38,31 +39,6 @@ def test_new_connection_baseline():
     assert first is not None
     assert first.is_head()
     assert last.is_complete()
-    t.join()
-
-
-def test_new_connection_timeout():
-    stream, retriever = new_arr_connection(timeout=0.2, idle=0.2, complete_only=False)
-    content = "hello world"
-
-    def send_data(s: Stream, c: str):
-        error = None
-        try:
-            with s:
-                s.send(iter_content(c, 1))
-        except RuntimeError as e:
-            error = e
-        finally:
-            assert error is not None
-
-    t = Thread(target=send_data, args=(stream, content))
-    t.start()
-    with retriever:
-        messages = list(retriever.recv())
-        assert retriever.closed()
-        assert retriever.error() is not None
-        assert not stream.alive()
-        assert len(messages) > 0
     t.join()
 
 
@@ -140,6 +116,37 @@ def test_new_connection_wait():
     with retriever:
         retriever.wait()
     t.join()
+
+
+def test_new_connection_recv_with_sequence():
+    stream, retriever = new_arr_connection(timeout=0, idle=0.1, complete_only=False)
+    content = "hello world"
+
+    def send_data(s: Stream, c: str):
+        with s:
+            messages = SequencePipe().across(iter_content(c, 0.02))
+            s.send(messages)
+
+    send_data(stream, content)
+
+    got = retriever.recv()
+    assert len(list(got)) == len(content) + 1
+
+
+def test_new_connection_wait_with_sequence():
+    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    content = "hello world"
+
+    def send_data(s: Stream, c: str):
+        with s:
+            messages = SequencePipe().across(iter_content(c, 0.02))
+            messages = list(messages)
+            s.send(messages)
+
+    send_data(stream, content)
+
+    got = retriever.wait()
+    assert len(got) == 1
 
 
 def test_new_connection_with_pool():

@@ -178,6 +178,9 @@ class ConversationImpl(Conversation[G]):
         self.close()
         return False
 
+    def __del__(self):
+        self.close()
+
     def close(self):
         if self._closed:
             return

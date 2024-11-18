@@ -136,7 +136,7 @@ class ArrayReceiver(Receiver):
     ):
         self._timeleft = timeleft
         self._idle = idle
-        self._chunks = deque()
+        self._streaming = deque()
         self._closed = False
         self._done = False
         self._error: Optional[Message] = None
@@ -146,8 +146,8 @@ class ArrayReceiver(Receiver):
         if self._closed:
             raise RuntimeError("Receiver is closed")
         while not self._done:
-            if len(self._chunks) > 0:
-                item = self._chunks.popleft()
+            if len(self._streaming) > 0:
+                item = self._streaming.popleft()
                 yield item
                 continue
             if not self._timeleft.alive():
@@ -156,9 +156,9 @@ class ArrayReceiver(Receiver):
                 break
             if self._idle:
                 time.sleep(self._idle)
-        if len(self._chunks) > 0:
-            yield from self._chunks
-            self._chunks = []
+        if len(self._streaming) > 0:
+            yield from self._streaming
+            self._streaming.clear()
         if self._error is not None:
             yield self._error
 
@@ -175,7 +175,7 @@ class ArrayReceiver(Receiver):
             return False
         else:
             if message.is_complete() or not self._complete_only:
-                self._chunks.append(message)
+                self._streaming.append(message)
             return True
 
     def cancel(self):
@@ -207,7 +207,7 @@ class ArrayReceiver(Receiver):
             return
         self._closed = True
         self._done = True
-        self._chunks = []
+        self._streaming.clear()
         self._timeleft = None
 
 

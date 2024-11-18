@@ -26,5 +26,8 @@ class NamedLoggerProvider(Provider[LoggerItf]):
 
     def factory(self, con: Container) -> Optional[LoggerItf]:
         logging.captureWarnings(True)
-        origin = logging.LoggerAdapter(logging.getLogger(self.logger_name))
-        return origin
+        if self.logger_name in logging.Logger.manager.loggerDict:
+            logger = logging.getLogger(self.logger_name)
+            origin = logging.LoggerAdapter(logger)
+            return origin
+        return get_console_logger(name=self.logger_name)

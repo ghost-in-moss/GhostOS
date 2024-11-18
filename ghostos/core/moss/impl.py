@@ -30,7 +30,11 @@ class MossCompilerImpl(MossCompiler):
         }
         self._injections: Dict[str, Any] = {}
         self._attr_prompts: List = []
+        self._compiled = False
         self._destroyed = False
+
+    def __del__(self):
+        self.destroy()
 
     def container(self) -> Container:
         return self._container
@@ -89,6 +93,7 @@ class MossCompilerImpl(MossCompiler):
         attr_prompts = {}
         for attr_name, value in self._attr_prompts:
             attr_prompts[attr_name] = value
+        self._compiled = True
         return MossRuntimeImpl(
             container=self._container,
             pycontext=self._pycontext.model_copy(deep=True),
@@ -115,6 +120,8 @@ class MossCompilerImpl(MossCompiler):
             return
         self._destroyed = True
         # container 先不 destroy.
+        if not self._compiled:
+            self._container.destroy()
         del self._container
         del self._pycontext
         del self._predefined_locals
@@ -179,6 +186,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
 
     def __del__(self):
         MossRuntime.instance_count -= 1
+        self.destroy()
 
     def _compile_moss(self) -> Moss:
         moss_type = self.moss_type()

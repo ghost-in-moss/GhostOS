@@ -1,7 +1,8 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any
 
 from ghostos.abcd import (
-    Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks
+    Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks,
+    Messenger,
 )
 from ghostos.abcd import get_ghost_driver
 from ghostos.core.messages import (
@@ -11,7 +12,7 @@ from ghostos.core.runtime import (
     TaskBrief, GoTaskStruct, TaskLocker, TaskPayload, GoTasks, TaskState,
     EventBus, Event, EventTypes,
     GoThreads,
-    Messenger, GoThreadInfo,
+    GoThreadInfo,
 )
 from ghostos.prompter import Prompter
 from ghostos.contracts.logger import wrap_logger, LoggerItf
@@ -99,6 +100,7 @@ class SessionImpl(Session[Ghost]):
     def __del__(self):
         # for gc test
         Session.instance_count -= 1
+        self.destroy()
 
     def _bootstrap(self):
         self.contracts.validate(self.container)
@@ -387,7 +389,6 @@ class SessionImpl(Session[Ghost]):
         if self._destroyed:
             return
         self._destroyed = True
-        self.locker.release()
         del self.locker
         self.container.destroy()
         del self.container

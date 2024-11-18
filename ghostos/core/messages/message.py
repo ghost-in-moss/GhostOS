@@ -1,6 +1,7 @@
 from __future__ import annotations
 import enum
 import time
+from datetime import datetime
 from typing import Optional, Dict, Set, Iterable, Union, List, Any, ClassVar, Type
 from typing_extensions import Self, Literal
 from abc import ABC, abstractmethod
@@ -229,7 +230,7 @@ class Message(BaseModel):
         """
         if msg_id is None:
             msg_id = uuid()
-        created = round(time.time(), 4)
+        created = round(time.time(), 3)
         return cls(
             role=role,
             name=name,
@@ -342,8 +343,8 @@ class Message(BaseModel):
             item = self
         if not item.msg_id:
             item.msg_id = uuid()
-        # if not self.created:
-        #     item.created = time.time()
+        if not self.created:
+            item.created = round(time.time(), 3)
         if item.seq == "chunk":
             item.seq = "head"
         return item
@@ -411,6 +412,9 @@ class Message(BaseModel):
     def is_head(self) -> bool:
         return self.seq == "head"
 
+    def is_chunk(self) -> bool:
+        return self.seq == "chunk"
+
     def get_seq(self) -> SeqType:
         return self.seq
 
@@ -419,6 +423,9 @@ class Message(BaseModel):
         dump a message dict without default value.
         """
         return self.model_dump(exclude_defaults=True)
+
+    def get_created(self) -> datetime:
+        return datetime.fromtimestamp(self.created)
 
     def __str__(self):
         return self.get_content()

@@ -3,6 +3,7 @@ from abc import abstractmethod
 from logging.config import dictConfig
 from logging import getLogger, LoggerAdapter, Logger
 from typing import Protocol, Optional
+from os import path
 import yaml
 
 __all__ = [
@@ -110,6 +111,9 @@ def config_logging(conf_path: str) -> None:
     configurate logging by yaml config
     :param conf_path: absolute path of yaml config file
     """
+    if not path.exists(conf_path):
+        return
+
     with open(conf_path) as f:
         content = f.read()
     data = yaml.safe_load(content)

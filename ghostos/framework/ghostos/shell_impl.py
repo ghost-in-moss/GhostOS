@@ -87,7 +87,7 @@ class ShellImpl(Shell):
 
         task = self._tasks.get_task(task_id)
         if task is None:
-            task = self.create_root_task(ghost, context)
+            task = self.create_root_task(task_id, ghost, context)
             self._logger.info("create root task task id %s for ghost", task_id)
 
         task.meta = to_entity_meta(ghost)
@@ -158,10 +158,10 @@ class ShellImpl(Shell):
 
     def create_root_task(
             self,
+            task_id: str,
             ghost: Ghost,
             context: Optional[Ghost.ContextType],
     ) -> GoTaskStruct:
-        task_id = uuid()
         id_ = get_identifier(ghost)
         context_meta = to_entity_meta(context) if context else None
         task = GoTaskStruct.new(

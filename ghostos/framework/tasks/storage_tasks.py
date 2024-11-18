@@ -1,5 +1,5 @@
 import time
-from typing import Optional, List, Iterable, Dict, Type, TypedDict
+from typing import Optional, List, Iterable, Type, TypedDict
 import yaml
 from ghostos.core.runtime import TaskState, TaskBrief, GoTaskStruct, GoTasks
 from ghostos.contracts.workspace import Workspace
@@ -7,7 +7,7 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage
 from ghostos.container import Provider, Container
 from ghostos.core.runtime.tasks import TaskLocker
-from ghostos.helpers import uuid
+from ghostos.helpers import uuid, timestamp
 
 __all__ = ['StorageGoTasksImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
 
@@ -77,7 +77,7 @@ class StorageGoTasksImpl(GoTasks):
             filename = self._get_task_filename(task.task_id)
             data = task.model_dump(exclude_defaults=True)
             content = yaml.safe_dump(data)
-            task.updated = int(time.time())
+            task.updated = timestamp()
             self._storage.put(filename, content.encode('utf-8'))
 
     @staticmethod

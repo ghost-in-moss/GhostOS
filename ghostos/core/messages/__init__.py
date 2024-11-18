@@ -13,5 +13,5 @@ from ghostos.core.messages.openai import (
     CompletionUsagePayload,
 )
 from ghostos.core.messages.buffers import Buffer, Flushed
-from ghostos.core.messages.helpers import copy_messages
+from ghostos.core.messages.utils import copy_messages
 from ghostos.core.messages.transport import Stream, Receiver, new_arr_connection

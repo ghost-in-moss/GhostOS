@@ -1,12 +1,11 @@
 from typing import Optional, List, Iterable, Dict, Any, Self
-import time
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Message, copy_messages, Role
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event, EventTypes
-from ghostos.helpers import uuid
+from ghostos.helpers import uuid, timestamp
 from contextlib import contextmanager
 
 __all__ = [
@@ -37,7 +36,7 @@ class Turn(BaseModel):
         description="The PyContext instance",
     )
     created: int = Field(
-        default_factory=lambda: int(round(time.time(), 0)),
+        default_factory=timestamp,
     )
     extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 

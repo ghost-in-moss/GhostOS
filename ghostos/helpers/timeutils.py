@@ -1,7 +1,7 @@
-from typing import Tuple
+from datetime import datetime
 import time
 
-__all__ = ['Timeleft']
+__all__ = ['Timeleft', 'timestamp_datetime', 'timestamp']
 
 
 class Timeleft:
@@ -21,3 +21,11 @@ class Timeleft:
     def passed(self) -> float:
         now = time.time()
         return now - self.start
+
+
+def timestamp_datetime() -> datetime:
+    return datetime.fromtimestamp(int(time.time()))
+
+
+def timestamp() -> int:
+    return int(time.time())

@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from pydantic.errors import PydanticSchemaGenerationError
 from typing import TypedDict, Required, Iterable, List, Optional, Protocol
 from typing_extensions import Literal
+from datetime import datetime
 
 
 def test_pydantic_new_typed_dict() -> None:
@@ -189,3 +190,11 @@ def test_model_with_none_model_object():
     except PydanticSchemaGenerationError as e:
         err = e
     assert err is not None
+
+
+def test_datetime_model():
+    class Foo(BaseModel):
+        time: datetime = Field(default_factory=datetime.now)
+
+    f = Foo()
+    assert f.time.timestamp() > 0

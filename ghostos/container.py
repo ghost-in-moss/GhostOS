@@ -168,6 +168,7 @@ class Container(IoCContainer):
         Container.instance_count += 1
 
     def __del__(self):
+        self.destroy()
         Container.instance_count -= 1
 
     def _inherit(self, parent: Container):
@@ -175,7 +176,7 @@ class Container(IoCContainer):
         inherit none singleton provider from parent
         """
         for provider in parent.providers(recursively=True):
-            if not provider.inheritable() and not isinstance(provider, Bootstrapper):
+            if provider.inheritable() and not isinstance(provider, Bootstrapper):
                 self._register(provider)
 
     def bootstrap(self) -> None:

@@ -2,7 +2,7 @@ from typing import Iterable, List, Optional, Dict
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from ghostos.core.messages.message import Message, MessageType
-from ghostos.core.messages.helpers import iter_messages
+from ghostos.core.messages.utils import iter_messages
 
 
 class Pipe(ABC):
@@ -27,6 +27,7 @@ def pipeline(pipes: Iterable[Pipe], messages: Iterable[Message]) -> Iterable[Mes
     outputs = messages
     for pipe in ordered:
         outputs = pipe.across(messages)
+        messages = outputs
     yield from outputs
 
 
@@ -39,32 +40,35 @@ class SequencePipe(Pipe):
         return SequencePipe()
 
     def across(self, messages: Iterable[Message]) -> Iterable[Message]:
-        head: Optional[Message] = None
+        buffer: Optional[Message] = None
         final: Optional[Message] = None
         for item in messages:
             if MessageType.is_protocol_message(item):
                 final = item
                 break
-            if head is None:
+            if buffer is None:
                 if item.is_complete():
-                    yield item
+                    buffer = item
+                    continue
                 else:
-                    head = item.as_head()
-                    yield head.get_copy()
+                    # yield head
+                    buffer = item.as_head()
+                    yield buffer.get_copy()
+                    continue
             else:
-                patched = head.patch(item)
+                patched = buffer.patch(item)
                 if patched:
                     if patched.is_complete():
-                        head = patched
-                        yield patched.get_copy()
+                        buffer = patched
+                        continue
                     else:
                         yield item.get_copy()
                 else:
-                    yield head.as_tail()
-                    head = item.as_head()
-                    yield head.get_copy()
-        if head is not None:
-            yield head.as_tail(copy=False)
+                    yield buffer.as_tail()
+                    buffer = item.as_head()
+                    continue
+        if buffer is not None:
+            yield buffer.as_tail(copy=False)
         if final is not None:
             yield final
 

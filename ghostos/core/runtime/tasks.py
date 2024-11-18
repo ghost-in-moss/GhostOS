@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from ghostos.identifier import Identifier, Identical
 from ghostos.entity import EntityMeta
 from ghostos.core.messages import Payload
+from ghostos.helpers import timestamp
 from contextlib import contextmanager
 
 __all__ = [
@@ -136,11 +137,11 @@ children task ids to wait
 
     # --- time related --- #
     created: int = Field(
-        default_factory=lambda: int(round(time.time(), 0)),
+        default_factory=timestamp,
         description="The time the task was created.",
     )
     updated: int = Field(
-        default=0,
+        default_factory=timestamp,
         description="The time the task was updated.",
     )
 
@@ -194,7 +195,9 @@ children task ids to wait
         self.children.append(task_id)
         child = self.new(
             task_id=task_id,
+            shell_id=self.shell_id,
             process_id=self.process_id,
+            depth=self.depth + 1,
             name=name,
             description=description,
             meta=meta,
@@ -235,7 +238,7 @@ children task ids to wait
         """
         return self.model_copy(
             update={
-                "updated": round(time.time(), 4),
+                "updated": timestamp(),
                 "turns": self.turns + 1,
             },
             deep=True,
@@ -357,7 +360,6 @@ class GoTasks(ABC):
         """
         获取多个任务的摘要信息.
         :param task_ids:
-        :param states:
         :return:
         """
         pass
