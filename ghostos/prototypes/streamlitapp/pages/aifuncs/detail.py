@@ -14,7 +14,7 @@ from ghostos.prototypes.streamlitapp.widgets.exec_frame import (
 )
 from ghostos.prototypes.streamlitapp.widgets.moss import render_pycontext
 from ghostos.prototypes.streamlitapp.widgets.messages import (
-    render_message,
+    render_message_item,
     render_messages,
 )
 from ghostos.core.messages import new_arr_connection
@@ -118,7 +118,7 @@ def render_aifunc_execute_stream(route: AIFuncDetailRoute, fn: Type[AIFunc]):
                 if not item.is_complete():
                     continue
                 route.received.append(item)
-                render_message(item, debug=False)
+                render_message_item(item, debug=False)
     st.write(f"executed in {round(timeleft.passed(), 2)} seconds")
 
 

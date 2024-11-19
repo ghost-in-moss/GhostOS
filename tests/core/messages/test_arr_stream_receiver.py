@@ -158,11 +158,12 @@ def test_new_connection_with_pool():
     def send_data(s: Stream, c: str):
         with s:
             s.send(iter_content(c, 0.02))
+            s.send(iter_content(c, 0.02))
 
     pool.submit(send_data, stream, content)
 
     with retriever:
         messages = retriever.wait()
-        assert len(messages) == 1
+        assert len(messages) == 2
     assert retriever.error() is None
     pool.shutdown(wait=True)

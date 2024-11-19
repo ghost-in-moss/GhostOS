@@ -1,7 +1,7 @@
 from typing import Optional, Iterable, List, TypeVar, Tuple, Union
 
 from ghostos.container import Container
-from ghostos.abcd import Conversation, Scope, Ghost
+from ghostos.abcd import Conversation, Scope, Ghost, Context
 from ghostos.abcd import run_session_event
 from ghostos.core.messages import (
     Message, Role,
@@ -61,6 +61,7 @@ class ConversationImpl(Conversation[G]):
         logger = container.force_fetch(LoggerItf)
         self._logger = wrap_logger(logger, self._scope.model_dump())
         self._is_background = is_background
+        self._ctx: Optional[Context] = None
         self._locker = task_locker
         self._tasks = container.force_fetch(GoTasks)
         self._threads = container.force_fetch(GoThreads)
@@ -95,6 +96,9 @@ class ConversationImpl(Conversation[G]):
         message = Role.USER.new(content=query, name=user_name)
         return self.respond([message])
 
+    def update_context(self, context: Context) -> None:
+        self._ctx = context
+
     def respond(
             self,
             inputs: Iterable[Message],
@@ -103,6 +107,9 @@ class ConversationImpl(Conversation[G]):
     ) -> Receiver:
         self._validate_closed()
         context_meta = to_entity_meta(context) if context is not None else None
+        if self._ctx is not None:
+            context_meta = to_entity_meta(self._ctx)
+            self._ctx = None
         event = EventTypes.INPUT.new(
             task_id=self._scope.task_id,
             messages=list(inputs),

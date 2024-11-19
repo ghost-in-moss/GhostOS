@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from typing import Optional, List, ClassVar, Dict, Self
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -253,10 +254,6 @@ class TaskBrief(BaseModel, Identical):
     status_desc: str = Field(description="the description of the task status")
     created: int = Field(description="the time the task was created")
     updated: int = Field(description="the time that task was updated")
-
-    def is_overdue(self) -> bool:
-        now = time.time()
-        return now - self.updated > self.overdue
 
     def __identifier__(self) -> Identifier:
         return Identifier(

@@ -352,6 +352,10 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def update_context(self, context: Context) -> None:
+        pass
+
+    @abstractmethod
     def respond(
             self,
             inputs: Iterable[Message],

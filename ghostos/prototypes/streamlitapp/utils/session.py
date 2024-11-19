@@ -95,9 +95,11 @@ class Singleton:
     session state singleton, key is the class type
     """
 
-    def __init__(self, value: object):
+    def __init__(self, value: object, abstract: Optional[Type] = None):
         self.value = value
-        self.key = self.gen_key(type(value))
+        if abstract is None:
+            abstract = type(value)
+        self.key = self.gen_key(abstract)
 
     def bind(self, session_state: MutableMapping, force: bool = False) -> None:
         """
@@ -108,10 +110,12 @@ class Singleton:
             session_state[self.key] = self.value
 
     @classmethod
-    def get(cls, t: Type[T], session_state: MutableMapping) -> T:
+    def get(cls, t: Type[T], session_state: MutableMapping, force: bool = True) -> T:
         key = cls.gen_key(t)
         if key not in session_state:
-            raise KeyError(f'key {key} not found in session state')
+            if force:
+                raise KeyError(f'key {key} not found in session state')
+            return None
         value = session_state[key]
         return value
 

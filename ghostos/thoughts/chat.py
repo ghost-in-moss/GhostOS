@@ -29,4 +29,4 @@ class ChatThoughtDriver(LLMThoughtDriver[ChatThought]):
         return []
 
     def instruction(self, g: Ghost, e: Event) -> str:
-        return self.thought.instruction
+        return self.thought.show_instruction

@@ -89,7 +89,7 @@ class BasicMossThoughtDriver(ABC):
 class MossThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[MossThought]):
 
     def instruction(self, g: Ghost, e: Event) -> str:
-        return self.thought.instruction
+        return self.thought.show_instruction
 
     def on_created(self, g: Ghost, e: Event) -> Optional[Operator]:
         session = g.session()

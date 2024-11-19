@@ -2,9 +2,10 @@ from ghostos.helpers import create_and_bind_module
 from ghostos.scripts.cli.run_streamlit_ghost import RunGhostChatApp
 from ghostos.bootstrap import make_app_container, get_ghostos
 from ghostos.prototypes.streamlitapp.main import main_run
-from ghostos.prototypes.streamlitapp.pages.router import default_router, GhostChatPage
+from ghostos.prototypes.streamlitapp.pages.router import default_router, GhostChatRoute
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.contracts.logger import get_console_logger
+from ghostos.abcd import GhostOS, Shell
 import streamlit as st
 import sys
 import json
@@ -30,7 +31,7 @@ def bootstrap():
     container = make_app_container(app_arg.workspace_dir)
 
     # bound route.
-    page_route = GhostChatPage(ghost_meta=app_arg.ghost_meta)
+    page_route = GhostChatRoute(ghost_meta=app_arg.ghost_meta)
     # initialize router and set aifunc is default
     router = default_router().with_current(page_route)
 
@@ -40,8 +41,8 @@ def bootstrap():
     return [
         Singleton(container),
         Singleton(router),
-        Singleton(ghostos),
-        Singleton(shell),
+        Singleton(ghostos, GhostOS),
+        Singleton(shell, Shell),
     ]
 
 

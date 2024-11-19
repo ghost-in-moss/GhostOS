@@ -1,3 +1,5 @@
+import time
+
 from pydantic import BaseModel, Field
 from pydantic.errors import PydanticSchemaGenerationError
 from typing import TypedDict, Required, Iterable, List, Optional, ClassVar, Type
@@ -213,3 +215,11 @@ def test_model_with_subclass_define():
 
     foo2 = Foo2()
     assert foo2.bar.bar == 123
+
+
+def test_model_with_datetime():
+    class Foo(BaseModel):
+        now: datetime = Field(default_factory=datetime.now)
+
+    foo = Foo(now=int(time.time()))
+    assert foo.now.timestamp() > 0

@@ -8,10 +8,10 @@ from ghostos.helpers import gettext as _
 def render_messages(messages: Iterable[Message]):
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
     for msg in messages:
-        render_message(msg, debug=debug)
+        render_message_item(msg, debug=debug)
 
 
-def render_message(msg: Message, debug: bool):
+def render_message_item(msg: Message, debug: bool):
     if not msg.is_complete():
         return
     if MessageType.ERROR.match(msg):

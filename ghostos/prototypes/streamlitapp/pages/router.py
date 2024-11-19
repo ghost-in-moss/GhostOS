@@ -2,7 +2,7 @@ from typing import Optional, List
 from ghostos.prototypes.streamlitapp.utils.route import Route, Router, Link
 from ghostos.core.messages import Message
 from ghostos.core.aifunc import ExecFrame
-from ghostos.abcd import Ghost
+from ghostos.abcd import Ghost, Context
 from ghostos.entity import EntityMeta, from_entity_meta, get_entity
 from enum import Enum
 from pydantic import Field
@@ -19,7 +19,7 @@ class PagePath(str, Enum):
 
 # --- ghosts --- #
 
-class GhostChatPage(Route):
+class GhostChatRoute(Route):
     link = Link(
         name="ghost_chat",
         import_path=PagePath.GHOSTOS.suffix(".chat:main"),
@@ -28,9 +28,27 @@ class GhostChatPage(Route):
         antd_icon="robot",
     )
     ghost_meta: Optional[EntityMeta] = Field(default=None, description="ghost meta")
+    context_meta: Optional[EntityMeta] = Field(default=None, description="context meta")
+    input_type: str = Field(default="Chat", description="input type")
+    page_type: str = Field(default="Chat", description="page type")
+
+    inputs: List[Message] = Field(default_factory=list, description="inputs")
+
+    __ghost__ = None
 
     def get_ghost(self) -> Ghost:
-        return get_entity(self.ghost_meta, Ghost)
+        if self.__ghost__ is None:
+            self.__ghost__ = get_entity(self.ghost_meta, Ghost)
+        return self.__ghost__
+
+    __context__ = None
+
+    def get_context(self) -> Optional[Context]:
+        if self.context_meta is None:
+            return None
+        if self.__context__ is None:
+            self.__context__ = get_entity(self.context_meta, Context)
+        return self.__context__
 
 
 # --- home --- #
@@ -126,7 +144,7 @@ def default_router() -> Router:
             GhostOSHost(),
             AIFuncListRoute(),
             AIFuncDetailRoute(),
-            GhostChatPage(),
+            GhostChatRoute(),
         ],
         home=Home.label(),
         navigator_page_names=[
