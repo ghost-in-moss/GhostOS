@@ -361,7 +361,7 @@ class Conversation(Protocol[G]):
             inputs: Iterable[Message],
             context: Optional[G.ContextType] = None,
             history: Optional[List[Message]] = None,
-    ) -> Receiver:
+    ) -> Tuple[Event, Receiver]:
         """
         create response immediately by inputs. the inputs will change to event.
         """

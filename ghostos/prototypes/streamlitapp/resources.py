@@ -20,8 +20,6 @@ class AppConf(YamlConfig):
 
     domain: str = GHOSTOS_DOMAIN
     lang: str = Field("zh", description="lang of the app")
-    help_mode: bool = False
-    debug_mode: bool = False
 
     bool_options: Dict[str, bool] = Field(
         default_factory=dict,

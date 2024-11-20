@@ -1,4 +1,5 @@
-from typing import Iterable, Optional, Callable, Tuple, List
+from __future__ import annotations
+from typing import Iterable, Optional, Callable, Tuple, List, Self, Iterator
 
 from typing_extensions import Protocol
 from collections import deque
@@ -7,7 +8,10 @@ from ghostos.core.messages.message import Message, MessageType
 from ghostos.core.messages.pipeline import SequencePipe
 import time
 
-__all__ = ["Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_arr_connection"]
+__all__ = [
+    "Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_arr_connection",
+    "ArrayReceiverBuffer",
+]
 
 from ghostos.helpers import Timeleft
 
@@ -124,6 +128,24 @@ class Receiver(Protocol):
             intercept = self.fail(str(exc_val))
         self.close()
         return intercept
+
+
+class StreamPart(Protocol):
+    @abstractmethod
+    def head(self) -> Tuple[Message, bool]:
+        pass
+
+    @abstractmethod
+    def chunks(self) -> Iterable[Message]:
+        pass
+
+    @abstractmethod
+    def tail(self) -> Message:
+        pass
+
+    @abstractmethod
+    def next(self) -> Optional[Self]:
+        pass
 
 
 class ArrayReceiver(Receiver):
@@ -273,6 +295,77 @@ class ArrayStream(Stream):
 
     def closed(self) -> bool:
         return self._closed
+
+
+class ArrayReceiverBuffer:
+    def __init__(self, head: Message, receiver: Iterator[Message]):
+        self._head = head
+        self._receiver = receiver
+        self._chunks = []
+        self._done: Optional[Message] = None
+        self._next: Optional[Self] = None
+
+    @classmethod
+    def new(cls, receiver: Iterable[Message]) -> Optional[Self]:
+        iterator = iter(receiver)
+        head = next(iterator)
+        if head is None:
+            return None
+        return cls(head, iterator)
+
+    def head(self) -> Message:
+        return self._head
+
+    def chunks(self) -> Iterable[Message]:
+        if self._head.is_complete():
+            yield from [self._head]
+            return
+        elif self._done is not None:
+            return self._chunks
+
+        self._chunks = [self._head]
+        yield self._head
+        head = self._head.get_copy()
+        try:
+            item = next(self._receiver)
+        except StopIteration:
+            self._done = head.as_tail()
+            return None
+
+        while item is not None:
+            patched = head.patch(item)
+            if patched is not None:
+                head = patched
+                if item.is_complete():
+                    self._done = patched
+                else:
+                    self._chunks.append(item)
+                    yield item
+            else:
+                if self._done is None:
+                    self._done = head.as_tail()
+                self._next = ArrayReceiverBuffer(item, self._receiver)
+                break
+            try:
+                item = next(self._receiver)
+            except StopIteration:
+                break
+        if self._done is None:
+            self._done = self._head.as_tail()
+
+    def tail(self) -> Message:
+        if self._head.is_complete():
+            return self._head
+        if self._done:
+            return self._done
+        list(self.chunks())
+        if self._done is None:
+            raise RuntimeError(f"tail failed")
+        return self._done
+
+    def next(self) -> Optional[Self]:
+        list(self.chunks())
+        return self._next
 
 
 def new_arr_connection(

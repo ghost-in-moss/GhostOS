@@ -95,7 +95,7 @@ class ConsoleApp(Background):
         message = Role.new_system(
             self._welcome_user_message,
         )
-        receiver = self._conversation.respond([message])
+        event, receiver = self._conversation.respond([message])
         self.output_receiver(receiver)
 
         with patch_stdout(raw=True):
@@ -189,7 +189,7 @@ class ConsoleApp(Background):
         """
         :return: task_id
         """
-        receiver = self._conversation.respond([message])
+        event, receiver = self._conversation.respond([message])
         self.output_receiver(receiver)
 
     def _intercept_text(self, text: str) -> bool:

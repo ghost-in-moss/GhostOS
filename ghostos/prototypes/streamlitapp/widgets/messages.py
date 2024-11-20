@@ -1,14 +1,73 @@
 import streamlit as st
-from typing import Iterable
-from ghostos.core.messages import Message, Role, MessageType
-from ghostos.prototypes.streamlitapp.resources import get_app_conf
+from typing import Iterable, List, NamedTuple
+from ghostos.core.messages import Message, Role, MessageType, Caller
 from ghostos.helpers import gettext as _
 
 
-def render_messages(messages: Iterable[Message]):
-    debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
+class MessageGroup(NamedTuple):
+    msg_name: str
+    msg_role: str
+    stage: str
+    messages: List[Message]
+
+
+def render_messages(messages: Iterable[Message], debug: bool):
+    groups: List[MessageGroup] = []
+    group = MessageGroup("", "", "", [])
+
     for msg in messages:
-        render_message_item(msg, debug=debug)
+        if not msg.is_complete():
+            continue
+        if msg.name != group.msg_name or msg.role != group.msg_role or msg.stage != group.stage:
+            if group.messages:
+                groups.append(group)
+            group = MessageGroup(msg.name, msg.role, msg.stage, [])
+        group.messages.append(msg)
+
+    if group.messages:
+        groups.append(group)
+    for group in groups:
+        render_message_group(group, debug)
+
+
+def render_message_group(group: MessageGroup, debug: bool):
+    role = group.msg_role
+    name = group.msg_name
+    stage = group.stage
+    caption = f"{role}: {name}" if name else role
+    render_role = "user" if role == Role.USER.value else "assistant"
+    if stage:
+        with st.container(border=True):
+            st.caption(stage)
+            with st.chat_message(render_role):
+                st.caption(caption)
+                for msg in group.messages:
+                    render_message_content(msg, debug)
+    else:
+        with st.chat_message(render_role):
+            st.caption(caption)
+            for msg in group.messages:
+                render_message_content(msg, debug)
+
+
+def render_message_content(message: Message, debug: bool):
+    if message.type == MessageType.ERROR:
+        st.error(f"Error: {message.content}")
+    elif MessageType.is_text(message):
+        st.markdown(message.content)
+    # todo: more types
+    else:
+        st.write(message.model_dump(exclude_defaults=True))
+
+    if message.callers:
+        if st.button("tool calls", key="tool calls" + message.msg_id):
+            open_message_caller(message)
+
+
+@st.dialog("message_caller")
+def open_message_caller(message: Message):
+    for caller in message.callers:
+        st.write(caller.model_dump(exclude_defaults=True))
 
 
 def render_message_item(msg: Message, debug: bool):

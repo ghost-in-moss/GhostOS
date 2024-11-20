@@ -69,24 +69,7 @@ class Turn(BaseModel):
 
     @staticmethod
     def iter_event_message(event: Event, show_instruction: bool = True) -> Iterable[Message]:
-        if event is None:
-            return []
-
-        if EventTypes.CREATED.value != event.type and event.from_task_name and not event.from_self():
-            reason = ""
-            if event.reason:
-                reason = f" Reason: {event.reason}"
-            yield Role.new_system(
-                content=f"receive event {event.type} from task `{event.from_task_name}`.{reason}")
-
-        # messages in middle
-        if event.messages:
-            for message in event.messages:
-                yield message
-
-        # instruction after messages.
-        if show_instruction and event.instruction:
-            yield Role.new_system(content=event.instruction)
+        yield from event.iter_message(show_instruction)
 
     def messages(self) -> Iterable[Message]:
         yield from self.event_messages()
@@ -95,6 +78,9 @@ class Turn(BaseModel):
 
     def is_empty(self) -> bool:
         return (self.event is None or self.event.is_empty()) and not self.added
+
+    def is_from_client(self) -> bool:
+        return self.event is not None and self.event.from_task_id is None
 
 
 class GoThreadInfo(BaseModel):

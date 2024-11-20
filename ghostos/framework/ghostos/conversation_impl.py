@@ -104,7 +104,7 @@ class ConversationImpl(Conversation[G]):
             inputs: Iterable[Message],
             context: Optional[Ghost.ContextType] = None,
             history: Optional[List[Message]] = None,
-    ) -> Receiver:
+    ) -> Tuple[Event, Receiver]:
         self._validate_closed()
         context_meta = to_entity_meta(context) if context is not None else None
         if self._ctx is not None:
@@ -116,7 +116,7 @@ class ConversationImpl(Conversation[G]):
             context=context_meta,
             history=history,
         )
-        return self.respond_event(event)
+        return event, self.respond_event(event)
 
     def respond_event(
             self,

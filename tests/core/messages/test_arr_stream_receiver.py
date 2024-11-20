@@ -1,5 +1,5 @@
 from typing import Iterable
-from ghostos.core.messages.transport import new_arr_connection, Stream
+from ghostos.core.messages.transport import new_arr_connection, Stream, ArrayReceiverBuffer
 from ghostos.core.messages.pipeline import SequencePipe
 from ghostos.core.messages.message import Message
 from threading import Thread
@@ -166,4 +166,59 @@ def test_new_connection_with_pool():
         messages = retriever.wait()
         assert len(messages) == 2
     assert retriever.error() is None
+    pool.shutdown(wait=True)
+
+
+def test_array_receiver_buffer_baseline():
+    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    content = "hello world"
+
+    def send_data(s: Stream, c: str):
+        messages = SequencePipe().across(iter_content(c, 0))
+        messages = list(messages)
+        s.send(messages)
+
+    with stream:
+        send_data(stream, content)
+        send_data(stream, content)
+
+    buffer = ArrayReceiverBuffer.new(retriever.recv())
+    assert buffer is not None
+    assert buffer.head().content == "h"
+    for chunk in buffer.chunks():
+        assert chunk.content in content
+        assert len(chunk.content) == 1
+        assert not chunk.is_complete()
+
+    assert buffer.tail().content == content
+    assert buffer.tail().is_complete()
+    buffer = buffer.next()
+    assert buffer is not None
+    assert buffer.head().content == "h"
+    assert buffer.tail().content == content
+
+    buffer = buffer.next()
+    assert buffer is None
+
+
+def test_array_receiver_buffer_async():
+    from ghostos.contracts.pool import DefaultPool
+    pool = DefaultPool(10)
+    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    content = "hello world"
+
+    def send_data(s: Stream, c: str):
+        with s:
+            s.send(iter_content(c, 0.02))
+            s.send(iter_content(c, 0.02))
+
+    pool.submit(send_data, stream, content)
+
+    with retriever:
+        buffer = ArrayReceiverBuffer.new(retriever.recv())
+        assert buffer.tail().content == content
+        buffer = buffer.next()
+        assert buffer.tail().content == content
+        buffer = buffer.next()
+        assert buffer is None
     pool.shutdown(wait=True)

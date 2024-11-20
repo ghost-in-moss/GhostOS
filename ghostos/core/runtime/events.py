@@ -1,9 +1,9 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Iterable
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
-from ghostos.core.messages.message import Message
+from ghostos.core.messages.message import Message, Role
 from ghostos.entity import EntityMeta
 from ghostos.helpers import uuid
 from contextlib import contextmanager
@@ -88,6 +88,23 @@ class Event(BaseModel):
 
     def default_handler(self) -> str:
         return f"on_{self.event_type()}"
+
+    def iter_message(self, show_instruction: bool = True) -> Iterable[Message]:
+        if EventTypes.CREATED.value != self.type and self.from_task_name and not self.from_self():
+            reason = ""
+            if self.reason:
+                reason = f" Reason: {self.reason}"
+            yield Role.new_system(
+                content=f"receive self {self.type} from task `{self.from_task_name}`.{reason}")
+
+        # messages in middle
+        if self.messages:
+            for message in self.messages:
+                yield message
+
+        # instruction after messages.
+        if show_instruction and self.instruction:
+            yield Role.new_system(content=self.instruction)
 
     @classmethod
     def new(

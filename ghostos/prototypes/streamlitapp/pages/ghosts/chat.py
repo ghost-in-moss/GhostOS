@@ -3,12 +3,14 @@ import time
 import streamlit_react_jsonschema as srj
 from ghostos.prototypes.streamlitapp.pages.router import GhostChatRoute
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
+from ghostos.prototypes.streamlitapp.resources import get_app_conf
 from ghostos.prototypes.streamlitapp.widgets.messages import (
     render_messages,
     render_message_item,
 )
 from ghostos.prototypes.streamlitapp.widgets.renderer import render_object
-from ghostos.core.runtime import GoThreadInfo
+from ghostos.prototypes.streamlitapp.resources import get_app_conf
+from ghostos.core.runtime import GoThreadInfo, Turn, Event, GoThreads
 from ghostos.core.messages import Receiver, Role
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
@@ -125,7 +127,6 @@ def render_chat(route: GhostChatRoute, conversation: Conversation):
     if route.input_type == "any":
         pass
     else:
-        st.write("chat input")
         if chat_input := st.chat_input("Your message"):
             message = Role.USER.new(chat_input)
             route.inputs.append(message)
@@ -141,27 +142,30 @@ def chatting():
 
     while True:
         route = GhostChatRoute.get(st.session_state)
+        debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
         # has input
         if route is not None and route.inputs:
             inputs = route.inputs
             route.inputs = []
             route.bind(st.session_state)
-
-            with st.chat_message("user"):
-                st.write("todo")
-
-            receiver = conversation.respond(inputs)
-            render_receiver(receiver)
+            event, receiver = conversation.respond(inputs)
+            render_event(event, debug)
+            render_receiver(receiver, debug)
         elif event := conversation.pop_event():
+            render_event(event, debug)
             receiver = conversation.respond_event(event)
-            render_receiver(receiver)
+            render_receiver(receiver, debug)
         else:
-            time.sleep(0.5)
+            time.sleep(1)
 
 
-def render_receiver(receiver: Receiver):
-    receiver.wait()
-    st.write("todo")
+def render_receiver(receiver: Receiver, debug: bool):
+    try:
+        with receiver:
+            messages = receiver.wait()
+            render_messages(messages, debug)
+    except Exception as e:
+        st.exception(e)
 
 
 def render_ghost_settings(route: GhostChatRoute):
@@ -193,19 +197,20 @@ def render_context_settings(route: GhostChatRoute, conversation: Conversation):
                 conversation.update_context(data)
                 ctx = data
     else:
-        data, submitted = srj.pydantic_instance_form(ctx)
-        if submitted and isinstance(data, Context):
+        data, changed = render_object(ctx, immutable=False)
+        if changed and isinstance(data, Context):
             conversation.update_context(data)
             ctx = data
 
     # render prompt
     if ctx is not None:
-        st.subheader(_("context prompt"))
+        st.subheader(_("Context prompt"))
         try:
             prompt = ctx.get_prompt(conversation.container())
             st.markdown(prompt)
         except Exception as e:
             st.error(e)
+    # render artifact
     if ghost.ArtifactType:
         st.subheader(_("Artifact"))
         artifact = conversation.get_artifact()
@@ -230,16 +235,57 @@ def render_thread_info_settings(route: GhostChatRoute, conversation: Conversatio
 
     with st.expander(_("Detail"), expanded=False):
         st.write(thread_info.model_dump(exclude_defaults=True))
+    if st.button("reset history"):
+        # reset history
+        thread = conversation.thread()
+        thread.history = []
+        thread.current = None
+        threads = conversation.container().force_fetch(GoThreads)
+        threads.save_thread(thread)
+
     st.subheader(_("Thread Messages"))
     render_thread_messages(thread)
 
 
 def render_thread_messages(thread: GoThreadInfo):
     turns = thread.turns()
-    count = 0
+    debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
     for turn in turns:
-        count += 1
-        messages = list(turn.messages())
-        if messages:
-            st.write(f"turn {count}")
-            render_messages(messages)
+        render_turn(turn, debug)
+
+
+def render_turn(turn: Turn, debug: bool):
+    if turn.is_from_client():
+        messages = turn.messages()
+        render_messages(messages, debug)
+    # from other task
+    else:
+        event = turn.event
+        sub_title = _("background run")
+        if event is not None:
+            sub_title = _("background event: ") + event.type
+        with st.expander(sub_title, expanded=False):
+            messages = turn.messages()
+            render_messages(messages, debug)
+            render_event_object(event, debug)
+
+
+def render_event(event: Event, debug: bool):
+    if event is None:
+        return
+    if event.from_task_id:
+        sub_title = _("background event: ") + event.type
+        with st.expander(sub_title, expanded=False):
+            messages = event.iter_message(show_instruction=True)
+            render_messages(messages, debug)
+    else:
+        messages = event.iter_message(show_instruction=True)
+        render_messages(messages, debug)
+
+
+def render_event_object(event: Event, debug: bool):
+    if event is None:
+        return
+    from_task_name = event.from_task_name
+    if from_task_name is not None:
+        st.button(f"from task {from_task_name}")
