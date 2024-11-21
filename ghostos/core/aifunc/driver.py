@@ -141,7 +141,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             message = message.model_copy(deep=True)
             message.name = self.aifunc.func_name()
             payload = step.as_payload()
-            payload.set(message)
+            payload.set_payload(message)
             upstream.deliver(message)
 
     def on_system_messages(self, messages: List[Message]) -> None:

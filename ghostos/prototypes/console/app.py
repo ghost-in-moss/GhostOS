@@ -1,6 +1,6 @@
 from __future__ import annotations
 import asyncio
-from typing import Optional
+from typing import Optional, List
 
 from ghostos.abcd import GhostOS, Ghost, Background
 from ghostos.contracts.logger import get_console_logger
@@ -149,12 +149,12 @@ class ConsoleApp(Background):
         self.close()
         return False
 
-    def on_event(self, event: Event, retriever: Receiver) -> None:
-        self._logger.info(f"Received event {event.event_id} for task {event.task_id}")
-        self.output_receiver(retriever)
+    def on_event(self, event: Event, messages: List[Message]) -> None:
+        self._logger.debug(f"Received event {event.event_id} for task {event.task_id}")
+        # self.output_receiver(retriever)
 
-    def stopped(self) -> bool:
-        return self._stopped
+    def alive(self) -> bool:
+        return not self._stopped
 
     def halt(self) -> int:
         return 0
@@ -234,7 +234,7 @@ This demo provide a console interface to communicate with an agent.
         # some message is not visible to user
         if not content:
             return
-        payload = TaskPayload.read(message)
+        payload = TaskPayload.read_payload(message)
         title = "receive message"
         # markdown content
         prefix = ""

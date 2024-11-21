@@ -362,10 +362,8 @@ class GoTasks(ABC):
         pass
 
     @abstractmethod
-    def lock_task(self, task_id: str) -> TaskLocker:
+    def lock_task(self, task_id: str, overdue: float) -> TaskLocker:
         """
-        :param task_id:
-        :return: None if not locked
         """
         pass
 

@@ -20,7 +20,7 @@ def call_example(con: Container, req: WeatherAIFunc) -> WeatherAIFuncResult:
 ```python 
 from ghostos.container import Container
 from ghostos.core.aifunc import AIFuncExecutor, ExecFrame
-from ghostos.core.messages import new_arr_connection
+from ghostos.core.messages import new_basic_connection
 from ghostos.demo.aifuncs.weather import WeatherAIFunc, WeatherAIFuncResult
 
 
@@ -32,7 +32,7 @@ def stream_call_example(con: Container, req: WeatherAIFunc) -> WeatherAIFuncResu
 
     executor = con.force_fetch(AIFuncExecutor)
 
-    stream, receiver = new_arr_connection()
+    stream, receiver = new_basic_connection()
     frame = ExecFrame.from_func(req)
     t = Thread(target=executor.execute, args=(req, frame, stream))
     t.start()

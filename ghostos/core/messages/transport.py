@@ -9,8 +9,8 @@ from ghostos.core.messages.pipeline import SequencePipe
 import time
 
 __all__ = [
-    "Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_arr_connection",
-    "ArrayReceiverBuffer",
+    "Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_basic_connection",
+    "ReceiverBuffer",
 ]
 
 from ghostos.helpers import Timeleft
@@ -297,7 +297,7 @@ class ArrayStream(Stream):
         return self._closed
 
 
-class ArrayReceiverBuffer:
+class ReceiverBuffer:
     def __init__(self, head: Message, receiver: Iterator[Message]):
         self._head = head
         self._receiver = receiver
@@ -344,7 +344,8 @@ class ArrayReceiverBuffer:
             else:
                 if self._done is None:
                     self._done = head.as_tail()
-                self._next = ArrayReceiverBuffer(item, self._receiver)
+                self._next = ReceiverBuffer(item, self._receiver)
+                self._receiver = None
                 break
             try:
                 item = next(self._receiver)
@@ -368,7 +369,8 @@ class ArrayReceiverBuffer:
         return self._next
 
 
-def new_arr_connection(
+
+def new_basic_connection(
         *,
         timeout: float = -1,
         idle: float = 0.2,

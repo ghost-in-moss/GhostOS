@@ -1,6 +1,7 @@
 import streamlit as st
 from typing import Iterable, List, NamedTuple
 from ghostos.core.messages import Message, Role, MessageType, Caller
+from ghostos.framework.messages import CompletionUsagePayload, TaskPayload, PromptPayload
 from ghostos.helpers import gettext as _
 
 
@@ -11,7 +12,7 @@ class MessageGroup(NamedTuple):
     messages: List[Message]
 
 
-def render_messages(messages: Iterable[Message], debug: bool):
+def render_messages(messages: Iterable[Message], debug: bool, prefix: str = ""):
     groups: List[MessageGroup] = []
     group = MessageGroup("", "", "", [])
 
@@ -27,10 +28,10 @@ def render_messages(messages: Iterable[Message], debug: bool):
     if group.messages:
         groups.append(group)
     for group in groups:
-        render_message_group(group, debug)
+        render_message_group(group, debug, prefix)
 
 
-def render_message_group(group: MessageGroup, debug: bool):
+def render_message_group(group: MessageGroup, debug: bool, prefix: str = ""):
     role = group.msg_role
     name = group.msg_name
     stage = group.stage
@@ -42,15 +43,47 @@ def render_message_group(group: MessageGroup, debug: bool):
             with st.chat_message(render_role):
                 st.caption(caption)
                 for msg in group.messages:
-                    render_message_content(msg, debug)
+                    render_message_in_content(msg, debug, prefix)
     else:
         with st.chat_message(render_role):
             st.caption(caption)
             for msg in group.messages:
-                render_message_content(msg, debug)
+                render_message_in_content(msg, debug, prefix)
 
 
-def render_message_content(message: Message, debug: bool):
+def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
+    import streamlit_antd_components as sac
+    from ghostos.prototypes.streamlitapp.widgets.dialogs import (
+        open_task_info_dialog, open_completion_usage_dialog, open_prompt_info_dialog,
+    )
+
+    if not debug:
+        return
+    items = []
+    task_payload = TaskPayload.read_payload(message)
+    if task_payload:
+        items.append(sac.ButtonsItem(label="Task Info"))
+    completion_usage = CompletionUsagePayload.read_payload(message)
+    if completion_usage:
+        items.append(sac.ButtonsItem(label="Completion Usage"))
+    prompt_payload = PromptPayload.read_payload(message)
+    if prompt_payload:
+        items.append(sac.ButtonsItem(label="Prompt Info"))
+    if items:
+        selected = sac.buttons(
+            items,
+            index=None,
+            key=prefix + ":payloads:" + message.msg_id,
+        )
+        if selected == "Task Info" and task_payload:
+            open_task_info_dialog(task_payload.task_id)
+        elif selected == "Completion Usage" and completion_usage:
+            open_completion_usage_dialog(completion_usage)
+        elif selected == "Prompt Info" and prompt_payload:
+            open_prompt_info_dialog(prompt_payload.prompt_id)
+
+
+def render_message_in_content(message: Message, debug: bool, prefix: str = ""):
     if message.type == MessageType.ERROR:
         st.error(f"Error: {message.content}")
     elif MessageType.is_text(message):
@@ -60,8 +93,9 @@ def render_message_content(message: Message, debug: bool):
         st.write(message.model_dump(exclude_defaults=True))
 
     if message.callers:
-        if st.button("tool calls", key="tool calls" + message.msg_id):
+        if st.button("tool calls", key=prefix + "tool calls" + message.msg_id):
             open_message_caller(message)
+    render_message_payloads(message, debug, prefix)
 
 
 @st.dialog("message_caller")

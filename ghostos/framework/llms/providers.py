@@ -9,16 +9,21 @@ from ghostos.framework.llms.prompt_storage_impl import PromptStorageImpl
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf
 
-__all__ = ['ConfigBasedLLMsProvider', 'PromptStorageInWorkspaceProvider']
+__all__ = ['ConfigBasedLLMsProvider', 'PromptStorageInWorkspaceProvider', 'LLMsYamlConfig']
+
+
+class LLMsYamlConfig(YamlConfig, LLMsConfig):
+    """
+    配置项存储位置.
+    详细配置项见 LLMsConfig
+    """
+    relative_path = "llms_conf.yml"
 
 
 class ConfigBasedLLMsProvider(Provider[LLMs]):
     """
     基于 Config 来读取
     """
-
-    def __init__(self, llm_conf_path: str):
-        self.llm_conf_path = llm_conf_path
 
     def singleton(self) -> bool:
         return True
@@ -27,12 +32,6 @@ class ConfigBasedLLMsProvider(Provider[LLMs]):
         return LLMs
 
     def factory(self, con: Container) -> Optional[LLMs]:
-        class LLMsYamlConfig(YamlConfig, LLMsConfig):
-            """
-            配置项存储位置.
-            详细配置项见 LLMsConfig
-            """
-            relative_path = self.llm_conf_path
 
         configs = con.force_fetch(Configs)
         storage = con.force_fetch(PromptStorage)

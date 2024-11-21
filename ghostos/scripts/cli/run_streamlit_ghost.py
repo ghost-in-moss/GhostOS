@@ -5,6 +5,7 @@ from ghostos.scripts.cli.utils import (
 from streamlit.web.cli import main_run
 from ghostos.prototypes.streamlitapp import cli
 from ghostos.entity import EntityMeta, to_entity_meta
+from ghostos.bootstrap import reset_at, get_ghostos
 from pydantic import BaseModel, Field
 import sys
 from os import path
@@ -21,6 +22,7 @@ class RunGhostChatApp(BaseModel):
 def main():
     # path
     workspace_dir = check_ghostos_workspace_exists()
+    container = reset_at(workspace_dir)
     ghost, modulename, filename, is_temp = get_ghost_by_cli_argv()
     args = RunGhostChatApp(
         modulename=modulename,

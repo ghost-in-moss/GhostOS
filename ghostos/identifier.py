@@ -159,8 +159,7 @@ def identify_class(cls: type) -> Identifier:
     return Identifier(
         id=id_,
         name=name,
-        description=desc,
-        kind="class",
+        description=desc or "",
     )
 
 

@@ -70,6 +70,8 @@ __all__ = [
 
     # reset ghostos default application instances.
     'reset',
+    'reset_at',
+    'get_container',
 
     # default configuration
     'workspace_dir',
@@ -168,7 +170,6 @@ def default_application_providers(
         runtime_processes_dir: str = "processes",
         runtime_tasks_dir: str = "tasks",
         runtime_threads_dir: str = "threads",
-        llms_conf_path: str = "llms_conf.yml",
 ) -> List[Provider]:
     """
     application default providers
@@ -220,7 +221,7 @@ def default_application_providers(
         DefaultMOSSProvider(),
 
         # --- llm --- #
-        ConfigBasedLLMsProvider(llms_conf_path),
+        ConfigBasedLLMsProvider(),
         PromptStorageInWorkspaceProvider(),
 
         # --- basic library --- #
@@ -279,7 +280,11 @@ def get_ghostos(container: Optional[Container] = None) -> GhostOS:
     return container.force_fetch(GhostOS)
 
 
-def reset(con: Container) -> None:
+def get_container() -> Container:
+    return application_container
+
+
+def reset(con: Container) -> Container:
     """
     reset static ghostos application level instances
     :param con: a container with application level contract bindings, shall be validated outside.
@@ -290,19 +295,20 @@ def reset(con: Container) -> None:
     application_container = con
     # reset global ghost func
     ghost_func = init_ghost_func(application_container)
+    return application_container
 
 
-def reset_at(app_dir: str) -> None:
+def reset_at(app_dir: str) -> Container:
     """
     reset application with default configuration at specified app directory
     only run once if app_dir is the same
     """
     global workspace_dir
     if app_dir == workspace_dir:
-        return
+        return application_container
     workspace_dir = app_dir
     _container = make_app_container(app_dir)
-    reset(_container)
+    return reset(_container)
 
 
 # --- test the module by python -i --- #

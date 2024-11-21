@@ -217,7 +217,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 usage = CompletionUsagePayload.from_chunk(item)
                 chunk = Message.new_chunk(role=Role.ASSISTANT.value, typ_=MessageType.DEFAULT)
                 if usage:
-                    usage.set(chunk)
+                    usage.set_payload(chunk)
             elif len(item.choices) > 0:
                 choice = item.choices[0]
                 delta = choice.delta

@@ -183,12 +183,12 @@ class Prompt(BaseModel):
 class PromptPayload(Payload):
     key = "prompt_info"
 
-    pid: str = Field(description="created from prompt")
+    prompt_id: str = Field(description="created from prompt")
     desc: str = Field(default="description of the prompt")
 
     @classmethod
     def from_prompt(cls, prompt: Prompt) -> Self:
-        return cls(pid=prompt.id, desc=prompt.description)
+        return cls(prompt_id=prompt.id, desc=prompt.description)
 
 
 class PromptPipe(ABC):

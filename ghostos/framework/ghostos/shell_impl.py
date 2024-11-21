@@ -29,7 +29,10 @@ class ShellConf(BaseModel):
     max_task_errors: int = Field(
         default=3,
     )
-    background_idle_time: float = Field(0.5)
+    background_idle_time: float = Field(1)
+    task_lock_overdue: float = Field(
+        default=10.0
+    )
 
 
 G = TypeVar("G", bound=Ghost)
@@ -88,7 +91,7 @@ class ShellImpl(Shell):
         task = self._tasks.get_task(task_id)
         if task is None:
             task = self.create_root_task(task_id, ghost, context)
-            self._logger.info("create root task task id %s for ghost", task_id)
+            self._logger.debug("create root task task id %s for ghost", task_id)
 
         task.meta = to_entity_meta(ghost)
         if context is not None:
@@ -103,7 +106,7 @@ class ShellImpl(Shell):
             throw: bool,
             is_background: bool,
     ) -> Optional[Conversation]:
-        locker = self._tasks.lock_task(task.task_id)
+        locker = self._tasks.lock_task(task.task_id, self._conf.task_lock_overdue)
         if locker.acquire():
             conf = ConversationConf(
                 max_session_steps=self._conf.max_session_steps,
@@ -116,6 +119,7 @@ class ShellImpl(Shell):
                 task=task,
                 task_locker=locker,
                 is_background=is_background,
+                shell_closed=self.closed,
             )
         elif throw:
             raise RuntimeError(f'Task {task.task_id} already locked')
@@ -138,10 +142,11 @@ class ShellImpl(Shell):
                     receiver.wait()
 
         timeleft = Timeleft(timeout)
-        task = self.create_root_task(ghost, context)
+        task_id = uuid()
+        task = self.create_root_task(task_id, ghost, context)
         conversation = self.sync_task(task, throw=True, is_background=False)
         with conversation:
-            r = conversation.respond(instructions)
+            e, r = conversation.respond(instructions)
             send_message(r)
 
             while timeleft.alive():
@@ -198,7 +203,12 @@ class ShellImpl(Shell):
 
         def on_event(e: Event, r: Receiver) -> None:
             if background:
-                background.on_event(e, r)
+                messages = r.wait()
+                tails = []
+                for message in messages:
+                    if message.is_complete():
+                        tails.append(message)
+                background.on_event(e, tails)
 
         with conversation:
             event = conversation.pop_event()
@@ -236,35 +246,37 @@ class ShellImpl(Shell):
             if self._closed:
                 return True
             if background:
-                return background.stopped()
+                return not background.alive()
             return False
 
         def idle():
             time.sleep(self._conf.background_idle_time)
 
-        def halt() -> bool:
+        def halt() -> int:
             if background:
-                halt_time = background.halt()
-                if halt_time > 0:
-                    time.sleep(halt_time)
-                    return True
-            return False
+                return background.halt()
+            return 0
 
         while not is_stopped():
-            if halt():
+            if halt_time := halt():
+                time.sleep(halt_time)
                 continue
             try:
                 handled_event = self.run_background_event(background)
                 if handled_event:
                     continue
             except Exception as err:
-                self.close()
-                return
+                self._logger.exception(err)
+                break
             idle()
+        self.close()
 
     def _validate_closed(self):
         if self._closed:
             raise RuntimeError(f'Shell is closed')
+
+    def closed(self) -> bool:
+        return self._closed
 
     def close(self):
         if self._closed:

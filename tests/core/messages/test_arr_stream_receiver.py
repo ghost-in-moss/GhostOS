@@ -1,5 +1,5 @@
 from typing import Iterable
-from ghostos.core.messages.transport import new_arr_connection, Stream, ArrayReceiverBuffer
+from ghostos.core.messages.transport import new_basic_connection, Stream, ReceiverBuffer
 from ghostos.core.messages.pipeline import SequencePipe
 from ghostos.core.messages.message import Message
 from threading import Thread
@@ -15,7 +15,7 @@ def iter_content(content: str, gap: float) -> Iterable[Message]:
 
 
 def test_new_connection_baseline():
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
     assert stream.alive()
     assert not retriever.closed()
     content = "hello world, ha ha ha ha"
@@ -43,7 +43,7 @@ def test_new_connection_baseline():
 
 
 def test_new_connection_complete_only():
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=True)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=True)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -61,7 +61,7 @@ def test_new_connection_complete_only():
 
 
 def test_new_connection_timeout():
-    stream, retriever = new_arr_connection(timeout=0.2, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=0.2, idle=0.2, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -87,7 +87,7 @@ def test_new_connection_timeout():
 
 
 def test_new_connection_sync():
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -104,7 +104,7 @@ def test_new_connection_sync():
 
 
 def test_new_connection_wait():
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -119,7 +119,7 @@ def test_new_connection_wait():
 
 
 def test_new_connection_recv_with_sequence():
-    stream, retriever = new_arr_connection(timeout=0, idle=0.1, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=0, idle=0.1, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -134,7 +134,7 @@ def test_new_connection_recv_with_sequence():
 
 
 def test_new_connection_wait_with_sequence():
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -152,7 +152,7 @@ def test_new_connection_wait_with_sequence():
 def test_new_connection_with_pool():
     from ghostos.contracts.pool import DefaultPool
     pool = DefaultPool(10)
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -170,7 +170,7 @@ def test_new_connection_with_pool():
 
 
 def test_array_receiver_buffer_baseline():
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -182,7 +182,7 @@ def test_array_receiver_buffer_baseline():
         send_data(stream, content)
         send_data(stream, content)
 
-    buffer = ArrayReceiverBuffer.new(retriever.recv())
+    buffer = ReceiverBuffer.new(retriever.recv())
     assert buffer is not None
     assert buffer.head().content == "h"
     for chunk in buffer.chunks():
@@ -204,7 +204,7 @@ def test_array_receiver_buffer_baseline():
 def test_array_receiver_buffer_async():
     from ghostos.contracts.pool import DefaultPool
     pool = DefaultPool(10)
-    stream, retriever = new_arr_connection(timeout=5, idle=0.2, complete_only=False)
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
     content = "hello world"
 
     def send_data(s: Stream, c: str):
@@ -215,7 +215,7 @@ def test_array_receiver_buffer_async():
     pool.submit(send_data, stream, content)
 
     with retriever:
-        buffer = ArrayReceiverBuffer.new(retriever.recv())
+        buffer = ReceiverBuffer.new(retriever.recv())
         assert buffer.tail().content == content
         buffer = buffer.next()
         assert buffer.tail().content == content

@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import MutableMapping, Optional, ClassVar, Any, TypeVar, Type, List
+from typing import MutableMapping, Optional, ClassVar, Any, TypeVar, Type, List, Callable
 from typing_extensions import Self
 from pydantic import BaseModel
 from ghostos.helpers import generate_import_path
+import streamlit as st
 
 __all__ = [
     'SessionStateValue', 'ModelSingleton',
@@ -28,24 +29,15 @@ class SessionStateValue(ABC):
         """
         pass
 
-    @classmethod
-    def get_or_bind(cls, session_state: MutableMapping) -> Self:
-        value = cls.get(session_state)
+    def get_or_bind(self, session_state: MutableMapping) -> Self:
+        value = self.get(session_state)
+        cls = self.__class__
         if value is None:
-            default_value = cls.default()
-            default_value.bind(session_state)
-            return default_value
+            self.bind(session_state)
+            return self
         if not isinstance(value, cls):
             raise ValueError(f"type {cls} can not find self in streamlit.session_state, {value} found")
         return value
-
-    @classmethod
-    @abstractmethod
-    def default(cls) -> Self:
-        """
-        default self value
-        """
-        pass
 
     @abstractmethod
     def bind(self, session_state: MutableMapping) -> None:
@@ -76,11 +68,6 @@ class ModelSingleton(BaseModel, SessionStateValue, ABC):
     @classmethod
     def session_key(cls) -> str:
         return generate_import_path(cls)
-
-    @classmethod
-    def default(cls) -> Self:
-        # SingletonModel shall have default value for each field.
-        return cls()
 
     def bind(self, session_state: MutableMapping) -> None:
         key = self.session_key()

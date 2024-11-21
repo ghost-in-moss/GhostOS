@@ -1,11 +1,11 @@
-from typing import Optional, Iterable, List, TypeVar, Tuple, Union
+from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable
 
 from ghostos.container import Container
 from ghostos.abcd import Conversation, Scope, Ghost, Context
 from ghostos.abcd import run_session_event
 from ghostos.core.messages import (
     Message, Role,
-    Stream, Receiver, new_arr_connection,
+    Stream, Receiver, new_basic_connection,
 )
 from ghostos.core.runtime import (
     Event, EventTypes, EventBus,
@@ -14,7 +14,7 @@ from ghostos.core.runtime import (
 )
 from ghostos.contracts.pool import Pool
 from ghostos.contracts.logger import LoggerItf, wrap_logger
-from ghostos.entity import to_entity_meta
+from ghostos.entity import to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
 
@@ -48,6 +48,7 @@ class ConversationImpl(Conversation[G]):
             task: GoTaskStruct,
             task_locker: TaskLocker,
             is_background: bool,
+            shell_closed: Callable[[], bool],
     ):
         self._conf = conf
         self._container = container
@@ -67,6 +68,7 @@ class ConversationImpl(Conversation[G]):
         self._threads = container.force_fetch(GoThreads)
         self._eventbus = container.force_fetch(EventBus)
         self._closed = False
+        self._shell_closed = shell_closed
         self._bootstrap()
 
     def _bootstrap(self):
@@ -78,25 +80,48 @@ class ConversationImpl(Conversation[G]):
         return self._container
 
     def task(self) -> GoTaskStruct:
+        self._validate_closed()
         return self._tasks.get_task(self._scope.task_id)
 
     def thread(self) -> GoThreadInfo:
+        self._validate_closed()
         task = self.task()
         thread_id = task.thread_id
         return self._threads.get_thread(thread_id, create=True)
 
+    def update_thread(self, thread: GoThreadInfo) -> None:
+        self._validate_closed()
+        task = self.task()
+        thread.id = task.thread_id
+        self._threads.save_thread(thread)
+
+    def get_ghost(self) -> Ghost:
+        self._validate_closed()
+        task = self.task()
+        return get_entity(task.meta, Ghost)
+
+    def get_context(self) -> Optional[Context]:
+        self._validate_closed()
+        task = self.task()
+        if task.context is None:
+            return None
+        return get_entity(task.context, Context)
+
     def get_artifact(self) -> Tuple[Union[Ghost.ArtifactType, None], TaskState]:
+        self._validate_closed()
         task = self.task()
         session = self._create_session(task, self._locker, None)
         with session:
             return session.get_artifact(), TaskState(session.task.state)
 
-    def talk(self, query: str, user_name: str = "") -> Receiver:
-        self._logger.info("talk to user %s", user_name)
+    def talk(self, query: str, user_name: str = "") -> Tuple[Event, Receiver]:
+        self._validate_closed()
+        self._logger.debug("talk to user %s", user_name)
         message = Role.USER.new(content=query, name=user_name)
         return self.respond([message])
 
     def update_context(self, context: Context) -> None:
+        self._validate_closed()
         self._ctx = context
 
     def respond(
@@ -127,8 +152,9 @@ class ConversationImpl(Conversation[G]):
         # complete task_id
         if not event.task_id:
             event.task_id = self._scope.task_id
+        self._logger.debug("start to respond event %s", event.event_id)
 
-        stream, retriever = new_arr_connection(
+        stream, retriever = new_basic_connection(
             timeout=timeout,
             idle=self._conf.message_receiver_idle,
             complete_only=self._is_background,
@@ -139,6 +165,8 @@ class ConversationImpl(Conversation[G]):
     def _validate_closed(self):
         if self._closed:
             raise RuntimeError(f"Conversation is closed")
+        if self._shell_closed():
+            raise RuntimeError(f"Shell is closed")
 
     def _submit_session_event(self, event: Event, stream: Stream) -> None:
         self._logger.debug("submit session event")
@@ -209,4 +237,4 @@ class ConversationImpl(Conversation[G]):
         del self._logger
 
     def closed(self) -> bool:
-        return self._closed
+        return self._closed or self._shell_closed()

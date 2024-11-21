@@ -19,17 +19,17 @@ class Payload(BaseModel, ABC):
     """ the unique key of the payload"""
 
     @classmethod
-    def read(cls, message: Union[Message, HasPayloads]) -> Optional[Self]:
+    def read_payload(cls, message: Union[Message, HasPayloads]) -> Optional[Self]:
         value = message.payloads.get(cls.key, None)
         if value is None:
             return None
         return cls(**value)
 
-    def set(self, message: Union[Message, HasPayloads]) -> None:
+    def set_payload(self, message: Union[Message, HasPayloads]) -> None:
         message.payloads[self.key] = self.model_dump()
 
     @classmethod
-    def exists(cls, message: Union[Message, HasPayloads]) -> bool:
+    def payload_exists(cls, message: Union[Message, HasPayloads]) -> bool:
         if not hasattr(message, "payloads"):
             return False
         if not isinstance(message.payloads, dict):

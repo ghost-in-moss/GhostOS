@@ -120,7 +120,7 @@ class OpenAIAdapter(LLMApi):
             raise AttributeError("empty chat!!")
         try:
             prompt.run_start = timestamp()
-            self._logger.info(f"start chat completion for prompt {prompt.id}")
+            self._logger.debug(f"start chat completion for prompt {prompt.id}")
             return self._client.chat.completions.create(
                 messages=messages,
                 model=self._model.model,
@@ -136,7 +136,7 @@ class OpenAIAdapter(LLMApi):
                 **self._model.kwargs,
             )
         finally:
-            self._logger.info(f"end chat completion for prompt {prompt.id}")
+            self._logger.debug(f"end chat completion for prompt {prompt.id}")
             prompt.run_end = timestamp()
 
     def chat_completion(self, prompt: Prompt) -> Message:
@@ -145,10 +145,10 @@ class OpenAIAdapter(LLMApi):
             prompt.output = [message]
             pack = self._parser.from_chat_completion(message.choices[0].message)
             # add completion usage
-            self._model.set(pack)
+            self._model.set_payload(pack)
             if message.usage:
                 usage = CompletionUsagePayload.from_usage(message.usage)
-                usage.set(pack)
+                usage.set_payload(pack)
 
             if not pack.is_complete():
                 pack.chunk = False
@@ -168,8 +168,8 @@ class OpenAIAdapter(LLMApi):
             for chunk in messages:
                 yield chunk
                 if chunk.is_complete():
-                    self._model.set(chunk)
-                    prompt_payload.set(chunk)
+                    self._model.set_payload(chunk)
+                    prompt_payload.set_payload(chunk)
                     output.append(chunk)
             prompt.output = output
         except Exception as e:
@@ -199,6 +199,7 @@ class OpenAIDriver(LLMDriver):
         return OPENAI_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
+        self._logger.debug(f"new llm api %s at service %s", model.model, service.name)
         return OpenAIAdapter(service, model, self._parser, self._storage, self._logger)
 
 

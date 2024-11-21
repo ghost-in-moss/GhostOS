@@ -65,12 +65,12 @@ class GhostOSImpl(GhostOS):
         process = self._processes.get_process(shell_id)
         if process is None:
             process = GoProcess.new(shell_id=shell_id, process_id=process_id)
-            self._logger.info(f"Created shell `{shell_id}` process `{process_id}`")
+            self._logger.debug(f"Created shell `{shell_id}` process `{process_id}`")
         elif process_id is not None and process.process_id != process_id:
             process = GoProcess.new(shell_id=shell_id, process_id=process_id)
-            self._logger.info(f"Created shell `{shell_id}` new process `{process_id}`")
+            self._logger.debug(f"Created shell `{shell_id}` new process `{process_id}`")
         else:
-            self._logger.info(f"get shell `{shell_id}` new process `{process.process_id}`")
+            self._logger.debug(f"get shell `{shell_id}` new process `{process.process_id}`")
         self._processes.save_process(process)
 
         # prepare container

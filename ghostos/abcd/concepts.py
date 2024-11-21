@@ -239,11 +239,11 @@ class Background(ABC):
         pass
 
     @abstractmethod
-    def on_event(self, event: Event, retriever: Receiver) -> None:
+    def on_event(self, event: Event, messages: List[Message]) -> None:
         pass
 
     @abstractmethod
-    def stopped(self) -> bool:
+    def alive(self) -> bool:
         pass
 
     @abstractmethod
@@ -322,6 +322,10 @@ class Shell(ABC):
     def close(self):
         pass
 
+    @abstractmethod
+    def closed(self) -> bool:
+        pass
+
 
 class Conversation(Protocol[G]):
     """
@@ -344,11 +348,23 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def update_thread(self, thread: GoThreadInfo) -> None:
+        pass
+
+    @abstractmethod
+    def get_ghost(self) -> G:
+        pass
+
+    @abstractmethod
+    def get_context(self) -> G.ContextType:
+        pass
+
+    @abstractmethod
     def get_artifact(self) -> Tuple[Union[G.ArtifactType, None], TaskState]:
         pass
 
     @abstractmethod
-    def talk(self, query: str, user_name: str = "") -> Receiver:
+    def talk(self, query: str, user_name: str = "") -> Tuple[Event, Receiver]:
         pass
 
     @abstractmethod

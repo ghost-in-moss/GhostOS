@@ -38,7 +38,7 @@ def check_ghostos_workspace_exists() -> str:
     app_dir, ok = expect_workspace_dir()
     if not ok:
         logger.error("expect GhostOS workspace `%s` is not found. ", app_dir)
-        logger.info("run `ghostos init` to create workspace")
+        logger.debug("run `ghostos init` to create workspace")
         sys.exit(0)
     return app_dir
 

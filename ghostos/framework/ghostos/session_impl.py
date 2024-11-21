@@ -67,6 +67,7 @@ class SessionImpl(Session[Ghost]):
             parent_task_id=task.parent,
         )
         logger = container.force_fetch(LoggerItf)
+        logger.debug("SessionImpl initialized at %s", self.scope)
         self.logger = wrap_logger(
             logger,
             extra=self.scope.model_dump(),

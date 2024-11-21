@@ -271,8 +271,8 @@ class DefaultBuffer(Buffer):
         # 添加默认的 payloads.
         if self._payloads:
             for payload in self._payloads:
-                if not payload.exists(pack):
-                    payload.set(pack)
+                if not payload.payload_exists(pack):
+                    payload.set_payload(pack)
 
         return pack
 

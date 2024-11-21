@@ -8,7 +8,7 @@ import yaml
 
 __all__ = [
     'LoggerItf', 'config_logging', 'get_logger', 'get_console_logger', 'get_debug_logger',
-    'wrap_logger',
+    'wrap_logger', 'LoggerAdapter',
 ]
 
 
@@ -36,7 +36,7 @@ class LoggerItf(Protocol):
         To pass exception information, use the keyword argument exc_info with
         a true value, e.g.
 
-        logger.info("Houston, we have a %s", "notable problem", exc_info=True)
+        logger.debug("Houston, we have a %s", "notable problem", exc_info=True)
         """
         pass
 
@@ -127,30 +127,30 @@ def get_console_logger(
 ) -> LoggerItf:
     logger = getLogger(name)
     if not logger.hasHandlers():
-        logger.setLevel(logging.INFO)
         _console_handler = logging.StreamHandler()
-        if debug:
-            _console_handler.setLevel(logging.DEBUG)
         _console_formatter = PleshakovFormatter()
         _console_handler.setFormatter(_console_formatter)
         logger.addHandler(_console_handler)
+
+    if debug:
+        logger.setLevel(logging.DEBUG)
     return LoggerAdapter(logger, extra=extra)
 
 
 def get_debug_logger(
         name: str = "__ghostos_debug__",
         extra: Optional[dict] = None,
-        debug: bool = False,
 ) -> LoggerItf:
     logger = getLogger(name)
     if not logger.hasHandlers():
-        logger.setLevel(logging.INFO)
-        _debug_file_handler = logging.FileHandler("debug.log")
-        if debug:
-            _debug_file_handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)")
+        _debug_file_handler = logging.FileHandler("debug.log", mode="a")
+        formatter = logging.Formatter(
+            fmt="%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)",
+        )
         _debug_file_handler.setFormatter(formatter)
+        _debug_file_handler.setLevel(logging.DEBUG)
         logger.addHandler(_debug_file_handler)
+    logger.setLevel(logging.DEBUG)
     return LoggerAdapter(logger, extra=extra)
 
 
@@ -185,3 +185,7 @@ if __name__ == '__main__':
     get_console_logger().error("hello world")
     get_console_logger().warning("hello world")
     get_console_logger().critical("hello world")
+    get_debug_logger().debug("debug")
+    get_debug_logger().info("debug")
+    get_debug_logger().error("debug")
+    get_debug_logger().critical("debug")

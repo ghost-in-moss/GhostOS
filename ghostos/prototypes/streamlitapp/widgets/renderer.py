@@ -4,13 +4,115 @@ import streamlit_react_jsonschema as srj
 from pydantic import BaseModel
 from ghostos.helpers import generate_import_path, yaml_pretty_dump
 from ghostos.streamlit import render_streamlit_object, StreamlitRenderer
+from ghostos.core.runtime import (
+    TaskBrief, GoTasks, GoTaskStruct,
+    GoThreads, GoThreadInfo, Turn,
+    Event,
+)
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.container import Container
+from ghostos.helpers import gettext as _
 import inspect
 
-__all__ = ['render_object']
+__all__ = [
+    'render_object',
+    'render_task', 'render_task_by_id',
+    'render_thread', 'render_event', 'render_turn', 'render_event_object',
+    'render_empty',
+]
 
 T = TypeVar('T')
+
+
+def render_task_by_id(task_id: str):
+    container = Singleton.get(Container, st.session_state)
+    tasks = container.force_fetch(GoTasks)
+    task = tasks.get_task(task_id)
+    if task is None:
+        st.info(f"Task {task_id} not found")
+        st.empty()
+        return
+    render_task(task)
+
+
+def render_empty():
+    for i in range(30):
+        st.empty()
+
+
+def render_task(task: GoTaskStruct):
+    brief = TaskBrief.from_task(task)
+    srj.pydantic_instance_form(brief, readonly=True)
+
+    with st.expander(_("Detail"), expanded=False):
+        st.write(task.model_dump(exclude_defaults=True))
+
+    if task.children:
+        st.subheader("Subtasks")
+        st.write("todo")
+
+    container = Singleton.get(Container, st.session_state)
+    threads = container.force_fetch(GoThreads)
+    thread = threads.get_thread(task.thread_id)
+    st.subheader("Thread Info")
+    if thread is None:
+        st.info(f"Thread {task.thread_id} is not created yet")
+        st.empty()
+        return
+    with st.container(border=True):
+        render_thread(thread, prefix="render_thread_in_task", debug=False)
+
+
+def render_thread(thread: GoThreadInfo, max_turn: int = 20, prefix: str = "", debug: bool = False):
+    st.subheader("Thread Info")
+    turns = list(thread.turns())
+    turns = turns[-max_turn:]
+    count = 0
+    for turn in turns:
+        count += render_turn(turn, debug, prefix)
+    if count == 0:
+        st.info("No thread messages yet")
+
+
+def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
+    from ghostos.prototypes.streamlitapp.widgets.messages import render_messages
+    if turn.is_from_client():
+        messages = list(turn.messages())
+        render_messages(messages, debug, prefix)
+        return len(messages)
+    # from other task
+    else:
+        event = turn.event
+        sub_title = _("background run")
+        if event is not None:
+            sub_title = _("background event: ") + event.type
+        with st.expander(sub_title, expanded=False):
+            messages = list(turn.messages())
+            render_messages(messages, debug, prefix)
+            render_event_object(event, debug)
+            return len(messages)
+
+
+def render_event(event: Event, debug: bool):
+    from ghostos.prototypes.streamlitapp.widgets.messages import render_messages
+    if event is None:
+        return
+    if event.from_task_id:
+        sub_title = _("background event: ") + event.type
+        with st.expander(sub_title, expanded=False):
+            messages = event.iter_message(show_instruction=True)
+            render_messages(messages, debug)
+    else:
+        messages = event.iter_message(show_instruction=True)
+        render_messages(messages, debug)
+
+
+def render_event_object(event: Event, debug: bool):
+    if event is None:
+        return
+    from_task_name = event.from_task_name
+    if debug and from_task_name is not None:
+        st.button(f"from task {from_task_name}", key=f"from task {event.event_id}")
 
 
 def render_object(obj: T, immutable: bool = False) -> Tuple[T, bool]:

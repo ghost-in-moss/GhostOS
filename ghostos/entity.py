@@ -128,6 +128,8 @@ T = TypeVar("T")
 
 
 def get_entity(meta: EntityMeta, expect: Type[T]) -> T:
+    if meta is None:
+        raise ValueError("EntityMeta cannot be None")
     entity = from_entity_meta(meta)
     if not isinstance(entity, expect):
         raise TypeError(f"Expected entity type {expect} but got {type(entity)}")

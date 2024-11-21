@@ -69,10 +69,10 @@ def main_run(bootstrap: BOOTSTRAP) -> None:
     pgs = st.navigation(router.pages(), position="hidden")
     # define sidebar
     with st.sidebar:
-        router.render_homepage()
+        # router.render_homepage()
         # render page links
-        # with st.expander(label=_("Navigator"), expanded=False, icon=":material/menu:"):
-        #     router.render_navigator(use_container_width=True)
+        with st.expander(label=_("Navigator"), expanded=False, icon=":material/menu:"):
+            router.render_navigator(use_container_width=True)
         # with helper mode toggle
         # open_navigator = st.button(
         #     label=_("GhostOS Navigator"),

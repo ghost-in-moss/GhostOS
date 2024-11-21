@@ -1,5 +1,5 @@
 from ghostos.framework.messengers import DefaultMessenger
-from ghostos.core.messages import Message, new_arr_connection
+from ghostos.core.messages import Message, new_basic_connection
 
 
 def test_default_messenger_baseline():
@@ -16,7 +16,7 @@ def test_default_messenger_baseline():
 
 
 def test_messenger_with_upstream():
-    stream, receiver = new_arr_connection()
+    stream, receiver = new_basic_connection()
     messenger = DefaultMessenger(stream)
     items = []
     content = "hello world"

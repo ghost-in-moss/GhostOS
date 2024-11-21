@@ -1,7 +1,7 @@
 import sys
 from os.path import dirname
 from ghostos.core.aifunc import AIFuncExecutor
-from ghostos.core.messages.transport import new_arr_connection
+from ghostos.core.messages.transport import new_basic_connection
 
 # I hate python imports
 ghostos_project_dir = dirname(dirname(__file__))
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     fn = AgentFn(
         request="help me to find news about OpenAI O1 model",
     )
-    stream, receiver = new_arr_connection(timeout=-1, complete_only=True)
+    stream, receiver = new_basic_connection(timeout=-1, complete_only=True)
     frame, caller = executor.new_exec_frame(fn, stream)
     t = Thread(target=caller)
     t.start()

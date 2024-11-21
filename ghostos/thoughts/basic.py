@@ -80,7 +80,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         llm_api = self.get_llmapi(g)
 
         # run llms
-        logger.info("start llm thinking")  # todo: logger
+        logger.debug("start llm thinking")  # todo: logger
         # prepare messenger
         messenger = session.messenger(functional_tokens=chat.functional_tokens)
         llm_api.deliver_chat_completion(chat, messenger)
@@ -91,7 +91,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         # callback actions
         for caller in callers:
             if caller.name in action_map:
-                logger.info(f"llm response caller `{caller.name}` match action")
+                logger.debug(f"llm response caller `{caller.name}` match action")
                 action = action_map[caller.name]
                 op = action.act(container, session, caller)
                 if op is not None:

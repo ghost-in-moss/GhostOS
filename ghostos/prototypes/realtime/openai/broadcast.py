@@ -86,7 +86,7 @@ class SimpleBroadcaster(Broadcaster):
     def close(self):
         if self._closed:
             return
-        self._logger.info("%s is closing", self.__class__.__name__)
+        self._logger.debug("%s is closing", self.__class__.__name__)
         self._closed = True
         for chan in self.subscriber_channels.values():
             chan.put(None)

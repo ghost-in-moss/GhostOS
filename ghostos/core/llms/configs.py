@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 
 from typing import List, Dict, Optional, Any, ClassVar
-
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Payload
 
@@ -68,6 +67,7 @@ class LLMsConfig(BaseModel):
     """
     llms configurations for ghostos.core.llms.llm:LLMs default implementation.
     """
+
     services: List[ServiceConf] = Field(
         default_factory=list,
         description="define llm services, such as openai or moonshot",

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, Callable, Optional, MutableMapping, Literal, List, Dict, Set, Union
+from typing import ClassVar, Callable, Optional, MutableMapping, TypeVar, List, Dict, Set, Union
 from abc import ABC
 from typing_extensions import Self
 from ghostos.prototypes.streamlitapp.utils.session import SessionStateValue
@@ -11,6 +11,8 @@ from ghostos.helpers import gettext as _
 import streamlit_antd_components as sac
 
 __all__ = ["Router", 'Route', 'Link']
+
+T = TypeVar("T")
 
 
 class Link:
@@ -114,6 +116,7 @@ class Route(SessionStateValue, BaseModel, ABC):
         help_ = self.link.button_help
         if help_ is not None:
             help_ = _(help_)
+        self.bind(st.session_state)
         st.page_link(
             self.page(),
             label=label,
@@ -149,10 +152,6 @@ class Route(SessionStateValue, BaseModel, ABC):
             return cls(**data)
         return None
 
-    @classmethod
-    def default(cls) -> Self:
-        return cls()
-
     def bind(self, session_state: MutableMapping) -> None:
         from ghostos.container import get_caller_info
         key = self.session_state_key()
@@ -164,6 +163,23 @@ class Route(SessionStateValue, BaseModel, ABC):
         if current in st.session_state:
             return st.session_state[current]
         return ""
+
+    @classmethod
+    def get_route_bound(cls, value: T, key: str = "") -> T:
+        if not key:
+            key = generate_import_path(type(value))
+        session_key = cls.session_state_key() + ":" + key
+        if session_key in st.session_state:
+            return st.session_state[session_key]
+        st.session_state[session_key] = value
+        return value
+
+    @classmethod
+    def bind_to_route(cls, value, key: str = ""):
+        if not key:
+            key = generate_import_path(type(value))
+        session_key = cls.session_state_key() + ":" + key
+        st.session_state[session_key] = value
 
 
 class Router:

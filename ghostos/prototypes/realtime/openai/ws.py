@@ -117,7 +117,7 @@ class OpenAIWSConnection:
         if self._ws is not None:
             self._ws.close()
             self._ws = None
-        self._logger.info("[OpenAIWSConnection] stop the connection")
+        self._logger.debug("[OpenAIWSConnection] stop the connection")
 
     def closed(self) -> bool:
         return self._closed

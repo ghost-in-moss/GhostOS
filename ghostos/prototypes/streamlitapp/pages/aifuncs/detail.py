@@ -17,7 +17,7 @@ from ghostos.prototypes.streamlitapp.widgets.messages import (
     render_message_item,
     render_messages,
 )
-from ghostos.core.messages import new_arr_connection
+from ghostos.core.messages import new_basic_connection
 from ghostos.core.aifunc import (
     AIFunc,
     AIFuncExecutor,
@@ -101,7 +101,7 @@ def render_aifunc_execute_stream(route: AIFuncDetailRoute, fn: Type[AIFunc]):
         return
 
     executor = get_container().force_fetch(AIFuncExecutor)
-    stream, receiver = new_arr_connection(timeout=route.timeout, idle=route.exec_idle, complete_only=True)
+    stream, receiver = new_basic_connection(timeout=route.timeout, idle=route.exec_idle, complete_only=True)
     frame, caller = executor.new_exec_frame(args, stream)
     # save status
     route.frame = frame

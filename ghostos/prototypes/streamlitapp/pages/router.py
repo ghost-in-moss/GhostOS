@@ -3,36 +3,38 @@ from ghostos.prototypes.streamlitapp.utils.route import Route, Router, Link
 from ghostos.core.messages import Message
 from ghostos.core.aifunc import ExecFrame
 from ghostos.abcd import Ghost, Context
-from ghostos.entity import EntityMeta, from_entity_meta, get_entity
+from ghostos.entity import EntityMeta, get_entity
+from ghostos.helpers import generate_import_path
 from enum import Enum
 from pydantic import Field
+from ghostos.framework.llms import LLMsYamlConfig
+from ghostos.framework.documents import StorageDocumentsConfig
 
 
 class PagePath(str, Enum):
     HOMEPAGE = "ghostos.prototypes.streamlitapp.pages.homepage"
     AIFUNCS = "ghostos.prototypes.streamlitapp.pages.aifuncs"
     GHOSTOS = "ghostos.prototypes.streamlitapp.pages.ghosts"
+    CONFIGS = "ghostos.prototypes.streamlitapp.pages.configs"
 
     def suffix(self, attr_name: str):
         return self.value + attr_name
 
 
-# --- ghosts --- #
+# --- ghost --- #
 
 class GhostChatRoute(Route):
     link = Link(
-        name="ghost_chat",
+        name="Ghost Chat",
         import_path=PagePath.GHOSTOS.suffix(".chat:main"),
         streamlit_icon=":material/smart_toy:",
         button_help="todo",
         antd_icon="robot",
     )
+    task_id: str = Field(default="", description="Ghost Task ID")
     ghost_meta: Optional[EntityMeta] = Field(default=None, description="ghost meta")
     context_meta: Optional[EntityMeta] = Field(default=None, description="context meta")
-    input_type: str = Field(default="Chat", description="input type")
-    page_type: str = Field(default="Chat", description="page type")
-
-    inputs: List[Message] = Field(default_factory=list, description="inputs")
+    input_type: str = Field(default="", description="input type")
 
     __ghost__ = None
 
@@ -49,6 +51,25 @@ class GhostChatRoute(Route):
         if self.__context__ is None:
             self.__context__ = get_entity(self.context_meta, Context)
         return self.__context__
+
+
+# --- configs --- #
+
+class ConfigsRoute(Route):
+    link = Link(
+        name="Configs",
+        import_path=PagePath.CONFIGS.suffix(":main"),
+        streamlit_icon=":material/settings:",
+        button_help="todo",
+        antd_icon="settings",
+    )
+    config_classes: List[str] = Field(
+        default_factory=lambda: [
+            generate_import_path(LLMsYamlConfig),
+            generate_import_path(StorageDocumentsConfig),
+        ],
+        description="config classes"
+    )
 
 
 # --- home --- #
@@ -144,12 +165,13 @@ def default_router() -> Router:
             GhostOSHost(),
             AIFuncListRoute(),
             AIFuncDetailRoute(),
+            # ghosts
             GhostChatRoute(),
+            ConfigsRoute(),
         ],
         home=Home.label(),
         navigator_page_names=[
-            GhostOSHost.label(),
-            AIFuncListRoute.label(),
+            ConfigsRoute.label(),
         ],
         default_menu={
             Home.label(): None,
