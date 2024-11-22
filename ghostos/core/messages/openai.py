@@ -4,19 +4,19 @@ from openai.types.chat.chat_completion_chunk import ChoiceDelta, ChatCompletionC
 from openai.types.completion_usage import CompletionUsage
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
+from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
 from openai.types.chat.chat_completion_assistant_message_param import ChatCompletionAssistantMessageParam, FunctionCall
 from openai.types.chat.chat_completion_message_tool_call_param import ChatCompletionMessageToolCallParam
 from openai.types.chat.chat_completion_system_message_param import ChatCompletionSystemMessageParam
 from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
-from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
-
 from ghostos.core.messages import (
     Message, MessageType, Role, Caller, Payload, MessageClass, MessageClassesParser
 )
 from ghostos.core.messages.message_classes import (
     CallerOutput, VariableMessage,
 )
+from ghostos.contracts.logger import get_ghostos_logger
 from ghostos.container import Provider, Container
 from ghostos.helpers import import_class_from_path
 
@@ -120,30 +120,70 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             yield from self._parse_message(message)
 
     def _parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
+        if message.type == MessageType.FUNCTION_CALL.value:
+            if message.ref_id:
+                yield from [
+                    ChatCompletionAssistantMessageParam(
+                        content=None,
+                        role="assistant",
+                        tool_calls=[
+                            ChatCompletionMessageToolCallParam(
+                                id=message.ref_id,
+                                function=FunctionCall(
+                                    name=message.name,
+                                    arguments=message.content,
+                                ),
+                                type="function"
+                            )
+                        ]
+                    )
+                ]
+            else:
+                yield from [
+                    ChatCompletionAssistantMessageParam(
+                        content=None,
+                        role="assistant",
+                        function_call=FunctionCall(
+                            name=message.name,
+                            arguments=message.content,
+                        )
+                    )
+                ]
+        elif message.type == MessageType.FUNCTION_OUTPUT:
+            if message.ref_id:
+                yield from [
+                    ChatCompletionToolMessageParam(
+                        tool_call_id=message.ref_id,
+                        content=message.content,
+                        role="tool",
+                    )
+                ]
+            else:
+                yield from [
+                    ChatCompletionFunctionMessageParam(
+                        content=message.get_content(),
+                        name=message.name,
+                        role="function",
+                    )
+                ]
+        elif not MessageType.is_text(message):
+            return []
+
         if message.role == Role.ASSISTANT:
-            return self._parse_assistant_chat_completion(message)
+            yield from self._parse_assistant_chat_completion(message)
         elif message.role == Role.SYSTEM:
-            return [
-                ChatCompletionSystemMessageParam(content=message.get_content(), name=message.name, role="system")
+            yield from [
+                ChatCompletionSystemMessageParam(content=message.get_content(), role="system")
             ]
         elif message.role == Role.USER:
-            return [
-                ChatCompletionUserMessageParam(content=message.get_content(), name=message.name, role="user")
-            ]
-        elif message.type == MessageType.FUNCTION_OUTPUT:
-            return [
-                ChatCompletionFunctionMessageParam(content=message.get_content(), name=message.name, role="function")
-            ]
-        elif message.role == MessageType.FUNCTION_CALL:
-            return [
-                ChatCompletionToolMessageParam(
-                    tool_call_id=message.ref_id,
-                    content=message.get_content(),
-                    role="tool",
-                )
+            item = ChatCompletionUserMessageParam(content=message.get_content(), role="user")
+            if message.name:
+                item["name"] = message.name
+            yield from [
+                item
             ]
         else:
-            return []
+            yield from []
 
     @staticmethod
     def _parse_assistant_chat_completion(message: Message) -> Iterable[ChatCompletionAssistantMessageParam]:
@@ -179,14 +219,15 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                     tool_calls.append(tool_call)
         if not content and not function_call and not tool_calls:
             return []
-
-        return [ChatCompletionAssistantMessageParam(
+        item = ChatCompletionAssistantMessageParam(
             content=content,
             role="assistant",
-            name=message.name if message.name else "",
-            function_call=function_call,
             tool_calls=tool_calls,
-        )]
+        )
+        if message.name:
+            item["name"] = message.name
+
+        return [item]
 
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
         pack = Message.new_tail(type_=MessageType.DEFAULT, role=message.role, content=message.content)
@@ -212,6 +253,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         # 创建首包, 并发送.
         buffer = None
         for item in messages:
+            get_ghostos_logger().debug("receive chunk: %s", item)
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
@@ -222,6 +264,8 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 choice = item.choices[0]
                 delta = choice.delta
                 chunk = self._new_pack_from_delta(delta)
+                if chunk is None:
+                    continue
             else:
                 continue
 
@@ -241,23 +285,36 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             yield buffer.as_tail(copy=False)
 
     @staticmethod
-    def _new_pack_from_delta(delta: ChoiceDelta) -> Message:
-        pack = Message.new_chunk(
-            role=Role.ASSISTANT.value,
-            content=delta.content,
-            typ_=MessageType.DEFAULT,
-        )
+    def _new_pack_from_delta(delta: ChoiceDelta) -> Optional[Message]:
+
         # function call
         if delta.function_call:
-            function_call = Caller(**delta.function_call.model_dump())
-            pack.callers.add(function_call)
+            pack = Message.new_chunk(
+                typ_=MessageType.FUNCTION_CALL.value,
+                name=delta.function_call.name,
+                content=delta.function_call.arguments,
+            )
+            return pack
 
         # tool calls
-        if delta.tool_calls:
+        elif delta.content:
+            pack = Message.new_chunk(
+                role=Role.ASSISTANT.value,
+                content=delta.content,
+                typ_=MessageType.DEFAULT,
+            )
+            return pack
+
+        elif delta.tool_calls:
             for item in delta.tool_calls:
-                tool_call = Caller(**item.tool_call.model_dump())
-                pack.callers.add(tool_call)
-        return pack
+                pack = Message.new_chunk(
+                    typ_=MessageType.FUNCTION_CALL.value,
+                    ref_id=item.id,
+                    name=item.function.name,
+                    content=item.function.arguments,
+                )
+                return pack
+        return None
 
 
 class DefaultOpenAIParserProvider(Provider[OpenAIMessageParser]):

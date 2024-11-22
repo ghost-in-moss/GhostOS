@@ -76,8 +76,11 @@ def render_thread(thread: GoThreadInfo, max_turn: int = 20, prefix: str = "", de
 
 def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
     from ghostos.prototypes.streamlitapp.widgets.messages import render_messages
+    if turn.summary is not None:
+        st.info("summary:\n" + turn.summary)
+
     if turn.is_from_client():
-        messages = list(turn.messages())
+        messages = list(turn.messages(False))
         render_messages(messages, debug, prefix)
         return len(messages)
     # from other task
@@ -87,7 +90,7 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
         if event is not None:
             sub_title = _("background event: ") + event.type
         with st.expander(sub_title, expanded=False):
-            messages = list(turn.messages())
+            messages = list(turn.messages(False))
             render_messages(messages, debug, prefix)
             render_event_object(event, debug)
             return len(messages)

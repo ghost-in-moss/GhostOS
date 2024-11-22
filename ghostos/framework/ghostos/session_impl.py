@@ -15,7 +15,7 @@ from ghostos.core.runtime import (
     GoThreadInfo,
 )
 from ghostos.prompter import Prompter
-from ghostos.contracts.logger import wrap_logger, LoggerItf
+from ghostos.contracts.logger import get_ghostos_logger, LoggerItf
 from ghostos.contracts.variables import Variables
 from ghostos.container import Container, provide, Contracts
 from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
@@ -66,12 +66,6 @@ class SessionImpl(Session[Ghost]):
             task_id=task.task_id,
             parent_task_id=task.parent,
         )
-        logger = container.force_fetch(LoggerItf)
-        logger.debug("SessionImpl initialized at %s", self.scope)
-        self.logger = wrap_logger(
-            logger,
-            extra=self.scope.model_dump(),
-        )
 
         self.ghost: G = get_entity(self.task.meta, Ghost)
         self.ghost_driver: GhostDriver[G] = get_ghost_driver(self.ghost)
@@ -98,6 +92,10 @@ class SessionImpl(Session[Ghost]):
             raise RuntimeError(f"Failed to start session")
         Session.instance_count += 1
 
+    @property
+    def logger(self) -> LoggerItf:
+        return get_ghostos_logger(self.scope.model_dump())
+
     def __del__(self):
         # for gc test
         Session.instance_count -= 1
@@ -106,7 +104,6 @@ class SessionImpl(Session[Ghost]):
     def _bootstrap(self):
         self.contracts.validate(self.container)
         self.container.set(Session, self)
-        self.container.set(LoggerItf, self.logger)
         self.container.set(Scope, self.scope)
         self.container.set(MessageKindParser, self._message_parser)
         self.container.register(provide(GoTaskStruct, False)(lambda c: self.task))
@@ -167,7 +164,7 @@ class SessionImpl(Session[Ghost]):
             return None, EmptyOperator()
 
         if EventTypes.ERROR.value == event.type:
-            self.task.error += 1
+            self.task.errors += 1
             if self.task.errors > self._max_errors:
                 # if reach max errors, fail the task
                 return None, self.taskflow().fail("task failed too much, exceeds max errors")
@@ -238,12 +235,13 @@ class SessionImpl(Session[Ghost]):
 
     def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[Caller]]:
         self._validate_alive()
+        messages = self._message_parser.parse(messages)
         with self._thread_locker:
             messenger = self.messenger(stage)
             messenger.send(messages)
-            messages, callers = messenger.flush()
-            self.thread.append(*messages)
-            return messages, callers
+            buffer, callers = messenger.flush()
+            self.thread.append(*buffer)
+            return buffer, callers
 
     def cancel_subtask(self, ghost: G, reason: str = "") -> None:
         self._validate_alive()
@@ -323,7 +321,7 @@ class SessionImpl(Session[Ghost]):
         task = self.task
         task.meta = to_entity_meta(self.ghost)
         state_values = {}
-        for name, value in self.state:
+        for name, value in self.state.items():
             state_values[name] = to_entity_meta(value)
         thread = self.thread
         # update system log

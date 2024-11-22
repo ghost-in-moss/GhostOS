@@ -16,7 +16,7 @@ services:
     base_url: https://api.deepseek.com/beta
     # proxy: $OPENAI_PROXY
 # Configure default LLM API here.
-default: moonshot-v1-32k
+default: gpt-4o
 # The models below can be edited as you want, see details: ghostos.core.llms.configs:ModelConf
 # the key of models is a `llm_api_name`, value is a ModelConf instance.
 models:

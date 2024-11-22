@@ -2,7 +2,7 @@ from typing import List
 
 from ghostos.core.messages import Message
 from ghostos.core.runtime import Event
-from ghostos.contracts.logger import get_console_logger
+from ghostos.contracts.logger import get_ghostos_logger
 from ghostos.helpers import create_and_bind_module
 from ghostos.scripts.cli.run_streamlit_ghost import RunGhostChatApp
 from ghostos.bootstrap import get_ghostos, get_container
@@ -17,7 +17,7 @@ import json
 if len(sys.argv) < 2:
     raise SystemExit(f"invalid RunAIFuncApp arguments")
 
-logger = get_console_logger(debug=True)
+logger = get_ghostos_logger()
 
 
 class StreamlitBackgroundApp(Background):
@@ -54,7 +54,11 @@ def bootstrap():
     logger.debug(f"generate ghostos app container at workspace {app_arg.workspace_dir}")
 
     # bound route.
-    page_route = GhostChatRoute(ghost_meta=app_arg.ghost_meta)
+    page_route = GhostChatRoute(
+        ghost_meta=app_arg.ghost_meta,
+        context_meta=app_arg.context_meta,
+        filename=app_arg.filename,
+    )
     page_route = page_route.get_or_bind(st.session_state)
     # initialize router and set aifunc is default
     router = default_router().with_current(page_route)

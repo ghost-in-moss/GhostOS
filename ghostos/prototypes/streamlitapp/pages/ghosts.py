@@ -3,7 +3,7 @@ import time
 import streamlit_react_jsonschema as srj
 from typing import Iterable, List
 from ghostos.prototypes.streamlitapp.pages.router import (
-    GhostChatRoute,
+    GhostChatRoute, GhostTaskRoute, GhostSettingsRoute,
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.prototypes.streamlitapp.widgets.messages import (
@@ -19,15 +19,17 @@ from ghostos.core.messages import Receiver, Role, ReceiverBuffer, MessageType, M
 from streamlit.logger import get_logger
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
+from ghostos.entity import to_entity_meta
 from ghostos.helpers import gettext as _
 from ghostos.helpers import generate_import_path, yaml_pretty_dump
+from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
 from pydantic import BaseModel
 import inspect
 
 logger = get_logger("ghostos")
 
 
-def main():
+def main_chat():
     # create shell
     route = GhostChatRoute.get(st.session_state)
     if route is None:
@@ -35,32 +37,13 @@ def main():
         return
 
     # get ghost and context
-    ghost = route.get_ghost()
-    context = route.get_context()
-    ghost = route.get_route_bound(ghost)
-    context = route.get_route_bound(context)
-
-    conversation = Singleton.get(Conversation, st.session_state, force=False)
-    if not conversation:
-        shell = Singleton.get(Shell, st.session_state)
-        # create conversation
-        conversation = shell.sync(ghost, context)
-        Singleton(conversation, Conversation).bind(st.session_state)
+    conversation = get_conversation(route)
     # run the pages
-    run_chat_page(route, conversation)
-    route.get_or_bind(st.session_state)
-
-
-def run_chat_page(route: GhostChatRoute, conversation: Conversation):
-    pic = None
     with st.sidebar:
         # other pages
-        if st.button(_("Ghost Settings"), use_container_width=True):
-            render_ghost_settings(route)
-        if st.button(_("Context"), use_container_width=True):
-            render_context_settings(conversation)
-        if st.button("Task Info", use_container_width=True):
-            render_task_info_settings(conversation.task())
+        with st.container(border=True):
+            GhostSettingsRoute().render_page_link(use_container_width=True)
+            GhostTaskRoute().render_page_link(use_container_width=True)
         if st.button("Clear Messages", use_container_width=True):
             thread = conversation.thread()
             thread = thread.reset_history([])
@@ -111,6 +94,44 @@ def run_chat_page(route: GhostChatRoute, conversation: Conversation):
     chatting(route, conversation, inputs, auto_run)
 
 
+def get_conversation(route: GhostChatRoute) -> Conversation:
+    conversation = Singleton.get(Conversation, st.session_state, force=False)
+    if not conversation:
+        shell = Singleton.get(Shell, st.session_state)
+        # create conversation
+        conversation = shell.sync(route.get_ghost(), route.get_context())
+        Singleton(conversation, Conversation).bind(st.session_state)
+    return conversation
+
+
+def main_settings():
+    route = GhostChatRoute.get(st.session_state)
+    with st.sidebar:
+        # other pages
+        with st.container(border=True):
+            route.render_page_link(use_container_width=True)
+            GhostTaskRoute().render_page_link(use_container_width=True)
+    st.title("Ghost Settings")
+    conversation = get_conversation(route)
+    render_ghost_settings(route)
+    render_instruction(conversation)
+    render_context_settings(conversation)
+
+
+def main_task():
+    route = GhostChatRoute.get(st.session_state)
+    with st.sidebar:
+        # other pages
+        with st.container(border=True):
+            route.render_page_link(use_container_width=True)
+            GhostSettingsRoute().render_page_link(use_container_width=True)
+    conversation = get_conversation(route)
+    task = conversation.task()
+    thread = conversation.thread()
+    st.title("Ghost Task Info")
+    render_task_info_settings(task, thread)
+
+
 def chatting(route: GhostChatRoute, conversation: Conversation, inputs: List[Message], rotate: bool):
     thread = conversation.thread()
     render_thread_messages(thread, max_turn=20)
@@ -153,6 +174,12 @@ def render_receiver(receiver: Receiver, debug: bool):
                         contents = chunks_to_st_stream(buffer.chunks())
                         st.write_stream(contents)
                         render_message_payloads(buffer.tail(), debug)
+                    elif MessageType.FUNCTION_CALL.match(buffer.head()):
+                        if debug:
+                            contents = chunks_to_st_stream(buffer.chunks())
+                            with st.container(border=True):
+                                st.write_stream(contents)
+                        render_message_payloads(buffer.tail(), debug)
                     else:
                         render_message_in_content(buffer.tail(), debug)
                     # render next item
@@ -167,7 +194,6 @@ def chunks_to_st_stream(chunks: Iterable[Message]) -> Iterable[str]:
             yield chunk.content
 
 
-@st.dialog(_("Ghost Settings"), width="large")
 def render_ghost_settings(route: GhostChatRoute):
     if route is None:
         st.error("page is not configured")
@@ -175,9 +201,17 @@ def render_ghost_settings(route: GhostChatRoute):
     ghost = route.get_ghost()
     # render ghost info
     if isinstance(ghost, BaseModel):
-        data, mod = srj.pydantic_instance_form(ghost)
-        if st.button("Save"):
-            st.write("todo saving ghosts")
+        data, submitted = srj.pydantic_instance_form(ghost)
+        st.write("debug")
+        st.write(submitted)
+        if route.filename and submitted:
+            ghosts_conf = GhostsConf.load_from(route.filename)
+            key = ghosts_conf.file_ghost_key(route.filename)
+            info = GhostInfo(ghost=to_entity_meta(data))
+            ghosts_conf.ghosts[key] = info
+            ghosts_conf.save(route.filename)
+            st.write("saved")
+
     else:
         st.write(ghost)
     source = inspect.getsource(ghost.__class__)
@@ -186,8 +220,13 @@ def render_ghost_settings(route: GhostChatRoute):
     render_empty()
 
 
-@st.dialog("Ghost Context", width="large")
+def render_instruction(conversation: Conversation):
+    st.subheader("Instructions")
+    conversation.get_ghost_driver()
+
+
 def render_context_settings(conversation: Conversation):
+    st.subheader("Context")
     ctx = conversation.get_context()
     ghost = conversation.get_ghost()
     if ctx is None and ghost.ContextType is None:
@@ -221,26 +260,31 @@ def render_context_settings(conversation: Conversation):
     render_empty()
 
 
-@st.dialog("Task Info", width="large")
-def render_task_info_settings(task: GoTaskStruct):
+def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):
     from ghostos.core.runtime.tasks import TaskBrief
     brief = TaskBrief.from_task(task)
     srj.pydantic_instance_form(brief, readonly=True)
 
     with st.expander(_("Detail"), expanded=False):
         st.write(task.model_dump(exclude_defaults=True))
+
+    st.subheader("Thread Info")
+    with st.container(border=True):
+        render_thread_messages(thread, max_turn=0)
     render_empty()
 
 
 def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
     turns = list(thread.turns())
-    turns = turns[-max_turn:]
+    if max_turn > 0:
+        turns = turns[-max_turn:]
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
     count = 0
     for turn in turns:
         count += render_turn(turn, debug)
     if count == 0:
         st.info("No thread messages yet")
+        render_empty()
 
 
 def render_event_object(event: Event, debug: bool):

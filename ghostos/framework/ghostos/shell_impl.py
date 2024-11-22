@@ -1,7 +1,7 @@
 import time
 from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable
 
-from ghostos.contracts.logger import LoggerItf
+from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.contracts.pool import Pool
 from ghostos.container import Container, Provider
 from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
@@ -16,7 +16,6 @@ from ghostos.helpers import uuid, Timeleft
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
 from pydantic import BaseModel, Field
-from threading import Thread
 from .conversation_impl import ConversationImpl, ConversationConf
 
 __all__ = ['ShellConf', 'ShellImpl', 'Shell']
@@ -64,13 +63,16 @@ class ShellImpl(Shell):
         self._tasks = container.force_fetch(GoTasks)
         self._closed = False
         self._background_started = False
-        self._logger = container.force_fetch(LoggerItf)
         # bootstrap the container.
         # bind self
         self._container.set(Shell, self)
         self._container.set(ShellImpl, self)
         self._container.set(ShellConf, config)
         self._container.bootstrap()
+
+    @property
+    def logger(self) -> LoggerItf:
+        return get_ghostos_logger()
 
     def container(self) -> Container:
         return self._container
@@ -86,12 +88,12 @@ class ShellImpl(Shell):
     def sync(self, ghost: Ghost, context: Optional[Ghost.ContextType] = None) -> Conversation:
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self._scope)
-        self._logger.debug("sync ghost with task id %s", task_id)
+        self.logger.debug("sync ghost with task id %s", task_id)
 
         task = self._tasks.get_task(task_id)
         if task is None:
             task = self.create_root_task(task_id, ghost, context)
-            self._logger.debug("create root task task id %s for ghost", task_id)
+            self.logger.debug("create root task task id %s for ghost", task_id)
 
         task.meta = to_entity_meta(ghost)
         if context is not None:
@@ -266,7 +268,7 @@ class ShellImpl(Shell):
                 if handled_event:
                     continue
             except Exception as err:
-                self._logger.exception(err)
+                self.logger.exception(err)
                 break
             idle()
         self.close()

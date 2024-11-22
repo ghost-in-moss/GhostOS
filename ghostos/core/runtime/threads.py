@@ -38,6 +38,10 @@ class Turn(BaseModel):
     created: int = Field(
         default_factory=timestamp,
     )
+    summary: Optional[str] = Field(
+        default=None,
+        description="The summary before till this turn",
+    )
     extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 
     @classmethod
@@ -71,7 +75,11 @@ class Turn(BaseModel):
     def iter_event_message(event: Event, show_instruction: bool = True) -> Iterable[Message]:
         yield from event.iter_message(show_instruction)
 
-    def messages(self) -> Iterable[Message]:
+    def messages(self, truncate: bool) -> Iterable[Message]:
+        if truncate and self.summary is not None:
+            yield Role.SYSTEM.new("summary of omitted history messages" + self.summary)
+            return
+
         yield from self.event_messages()
         if self.added:
             yield from self.added
@@ -160,14 +168,25 @@ class GoThreadInfo(BaseModel):
             return self.history[-1]
         return self.on_created
 
-    def get_history_messages(self) -> Iterable[Message]:
+    def get_history_turns(self, truncate: bool = True) -> List[Turn]:
+        turns = []
+        if self.history:
+            for turn in self.history:
+                # use summary as truncate point
+                if truncate and turn.summary is not None:
+                    turns = [turn]
+                else:
+                    turns.append(turn)
+        return turns
+
+    def get_history_messages(self, truncate: bool) -> Iterable[Message]:
         """
         返回所有的历史消息.
         """
-        yield from self.on_created.messages()
-        if self.history:
-            for turn in self.history:
-                yield from turn.messages()
+        yield from self.on_created.messages(False)
+        turns = self.get_history_turns(truncate)
+        for turn in turns:
+            yield from turn.messages(truncate)
 
     def get_pycontext(self) -> PyContext:
         """
@@ -269,9 +288,14 @@ class GoThreadInfo(BaseModel):
     def thread_copy(self, update: Optional[dict] = None) -> "GoThreadInfo":
         return self.model_copy(update=update, deep=True)
 
-    def to_prompt(self, system: List[Message], stages: Optional[List[str]] = None) -> Prompt:
+    def to_prompt(
+            self,
+            system: List[Message],
+            stages: Optional[List[str]] = None,
+            truncate: bool = True,
+    ) -> Prompt:
         turn_id = self.last_turn().turn_id
-        history = list(self.get_history_messages())
+        history = list(self.get_history_messages(truncate))
         inputs = []
         appending = []
         current_turn = self.current

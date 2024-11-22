@@ -1,7 +1,10 @@
-from typing import Optional, Generic, TypeVar, Tuple, List
+from typing import Optional, Generic, TypeVar, Tuple, List, Iterable
 from abc import ABC, abstractmethod
 from ghostos.abcd.concepts import Session, Operator, Action
 from ghostos.core.llms import Prompt, ModelConf, ServiceConf, PromptPipe, LLMs, LLMApi
+from pydantic import BaseModel, Field
+
+__all__ = ['Thought', 'LLMThought', 'SummaryThought', 'ChainOfThoughts']
 
 T = TypeVar("T")
 
@@ -42,8 +45,8 @@ class LLMThought(Thought[Operator]):
     def __init__(
             self,
             llm_api: str = "",
+            actions: Optional[Iterable[Action]] = None,
             message_stage: str = "",
-            *actions: Action,
             model: Optional[ModelConf] = None,
             service: Optional[ServiceConf] = None,
     ):
@@ -59,12 +62,13 @@ class LLMThought(Thought[Operator]):
         self.message_stage = message_stage
         self.model = model
         self.service = service
-        self.actions = {action.name(): action for action in actions}
+        self.actions = {}
+        if actions:
+            self.actions = {action.name(): action for action in actions}
 
     def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[Operator]]:
         for action in self.actions.values():
-            if isinstance(action, PromptPipe):
-                prompt = action.update_prompt(prompt)
+            prompt = action.update_prompt(prompt)
         llm_api = self.get_llm_api(session)
 
         streaming = not session.upstream.completes_only()
@@ -89,3 +93,25 @@ class LLMThought(Thought[Operator]):
         else:
             llm_api = llms.get_api(self.llm_api)
         return llm_api
+
+
+class SummaryThought(BaseModel, Thought[str]):
+    """
+    simple summary thought
+    """
+
+    llm_api: str = Field("", description="the llm api to use")
+    instruction: str = Field(
+        "summarize the history message in 500 words, keep the most important information.",
+        description="the llm instruction to use",
+    )
+
+    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[T]]:
+        from ghostos.core.messages import Role
+        forked = prompt.fork(None)
+        instruction = Role.SYSTEM.new(content=self.instruction)
+        forked.added.append(instruction)
+        llms = session.container.force_fetch(LLMs)
+        llm_api = llms.get_api(self.llm_api)
+        message = llm_api.chat_completion(forked)
+        return prompt, message.content

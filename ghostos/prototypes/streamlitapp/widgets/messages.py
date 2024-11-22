@@ -1,3 +1,5 @@
+import json
+
 import streamlit as st
 from typing import Iterable, List, NamedTuple
 from ghostos.core.messages import Message, Role, MessageType, Caller
@@ -89,19 +91,27 @@ def render_message_in_content(message: Message, debug: bool, prefix: str = ""):
     elif MessageType.is_text(message):
         st.markdown(message.content)
     # todo: more types
+    elif MessageType.FUNCTION_CALL.match(message) and debug:
+        callers = Caller.from_message(message)
+        render_message_caller(callers)
     else:
         st.write(message.model_dump(exclude_defaults=True))
-
-    if message.callers:
-        if st.button("tool calls", key=prefix + "tool calls" + message.msg_id):
-            open_message_caller(message)
+        if message.callers and debug:
+            render_message_caller(message.callers)
     render_message_payloads(message, debug, prefix)
 
 
-@st.dialog("message_caller")
-def open_message_caller(message: Message):
-    for caller in message.callers:
-        st.write(caller.model_dump(exclude_defaults=True))
+def render_message_caller(callers: Iterable[Caller]):
+    from ghostos.ghosts.moss_agent import MossAction
+    for caller in callers:
+        if caller.name == MossAction.Argument.name:
+            data = json.loads(caller.arguments)
+            arguments = MossAction.Argument(**data)
+            st.caption(f"functino call: {caller.name}")
+            st.code(arguments.code)
+        else:
+            st.caption(f"function call: {caller.name}")
+            st.json(caller.arguments)
 
 
 def render_message_item(msg: Message, debug: bool):

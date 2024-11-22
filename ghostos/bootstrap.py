@@ -164,7 +164,6 @@ def default_application_contracts() -> Contracts:
 
 def default_application_providers(
         root_dir: str,
-        logger_name: str,
         workspace_configs_dir: str = "configs",
         workspace_runtime_dir: str = "runtime",
         runtime_processes_dir: str = "processes",
@@ -187,7 +186,7 @@ def default_application_providers(
     from ghostos.framework.tasks import WorkspaceTasksProvider
     from ghostos.framework.eventbuses import MemEventBusImplProvider
     from ghostos.framework.llms import ConfigBasedLLMsProvider, PromptStorageInWorkspaceProvider
-    from ghostos.framework.logger import NamedLoggerProvider
+    from ghostos.framework.logger import DefaultLoggerProvider
     from ghostos.framework.variables import WorkspaceVariablesProvider
     from ghostos.framework.ghostos import GhostOSProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
@@ -196,7 +195,7 @@ def default_application_providers(
 
         # --- logger ---#
 
-        NamedLoggerProvider(logger_name),
+        DefaultLoggerProvider(),
         # --- workspace --- #
         BasicWorkspaceProvider(
             workspace_dir=root_dir,
@@ -250,9 +249,8 @@ def make_app_container(
     # load env from dotenv file
     dotenv.load_dotenv(dotenv_path=join(workspace_path, dotenv_file_path))
     # default logger name for GhostOS application
-    logger_name = os.environ.get("LoggerName", "ghostos")
     if app_providers is None:
-        app_providers = default_application_providers(root_dir=workspace_path, logger_name=logger_name)
+        app_providers = default_application_providers(root_dir=workspace_path)
     if app_contracts is None:
         app_contracts = default_application_contracts()
 

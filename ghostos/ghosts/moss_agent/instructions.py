@@ -2,7 +2,7 @@ from ghostos.core.moss import MossRuntime
 from ghostos.prompter import Prompter, TextPrmt
 from ghostos.identifier import Identifier
 
-AGENT_INTRODUCTION = """
+AGENT_META_INTRODUCTION = """
 You are the mind of an AI Agent driven by `GhostOS` framework.
 Here are some basic information you might expect:
 """
@@ -26,13 +26,14 @@ the python code you generated, must include a main function, follow the pattern:
 def main(moss: Moss):
     \"""
     :param moss: instance of the class `Moss`, the properties on it will be injected with runtime implementations.
-    :return: Union[Operator, None], if None, the outer system will perform default action. 
+    :return: Optional[Operator] 
+             if return None, the outer system will perform default action, or observe the values you printed.
              Otherwise, the outer system will execute the operator. 
-             You shall only return operator by the libraries provided by `moss`.
+             You shall only return operator by the libraries provided on `moss`.
     \"""
 ```
-
-* the outer system will execute the main function to realize your will.
+* the outer system will execute the main function in the python module provided to you. you shall not import the module.
+* the imported functions are only shown with signature, the source code is omitted.
 * if the python code context can not fulfill your will, do not use the `moss` tool.
 * you can reply as usual without calling the tool `moss`. use it only when you know what you're doing.
 * the code you generated executed only once and do not add to the python context. 
@@ -54,9 +55,11 @@ useful to generate execution code of `MOSS`, notice the code must include a `mai
 
 def get_moss_context_prompter(title: str, runtime: MossRuntime) -> Prompter:
     code_context = runtime.prompter().dump_code_context()
+
     injections = runtime.moss_injections()
     children = []
     container = runtime.container()
+
     for name, injection in injections.items():
         if isinstance(injection, Prompter):
             prompter = TextPrmt(
@@ -64,20 +67,30 @@ def get_moss_context_prompter(title: str, runtime: MossRuntime) -> Prompter:
                 content=injection.self_prompt(container),
             )
             children.append(prompter)
+    end = "more information about attributes on `moss`:" if children else ""
+    content = f"""
+The module provided to you are `{runtime.module().__name__}`.
+The code are:
+```python
+{code_context}
+```
+
+{end}
+"""
     return TextPrmt(
         title=title,
-        content=code_context,
+        content=content,
     ).with_children(*children)
 
 
 def get_agent_identity(title: str, id_: Identifier) -> Prompter:
+    from ghostos.helpers import yaml_pretty_dump
+    value = id_.model_dump(exclude_defaults=True)
     return TextPrmt(
         title=title,
         content=f"""
-`name`: 
-{id_.name}
-
-`description`: 
-{id_.description}
+```yaml
+{yaml_pretty_dump(value)}
+```
 """
     )

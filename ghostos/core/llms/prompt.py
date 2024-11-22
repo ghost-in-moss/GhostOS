@@ -7,6 +7,7 @@ from typing import List, Iterable, Optional, Union, Callable, Self, Set
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
+from openai.types.shared_params.function_definition import FunctionDefinition
 from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 
 from pydantic import BaseModel, Field
@@ -105,10 +106,14 @@ class Prompt(BaseModel):
             return NOT_GIVEN
         functions = []
         for func in self.functions:
-            if func.id is not None:
-                continue
-            openai_func = Function(**func.model_dump())
+            openai_func = Function(
+                name=func.name,
+                description=func.description,
+                parameters=func.parameters,
+            )
             functions.append(openai_func)
+        if not functions:
+            return NOT_GIVEN
         return functions
 
     def get_openai_tools(self) -> Union[List[ChatCompletionToolParam], NotGiven]:
@@ -116,15 +121,19 @@ class Prompt(BaseModel):
             return NOT_GIVEN
         tools = []
         for func in self.functions:
-            if func.id is None:
-                continue
-            openai_func = Function(**func.model_dump())
-            tool = ChatCompletionToolParam(function=openai_func)
+            openai_func = FunctionDefinition(
+                name=func.name,
+                description=func.description,
+                parameters=func.parameters,
+            )
+            tool = ChatCompletionToolParam(function=openai_func, type="function")
             tools.append(tool)
+        if not tools:
+            return NOT_GIVEN
         return tools
 
     def get_openai_function_call(self) -> Union[FunctionCall, NotGiven]:
-        if not self.functions:
+        if not self.functions or self.model.use_tools:
             return NOT_GIVEN
         if self.function_call is None:
             return "auto"
@@ -149,7 +158,7 @@ class Prompt(BaseModel):
 
     def fork(
             self,
-            inputs: List[Message],
+            inputs: Optional[List[Message]],
             *,
             system: Optional[List[Message]] = None,
             description: str = "",
@@ -166,7 +175,7 @@ class Prompt(BaseModel):
         copied = self.filter_stages(stages)
         copied.id = prompt_id
         copied.description = description
-        if inputs:
+        if inputs is not None:
             copied.history.extend(copied.inputs)
             copied.history.extend(copied.added)
             copied.inputs = inputs

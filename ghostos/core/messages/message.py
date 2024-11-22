@@ -292,19 +292,16 @@ class Message(BaseModel):
             content: Optional[str] = None,
             memory: Optional[str] = None,
             name: Optional[str] = None,
+            ref_id: Optional[str] = None,
     ):
         """
         create a chunk message.
-        :param typ_:
-        :param role:
-        :param content:
-        :param memory:
-        :param name:
         :return:
         """
         return cls(
             role=role, name=name, content=content, memory=memory,
             type=typ_,
+            ref_id=ref_id,
             seq="chunk",
         )
 
@@ -480,6 +477,17 @@ class Caller(BaseModel):
             content=output,
         )
 
+    @classmethod
+    def from_message(cls, message: Message) -> Iterable[Caller]:
+        if message.type == MessageType.FUNCTION_CALL.value:
+            yield Caller(
+                id=message.ref_id,
+                name=message.name,
+                arguments=message.content,
+            )
+        if message.callers:
+            yield from message.callers
+
 
 class CallerOutput(BaseModel, MessageClass):
     __message_type__ = MessageType.FUNCTION_OUTPUT.value
@@ -504,24 +512,24 @@ class CallerOutput(BaseModel, MessageClass):
         return cls(
             call_id=container.ref_id,
             name=container.name,
-            output=container.content,
+            content=container.content,
         )
 
-    def to_openai_param(self, container: Optional[Container]) -> Dict:
+    def to_openai_param(self, container: Optional[Container]) -> List[Dict]:
         from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
         from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
         if self.call_id:
-            return ChatCompletionToolMessageParam(
+            return [ChatCompletionToolMessageParam(
                 content=self.content,
                 role="tool",
                 tool_call_id=self.call_id,
-            )
+            )]
         else:
-            return ChatCompletionFunctionMessageParam(
+            return [ChatCompletionFunctionMessageParam(
                 content=self.content,
                 name=self.name,
                 role="function",
-            )
+            )]
 
 
 class MessageClassesParser:

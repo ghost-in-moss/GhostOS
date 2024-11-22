@@ -7,7 +7,7 @@ from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
-from ghostos.contracts.logger import LoggerItf
+from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.helpers import timestamp
 from ghostos.core.messages import (
     Message, OpenAIMessageParser, DefaultOpenAIMessageParser,
@@ -75,14 +75,12 @@ class OpenAIAdapter(LLMApi):
             model_conf: ModelConf,
             parser: OpenAIMessageParser,
             storage: PromptStorage,
-            logger: LoggerItf,
             # deprecated:
             functional_token_prompt: Optional[str] = None,
     ):
         self._service = service_conf
         self._model = model_conf
         self._storage: PromptStorage = storage
-        self._logger = logger
         http_client = None
         if service_conf.proxy:
             transport = SyncProxyTransport.from_url(service_conf.proxy)
@@ -120,13 +118,20 @@ class OpenAIAdapter(LLMApi):
             raise AttributeError("empty chat!!")
         try:
             prompt.run_start = timestamp()
-            self._logger.debug(f"start chat completion for prompt {prompt.id}")
+            get_ghostos_logger().info(f"start chat completion for prompt %s", prompt.id)
+            get_ghostos_logger().info(f"start chat completion messages %s", messages)
+            functions = prompt.get_openai_functions()
+            tools = prompt.get_openai_tools()
+            if self._model.use_tools:
+                functions = NOT_GIVEN
+            else:
+                tools = NOT_GIVEN
             return self._client.chat.completions.create(
                 messages=messages,
                 model=self._model.model,
                 function_call=prompt.get_openai_function_call(),
-                functions=prompt.get_openai_functions(),
-                tools=prompt.get_openai_tools(),
+                functions=functions,
+                tools=tools,
                 max_tokens=self._model.max_tokens,
                 temperature=self._model.temperature,
                 n=self._model.n,
@@ -136,7 +141,7 @@ class OpenAIAdapter(LLMApi):
                 **self._model.kwargs,
             )
         finally:
-            self._logger.debug(f"end chat completion for prompt {prompt.id}")
+            get_ghostos_logger().debug(f"end chat completion for prompt {prompt.id}")
             prompt.run_end = timestamp()
 
     def chat_completion(self, prompt: Prompt) -> Message:
@@ -163,6 +168,7 @@ class OpenAIAdapter(LLMApi):
         try:
             chunks: Iterable[ChatCompletionChunk] = self._chat_completion(prompt, stream=True)
             messages = self._parser.from_chat_completion_chunks(chunks)
+            get_ghostos_logger().debug("++++++++++++messages %s", messages)
             prompt_payload = PromptPayload.from_prompt(prompt)
             output = []
             for chunk in messages:
@@ -188,19 +194,18 @@ class OpenAIDriver(LLMDriver):
     adapter
     """
 
-    def __init__(self, storage: PromptStorage, logger: LoggerItf, parser: Optional[OpenAIMessageParser] = None):
+    def __init__(self, storage: PromptStorage, parser: Optional[OpenAIMessageParser] = None):
         if parser is None:
             parser = DefaultOpenAIMessageParser(None, None)
         self._parser = parser
         self._storage = storage
-        self._logger = logger
 
     def driver_name(self) -> str:
         return OPENAI_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
-        self._logger.debug(f"new llm api %s at service %s", model.model, service.name)
-        return OpenAIAdapter(service, model, self._parser, self._storage, self._logger)
+        get_ghostos_logger().debug(f"new llm api %s at service %s", model.model, service.name)
+        return OpenAIAdapter(service, model, self._parser, self._storage)
 
 
 class LitellmAdapter(OpenAIAdapter):
@@ -251,9 +256,8 @@ class OpenAIDriverBootstrapper(Bootstrapper):
 
     def bootstrap(self, container: Container) -> None:
         llms = container.force_fetch(LLMs)
-        logger = container.force_fetch(LoggerItf)
         storage = container.force_fetch(PromptStorage)
-        openai_driver = OpenAIDriver(storage, logger)
-        lite_llm_driver = LiteLLMDriver(storage, logger)
+        openai_driver = OpenAIDriver(storage)
+        lite_llm_driver = LiteLLMDriver(storage)
         llms.register_driver(openai_driver)
         llms.register_driver(lite_llm_driver)

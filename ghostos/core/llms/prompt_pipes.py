@@ -19,8 +19,8 @@ class AssistantNamePipe(PromptPipe):
             if message.role != Role.ASSISTANT.value:
                 return message
 
-            copy = None
-            if message.name != self._assistant_name:
+            copy = message
+            if message.name == self._assistant_name:
                 copy = message.get_copy()
                 copy.name = ""
             return copy

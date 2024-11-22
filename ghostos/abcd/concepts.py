@@ -11,10 +11,10 @@ from ghostos.prompter import Prompter, DataPrompter, DataPrompterDriver
 from ghostos.core.runtime import (
     TaskState,
 )
-from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
+from ghostos.core.llms import PromptPipe, Prompt
 from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload, Receiver
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
@@ -146,10 +146,6 @@ class GhostDriver(Generic[G], ABC):
     def truncate(self, session: Session) -> GoThreadInfo:
         pass
 
-    @abstractmethod
-    def prompt(self, session: Session) -> Prompt:
-        pass
-
 
 class Context(Payload, DataPrompter, ABC):
     """
@@ -201,9 +197,13 @@ class Operator(ABC):
         pass
 
 
-class Action(Protocol):
+class Action(PromptPipe, ABC):
     @abstractmethod
     def name(self) -> str:
+        pass
+
+    @abstractmethod
+    def update_prompt(self, prompt: Prompt) -> Prompt:
         pass
 
     @abstractmethod
@@ -354,6 +354,11 @@ class Conversation(Protocol[G]):
     @abstractmethod
     def get_ghost(self) -> G:
         pass
+
+    def get_ghost_driver(self) -> GhostDriver[G]:
+        from ghostos.abcd.utils import get_ghost_driver
+        ghost = self.get_ghost()
+        return get_ghost_driver(ghost)
 
     @abstractmethod
     def get_context(self) -> G.ContextType:

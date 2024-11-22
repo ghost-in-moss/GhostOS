@@ -60,3 +60,11 @@ def test_arr_tail():
     arr = [1, 2, 3, 4]
     assert arr[-2:] == [3, 4]
     assert arr[-20:] == [1, 2, 3, 4]
+
+
+def test_negative_slice_index():
+    arr = [1, 2, 3, 4]
+    first = arr[:2]
+    end = arr[2:]
+    assert first == [1, 2]
+    assert end == [3, 4]

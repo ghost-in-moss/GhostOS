@@ -1,28 +1,22 @@
 from typing import Optional, Type
 
 from ghostos.container import Provider, Container
-from ghostos.contracts.logger import LoggerItf, LoggerAdapter
+from ghostos.contracts.logger import LoggerItf, LoggerAdapter, get_ghostos_logger
 from ghostos.contracts.workspace import Workspace
 from os.path import join
 import logging
 from logging.handlers import RotatingFileHandler
 
-__all__ = ['NamedLoggerProvider']
+__all__ = ['DefaultLoggerProvider']
 
 
-class NamedLoggerProvider(Provider[LoggerItf]):
+class DefaultLoggerProvider(Provider[LoggerItf]):
     """
     basic logger
     """
 
-    def __init__(
-            self,
-            logger_name: str = "ghostos",
-    ):
-        self.logger_name = logger_name
-
     def singleton(self) -> bool:
-        return True
+        return False
 
     def contract(self) -> Type[LoggerItf]:
         return LoggerItf
@@ -30,7 +24,7 @@ class NamedLoggerProvider(Provider[LoggerItf]):
     def factory(self, con: Container) -> Optional[LoggerItf]:
         logging.captureWarnings(True)
         ws = con.force_fetch(Workspace)
-        logger = logging.getLogger(self.logger_name)
+        logger = get_ghostos_logger()
         if not logger.hasHandlers():
             path = ws.runtime().abspath()
             logfile = join(path, "logs/ghostos.log")

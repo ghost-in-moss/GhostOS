@@ -135,9 +135,6 @@ class RotateOperator(Operator):
         self.sync: bool = sync
 
     def run(self, session: Session) -> Union[Operator, None]:
-        if len(self.messages) == 0 and not self.instruction:
-            return None
-
         task = session.task
         event = EventTypes.ROTATE.new(
             task_id=task.task_id,

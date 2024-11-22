@@ -189,6 +189,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self.destroy()
 
     def _compile_moss(self) -> Moss:
+        from .lifecycle import __moss_compiled__
         moss_type = self.moss_type()
         if not issubclass(moss_type, Moss):
             raise TypeError(f"Moss type {moss_type} is not subclass of {generate_module_and_attr_name(Moss)}")
@@ -229,6 +230,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
 
         self._compiled.__dict__[MOSS_VALUE_NAME] = moss
         self._compiled.__dict__[MOSS_TYPE_NAME] = moss_type
+        fn = __moss_compiled__
+        if __moss_compiled__.__name__ in self._compiled.__dict__:
+            fn = self._compiled.__dict__[__moss_compiled__.__name__]
+            fn(moss)
         return moss
 
     def container(self) -> Container:

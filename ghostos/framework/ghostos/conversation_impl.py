@@ -13,7 +13,7 @@ from ghostos.core.runtime import (
     GoThreadInfo, GoThreads,
 )
 from ghostos.contracts.pool import Pool
-from ghostos.contracts.logger import LoggerItf, wrap_logger
+from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.entity import to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
@@ -59,8 +59,6 @@ class ConversationImpl(Conversation[G]):
             parent_task_id=task.parent,
         )
         self._pool = self._container.force_fetch(Pool)
-        logger = container.force_fetch(LoggerItf)
-        self._logger = wrap_logger(logger, self._scope.model_dump())
         self._is_background = is_background
         self._ctx: Optional[Context] = None
         self._locker = task_locker
@@ -72,8 +70,11 @@ class ConversationImpl(Conversation[G]):
         self._bootstrap()
 
     def _bootstrap(self):
-        self._container.set(LoggerItf, self._logger)
         self._container.bootstrap()
+
+    @property
+    def logger(self):
+        return get_ghostos_logger(self._scope.model_dump())
 
     def container(self) -> Container:
         self._validate_closed()
@@ -116,7 +117,7 @@ class ConversationImpl(Conversation[G]):
 
     def talk(self, query: str, user_name: str = "") -> Tuple[Event, Receiver]:
         self._validate_closed()
-        self._logger.debug("talk to user %s", user_name)
+        self.logger.debug("talk to user %s", user_name)
         message = Role.USER.new(content=query, name=user_name)
         return self.respond([message])
 
@@ -152,7 +153,7 @@ class ConversationImpl(Conversation[G]):
         # complete task_id
         if not event.task_id:
             event.task_id = self._scope.task_id
-        self._logger.debug("start to respond event %s", event.event_id)
+        self.logger.debug("start to respond event %s", event.event_id)
 
         stream, retriever = new_basic_connection(
             timeout=timeout,
@@ -169,19 +170,19 @@ class ConversationImpl(Conversation[G]):
             raise RuntimeError(f"Shell is closed")
 
     def _submit_session_event(self, event: Event, stream: Stream) -> None:
-        self._logger.debug("submit session event")
+        self.logger.debug("submit session event")
         try:
             with stream:
                 task = self._tasks.get_task(event.task_id)
                 session = self._create_session(task, self._locker, stream)
-                self._logger.debug(
+                self.logger.debug(
                     f"create session from event id %s, task_id is %s",
                     event.event_id, task.task_id,
                 )
                 with session:
                     run_session_event(session, event, self._conf.max_session_step)
         except Exception as e:
-            self._logger.exception(e)
+            self.logger.exception(e)
             self.fail(error=e)
         finally:
             self._eventbus.notify_task(event.task_id)
@@ -234,7 +235,6 @@ class ConversationImpl(Conversation[G]):
         del self._threads
         del self._eventbus
         del self._pool
-        del self._logger
 
     def closed(self) -> bool:
         return self._closed or self._shell_closed()

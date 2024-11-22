@@ -91,7 +91,10 @@ class Prompter(ABC):
     def with_children(self, *children: Prompter) -> Self:
         children = list(children)
         if len(children) > 0:
-            self.add_child(*children)
+            for child in children:
+                if child is None:
+                    continue
+                self.add_child(child)
         return self
 
     def add_child(self, *prompters: Prompter) -> Self:
@@ -167,6 +170,8 @@ class Prompter(ABC):
         result = {index: self}
         idx = 0
         for child in self.__children__:
+            if not child:
+                continue
             sub_index = index + "." + str(idx)
             sub_flatten = child.flatten(sub_index)
             for key in sub_flatten:

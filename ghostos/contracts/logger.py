@@ -2,13 +2,13 @@ import logging
 from abc import abstractmethod
 from logging.config import dictConfig
 from logging import getLogger, LoggerAdapter, Logger
-from typing import Protocol, Optional
+from typing import Protocol, Optional, Union
 from os import path
 import yaml
 
 __all__ = [
     'LoggerItf', 'config_logging', 'get_logger', 'get_console_logger', 'get_debug_logger',
-    'wrap_logger', 'LoggerAdapter',
+    'wrap_logger', 'LoggerAdapter', 'get_ghostos_logger',
 ]
 
 
@@ -135,6 +135,22 @@ def get_console_logger(
     if debug:
         logger.setLevel(logging.DEBUG)
     return LoggerAdapter(logger, extra=extra)
+
+
+def get_ghostos_logger(extra: Optional[dict] = None) -> Union[LoggerAdapter, Logger]:
+    logger = getLogger("ghostos")
+    if not logger.hasHandlers():
+        _debug_file_handler = logging.FileHandler("debug.log", mode="a")
+        formatter = logging.Formatter(
+            fmt="%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)",
+        )
+        _debug_file_handler.setFormatter(formatter)
+        _debug_file_handler.setLevel(logging.DEBUG)
+        logger.addHandler(_debug_file_handler)
+        logger.setLevel(logging.DEBUG)
+    if extra:
+        return LoggerAdapter(logger, extra)
+    return logger
 
 
 def get_debug_logger(

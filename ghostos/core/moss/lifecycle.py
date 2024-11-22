@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 
 if TYPE_CHECKING:
     from ghostos.core.moss.prompts import AttrPrompts
-    from ghostos.core.moss.abcd import MossPrompter, Execution, MossRuntime, MossCompiler
+    from ghostos.core.moss.abcd import MossPrompter, Execution, MossRuntime, MossCompiler, Moss
 
 """
 这个文件提供了 MOSS 生命周期的关键方法, 每一个都是可选的.
@@ -16,20 +16,8 @@ __all__ = [
     '__moss_attr_prompts__',
     '__moss_code_context__',
     '__moss_exec__',
+    '__moss_compiled__',
 ]
-
-
-class MOSS(ABC):
-    """
-    可以在代码里自定一个名为 MOSS 的类.
-    如果定义了, 或者引用了, 会自动生成它的实例.
-    会对类上定义的属性进行依赖注入.
-    对类上定义的方法名也按名称进行依赖注入. 没有注入对象时保留原方法.
-    这个类不要有 init 方法.
-    它的源码就是 MOSS 的 Prompt.
-    如果给 MOSS 注入了它未定义的属性或方法, 也会追加到它生成的 Prompt 里.
-    """
-    pass
 
 
 def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
@@ -42,6 +30,15 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
     compiler.register()
     """
     return compiler
+
+
+def __moss_compiled__(moss: "Moss") -> None:
+    """
+
+    :param moss:
+    :return:
+    """
+    return
 
 
 def __moss_attr_prompts__() -> "AttrPrompts":

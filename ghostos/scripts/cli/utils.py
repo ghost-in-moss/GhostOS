@@ -1,24 +1,37 @@
+from __future__ import annotations
 import sys
-from typing import Tuple, List, NamedTuple, Any, Optional
+from typing import Tuple, List, NamedTuple, Any, Optional, Dict, Self
 from types import ModuleType
 
 from ghostos.bootstrap import expect_workspace_dir
 from ghostos.contracts.logger import get_console_logger
 from ghostos.helpers import create_module, import_from_path
-import inspect
 from ghostos.abcd import Ghost
+from pydantic import BaseModel, Field
+from ghostos.entity import EntityMeta, to_entity_meta
+from ghostos.ghosts.moss_agent import new_moss_agent
+import inspect
+import json
 
 __all__ = [
     'get_ghost_by_cli_argv',
     'get_or_create_module_from_name',
     'check_ghostos_workspace_exists',
     'parse_args_modulename_or_filename',
+    'GhostsConf', 'GhostInfo',
 ]
 
 
-def get_ghost_by_cli_argv() -> Tuple[Ghost, str, str, bool]:
+def get_ghost_by_cli_argv() -> Tuple[GhostInfo, str, str, bool]:
     filename_or_modulename, args = parse_args_modulename_or_filename()
-    found = get_or_create_module_from_name(filename_or_modulename, "ghostos.temp.agent")
+    found = get_or_create_module_from_name(filename_or_modulename, "ghostos.temp.ghost")
+
+    # ghost info
+    ghosts_conf = GhostsConf.load_from(filename_or_modulename)
+    ghost_key = GhostsConf.file_ghost_key(filename_or_modulename)
+    if ghost_key in ghosts_conf.ghosts:
+        ghost_info = ghosts_conf.ghosts[ghost_key]
+        return ghost_info, found.module.__name__, found.filename, found.is_temp
 
     if found.value is not None:
         if not isinstance(found.value, Ghost):
@@ -29,8 +42,9 @@ def get_ghost_by_cli_argv() -> Tuple[Ghost, str, str, bool]:
         if not isinstance(ghost, Ghost):
             raise SystemExit(f"{filename_or_modulename} __ghost__ is not a Ghost object")
     else:
-        raise SystemExit(f"cant find ghost instance at {filename_or_modulename}")
-    return ghost, found.module.__name__, found.filename, found.is_temp
+        ghost = new_moss_agent(found.module.__name__)
+    ghost_info = GhostInfo(ghost=to_entity_meta(ghost))
+    return ghost_info, found.module.__name__, found.filename, found.is_temp
 
 
 def check_ghostos_workspace_exists() -> str:
@@ -67,10 +81,16 @@ def get_or_create_module_from_name(
         filename_or_modulename: str,
         temp_modulename: str,
 ) -> Found:
-    from os import path
+    from os import path, getcwd
+
     _, extension = path.splitext(filename_or_modulename)
     if extension in ACCEPTED_FILE_EXTENSIONS:
         filename = path.abspath(filename_or_modulename)
+        root_dir = getcwd()
+        if filename.startswith(root_dir):
+            relative_path = filename[len(root_dir) + 1:]
+            relative_path_basename, _ = path.splitext(relative_path)
+            temp_modulename = relative_path_basename.replace("/", ".")
         module = create_module(temp_modulename, filename)
         is_temp = True
         value = None
@@ -85,3 +105,50 @@ def get_or_create_module_from_name(
         filename = module.__file__
         is_temp = False
     return Found(value, module, filename, is_temp)
+
+
+class GhostInfo(BaseModel):
+    ghost: EntityMeta = Field(description="ghost meta")
+    context: Optional[EntityMeta] = Field(None)
+
+
+class GhostsConf(BaseModel):
+    ghosts: Dict[str, GhostInfo] = Field(
+        default_factory=dict,
+        description="ghost info dict, from filename to ghost info",
+    )
+
+    @classmethod
+    def load(cls, filename: str) -> Self:
+        from os.path import exists
+        if exists(filename):
+            with open(filename, "r") as f:
+                content = f.read()
+                data = json.loads(content)
+                return cls(**data)
+        return cls()
+
+    @classmethod
+    def load_from(cls, filename: str) -> Self:
+        ghosts_filename = cls.ghosts_filename(filename)
+        return cls.load(ghosts_filename)
+
+    @classmethod
+    def file_ghost_key(cls, filename: str) -> str:
+        from os.path import basename, splitext
+        file_basename = basename(filename)
+        key, _ = splitext(file_basename)
+        return key
+
+    @classmethod
+    def ghosts_filename(cls, filename: str) -> str:
+        from os.path import dirname, join
+        dir_ = dirname(filename)
+        ghosts_filename = join(dir_, ".ghosts.yml")
+        return ghosts_filename
+
+    def save(self, filename: str) -> None:
+        ghosts_filename = self.ghosts_filename(filename)
+        content = self.model_dump_json(indent=2)
+        with open(ghosts_filename, "w") as f:
+            f.write(content)

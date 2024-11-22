@@ -94,10 +94,10 @@ class MessageKindParser:
         for item in messages:
             if isinstance(item, Message):
                 yield self._with_ref(item)
-            if isinstance(item, MessageClass):
+            elif isinstance(item, MessageClass):
                 msg = item.to_message()
                 yield self._with_ref(msg)
-            if isinstance(item, str):
+            elif isinstance(item, str):
                 if not item:
                     # exclude empty message
                     continue

@@ -14,19 +14,39 @@ from ghostos.framework.documents import StorageDocumentsConfig
 class PagePath(str, Enum):
     HOMEPAGE = "ghostos.prototypes.streamlitapp.pages.homepage"
     AIFUNCS = "ghostos.prototypes.streamlitapp.pages.aifuncs"
-    GHOSTOS = "ghostos.prototypes.streamlitapp.pages.ghosts"
+    GHOSTS = "ghostos.prototypes.streamlitapp.pages.ghosts"
     CONFIGS = "ghostos.prototypes.streamlitapp.pages.configs"
 
     def suffix(self, attr_name: str):
         return self.value + attr_name
 
 
-# --- ghost --- #
+# --- ghosts --- #
+
+class GhostTaskRoute(Route):
+    link = Link(
+        name="Task Info",
+        import_path=PagePath.GHOSTS.suffix(":main_task"),
+        streamlit_icon=":material/smart_toy:",
+        button_help="todo",
+        antd_icon="robot",
+    )
+
+
+class GhostSettingsRoute(Route):
+    link = Link(
+        name="Ghost Settings",
+        import_path=PagePath.GHOSTS.suffix(":main_settings"),
+        streamlit_icon=":material/smart_toy:",
+        button_help="todo",
+        antd_icon="robot",
+    )
+
 
 class GhostChatRoute(Route):
     link = Link(
-        name="Ghost Chat",
-        import_path=PagePath.GHOSTOS.suffix(".chat:main"),
+        name="Chat",
+        import_path=PagePath.GHOSTS.suffix(":main_chat"),
         streamlit_icon=":material/smart_toy:",
         button_help="todo",
         antd_icon="robot",
@@ -34,6 +54,7 @@ class GhostChatRoute(Route):
     task_id: str = Field(default="", description="Ghost Task ID")
     ghost_meta: Optional[EntityMeta] = Field(default=None, description="ghost meta")
     context_meta: Optional[EntityMeta] = Field(default=None, description="context meta")
+    filename: Optional[str] = Field(default=None, description="filename to lunch the ghost")
     input_type: str = Field(default="", description="input type")
 
     __ghost__ = None
@@ -167,6 +188,9 @@ def default_router() -> Router:
             AIFuncDetailRoute(),
             # ghosts
             GhostChatRoute(),
+            GhostSettingsRoute(),
+            GhostTaskRoute(),
+
             ConfigsRoute(),
         ],
         home=Home.label(),

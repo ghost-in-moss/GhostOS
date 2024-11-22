@@ -59,6 +59,7 @@ def test_yield_with_finally():
     # finally is not called as well.
     assert values == []
 
+
 # iterable can not define __awaits__
 # def test_yield_is_blocking_with_none():
 #     tests = []
@@ -80,3 +81,12 @@ def test_yield_with_finally():
 #     import asyncio
 #     asyncio.run(main())
 #     assert tests == ["foo", "bar"]
+
+
+def test_yield_after_yield_from():
+    def foo():
+        yield from []
+        yield 1
+
+    values = list(foo())
+    assert values == [1]

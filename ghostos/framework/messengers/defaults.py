@@ -1,7 +1,7 @@
 from typing import Optional, Iterable, List, Tuple
 from ghostos.abcd.concepts import Messenger
 from ghostos.core.messages import (
-    Message, Payload, Role,
+    Message, Payload, Role, MessageType,
     Stream, Caller,
 )
 from ghostos.core.messages.pipeline import SequencePipe
@@ -43,7 +43,13 @@ class DefaultMessenger(Messenger):
         for msg_id in message_ids:
             message = self._sent_messages[msg_id]
             messages.append(message)
-            if message.callers:
+            if message.type == MessageType.FUNCTION_CALL:
+                callers.append(Caller(
+                    id=message.ref_id,
+                    name=message.name,
+                    arguments=message.content,
+                ))
+            elif message.callers:
                 callers.extend(message.callers)
         self.destroy()
         return messages, callers
@@ -74,8 +80,10 @@ class DefaultMessenger(Messenger):
         for item in messages:
             # add message info
             if item.is_complete() or item.is_head():
-                item.name = self._assistant_name
-                item.stage = self._stage
+                if not item.name:
+                    item.name = self._assistant_name
+                if not item.stage:
+                    item.stage = self._stage
                 if not item.role:
                     item.role = self._role
             # create buffer in case upstream is cancel
