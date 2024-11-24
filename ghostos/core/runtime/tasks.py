@@ -226,6 +226,9 @@ children task ids to wait
             description=self.purpose,
         )
 
+    def shall_notifiy(self) -> bool:
+        return self.depth > 0
+
     def is_dead(self) -> bool:
         return TaskState.is_dead(self.state)
 

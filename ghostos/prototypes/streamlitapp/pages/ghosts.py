@@ -117,7 +117,7 @@ def main_chat():
 
 def get_conversation(route: GhostChatRoute) -> Conversation:
     conversation = Singleton.get(Conversation, st.session_state, force=False)
-    if not conversation:
+    if not conversation or conversation.closed():
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
         conversation = shell.sync(route.get_ghost(), route.get_context())
@@ -148,8 +148,7 @@ def chatting(route: GhostChatRoute, conversation: Conversation, inputs: List[Mes
         render_event(event, debug)
         render_receiver(receiver, debug)
 
-    render_empty()
-    while not route.input_type and rotate and not conversation.closed():
+    while not route.input_type and rotate and conversation.available():
         if event := conversation.pop_event():
             render_event(event, debug)
             receiver = conversation.respond_event(event)
@@ -297,6 +296,7 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
     if count == 0:
         st.info("No thread messages yet")
         render_empty()
+    render_empty()
 
 
 def render_event_object(event: Event, debug: bool):

@@ -13,10 +13,11 @@ from ghostos.core.runtime import (
     GoThreadInfo, GoThreads,
 )
 from ghostos.contracts.pool import Pool
-from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
+from ghostos.contracts.logger import get_ghostos_logger
 from ghostos.entity import to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
+from threading import Lock
 
 __all__ = ["ConversationImpl", "ConversationConf", "Conversation"]
 
@@ -65,11 +66,18 @@ class ConversationImpl(Conversation[G]):
         self._tasks = container.force_fetch(GoTasks)
         self._threads = container.force_fetch(GoThreads)
         self._eventbus = container.force_fetch(EventBus)
+        self._handling_event = False
+        self._mutex = Lock()
         self._closed = False
         self._shell_closed = shell_closed
         self._bootstrap()
 
     def _bootstrap(self):
+        providers = self.get_ghost_driver().providers()
+        # bind self
+        self._container.set(Conversation, self)
+        for provider in providers:
+            self._container.register(provider)
         self._container.bootstrap()
 
     @property
@@ -159,6 +167,8 @@ class ConversationImpl(Conversation[G]):
             timeout: float = 0.0,
     ) -> Receiver:
         self._validate_closed()
+        if self._handling_event:
+            raise RuntimeError("conversation is handling event")
         # complete task_id
         if not event.task_id:
             event.task_id = self._scope.task_id
@@ -180,8 +190,8 @@ class ConversationImpl(Conversation[G]):
 
     def _submit_session_event(self, event: Event, stream: Stream) -> None:
         self.logger.debug("submit session event")
-        with stream:
-            try:
+        try:
+            with stream:
                 task = self._tasks.get_task(event.task_id)
                 session = self._create_session(task, self._locker, stream)
                 self.logger.debug(
@@ -190,11 +200,12 @@ class ConversationImpl(Conversation[G]):
                 )
                 with session:
                     run_session_event(session, event, self._conf.max_session_step)
-            except Exception as e:
-                if not self.fail(error=e):
-                    raise
-            finally:
-                self._eventbus.notify_task(event.task_id)
+        except Exception as e:
+            if not self.fail(error=e):
+                raise
+        finally:
+            self._eventbus.notify_task(event.task_id)
+            self._handling_event = False
 
     def _create_session(
             self,
@@ -202,9 +213,8 @@ class ConversationImpl(Conversation[G]):
             locker: TaskLocker,
             stream: Optional[Stream],
     ) -> SessionImpl:
-        container = Container(parent=self._container)
         return SessionImpl(
-            container=container,
+            container=self.container(),
             stream=stream,
             task=task,
             locker=locker,
@@ -248,3 +258,8 @@ class ConversationImpl(Conversation[G]):
 
     def closed(self) -> bool:
         return self._closed or self._shell_closed()
+
+    def available(self) -> bool:
+        if self.closed() or self._handling_event:
+            return False
+        return True

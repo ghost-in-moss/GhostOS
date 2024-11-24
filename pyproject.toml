@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.10,<3.14"
 pydantic = "^2.7.0"
 pytest = "^8.1.1"
 openai = "^1.19.0"
@@ -21,7 +21,6 @@ tree-sitter = "0.21.3"
 tree-sitter-languages = "^1.10.2"
 networkx = "^3.3"
 litellm = "^1.43.18"
-hide-py = "^0.3.0"
 prompt-toolkit = "^3.0.47"
 arxiv = "^2.1.3"
 llama-index-core = "^0.11.9"
@@ -46,6 +45,10 @@ hello = "ghostos.scripts.cli.run_helloworld:main"
 aifunc = "ghostos.scripts.cli.run_aifunc:main"
 console = "ghostos.scripts.cli.run_console:main"
 ghost = "ghostos.scripts.cli.run_streamlit_ghost:main"
+
+[tool.poetry.group.dev.dependencies]
+spherov2 = "^0.12.1"
+bleak = "^0.22.3"
 
 [build-system]
 requires = ["poetry-core"]

@@ -28,7 +28,9 @@ import inspect
 """
 
 __all__ = [
-    'get_prompt', 'reflect_module_locals', 'join_prompt_lines', 'compile_attr_prompts',
+    'get_prompt',
+    'reflect_module_locals', 'reflect_class_with_methods',
+    'join_prompt_lines', 'compile_attr_prompts',
     'get_defined_prompt',
     'AttrPrompts',
 ]
@@ -85,6 +87,24 @@ def reflect_module_locals(
             raise RuntimeError(f"failed to reflect local value {name!r}: {e}")
         if prompt is not None:
             yield name, prompt
+
+
+def reflect_class_with_methods(cls: type) -> str:
+    """
+    reflect class with all its method signatures.
+    """
+    from inspect import getsource
+    from .utils import make_class_prompt, get_callable_definition
+    source = getsource(cls)
+    attrs = []
+    for name in dir(cls):
+        if name.startswith("_"):
+            continue
+        method = getattr(cls, name)
+        if inspect.ismethod(method) or inspect.isfunction(method):
+            block = get_callable_definition(method)
+            attrs.append(block)
+    return make_class_prompt(source=source, attrs=attrs)
 
 
 def reflect_module_attr(

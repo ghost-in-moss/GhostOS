@@ -28,7 +28,7 @@ def __moss_agent_persona__(agent: MossAgent, moss: Moss) -> str:
 
 
 def __moss_agent_instruction__(agent: MossAgent, moss: Moss) -> str:
-    return agent.instruction
+    return agent.instructions
 
 
 def __moss_agent_thought__(agent: MossAgent, moss: Moss, *actions: Action) -> Thought:

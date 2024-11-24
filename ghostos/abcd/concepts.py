@@ -127,7 +127,8 @@ class GhostDriver(Generic[G], ABC):
     @abstractmethod
     def providers(self) -> Iterable[Provider]:
         """
-        ghost return session level container providers
+        ghost return conversation level container providers.
+        the provider that is not singleton will bind to session also.
         """
         pass
 
@@ -429,6 +430,10 @@ class Conversation(Protocol[G]):
         """
         close the conversation
         """
+        pass
+
+    @abstractmethod
+    def available(self) -> bool:
         pass
 
     @abstractmethod

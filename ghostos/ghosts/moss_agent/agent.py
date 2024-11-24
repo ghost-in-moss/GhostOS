@@ -35,7 +35,7 @@ class MossAgent(ModelEntity, Agent):
 
     moss_module: str = Field(description="Moss module name for the agent")
     persona: str = Field(description="Persona for the agent, if not given, use global persona")
-    instruction: str = Field(description="The instruction that the agent should follow")
+    instructions: str = Field(description="The instruction that the agent should follow")
 
     # optional configs
     name: str = Field(default="", description="name of the agent")
@@ -323,7 +323,7 @@ class MossAction(Action, PromptPipe):
         # if code is not exists, inform the llm
         if not code:
             return self.fire_error(session, caller, "the moss code is empty")
-        session.logger.info("moss action code: %s", code)
+        session.logger.debug("moss action code: %s", code)
 
         error = self.runtime.lint_exec_code(code)
         if error:
@@ -342,7 +342,7 @@ class MossAction(Action, PromptPipe):
 
             # handle std output
             std_output = result.std_output
-            session.logger.info("moss action std_output: %s", std_output)
+            session.logger.debug("moss action std_output: %s", std_output)
             if std_output:
                 output = f"Moss output:\n{std_output}"
                 message = caller.new_output(output)

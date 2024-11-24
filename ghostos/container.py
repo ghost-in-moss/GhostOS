@@ -488,7 +488,10 @@ class BootstrapProvider(Generic[INSTANCE], Provider[INSTANCE], Bootstrapper, met
     """
     将 bootstrapper 和 Provider 可以融合在一起.
     """
-    pass
+
+    @abstractmethod
+    def contract(self) -> Type[INSTANCE]:
+        pass
 
 
 class ProviderAdapter(Provider):

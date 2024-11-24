@@ -53,10 +53,10 @@ class SessionImpl(Session[Ghost]):
             max_errors: int,
     ):
         # session level container
-        self.container = container
+        self.container = Container(parent=container)
         self.upstream = stream
         self.task = task
-        self.locker = locker
+        self._task_locker = locker
         threads = container.force_fetch(GoThreads)
         thread = threads.get_thread(task.thread_id, create=True)
         self.thread = thread
@@ -88,9 +88,9 @@ class SessionImpl(Session[Ghost]):
         self._destroyed = False
         self._saved = False
         self._bootstrap()
-        self._thread_locker = Lock()
         if not self.refresh():
             raise RuntimeError(f"Failed to start session")
+        self._thread_locker = Lock()
         Session.instance_count += 1
 
     @property
@@ -112,9 +112,6 @@ class SessionImpl(Session[Ghost]):
         self.container.register(provide(Taskflow, False)(lambda c: self.taskflow()))
         self.container.register(provide(Subtasks, False)(lambda c: self.subtasks()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
-        # bind ghost providers.
-        for provider in self.ghost_driver.providers():
-            self.container.register(provider)
         self.container.bootstrap()
 
     @staticmethod
@@ -128,7 +125,7 @@ class SessionImpl(Session[Ghost]):
     def is_alive(self) -> bool:
         if self._failed or self._destroyed:
             return False
-        return self.locker.acquired() and (self.upstream is None or self.upstream.alive())
+        return self._task_locker.acquired() and (self.upstream is None or self.upstream.alive())
 
     def _validate_alive(self):
         if not self.is_alive():
@@ -215,7 +212,7 @@ class SessionImpl(Session[Ghost]):
     def refresh(self) -> bool:
         if self._failed or self._destroyed or not self.is_alive():
             return False
-        if self.locker.refresh():
+        if self._task_locker.refresh():
             self._saved = False
             return True
         return False
@@ -307,10 +304,10 @@ class SessionImpl(Session[Ghost]):
         return result
 
     def save(self) -> None:
-        if self._saved:
+        if self._saved or self._destroyed:
             return
         self._saved = True
-        self.logger.debug("saving session on %s", self.scope.model_dump())
+        self.logger.info("saving session on %s", self.scope.model_dump())
         self._validate_alive()
         self._update_subtasks()
         self._update_state_changes()
@@ -382,6 +379,7 @@ class SessionImpl(Session[Ghost]):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.logger.info("session exited")
         if exc_val is not None:
             intercepted = self.fail(exc_val)
             self.destroy()
@@ -405,7 +403,7 @@ class SessionImpl(Session[Ghost]):
         if self._destroyed:
             return
         self._destroyed = True
-        del self.locker
+        del self._task_locker
         self.container.destroy()
         del self.container
         del self._firing_events

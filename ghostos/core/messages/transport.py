@@ -307,8 +307,11 @@ class ReceiverBuffer:
 
     @classmethod
     def new(cls, receiver: Iterable[Message]) -> Optional[Self]:
-        iterator = iter(receiver)
-        head = next(iterator)
+        try:
+            iterator = iter(receiver)
+            head = next(iterator)
+        except StopIteration:
+            return None
         if head is None:
             return None
         return cls(head, iterator)
@@ -367,7 +370,6 @@ class ReceiverBuffer:
     def next(self) -> Optional[Self]:
         list(self.chunks())
         return self._next
-
 
 
 def new_basic_connection(
