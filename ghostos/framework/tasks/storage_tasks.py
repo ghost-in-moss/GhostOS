@@ -113,7 +113,7 @@ class StorageGoTasksImpl(GoTasks):
         for task in self.get_tasks(task_ids, states):
             yield TaskBrief.from_task(task)
 
-    def lock_task(self, task_id: str, overdue: float) -> TaskLocker:
+    def lock_task(self, task_id: str, overdue: float = 30) -> TaskLocker:
         return SimpleStorageLocker(self._storage, task_id, overdue)
 
 

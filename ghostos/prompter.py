@@ -136,7 +136,7 @@ class Prompter(ABC):
         title = self.get_title()
         depth = depth
         if title:
-            title = '#' * (depth + 2) + ' ' + title
+            title = '#' * (depth + 1) + ' ' + title
             depth = depth + 1
 
         self_prompt = self.self_prompt(container)

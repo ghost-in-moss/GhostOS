@@ -68,7 +68,7 @@ def test_llms():
     存在文件依赖关系.
     """
     container: Container = _prepare_container()
-    container.register(ConfigBasedLLMsProvider("llms_conf.yml"))
+    container.register(ConfigBasedLLMsProvider())
 
     llms = container.force_fetch(LLMs)
     api = llms.get_api("gpt-4")
