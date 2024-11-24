@@ -121,6 +121,10 @@ class GhostDriver(Generic[G], ABC):
         pass
 
     @abstractmethod
+    def get_instructions(self, session: Session) -> str:
+        pass
+
+    @abstractmethod
     def providers(self) -> Iterable[Provider]:
         """
         ghost return session level container providers
@@ -365,6 +369,10 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def get_instructions(self) -> str:
+        pass
+
+    @abstractmethod
     def get_artifact(self) -> Tuple[Union[G.ArtifactType, None], TaskState]:
         pass
 
@@ -569,6 +577,10 @@ class Session(Generic[G], ABC):
         """
         :return: the current state of the ghost goal
         """
+        pass
+
+    @abstractmethod
+    def get_instructions(self) -> str:
         pass
 
     @abstractmethod

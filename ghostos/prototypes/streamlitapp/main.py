@@ -16,6 +16,8 @@ __all__ = [
     "main_run",
 ]
 
+st.set_page_config(page_title='GhostOS')
+
 SINGLETONS = List[Singleton]
 
 BOOTSTRAP = Callable[[], SINGLETONS]

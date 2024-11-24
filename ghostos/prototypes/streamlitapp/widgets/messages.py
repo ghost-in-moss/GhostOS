@@ -63,6 +63,7 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
     )
 
     if not debug:
+        st.empty()
         return
     items = [sac.ButtonsItem(label="Detail")]
     task_payload = TaskPayload.read_payload(message)
@@ -106,6 +107,7 @@ def render_message_in_content(message: Message, debug: bool, prefix: str = ""):
         if message.callers:
             render_message_caller(message.callers, debug)
     render_message_payloads(message, debug, prefix)
+    st.empty()
 
 
 def render_message_caller_output(message: Message, debug: bool):

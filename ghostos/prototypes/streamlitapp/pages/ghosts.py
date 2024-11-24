@@ -7,7 +7,7 @@ from ghostos.prototypes.streamlitapp.pages.router import (
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.prototypes.streamlitapp.widgets.messages import (
-    render_message_in_content, render_message_payloads
+    render_message_in_content
 )
 from ghostos.prototypes.streamlitapp.widgets.renderer import (
     render_object, render_event, render_turn,
@@ -27,8 +27,6 @@ from pydantic import BaseModel
 import inspect
 
 logger = get_logger("ghostos")
-
-st.set_page_config(page_title='Ghost', layout="wide")
 
 
 def main_chat():
@@ -51,21 +49,13 @@ def main_chat():
             conversation.update_thread(thread)
             st.rerun()
 
-        st.subheader("page options")
-        # input type
+        st.subheader("chat options")
         with st.container(border=True):
-            show_chatting = st.toggle("chat", value=True)
             auto_run = st.toggle(
                 "auto run event",
                 help="automatic run background event",
                 value=True,
             )
-            show_ghost_settings = st.toggle("ghost settings")
-            show_instruction = st.toggle("instructions")
-            show_context = st.toggle("context")
-
-        st.subheader("inputs options")
-        with st.container(border=True):
             show_video = st.toggle("show video")
             show_image_file = st.toggle("upload image")
 
@@ -77,30 +67,40 @@ def main_chat():
 
     # header
     st.title("Ghost")
-    ghost = route.get_ghost()
-    id_ = get_identifier(ghost)
-    import_path = generate_import_path(ghost.__class__)
-    data = {
-        _("name"): id_.name,
-        _("desc"): id_.description,
-        _("class"): import_path,
-    }
-    # description
-    st.markdown(f"""
+    with st.container(border=True):
+        ghost = route.get_ghost()
+        id_ = get_identifier(ghost)
+        import_path = generate_import_path(ghost.__class__)
+        data = {
+            _("name"): id_.name,
+            _("desc"): id_.description,
+            _("class"): import_path,
+        }
+        if route.filename:
+            data[_("from")] = route.filename
+        # description
+        st.markdown(f"""
 ```yaml
 {yaml_pretty_dump(data)}
 ```
 """)
+        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+        with col1:
+            show_chatting = st.toggle("chat", value=True)
+        with col2:
+            show_ghost_settings = st.toggle("settings")
+        with col3:
+            show_instruction = st.toggle("instructions")
+        with col4:
+            show_context = st.toggle("context")
+
     # render ghost settings
     if show_ghost_settings:
         render_ghost_settings(route)
-        st.divider()
     if show_instruction:
         render_instruction(conversation)
-        st.divider()
     if show_context:
         render_context_settings(conversation)
-        st.divider()
 
     # inputs
     if show_chatting:
@@ -205,68 +205,71 @@ def chunks_to_st_stream(chunks: Iterable[Message]) -> Iterable[str]:
 
 def render_ghost_settings(route: GhostChatRoute):
     st.subheader(_("Settings"))
-    if route is None:
-        st.error("page is not configured")
-        return
-    ghost = route.get_ghost()
-    # render ghost info
-    if isinstance(ghost, BaseModel):
-        data, submitted = srj.pydantic_instance_form(ghost)
-        if route.filename and submitted:
-            ghosts_conf = GhostsConf.load_from(route.filename)
-            key = ghosts_conf.file_ghost_key(route.filename)
-            info = GhostInfo(ghost=to_entity_meta(data))
-            ghosts_conf.ghosts[key] = info
-            ghosts_conf.save(route.filename)
-            st.write("saved")
+    with st.container(border=True):
+        if route is None:
+            st.error("page is not configured")
+            return
+        ghost = route.get_ghost()
+        # render ghost info
+        if isinstance(ghost, BaseModel):
+            data, submitted = srj.pydantic_instance_form(ghost)
+            if route.filename and submitted:
+                ghosts_conf = GhostsConf.load_from(route.filename)
+                key = ghosts_conf.file_ghost_key(route.filename)
+                info = GhostInfo(ghost=to_entity_meta(data))
+                ghosts_conf.ghosts[key] = info
+                ghosts_conf.save(route.filename)
+                st.write("saved")
 
-    else:
-        st.write(ghost)
-    source = inspect.getsource(ghost.__class__)
-    if st.toggle("source code", key="ghost_source_code"):
-        st.caption(generate_import_path(ghost.__class__))
-        st.code(source)
-    render_empty()
+        else:
+            st.write(ghost)
+        source = inspect.getsource(ghost.__class__)
+        if st.toggle("source code", key="ghost_source_code"):
+            st.caption(generate_import_path(ghost.__class__))
+            st.code(source)
+        render_empty()
 
 
 def render_instruction(conversation: Conversation):
     st.subheader("Instructions")
-    driver = conversation.get_ghost_driver()
+    instructions = conversation.get_instructions()
+    with st.container(border=True):
+        st.markdown(instructions)
 
 
 def render_context_settings(conversation: Conversation):
     st.subheader("Context")
-    ctx = conversation.get_context()
-    ghost = conversation.get_ghost()
-    if ctx is None and ghost.ContextType is None:
-        st.info("No specific Context for this Ghost")
-        return
-    if ctx is None:
-        if ghost.ContextType is not None:
-            data, submitted = srj.pydantic_form(ghost.ContextType)
-            if submitted and isinstance(data, Context):
+    with st.container(border=True):
+        ctx = conversation.get_context()
+        ghost = conversation.get_ghost()
+        if ctx is None and ghost.ContextType is None:
+            st.info("No specific Context for this Ghost")
+            return
+        if ctx is None:
+            if ghost.ContextType is not None:
+                data, submitted = srj.pydantic_form(ghost.ContextType)
+                if submitted and isinstance(data, Context):
+                    conversation.update_context(data)
+                    ctx = data
+        else:
+            data, changed = render_object(ctx, immutable=False)
+            if changed and isinstance(data, Context):
                 conversation.update_context(data)
                 ctx = data
-    else:
-        data, changed = render_object(ctx, immutable=False)
-        if changed and isinstance(data, Context):
-            conversation.update_context(data)
-            ctx = data
 
-    # render prompt
-    if ctx is not None:
-        st.subheader(_("Context prompt"))
-        try:
-            prompt = ctx.get_prompt(conversation.container())
-            st.markdown(prompt)
-        except Exception as e:
-            st.error(e)
-    # render artifact
-    if ghost.ArtifactType:
-        st.subheader(_("Artifact"))
-        artifact = conversation.get_artifact()
-        render_object(artifact)
-    render_empty()
+        # render prompt
+        if ctx is not None:
+            st.subheader(_("Context prompt"))
+            try:
+                prompt = ctx.get_prompt(conversation.container())
+                st.markdown(prompt)
+            except Exception as e:
+                st.error(e)
+        # render artifact
+        if ghost.ArtifactType:
+            st.subheader(_("Artifact"))
+            artifact = conversation.get_artifact()
+            render_object(artifact)
 
 
 def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):

@@ -108,6 +108,15 @@ class ConversationImpl(Conversation[G]):
             return None
         return get_entity(task.context, Context)
 
+    def get_instructions(self) -> str:
+        self._validate_closed()
+        session = self._create_session(self.task(), self._locker, None)
+        try:
+            instructions = session.get_instructions()
+            return instructions
+        finally:
+            session.destroy()
+
     def get_artifact(self) -> Tuple[Union[Ghost.ArtifactType, None], TaskState]:
         self._validate_closed()
         task = self.task()

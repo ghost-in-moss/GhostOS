@@ -128,7 +128,7 @@ class SessionImpl(Session[Ghost]):
     def is_alive(self) -> bool:
         if self._failed or self._destroyed:
             return False
-        return self.locker.acquired() and self.upstream.alive()
+        return self.locker.acquired() and (self.upstream is None or self.upstream.alive())
 
     def _validate_alive(self):
         if not self.is_alive():
@@ -208,6 +208,9 @@ class SessionImpl(Session[Ghost]):
 
     def get_artifact(self) -> Ghost.ArtifactType:
         return self.ghost_driver.get_artifact(self)
+
+    def get_instructions(self) -> str:
+        return self.ghost_driver.get_instructions(self)
 
     def refresh(self) -> bool:
         if self._failed or self._destroyed or not self.is_alive():

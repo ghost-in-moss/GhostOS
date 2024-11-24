@@ -105,6 +105,13 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 moss = runtime.moss()
                 return fn(self.ghost, moss)
 
+    def get_instructions(self, session: Session) -> str:
+        compiler = self._get_moss_compiler(session)
+        with compiler:
+            rtm = compiler.compile(self.ghost.compile_module)
+            with rtm:
+                return self._get_instructions(session, rtm)
+
     def thought(self, session: Session, runtime: MossRuntime) -> Thought:
         from .for_meta_ai import __moss_agent_thought__ as fn
         compiled = runtime.module()
@@ -140,9 +147,9 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 thread = session.thread
                 thread.new_turn(event)
 
-                instructions = self._get_instructions(session, rtm)
                 # prepare prompt
-                prompt = thread.to_prompt(instructions)
+                instructions = self._get_instructions(session, rtm)
+                prompt = thread.to_prompt([Role.SYSTEM.new(content=instructions)])
                 pipes = self._get_prompt_pipes(session, rtm)
                 prompt = run_prompt_pipeline(prompt, pipes)
 
@@ -166,7 +173,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
             return fn(self.ghost, session, runtime, event), True
         return None, False
 
-    def _get_instructions(self, session: Session, runtime: MossRuntime) -> List[Message]:
+    def _get_instructions(self, session: Session, runtime: MossRuntime) -> str:
         """
         generate moss agent's instruction
         :param session:
@@ -175,7 +182,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         """
         prompter = self._get_instruction_prompter(session, runtime)
         instruction = prompter.get_prompt(session.container, depth=0)
-        return [Role.SYSTEM.new(content=instruction)]
+        return instruction
 
     def _get_instruction_prompter(self, session: Session, runtime: MossRuntime) -> Prompter:
         agent = self.ghost
