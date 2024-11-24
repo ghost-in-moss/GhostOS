@@ -150,6 +150,7 @@ class RotateOperator(Operator):
             session.thread.append(msg)
             event.reason = f"receive observation at turn {task.turns}"
             session.fire_events(event)
+            session.task.state = TaskState.WAITING.value
             return None
 
     def destroy(self):
@@ -189,9 +190,9 @@ class FailOperator(Operator):
 class WaitOperator(AbcOperator, ABC):
 
     def run(self, session: Session) -> Union[Operator, None]:
+        task = session.task
+        task.state = TaskState.WAITING.value
         if len(self.messages) > 0:
-            task = session.task
-            task.state = TaskState.WAITING.value
             task.status_desc = self.status
             if task.parent:
                 event = EventTypes.WAIT_CALLBACK.new(

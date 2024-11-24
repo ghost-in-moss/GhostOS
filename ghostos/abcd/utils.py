@@ -3,7 +3,7 @@ from ghostos.helpers import import_class_from_path
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
 from .concepts import Ghost, GhostDriver, Session, Operator
-from ghostos.core.runtime import Event
+from ghostos.core.runtime import Event, TaskState
 
 __all__ = [
     'get_ghost_driver', 'get_ghost_driver_type', 'is_ghost',
@@ -53,8 +53,12 @@ def fire_session_event(session: Session, event: Event) -> Optional[Operator]:
         # if event is intercepted, stop the run.
         return None
     driver = get_ghost_driver(session.ghost)
+    session.task.state = TaskState.RUNNING.value
     session.thread = driver.truncate(session)
-    return driver.on_event(session, event)
+    op = driver.on_event(session, event)
+    if op is None:
+        session.task.state = TaskState.WAITING.value
+    return op
 
 
 class InitOperator(Operator):
@@ -77,9 +81,9 @@ def run_session_event(session: Session, event: Event, max_step: int) -> None:
             raise RuntimeError(f"Max step {max_step} reached")
         if not session.refresh():
             raise RuntimeError("Session refresh failed")
-        session.logger.debug("start session op %s", op)
+        session.logger.debug("start session op %s", repr(op))
         next_op = op.run(session)
-        session.logger.debug("done session op %s", op)
+        session.logger.debug("done session op %s", repr(op))
         op.destroy()
         # session do save after each op
         session.save()

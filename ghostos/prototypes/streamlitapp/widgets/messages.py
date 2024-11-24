@@ -35,13 +35,15 @@ def render_messages(messages: Iterable[Message], debug: bool, prefix: str = ""):
 
 def render_message_group(group: MessageGroup, debug: bool, prefix: str = ""):
     role = group.msg_role
+    if role not in {Role.ASSISTANT.value, Role.USER.value} and not debug:
+        # hide system messages.
+        return
     name = group.msg_name
     stage = group.stage
     caption = f"{role}: {name}" if name else role
     render_role = "user" if role == Role.USER.value else "assistant"
     if stage:
-        with st.container(border=True):
-            st.caption(stage)
+        with st.expander(stage, expanded=False):
             with st.chat_message(render_role):
                 st.caption(caption)
                 for msg in group.messages:
@@ -57,11 +59,12 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
     import streamlit_antd_components as sac
     from ghostos.prototypes.streamlitapp.widgets.dialogs import (
         open_task_info_dialog, open_completion_usage_dialog, open_prompt_info_dialog,
+        open_message_dialog,
     )
 
     if not debug:
         return
-    items = []
+    items = [sac.ButtonsItem(label="Detail")]
     task_payload = TaskPayload.read_payload(message)
     if task_payload:
         items.append(sac.ButtonsItem(label="Task Info"))
@@ -77,7 +80,9 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
             index=None,
             key=prefix + ":payloads:" + message.msg_id,
         )
-        if selected == "Task Info" and task_payload:
+        if selected == "Detail":
+            open_message_dialog(message)
+        elif selected == "Task Info" and task_payload:
             open_task_info_dialog(task_payload.task_id)
         elif selected == "Completion Usage" and completion_usage:
             open_completion_usage_dialog(completion_usage)
@@ -90,24 +95,41 @@ def render_message_in_content(message: Message, debug: bool, prefix: str = ""):
         st.error(f"Error: {message.content}")
     elif MessageType.is_text(message):
         st.markdown(message.content)
-    # todo: more types
-    elif MessageType.FUNCTION_CALL.match(message) and debug:
+    elif MessageType.FUNCTION_CALL.match(message):
         callers = Caller.from_message(message)
-        render_message_caller(callers)
+        render_message_caller(callers, debug)
+    elif MessageType.FUNCTION_OUTPUT.match(message):
+        render_message_caller_output(message, debug)
+    # todo: more types
     else:
         st.write(message.model_dump(exclude_defaults=True))
-        if message.callers and debug:
-            render_message_caller(message.callers)
+        if message.callers:
+            render_message_caller(message.callers, debug)
     render_message_payloads(message, debug, prefix)
 
 
-def render_message_caller(callers: Iterable[Caller]):
+def render_message_caller_output(message: Message, debug: bool):
+    with st.expander("Caller Output", expanded=debug):
+        st.caption(f"function {message.name} output:")
+        st.write(message.content)
+
+
+def render_message_caller(callers: Iterable[Caller], debug: bool):
+    with st.expander("Callers", expanded=debug):
+        _render_message_caller(callers)
+
+
+def _render_message_caller(callers: Iterable[Caller]):
     from ghostos.ghosts.moss_agent import MossAction
     for caller in callers:
         if caller.name == MossAction.Argument.name:
-            data = json.loads(caller.arguments)
-            arguments = MossAction.Argument(**data)
-            st.caption(f"functino call: {caller.name}")
+            try:
+                data = json.loads(caller.arguments)
+                arguments = MossAction.Argument(**data)
+            except json.JSONDecodeError:
+                arguments = MossAction.Argument(code=caller.arguments)
+
+            st.caption(f"function call: {caller.name}")
             st.code(arguments.code)
         else:
             st.caption(f"function call: {caller.name}")

@@ -79,7 +79,7 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
     if turn.summary is not None:
         st.info("summary:\n" + turn.summary)
 
-    if turn.is_from_client():
+    if turn.is_from_client() or turn.is_from_self():
         messages = list(turn.messages(False))
         render_messages(messages, debug, prefix)
         return len(messages)

@@ -324,7 +324,7 @@ class MossAction(Action, PromptPipe):
 
         moss = self.runtime.moss()
         try:
-            result = self.runtime.execute(target="main", code=code, args=[moss])
+            result = self.runtime.execute(target="run", code=code, args=[moss])
             op = result.returns
             if op is not None and not isinstance(op, Operator):
                 return self.fire_error(session, caller, "result of moss code is not None or Operator")
@@ -343,10 +343,13 @@ class MossAction(Action, PromptPipe):
                 if op is None:
                     # if std output is not empty, and op is none, observe the output as default.
                     return session.taskflow().think()
-            return op
+            else:
+                output = caller.new_output("executed with no output or errors.")
+                session.respond([output])
+                return session.taskflow().think()
 
         except Exception as e:
-            return self.fire_error(session, caller, f"error executing moss code: {e}")
+            return self.fire_error(session, caller, f"error during executing moss code: {e}")
 
     @staticmethod
     def fire_error(session: Session, caller: Caller, error: str) -> Operator:

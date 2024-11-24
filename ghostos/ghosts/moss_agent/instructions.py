@@ -18,12 +18,28 @@ Which provides you a way to control your body / tools / thoughts through Python 
 
 basic usage: 
 1. you will get the python code context that MOSS provide to you below. 
-2. you can generate python code to the tool named `moss`, the code will be automatically executed by the outer system.
+2. you can generate code by `moss` tool, then the `GhostOS` will execute them for you.
 3. if you print anything in your generated code, the output will be shown in further messages.
 
-the python code you generated, must include a main function, follow the pattern:
+"""
+
+MOSS_CONTEXT_TEMPLATE = """
+The python context `{modulename}` that MOSS provides to you are below:
+
 ```python
-def main(moss: Moss):
+{code_context}
+```
+
+Notices:
+* the imported functions are only shown with signature, the source code is omitted.
+* the properties on moss instance, will keep existence. 
+* You can bind variables of type int/float/bool/str/list/dict/BaseModel to moss instance if you need them for next turn.
+
+You are able to call the `moss` tool, generate code to fulfill your will.
+the python code you generated, must include a `run` function, follow the pattern:
+
+```python
+def run(moss: Moss):
     \"""
     :param moss: instance of the class `Moss`, the properties on it will be injected with runtime implementations.
     :return: Optional[Operator] 
@@ -32,24 +48,19 @@ def main(moss: Moss):
              You shall only return operator by the libraries provided on `moss`.
     \"""
 ```
-* the outer system will execute the main function in the python module provided to you. you shall not import the module.
-* the imported functions are only shown with signature, the source code is omitted.
+
+Then the `GhostOS` system will add your code to the python module provided to you, 
+and execute the `run` function. 
+
+Notices: 
+* you do not need to import the module that already provided above.
 * if the python code context can not fulfill your will, do not use the `moss` tool.
 * you can reply as usual without calling the tool `moss`. use it only when you know what you're doing.
-* the code you generated executed only once and do not add to the python context. 
-  But the properties on moss instance, will keep existence. 
-  You can bind variables of type int/float/bool/str/list/dict/BaseModel to moss instance if you need them for next turn.
-"""
-
-MOSS_CONTEXT_TEMPLATE = """
-The python context that MOSS provides to you are below:
-```python
-{code_context}
-```
+* the comments in your code generation is useful but not required, comment only when necessary
 """
 
 MOSS_FUNCTION_DESC = """
-useful to generate execution code of `MOSS`, notice the code must include a `main` function.
+useful to call MOSS system to execute the code. The code must include a `run` function.
 """
 
 
@@ -67,16 +78,12 @@ def get_moss_context_prompter(title: str, runtime: MossRuntime) -> Prompter:
                 content=injection.self_prompt(container),
             )
             children.append(prompter)
-    end = "more information about attributes on `moss`:" if children else ""
-    content = f"""
-The module provided to you are `{runtime.module().__name__}`.
-The code are:
-```python
-{code_context}
-```
 
-{end}
-"""
+    content = MOSS_CONTEXT_TEMPLATE.format(
+        modulename=runtime.module().__name__,
+        code_context=code_context,
+    )
+
     return TextPrmt(
         title=title,
         content=content,

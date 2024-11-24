@@ -1,6 +1,6 @@
 from ghostos.core.messages import (
     Role,
-    Message,
+    Message, MessageType,
 )
 
 
@@ -80,7 +80,19 @@ def test_patch_default_type_message():
     assert patch is None
 
 
-
-
-
-
+def test_function_call_message():
+    head = Message.new_head(
+        typ_=MessageType.FUNCTION_CALL,
+        ref_id="abc",
+        name="abc",
+    )
+    patched = head.patch(
+        Message.new_chunk(
+            typ_=MessageType.FUNCTION_CALL,
+            content="hello world"
+        )
+    )
+    assert patched is not None
+    assert patched.ref_id == "abc"
+    assert patched.name == "abc"
+    assert patched.content == "hello world"

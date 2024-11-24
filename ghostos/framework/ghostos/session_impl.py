@@ -86,6 +86,7 @@ class SessionImpl(Session[Ghost]):
         self._failed = False
         self._done = False
         self._destroyed = False
+        self._saved = False
         self._bootstrap()
         self._thread_locker = Lock()
         if not self.refresh():
@@ -173,7 +174,7 @@ class SessionImpl(Session[Ghost]):
             # cancel self and all subtasks.
             self.task.errors = 0
             self.thread.new_turn(event)
-            self.task.state = TaskState.CANCELLED
+            self.task.state = TaskState.CANCELLED.value
             for child_id in self.task.children:
                 event = EventTypes.CANCEL.new(
                     task_id=child_id,
@@ -211,7 +212,10 @@ class SessionImpl(Session[Ghost]):
     def refresh(self) -> bool:
         if self._failed or self._destroyed or not self.is_alive():
             return False
-        return self.locker.refresh()
+        if self.locker.refresh():
+            self._saved = False
+            return True
+        return False
 
     def _reset(self):
         self._fetched_task_briefs = {}
@@ -277,7 +281,9 @@ class SessionImpl(Session[Ghost]):
 
     def fire_events(self, *events: "Event") -> None:
         self._validate_alive()
-        self._firing_events.extend(events)
+        firing = list(events)
+        self.logger.debug("session fire events: %d", len(firing))
+        self._firing_events.extend(firing)
 
     def get_task_briefs(self, *task_ids: str) -> Dict[str, TaskBrief]:
         self._validate_alive()
@@ -298,6 +304,10 @@ class SessionImpl(Session[Ghost]):
         return result
 
     def save(self) -> None:
+        if self._saved:
+            return
+        self._saved = True
+        self.logger.debug("saving session on %s", self.scope.model_dump())
         self._validate_alive()
         self._update_subtasks()
         self._update_state_changes()
@@ -329,11 +339,13 @@ class SessionImpl(Session[Ghost]):
             content = "\n".join(self._system_logs)
             message = Role.SYSTEM.new(content=content)
             thread.append(message)
+            self._system_logs = []
 
         task.thread_id = thread.id
         task.state_values = state_values
         tasks = self.container.force_fetch(GoTasks)
         threads = self.container.force_fetch(GoThreads)
+        self.logger.debug("task info %s", task.model_dump())
         tasks.save_task(task)
         threads.save_thread(thread)
 
@@ -352,6 +364,7 @@ class SessionImpl(Session[Ghost]):
     def _do_fire_events(self) -> None:
         if not self._firing_events:
             return
+        logger = self.logger
         bus = self.container.force_fetch(EventBus)
         for e in self._firing_events:
             # all the sub-tasks need notification
@@ -359,6 +372,7 @@ class SessionImpl(Session[Ghost]):
             if e.task_id == self.task.parent:
                 notify = self.task.depth - 1 == 0
             bus.send_event(e, notify)
+            logger.debug("session fired event %s", {e.event_id})
         self._firing_events = []
 
     def __enter__(self):
@@ -369,20 +383,20 @@ class SessionImpl(Session[Ghost]):
             intercepted = self.fail(exc_val)
             self.destroy()
             return intercepted
-        else:
+        elif not self._destroyed:
             self.save()
             self.destroy()
             return None
 
     def fail(self, err: Optional[Exception]) -> bool:
         if self._failed:
-            return True
+            return False
         self._failed = True
         self.logger.exception("Session failed: %s", err)
-        if self.upstream is not None:
+        if self.upstream is not None and self.upstream.alive():
             message = MessageType.ERROR.new(content=str(err))
             self.upstream.deliver(message)
-        return False
+        return True
 
     def destroy(self) -> None:
         if self._destroyed:

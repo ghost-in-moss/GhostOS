@@ -1,6 +1,7 @@
 import streamlit as st
 from ghostos.helpers import gettext as _, yaml_pretty_dump
 from ghostos.framework.messages import CompletionUsagePayload
+from ghostos.core.messages import Message
 from ghostos.prototypes.streamlitapp.widgets.renderer import render_empty
 
 
@@ -23,6 +24,11 @@ def open_completion_usage_dialog(completion: CompletionUsagePayload):
     import streamlit_react_jsonschema as srj
     srj.pydantic_instance_form(completion, readonly=True)
     render_empty()
+
+
+@st.dialog(title=_("Message Detail"), width="large")
+def open_message_dialog(message: Message):
+    st.json(message.model_dump_json(indent=2))
 
 
 @st.dialog(title=_("Prompt Info"), width="large")

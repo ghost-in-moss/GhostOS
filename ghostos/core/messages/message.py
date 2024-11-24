@@ -366,6 +366,8 @@ class Message(BaseModel):
         if not self.msg_id:
             # 当前消息的 msg id 不会变更.
             self.msg_id = pack.msg_id
+        if not self.ref_id:
+            self.ref_id = pack.ref_id
         if not self.type:
             # type 也不会变更.
             self.type = pack.type

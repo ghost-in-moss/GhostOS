@@ -90,6 +90,9 @@ class Turn(BaseModel):
     def is_from_client(self) -> bool:
         return self.event is not None and self.event.from_task_id is None
 
+    def is_from_self(self) -> bool:
+        return self.event is not None and self.event.from_self()
+
 
 class GoThreadInfo(BaseModel):
     """

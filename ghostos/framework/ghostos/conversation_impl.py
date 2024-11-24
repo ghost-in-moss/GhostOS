@@ -171,8 +171,8 @@ class ConversationImpl(Conversation[G]):
 
     def _submit_session_event(self, event: Event, stream: Stream) -> None:
         self.logger.debug("submit session event")
-        try:
-            with stream:
+        with stream:
+            try:
                 task = self._tasks.get_task(event.task_id)
                 session = self._create_session(task, self._locker, stream)
                 self.logger.debug(
@@ -181,11 +181,11 @@ class ConversationImpl(Conversation[G]):
                 )
                 with session:
                     run_session_event(session, event, self._conf.max_session_step)
-        except Exception as e:
-            self.logger.exception(e)
-            self.fail(error=e)
-        finally:
-            self._eventbus.notify_task(event.task_id)
+            except Exception as e:
+                if not self.fail(error=e):
+                    raise
+            finally:
+                self._eventbus.notify_task(event.task_id)
 
     def _create_session(
             self,
@@ -215,8 +215,9 @@ class ConversationImpl(Conversation[G]):
     def fail(self, error: Exception) -> bool:
         if self._closed:
             return False
+        self.logger.exception(error)
         self.close()
-        return False
+        return True
 
     def __del__(self):
         self.close()

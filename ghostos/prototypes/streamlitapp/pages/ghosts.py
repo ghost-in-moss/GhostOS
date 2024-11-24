@@ -3,7 +3,7 @@ import time
 import streamlit_react_jsonschema as srj
 from typing import Iterable, List
 from ghostos.prototypes.streamlitapp.pages.router import (
-    GhostChatRoute, GhostTaskRoute, GhostSettingsRoute,
+    GhostChatRoute, GhostTaskRoute,
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.prototypes.streamlitapp.widgets.messages import (
@@ -28,6 +28,8 @@ import inspect
 
 logger = get_logger("ghostos")
 
+st.set_page_config(page_title='Ghost', layout="wide")
+
 
 def main_chat():
     # create shell
@@ -42,7 +44,6 @@ def main_chat():
     with st.sidebar:
         # other pages
         with st.container(border=True):
-            GhostSettingsRoute().render_page_link(use_container_width=True)
             GhostTaskRoute().render_page_link(use_container_width=True)
         if st.button("Clear Messages", use_container_width=True):
             thread = conversation.thread()
@@ -50,14 +51,21 @@ def main_chat():
             conversation.update_thread(thread)
             st.rerun()
 
-        st.subheader("Inputs")
+        st.subheader("page options")
         # input type
         with st.container(border=True):
+            show_chatting = st.toggle("chat", value=True)
             auto_run = st.toggle(
                 "auto run event",
                 help="automatic run background event",
                 value=True,
             )
+            show_ghost_settings = st.toggle("ghost settings")
+            show_instruction = st.toggle("instructions")
+            show_context = st.toggle("context")
+
+        st.subheader("inputs options")
+        with st.container(border=True):
             show_video = st.toggle("show video")
             show_image_file = st.toggle("upload image")
 
@@ -65,8 +73,7 @@ def main_chat():
             pic = st.camera_input("Task a picture")
         if show_image_file:
             image = st.file_uploader("Upload image", type=["png", "jpg", "jpeg"])
-        for i in range(5):
-            st.empty()
+        render_empty()
 
     # header
     st.title("Ghost")
@@ -84,14 +91,28 @@ def main_chat():
 {yaml_pretty_dump(data)}
 ```
 """)
-    inputs = []
-    if chat_input := st.chat_input("message"):
-        inputs = route.get_route_bound([], "inputs")
-        inputs.append(Role.USER.new(chat_input))
-        route.bind_to_route([], "inputs")
-        route.input_type = ""
+    # render ghost settings
+    if show_ghost_settings:
+        render_ghost_settings(route)
+        st.divider()
+    if show_instruction:
+        render_instruction(conversation)
+        st.divider()
+    if show_context:
+        render_context_settings(conversation)
+        st.divider()
 
-    chatting(route, conversation, inputs, auto_run)
+    # inputs
+    if show_chatting:
+        st.subheader("Chat")
+        inputs = []
+        if chat_input := st.chat_input("message"):
+            inputs = route.get_route_bound([], "inputs")
+            inputs.append(Role.USER.new(chat_input))
+            route.bind_to_route([], "inputs")
+            route.input_type = ""
+
+        chatting(route, conversation, inputs, auto_run)
 
 
 def get_conversation(route: GhostChatRoute) -> Conversation:
@@ -104,27 +125,12 @@ def get_conversation(route: GhostChatRoute) -> Conversation:
     return conversation
 
 
-def main_settings():
-    route = GhostChatRoute.get(st.session_state)
-    with st.sidebar:
-        # other pages
-        with st.container(border=True):
-            route.render_page_link(use_container_width=True)
-            GhostTaskRoute().render_page_link(use_container_width=True)
-    st.title("Ghost Settings")
-    conversation = get_conversation(route)
-    render_ghost_settings(route)
-    render_instruction(conversation)
-    render_context_settings(conversation)
-
-
 def main_task():
     route = GhostChatRoute.get(st.session_state)
     with st.sidebar:
         # other pages
         with st.container(border=True):
             route.render_page_link(use_container_width=True)
-            GhostSettingsRoute().render_page_link(use_container_width=True)
     conversation = get_conversation(route)
     task = conversation.task()
     thread = conversation.thread()
@@ -136,13 +142,13 @@ def chatting(route: GhostChatRoute, conversation: Conversation, inputs: List[Mes
     thread = conversation.thread()
     render_thread_messages(thread, max_turn=20)
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
-    render_empty()
 
     if inputs:
         event, receiver = conversation.respond(inputs)
         render_event(event, debug)
         render_receiver(receiver, debug)
 
+    render_empty()
     while not route.input_type and rotate and not conversation.closed():
         if event := conversation.pop_event():
             render_event(event, debug)
@@ -164,22 +170,25 @@ def video_input_dialog(route: GhostChatRoute):
 def render_receiver(receiver: Receiver, debug: bool):
     try:
         with receiver:
-            with st.status("waiting..."):
-                buffer = ReceiverBuffer.new(receiver.recv())
-            if buffer is None:
-                return
             with st.chat_message("assistant"):
+                with st.status("waiting..."):
+                    buffer = ReceiverBuffer.new(receiver.recv())
+                if buffer is None:
+                    st.error("No message received")
+                    return
                 while buffer is not None:
                     if MessageType.is_text(buffer.head()):
                         contents = chunks_to_st_stream(buffer.chunks())
-                        st.write_stream(contents)
-                        render_message_payloads(buffer.tail(), debug)
+                        with st.empty():
+                            st.write_stream(contents)
+                            with st.container():
+                                render_message_in_content(buffer.tail(), debug)
                     elif MessageType.FUNCTION_CALL.match(buffer.head()):
-                        if debug:
-                            contents = chunks_to_st_stream(buffer.chunks())
-                            with st.container(border=True):
-                                st.write_stream(contents)
-                        render_message_payloads(buffer.tail(), debug)
+                        contents = chunks_to_st_stream(buffer.chunks())
+                        with st.empty():
+                            st.write_stream(contents)
+                            with st.container():
+                                render_message_in_content(buffer.tail(), debug)
                     else:
                         render_message_in_content(buffer.tail(), debug)
                     # render next item
@@ -195,6 +204,7 @@ def chunks_to_st_stream(chunks: Iterable[Message]) -> Iterable[str]:
 
 
 def render_ghost_settings(route: GhostChatRoute):
+    st.subheader(_("Settings"))
     if route is None:
         st.error("page is not configured")
         return
@@ -202,8 +212,6 @@ def render_ghost_settings(route: GhostChatRoute):
     # render ghost info
     if isinstance(ghost, BaseModel):
         data, submitted = srj.pydantic_instance_form(ghost)
-        st.write("debug")
-        st.write(submitted)
         if route.filename and submitted:
             ghosts_conf = GhostsConf.load_from(route.filename)
             key = ghosts_conf.file_ghost_key(route.filename)
@@ -215,14 +223,15 @@ def render_ghost_settings(route: GhostChatRoute):
     else:
         st.write(ghost)
     source = inspect.getsource(ghost.__class__)
-    with st.expander("source code", expanded=False):
+    if st.toggle("source code", key="ghost_source_code"):
+        st.caption(generate_import_path(ghost.__class__))
         st.code(source)
     render_empty()
 
 
 def render_instruction(conversation: Conversation):
     st.subheader("Instructions")
-    conversation.get_ghost_driver()
+    driver = conversation.get_ghost_driver()
 
 
 def render_context_settings(conversation: Conversation):

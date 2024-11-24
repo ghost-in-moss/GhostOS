@@ -122,26 +122,22 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     def _parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         if message.type == MessageType.FUNCTION_CALL.value:
             if message.ref_id:
-                yield from [
+                return [
                     ChatCompletionAssistantMessageParam(
-                        content=None,
                         role="assistant",
-                        tool_calls=[
-                            ChatCompletionMessageToolCallParam(
-                                id=message.ref_id,
-                                function=FunctionCall(
-                                    name=message.name,
-                                    arguments=message.content,
-                                ),
-                                type="function"
-                            )
-                        ]
+                        tool_calls=[ChatCompletionMessageToolCallParam(
+                            id=message.ref_id,
+                            function=FunctionCall(
+                                name=message.name,
+                                arguments=message.content,
+                            ),
+                            type="function"
+                        )]
                     )
                 ]
             else:
-                yield from [
+                return [
                     ChatCompletionAssistantMessageParam(
-                        content=None,
                         role="assistant",
                         function_call=FunctionCall(
                             name=message.name,
@@ -151,7 +147,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 ]
         elif message.type == MessageType.FUNCTION_OUTPUT:
             if message.ref_id:
-                yield from [
+                return [
                     ChatCompletionToolMessageParam(
                         tool_call_id=message.ref_id,
                         content=message.content,
@@ -159,7 +155,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                     )
                 ]
             else:
-                yield from [
+                return [
                     ChatCompletionFunctionMessageParam(
                         content=message.get_content(),
                         name=message.name,
@@ -170,20 +166,20 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             return []
 
         if message.role == Role.ASSISTANT:
-            yield from self._parse_assistant_chat_completion(message)
+            return self._parse_assistant_chat_completion(message)
         elif message.role == Role.SYSTEM:
-            yield from [
+            return [
                 ChatCompletionSystemMessageParam(content=message.get_content(), role="system")
             ]
         elif message.role == Role.USER:
             item = ChatCompletionUserMessageParam(content=message.get_content(), role="user")
             if message.name:
                 item["name"] = message.name
-            yield from [
+            return [
                 item
             ]
         else:
-            yield from []
+            return []
 
     @staticmethod
     def _parse_assistant_chat_completion(message: Message) -> Iterable[ChatCompletionAssistantMessageParam]:

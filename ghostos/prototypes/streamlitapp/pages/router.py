@@ -33,16 +33,6 @@ class GhostTaskRoute(Route):
     )
 
 
-class GhostSettingsRoute(Route):
-    link = Link(
-        name="Ghost Settings",
-        import_path=PagePath.GHOSTS.suffix(":main_settings"),
-        streamlit_icon=":material/smart_toy:",
-        button_help="todo",
-        antd_icon="robot",
-    )
-
-
 class GhostChatRoute(Route):
     link = Link(
         name="Chat",
@@ -188,7 +178,6 @@ def default_router() -> Router:
             AIFuncDetailRoute(),
             # ghosts
             GhostChatRoute(),
-            GhostSettingsRoute(),
             GhostTaskRoute(),
 
             ConfigsRoute(),
