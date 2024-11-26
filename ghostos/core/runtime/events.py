@@ -125,7 +125,7 @@ class Event(BaseModel):
         type_ = event_type
         payloads = payloads if payloads is not None else {}
         return cls(
-            id=id_,
+            event_id=id_,
             type=type_,
             task_id=task_id,
             from_task_id=from_task_id,

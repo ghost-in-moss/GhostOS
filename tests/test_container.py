@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict, get_args, get_origin
+from typing import Type, Dict, get_args, get_origin, ClassVar
 
 from ghostos.container import Container, Provider, provide
 
@@ -162,3 +162,29 @@ def test_container_inherit():
     bar = sub_container.force_fetch(Bar)
     assert bar.bar == "hello"
     assert bar.foo.foo == 2
+
+
+def test_bloodline():
+    container = Container()
+    assert container.bloodline is not None
+    sub = Container(parent=container, name="hello")
+    assert len(sub.bloodline) == 2
+
+
+def test_container_shutdown():
+    class Foo:
+        instance_count: ClassVar[int] = 0
+
+        def __init__(self):
+            Foo.instance_count += 1
+
+        def shutdown(self):
+            Foo.instance_count -= 1
+
+    container = Container()
+    f = Foo()
+    container.set(Foo, f)
+    container.add_shutdown(f.shutdown)
+    assert Foo.instance_count == 1
+    container.destroy()
+    assert Foo.instance_count == 0

@@ -3,8 +3,18 @@ from ghostos.core.moss import Moss as Parent
 
 
 class Moss(Parent):
+
     bolt: SpheroBolt
     """bolt controller"""
+
+
+def example_spin_the_bolt(moss: Moss):
+    moss.bolt.run(Command(
+        name="spin bolt",
+        code="""
+api.spin(360, 1)
+"""
+    ))
 
 
 # <moss-hide>

@@ -1,12 +1,10 @@
 from typing import List, Optional, Tuple
 from os.path import dirname, join
 from ghostos.abcd import GhostOS
-from ghostos.contracts.logger import config_logging
 from ghostos.container import Container, Provider, Contracts
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
 
 import dotenv
-import os
 
 # Core Concepts
 #
@@ -108,7 +106,6 @@ def default_application_contracts() -> Contracts:
     """
     from ghostos.core.moss import MossCompiler
     from ghostos.core.messages.openai import OpenAIMessageParser
-    from ghostos.contracts.pool import Pool
     from ghostos.contracts.shutdown import Shutdown
     from ghostos.contracts.modules import Modules
     from ghostos.contracts.workspace import Workspace
@@ -131,7 +128,6 @@ def default_application_contracts() -> Contracts:
         Variables,
 
         # system contracts
-        Pool,  # multi-thread or process pool to submit async tasks
         Shutdown,  # graceful shutdown register
         LLMs,  # LLMs interface
         PromptStorage,
@@ -174,7 +170,6 @@ def default_application_providers(
     application default providers
     todo: use manager provider to configurate multiple kinds of implementation
     """
-    from ghostos.contracts.pool import DefaultPoolProvider
     from ghostos.contracts.shutdown import ShutdownProvider
     from ghostos.contracts.modules import DefaultModulesProvider
     from ghostos.core.moss import DefaultMOSSProvider
@@ -213,7 +208,6 @@ def default_application_providers(
 
         # --- session ---#
         MsgThreadsRepoByWorkSpaceProvider(runtime_threads_dir),
-        DefaultPoolProvider(100),
         MemEventBusImplProvider(),
 
         # --- moss --- #
@@ -255,7 +249,7 @@ def make_app_container(
         app_contracts = default_application_contracts()
 
     # prepare application container
-    _container = Container()
+    _container = Container(name="ghostos_root")
     _container.register(*app_providers)
     # contracts validation
     app_contracts.validate(_container)

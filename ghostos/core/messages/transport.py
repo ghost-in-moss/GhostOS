@@ -257,9 +257,11 @@ class ArrayStream(Stream):
             self._alive = False
             self._error = self._receiver.error()
             if self._error is not None:
-                raise RuntimeError(f"upstream is closed: {self._error.get_content()}")
+                raise RuntimeError(f"stream is failed: {self._error.get_content()}")
+            elif not self.alive():
+                raise RuntimeError(f"stream is closed")
             else:
-                raise RuntimeError(f"send upstream failed")
+                raise RuntimeError(f"send stream failed")
         return True
 
     def completes_only(self) -> bool:

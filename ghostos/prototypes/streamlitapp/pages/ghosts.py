@@ -147,7 +147,6 @@ def chatting(route: GhostChatRoute, conversation: Conversation, inputs: List[Mes
         event, receiver = conversation.respond(inputs)
         render_event(event, debug)
         render_receiver(receiver, debug)
-
     while not route.input_type and rotate and conversation.available():
         if event := conversation.pop_event():
             render_event(event, debug)
@@ -168,13 +167,12 @@ def video_input_dialog(route: GhostChatRoute):
 
 def render_receiver(receiver: Receiver, debug: bool):
     try:
+        with st.status("waiting..."):
+            buffer = ReceiverBuffer.new(receiver.recv())
+        if buffer is None:
+            return
         with receiver:
             with st.chat_message("assistant"):
-                with st.status("waiting..."):
-                    buffer = ReceiverBuffer.new(receiver.recv())
-                if buffer is None:
-                    st.error("No message received")
-                    return
                 while buffer is not None:
                     if MessageType.is_text(buffer.head()):
                         contents = chunks_to_st_stream(buffer.chunks())
@@ -282,7 +280,6 @@ def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):
     st.subheader("Thread Info")
     with st.container(border=True):
         render_thread_messages(thread, max_turn=0)
-    render_empty()
 
 
 def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
@@ -295,8 +292,6 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
         count += render_turn(turn, debug)
     if count == 0:
         st.info("No thread messages yet")
-        render_empty()
-    render_empty()
 
 
 def render_event_object(event: Event, debug: bool):

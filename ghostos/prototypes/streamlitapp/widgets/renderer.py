@@ -36,7 +36,7 @@ def render_task_by_id(task_id: str):
 
 
 def render_empty():
-    for i in range(30):
+    for i in range(20):
         st.empty()
 
 

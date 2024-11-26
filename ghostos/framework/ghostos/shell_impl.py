@@ -1,8 +1,7 @@
 import time
-from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable
-
+from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable, Dict
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
-from ghostos.contracts.pool import Pool
+from ghostos.contracts.pool import Pool, DefaultPool
 from ghostos.container import Container, Provider
 from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
 from ghostos.abcd.utils import get_ghost_driver
@@ -12,7 +11,7 @@ from ghostos.core.runtime import (
     GoTasks, TaskState, GoTaskStruct,
 )
 from ghostos.core.messages import Stream
-from ghostos.helpers import uuid, Timeleft
+from ghostos.helpers import uuid, Timeleft, import_from_path
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
 from pydantic import BaseModel, Field
@@ -28,10 +27,12 @@ class ShellConf(BaseModel):
     max_task_errors: int = Field(
         default=3,
     )
+    pool_size: int = 100
     background_idle_time: float = Field(1)
     task_lock_overdue: float = Field(
         default=10.0
     )
+    providers: List[str] = []
 
 
 G = TypeVar("G", bound=Ghost)
@@ -47,10 +48,16 @@ class ShellImpl(Shell):
             providers: List[Provider],
     ):
         self._conf = config
+        self._container = Container(parent=container, name="shell")
         # prepare container
         for provider in providers:
-            container.register(provider)
-        self._container = container
+            self._container.register(provider)
+        for provider_name in config.providers:
+            p = import_from_path(provider_name)
+            if isinstance(p, Provider):
+                self._container.register(p)
+            elif issubclass(p, Provider):
+                self._container.register(p())
 
         self._shell_id = process.shell_id
         self._process_id = process.process_id
@@ -59,8 +66,10 @@ class ShellImpl(Shell):
             process_id=self._process_id,
             task_id=self._process_id,
         )
-        self._eventbus = container.force_fetch(EventBus)
-        self._tasks = container.force_fetch(GoTasks)
+        self._pool = DefaultPool(config.pool_size)
+        self._container.set(Pool, self._pool)
+        self._eventbus = self._container.force_fetch(EventBus)
+        self._tasks = self._container.force_fetch(GoTasks)
         self._closed = False
         self._background_started = False
         # bootstrap the container.
@@ -68,7 +77,9 @@ class ShellImpl(Shell):
         self._container.set(Shell, self)
         self._container.set(ShellImpl, self)
         self._container.set(ShellConf, config)
+
         self._container.bootstrap()
+        self._conversations: List[Conversation] = []
 
     @property
     def logger(self) -> LoggerItf:
@@ -115,16 +126,26 @@ class ShellImpl(Shell):
                 max_task_errors=self._conf.max_task_errors,
             )
             self._tasks.save_task(task)
-            return ConversationImpl(
+            conversation = ConversationImpl(
                 conf=conf,
-                container=Container(parent=self._container),
+                container=self._container,
                 task=task,
                 task_locker=locker,
                 is_background=is_background,
                 shell_closed=self.closed,
             )
+            exists = self._conversations
+            running = []
+            # remove closed ones
+            for c in exists:
+                if c.closed():
+                    continue
+                running.append(c)
+            running.append(conversation)
+            self._conversations = running
+            return conversation
         elif throw:
-            raise RuntimeError(f'Task {task.task_id} already locked')
+            raise RuntimeError(f'create conversation failed, Task {task.task_id} already locked')
         return None
 
     def call(
@@ -240,8 +261,7 @@ class ShellImpl(Shell):
             raise RuntimeError(f'background run already started')
 
         for i in range(worker):
-            pool = self.container().force_fetch(Pool)
-            pool.submit(self._run_background_worker, background)
+            self._pool.submit(self._run_background_worker, background)
 
     def _run_background_worker(self, background: Optional[Background] = None):
         def is_stopped() -> bool:
@@ -271,6 +291,7 @@ class ShellImpl(Shell):
                 self.logger.exception(err)
                 break
             idle()
+        self.logger.info("shut down background worker")
         self.close()
 
     def _validate_closed(self):
@@ -284,9 +305,23 @@ class ShellImpl(Shell):
         if self._closed:
             return
         self._closed = True
-        pool = self.container().force_fetch(Pool)
-        pool.shutdown()
+        self.logger.info(
+            "start closing shell %s, conversations %d",
+            self._shell_id,
+            len(self._conversations)
+        )
+        for conversation in self._conversations:
+            if conversation.closed():
+                continue
+            self.logger.info("closing shell conversation %s", conversation.task_id)
+            conversation.close()
+        del self._conversations
+        self.logger.info("shell conversations are closed")
         self._container.destroy()
+        self.logger.info("shell container destroyed")
+        self.logger.info("shutting down shell pool")
+        self._pool.shutdown(cancel_futures=True)
+        self.logger.info("shell pool is shut")
         del self._container
         del self._eventbus
         del self._tasks

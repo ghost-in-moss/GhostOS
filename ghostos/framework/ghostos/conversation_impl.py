@@ -3,6 +3,7 @@ from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable
 from ghostos.container import Container
 from ghostos.abcd import Conversation, Scope, Ghost, Context
 from ghostos.abcd import run_session_event
+from ghostos.errors import SessionError
 from ghostos.core.messages import (
     Message, Role,
     Stream, Receiver, new_basic_connection,
@@ -13,11 +14,11 @@ from ghostos.core.runtime import (
     GoThreadInfo, GoThreads,
 )
 from ghostos.contracts.pool import Pool
-from ghostos.contracts.logger import get_ghostos_logger
+from ghostos.contracts.logger import LoggerItf
 from ghostos.entity import to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
-from threading import Lock
+from threading import Lock, Thread
 
 __all__ = ["ConversationImpl", "ConversationConf", "Conversation"]
 
@@ -52,7 +53,9 @@ class ConversationImpl(Conversation[G]):
             shell_closed: Callable[[], bool],
     ):
         self._conf = conf
-        self._container = container
+        self.task_id = task.task_id
+        self._container = Container(parent=container, name="conversation")
+        self.logger = self._container.force_fetch(LoggerItf)
         self._scope = Scope(
             shell_id=task.shell_id,
             process_id=task.process_id,
@@ -66,6 +69,7 @@ class ConversationImpl(Conversation[G]):
         self._tasks = container.force_fetch(GoTasks)
         self._threads = container.force_fetch(GoThreads)
         self._eventbus = container.force_fetch(EventBus)
+        self._submit_session_thread: Optional[Thread] = None
         self._handling_event = False
         self._mutex = Lock()
         self._closed = False
@@ -79,10 +83,6 @@ class ConversationImpl(Conversation[G]):
         for provider in providers:
             self._container.register(provider)
         self._container.bootstrap()
-
-    @property
-    def logger(self):
-        return get_ghostos_logger(self._scope.model_dump())
 
     def container(self) -> Container:
         self._validate_closed()
@@ -149,6 +149,9 @@ class ConversationImpl(Conversation[G]):
             history: Optional[List[Message]] = None,
     ) -> Tuple[Event, Receiver]:
         self._validate_closed()
+        if self._submit_session_thread:
+            self._submit_session_thread.join()
+            self._submit_session_thread = None
         context_meta = to_entity_meta(context) if context is not None else None
         if self._ctx is not None:
             context_meta = to_entity_meta(self._ctx)
@@ -179,7 +182,8 @@ class ConversationImpl(Conversation[G]):
             idle=self._conf.message_receiver_idle,
             complete_only=self._is_background,
         )
-        self._pool.submit(self._submit_session_event, event, stream)
+        self._submit_session_thread = Thread(target=self._submit_session_event, args=(event, stream,))
+        self._submit_session_thread.start()
         return retriever
 
     def _validate_closed(self):
@@ -191,6 +195,7 @@ class ConversationImpl(Conversation[G]):
     def _submit_session_event(self, event: Event, stream: Stream) -> None:
         self.logger.debug("submit session event")
         try:
+            self._handling_event = True
             with stream:
                 task = self._tasks.get_task(event.task_id)
                 session = self._create_session(task, self._locker, stream)
@@ -206,6 +211,7 @@ class ConversationImpl(Conversation[G]):
         finally:
             self._eventbus.notify_task(event.task_id)
             self._handling_event = False
+            self._submit_session_thread = None
 
     def _create_session(
             self,
@@ -234,9 +240,16 @@ class ConversationImpl(Conversation[G]):
     def fail(self, error: Exception) -> bool:
         if self._closed:
             return False
-        self.logger.exception(error)
+        if isinstance(error, SessionError):
+            self.logger.info(f"receive session stop error: {error}")
+            return False
+        elif isinstance(error, IOError):
+            self.logger.exception(f"receive IO error: {error}")
+            return False
+        # otherwise, close the whole thing.
+        self.logger.exception(f"receive IO error: {error}")
         self.close()
-        return True
+        return False
 
     def __del__(self):
         self.close()
@@ -245,10 +258,16 @@ class ConversationImpl(Conversation[G]):
         if self._closed:
             return
         self._closed = True
+        self.logger.info("conversation %s is closing", self.task_id)
+        self._handling_event = False
+        if self._submit_session_thread:
+            self._submit_session_thread.join()
+            self._submit_session_thread = None
         self._locker.release()
         self._destroy()
 
     def _destroy(self):
+        self.logger.info("conversation %s is destroying", self.task_id)
         self._container.destroy()
         del self._container
         del self._tasks
@@ -257,9 +276,9 @@ class ConversationImpl(Conversation[G]):
         del self._pool
 
     def closed(self) -> bool:
-        return self._closed or self._shell_closed()
+        return self._closed
 
     def available(self) -> bool:
-        if self.closed() or self._handling_event:
+        if self.closed() or self._shell_closed() or self._handling_event:
             return False
         return True

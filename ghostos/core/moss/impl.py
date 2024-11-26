@@ -21,7 +21,7 @@ IMPORT_FUTURE = "from __future__ import annotations"
 
 class MossCompilerImpl(MossCompiler):
     def __init__(self, *, container: Container, pycontext: Optional[PyContext] = None):
-        self._container = Container(parent=container)
+        self._container = Container(parent=container, name="moss")
         self._pycontext = pycontext if pycontext else PyContext()
         self._modules: Modules = self._container.force_fetch(Modules)
         self._predefined_locals: Dict[str, Any] = {

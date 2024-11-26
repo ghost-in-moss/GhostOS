@@ -70,9 +70,7 @@ def bootstrap():
         logger.debug("start shell background run")
         shell = ghostos.create_shell("ghostos_streamlit_app", "ghostos_streamlit_app")
         shell.background_run(4, StreamlitBackgroundApp())
-        conversation = shell.sync(page_route.get_ghost(), page_route.get_context())
         Singleton(shell, Shell).bind(st.session_state)
-        Singleton(conversation, Conversation).bind(st.session_state)
 
     return [
         Singleton(container),

@@ -351,9 +351,9 @@ class MossAction(Action, PromptPipe):
                     # if std output is not empty, and op is none, observe the output as default.
                     return session.taskflow().think()
             else:
-                output = caller.new_output("executed with no output or errors.")
+                output = caller.new_output("executed")
                 session.respond([output])
-                return session.taskflow().think()
+                return None
 
         except Exception as e:
             return self.fire_error(session, caller, f"error during executing moss code: {e}")

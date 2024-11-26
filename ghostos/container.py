@@ -142,15 +142,24 @@ class Container(IoCContainer):
     - 仍然需要考虑加入 RAG Memories 来支持. 获取做到 OS 层.
     """
     instance_count: ClassVar[int] = 0
+    bloodline: List[str]
 
-    def __init__(self, parent: Optional[Container] = None, inherit: bool = True):
+    def __init__(self, parent: Optional[Container] = None, *, name: str = "", inherit: bool = True):
+        self.bloodline = []
         # container extended by children container
         if parent is not None:
             if not isinstance(parent, Container):
                 raise AttributeError("container can only initialized with parent Container")
             if parent is self:
                 raise AttributeError("container's parent must not be itself")
-        self.parent = parent
+        self.parent: Optional[Container] = parent
+        if isinstance(self.parent, Container):
+            bloodline = self.parent.bloodline.copy()
+            bloodline.append(name)
+        else:
+            bloodline = [name]
+        self.bloodline: List[str] = bloodline
+
         # global singletons.
         self._instances: Dict[Any, Any] = {}
         self._factory: Dict[Any, Factory] = {}
@@ -400,7 +409,7 @@ class Container(IoCContainer):
 
     def _check_destroyed(self) -> None:
         if self._destroyed:
-            raise RuntimeError("container is called after destroyed")
+            raise RuntimeError(f"container {self.bloodline} is called after destroyed")
 
     def destroy(self) -> None:
         """
@@ -564,7 +573,8 @@ class Contracts:
     def validate(self, container: Container) -> None:
         for contract in self.contracts:
             if not container.bound(contract):
-                raise NotImplementedError(f'Contract {contract} not bound to container')
+                call_at = get_caller_info(2)
+                raise NotImplementedError(f'Contract {contract} not bound to container: {call_at}')
 
     def join(self, target: Contracts) -> Contracts:
         abstracts = set(self.contracts)

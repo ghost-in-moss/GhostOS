@@ -44,3 +44,4 @@ def test_thread_sending_message_with_stage():
     assert len(prompt.added) == 2
     prompt = thread.to_prompt([], ["a", "b"])
     assert len(prompt.added) == 3
+

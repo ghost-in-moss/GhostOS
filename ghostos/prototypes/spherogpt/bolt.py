@@ -6,14 +6,14 @@ except ImportError:
     exit("This script requires the spherov2 to be installed.")
 
 from spherov2 import scanner
-from spherov2.toy import bolt
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List
 from spherov2.sphero_edu import SpheroEduAPI
 from pydantic import BaseModel, Field
 from ghostos.helpers import Timeleft
 from ghostos.abcd import Conversation
+from ghostos.contracts.logger import LoggerItf
 from ghostos.core.runtime import EventBus, EventTypes
 from ghostos.core.messages import MessageType
 from ghostos.core.moss.prompts import reflect_class_with_methods, get_prompt
@@ -35,36 +35,38 @@ class Command(BaseModel):
     """
     name: str = Field(description="aim of the command in simple words")
     duration: float = Field(
+        default=0.0,
         description="the command running duration in seconds. "
-                    "when the duration tick out, the bolt stop."
-                    "if duration is 0, execute once.")
-    code: str = Field(description="the command code")
-    execution_log: str = Field(default="", description="the command execution log, only used at the command runtime")
+                    "if duration is 0, execute once. otherwise, command will run at every frame."
+    )
+    code: str = Field(description="the command code to execute in the sphero bolt runtime.")
 
     def run_frame(self, api: SpheroEduAPI, passed: float, frame: int) -> None:
         """
         run a single frame every tick
-        :param api: SpheroEduAPI that controll the sphero bolt
+        :param api: SpheroEduAPI that control the sphero bolt
         :param passed: the passed time from command start to now
         :param frame: the frame number, frame == 0 means the command is starting
-        :return: None
+
+        for example, if you want roll at a special curve,
+        you shall change head angle by passed time at each frame,
         """
         # eval the python code defined in the command.
+        # this is how the command work
         eval(self.code)
 
 
 class SpheroBolt(ABC):
     """
     Sphero Bolt interface
+    Notice you can only run sphero by Command.
     """
 
     @abstractmethod
     def run(self, *commands: Command) -> None:
         """
         run command on sphero bolt. will always stop movement at beginning and end of the execution time.
-        :param commands: the commands, could be a pipeline
-        :param tick: the interval time between frames in secondes
-        :return: None, but will send message after the running.
+        :param commands: the commands to execute in order
         """
         pass
 
@@ -73,11 +75,13 @@ class SpheroBoltImpl(SpheroBolt):
 
     def __init__(
             self,
+            logger: LoggerItf,
             eventbus: EventBus,
             task_id: str,
             notify: bool,
             tick_interval: float = 0.01,
     ):
+        self._logger = logger
         self._executing_command: Optional[Command] = None
         self._command_stack: List[Command] = []
         self._timeleft: Optional[Timeleft] = None
@@ -86,16 +90,17 @@ class SpheroBoltImpl(SpheroBolt):
         self._notify: bool = notify
         self._eventbus = eventbus
         self._destroyed = False
-        self._main_thread = Thread(target=self._main)
+        self._main_thread: Optional[Thread] = None
         self._tick_interval = tick_interval
         self._ticked_frames: int = 0
-        self._bolt: Optional[bolt] = None
+        self._error = None
 
     def bootstrap(self):
         try:
-            self._bolt = scanner.find_BOLT()
-            if self._bolt is not None:
-                self._main_thread.start()
+            self._logger.info("SpheroBolt Bootstrap started")
+            _bolt = scanner.find_BOLT()
+            self._main_thread = Thread(target=self._main, args=(_bolt,))
+            self._main_thread.start()
         except Exception as e:
             raise NotImplementedError("Could not find the Bolt device. " + str(e))
 
@@ -103,9 +108,10 @@ class SpheroBoltImpl(SpheroBolt):
         if self._destroyed:
             return
         self._destroyed = True
-        if self._bolt is not None:
+        self._logger.info("SpheroBolt Bootstrap destroying")
+        if self._main_thread is not None:
             self._main_thread.join()
-        del self._bolt
+        del self._logger
         del self._eventbus
 
     def __del__(self):
@@ -125,42 +131,53 @@ class SpheroBoltImpl(SpheroBolt):
             return
         name = self._executing_command.name
         passed = self._timeleft.passed()
-        content = f"command `{name}` {action} after running `{round(passed, 4)}` second"
+        content = f"sphero bolt: command `{name}` {action} after running `{round(passed, 4)}` second"
         self._clear_command()
         event = EventTypes.NOTIFY.new(
             task_id=self._task_id,
-            messages=[MessageType.TEXT.new_system(content=content)]
+            messages=[MessageType.TEXT.new_system(content=content)],
+            from_task_id="sphero_bolt",
+            from_task_name="sphero_bolt",
         )
         self._eventbus.send_event(event, self._notify)
 
-    def _main(self) -> None:
-        with SpheroEduAPI(self._bolt) as api:
+    def _main(self, toy) -> None:
+        with SpheroEduAPI(toy) as api:
             while not self._destroyed:
-                if self._executing_command and self._timeleft:
-                    if self._executing_command.duration <= 0:
-                        self._executing_command.run_frame(api, 0, 0)
-                        self._command_succeeded()
-                        continue
-                    elif self._timeleft.alive():
-                        self._executing_command.run_frame(api, self._timeleft.passed(), self._ticked_frames)
-                        self._ticked_frames += 1
-                        time.sleep(self._tick_interval)
-                        continue
+                try:
+                    if self._executing_command and self._timeleft:
+                        if self._executing_command.duration <= 0:
+                            self._executing_command.run_frame(api, 0, 0)
+                            self._command_succeeded()
+                            continue
+                        elif self._timeleft.alive():
+                            self._executing_command.run_frame(
+                                api,
+                                self._timeleft.passed(),
+                                self._ticked_frames,
+                            )
+                            self._ticked_frames += 1
+                            time.sleep(self._tick_interval)
+                            continue
+                        else:
+                            self._command_succeeded()
+                    elif len(self._command_stack) > 0:
+                        current: Command = self._command_stack.pop(0)
+                        self._executing = True
+                        self._executing_command = current
+                        self._timeleft = Timeleft(current.duration)
+                        self._ticked_frames = 0
                     else:
-                        self._command_succeeded()
-                elif len(self._command_stack) > 0:
-                    current: Command = self._command_stack.pop(0)
-                    self._executing = True
-                    self._executing_command = current
-                    self._timeleft = Timeleft(current.duration)
-                    self._ticked_frames = 0
-                else:
-                    time.sleep(0.5)
-            api.stop_roll()
+                        time.sleep(0.5)
+                except Exception as e:
+                    self._logger.exception(e)
+                    self._reset_command_at(f"stopped because of error {e}")
+            self._logger.info("SpheroBolt start to stop")
+        self._logger.info("SpheroBolt stopped")
 
     def run(self, *commands: Command) -> None:
-        if self._bolt is None:
-            raise RuntimeError(f"Sphero Bolt is not initialized.")
+        if self._error:
+            raise RuntimeError(self._error)
         if self._executing:
             self._reset_command_at("stop during new command")
         commands = list(commands)
@@ -183,8 +200,10 @@ class SpheroBoltProvider(BootstrapProvider):
     def factory(self, con: Container) -> Optional[SpheroBolt]:
         conversation = con.force_fetch(Conversation)
         eventbus = con.force_fetch(EventBus)
+        logger = con.force_fetch(LoggerItf)
         task = conversation.task()
         return SpheroBoltImpl(
+            logger,
             eventbus,
             task_id=task.task_id,
             notify=task.shall_notifiy(),
@@ -194,8 +213,8 @@ class SpheroBoltProvider(BootstrapProvider):
     def bootstrap(self, container: Container) -> None:
         sphero_bolt = container.force_fetch(SpheroBolt)
         if isinstance(sphero_bolt, SpheroBoltImpl):
-            sphero_bolt.bootstrap()
             container.add_shutdown(sphero_bolt.destroy)
+            sphero_bolt.bootstrap()
 
 
 exports = {

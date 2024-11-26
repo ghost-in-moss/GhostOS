@@ -121,7 +121,8 @@ class ErrorOperator(Operator):
             from_task_id=task.task_id,
             from_task_name=task.name,
         )
-        return fire_session_event(session, event)
+        session.fire_events(event)
+        return None
 
     def destroy(self):
         del self.messages

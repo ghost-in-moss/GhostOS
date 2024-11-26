@@ -336,6 +336,7 @@ class Conversation(Protocol[G]):
     """
     interface for operate on synchronized (task is locked) ghost
     """
+    task_id: str
 
     @abstractmethod
     def container(self) -> Container:

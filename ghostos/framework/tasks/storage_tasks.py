@@ -63,6 +63,7 @@ class SimpleStorageLocker(TaskLocker):
         filename = self.locker_file_name()
         if self.refresh():
             self.storage.remove(filename)
+            self._acquired = False
             return True
         return False
 

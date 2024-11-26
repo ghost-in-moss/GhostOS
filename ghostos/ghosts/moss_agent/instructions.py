@@ -53,10 +53,11 @@ Then the `GhostOS` system will add your code to the python module provided to yo
 and execute the `run` function. 
 
 Notices: 
-* you do not need to import the module that already provided above.
+* Your code will **APPEND** to the code of `{modulename}` then execute, so **DO NOT REPEAT THE DEFINED CODE IN THE MODULE**.
 * if the python code context can not fulfill your will, do not use the `moss` tool.
 * you can reply as usual without calling the tool `moss`. use it only when you know what you're doing.
-* the comments in your code generation is useful but not required, comment only when necessary
+* don't copy the main function's __doc__, they are instruction to you only.
+* in your code generation, comments is not required, comment only when necessary.
 """
 
 MOSS_FUNCTION_DESC = """

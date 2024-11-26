@@ -1,5 +1,5 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any
-
+from ghostos.errors import SessionError
 from ghostos.abcd import (
     Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks,
     Messenger,
@@ -24,6 +24,8 @@ from ghostos.framework.messengers import DefaultMessenger
 from .taskflow_impl import TaskflowImpl
 from .subtasks_impl import SubtasksImpl
 from threading import Lock
+
+from ...errors import SessionError
 
 G = TypeVar("G", bound=Ghost)
 
@@ -53,9 +55,10 @@ class SessionImpl(Session[Ghost]):
             max_errors: int,
     ):
         # session level container
-        self.container = Container(parent=container)
+        self.container = Container(parent=container, name="session")
         self.upstream = stream
         self.task = task
+        self.logger = self.container.force_fetch(LoggerItf)
         self._task_locker = locker
         threads = container.force_fetch(GoThreads)
         thread = threads.get_thread(task.thread_id, create=True)
@@ -88,14 +91,8 @@ class SessionImpl(Session[Ghost]):
         self._destroyed = False
         self._saved = False
         self._bootstrap()
-        if not self.refresh():
-            raise RuntimeError(f"Failed to start session")
-        self._thread_locker = Lock()
+        self._respond_lock = Lock()
         Session.instance_count += 1
-
-    @property
-    def logger(self) -> LoggerItf:
-        return get_ghostos_logger(self.scope.model_dump())
 
     def __del__(self):
         # for gc test
@@ -240,7 +237,7 @@ class SessionImpl(Session[Ghost]):
     def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[Caller]]:
         self._validate_alive()
         messages = self._message_parser.parse(messages)
-        with self._thread_locker:
+        with self._respond_lock:
             messenger = self.messenger(stage)
             messenger.send(messages)
             buffer, callers = messenger.flush()
@@ -376,10 +373,12 @@ class SessionImpl(Session[Ghost]):
         self._firing_events = []
 
     def __enter__(self):
+        if not self.refresh():
+            raise RuntimeError(f"Failed to start session")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.logger.info("session exited")
+        self.logger.debug("session exited")
         if exc_val is not None:
             intercepted = self.fail(exc_val)
             self.destroy()
@@ -397,7 +396,8 @@ class SessionImpl(Session[Ghost]):
         if self.upstream is not None and self.upstream.alive():
             message = MessageType.ERROR.new(content=str(err))
             self.upstream.deliver(message)
-        return True
+            raise SessionError(str(err))
+        return False
 
     def destroy(self) -> None:
         if self._destroyed:

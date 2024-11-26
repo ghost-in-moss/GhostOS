@@ -5,7 +5,6 @@ from ghostos.core.runtime import GoProcesses, GoProcess, GoThreads, GoTasks, Eve
 from ghostos.container import Container, Provider, Contracts, INSTANCE
 from ghostos.contracts.configs import Configs, YamlConfig
 from ghostos.contracts.modules import Modules
-from ghostos.contracts.pool import Pool
 from ghostos.contracts.variables import Variables
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
@@ -31,7 +30,6 @@ class GhostOSImpl(GhostOS):
         LoggerItf,
         Configs,
         Modules,
-        Pool,
         Variables,
         Workspace,
     ])
@@ -77,11 +75,10 @@ class GhostOSImpl(GhostOS):
         self._processes.save_process(process)
 
         # prepare container
-        container = Container(parent=self._container)
         providers = providers or []
         return ShellImpl(
             config=shell_conf,
-            container=container,
+            container=self._container,
             process=process,
             providers=providers,
         )

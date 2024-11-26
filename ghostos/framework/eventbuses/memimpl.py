@@ -34,7 +34,6 @@ class MemEventBusImpl(EventBus):
             self._task_queues[task_id] = Queue()
         queue = self._task_queues[task_id]
         queue.put(event_id)
-        queue.task_done()
 
     def pop_task_event(self, task_id: str) -> Optional[Event]:
         if task_id not in self._task_queues:
