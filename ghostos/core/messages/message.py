@@ -171,6 +171,7 @@ class Message(BaseModel):
 
     msg_id: str = Field(default="", description="unique message id. ")
     ref_id: Optional[str] = Field(default=None, description="the referenced message id.")
+    from_id: Optional[str] = Field(default=None, description="the origin message id.")
     index: Optional[int] = Field(default=None, description="the index of the message.")
     type: str = Field(default="", description="default message type, if empty, means text")
     stage: str = Field(default="", description="message stage")
@@ -431,7 +432,7 @@ class Message(BaseModel):
         return datetime.fromtimestamp(self.created)
 
     def __str__(self):
-        return self.get_content()
+        return self.__repr__()
 
 
 class MessageClass(ABC):

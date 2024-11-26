@@ -289,7 +289,9 @@ class ShellImpl(Shell):
                     continue
             except Exception as err:
                 self.logger.exception(err)
-                break
+                if background and not background.on_error(err):
+                    self.logger.info("stop shell due to background not catch error")
+                    break
             idle()
         self.logger.info("shut down background worker")
         self.close()

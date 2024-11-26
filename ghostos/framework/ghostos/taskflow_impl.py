@@ -8,7 +8,7 @@ from ghostos.abcd import Taskflow, Session, Operator
 from ghostos.abcd import fire_session_event
 from ghostos.core.runtime import TaskState, EventTypes, TaskBrief
 from ghostos.core.moss import Injection, MossRuntime
-from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role
+from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role, MessageType
 from pprint import pprint
 from contextlib import redirect_stdout
 from io import StringIO
@@ -180,8 +180,13 @@ class FailOperator(Operator):
                 reason=f"task {task.name} is failed: {self.reason}",
             )
             session.fire_events(event)
-        elif self.messages:
-            session.respond(self.messages)
+        messages = []
+        if self.reason:
+            messages = [Role.SYSTEM.new(content=self.reason)]
+        if self.messages:
+            messages.extend(self.messages)
+        if messages:
+            session.respond(messages)
         return None
 
     def destroy(self):

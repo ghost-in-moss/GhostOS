@@ -84,13 +84,13 @@ def open_prompt_info_dialog(prompt_id: str):
     if prompt.history:
         st.subheader(_("History"))
         with st.container(border=True):
-            render_messages(prompt.history, False, prefix)
+            render_messages(prompt.history, False, False, prefix=prefix)
     if prompt.inputs:
         st.subheader(_("Input"))
         with st.container(border=True):
-            render_messages(prompt.inputs, False, prefix)
+            render_messages(prompt.inputs, False, False, prefix)
     if prompt.added:
         st.subheader(_("Added"))
         with st.container(border=True):
-            render_messages(prompt.added, False, prefix)
+            render_messages(prompt.added, False, False, prefix)
     render_empty()

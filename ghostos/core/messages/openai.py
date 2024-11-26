@@ -16,7 +16,7 @@ from ghostos.core.messages import (
 from ghostos.core.messages.message_classes import (
     CallerOutput, VariableMessage,
 )
-from ghostos.contracts.logger import get_ghostos_logger
+from ghostos.contracts.logger import LoggerItf, FakeLogger
 from ghostos.container import Provider, Container
 from ghostos.helpers import import_class_from_path
 
@@ -107,7 +107,12 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 VariableMessage,
             ]
         self.class_parser = MessageClassesParser(message_classes)
-        self.container = container
+        self.container: Optional[Container] = container
+        self.logger: Optional[LoggerItf] = None
+        if container:
+            self.logger = container.get(LoggerItf)
+        if not self.logger:
+            self.logger = FakeLogger()
 
     def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         if not message.is_complete():
@@ -249,21 +254,26 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         # 创建首包, 并发送.
         buffer = None
         for item in messages:
-            get_ghostos_logger().debug("receive chunk: %s", item)
+            chunk = None
+            self.logger.debug("openai parser receive item: %s", item)
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
-                chunk = Message.new_chunk(role=Role.ASSISTANT.value, typ_=MessageType.DEFAULT)
-                if usage:
-                    usage.set_payload(chunk)
+                if usage and buffer:
+                    usage.set_payload(buffer)
+                    continue
             elif len(item.choices) > 0:
                 choice = item.choices[0]
                 delta = choice.delta
-                chunk = self._new_pack_from_delta(delta)
-                if chunk is None:
-                    continue
+                chunk = self._new_chunk_from_delta(delta)
             else:
                 continue
+            self.logger.debug("openai parser parsed chunk: %s", chunk)
+
+            if chunk is None:
+                continue
+            elif item.id:
+                chunk.from_id = item.id
 
             if buffer is None:
                 buffer = chunk.as_head(copy=True)
@@ -273,15 +283,18 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 if not patched:
                     yield buffer.as_tail()
                     buffer = chunk.as_head(copy=True)
+                    yield buffer.get_copy()
+                    continue
                 else:
                     buffer = patched
-                yield chunk
+                    yield chunk
+                    continue
 
         if buffer:
             yield buffer.as_tail(copy=False)
 
     @staticmethod
-    def _new_pack_from_delta(delta: ChoiceDelta) -> Optional[Message]:
+    def _new_chunk_from_delta(delta: ChoiceDelta) -> Optional[Message]:
 
         # function call
         if delta.function_call:

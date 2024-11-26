@@ -391,7 +391,6 @@ class Conversation(Protocol[G]):
             self,
             inputs: Iterable[Message],
             context: Optional[G.ContextType] = None,
-            history: Optional[List[Message]] = None,
     ) -> Tuple[Event, Receiver]:
         """
         create response immediately by inputs. the inputs will change to event.
@@ -544,7 +543,7 @@ class Session(Generic[G], ABC):
     logger: LoggerItf
 
     @abstractmethod
-    def is_alive(self) -> bool:
+    def alive(self) -> bool:
         """
         Session 对自身任务进行状态检查.
         如果这个任务被取消或终止, 则返回 false.

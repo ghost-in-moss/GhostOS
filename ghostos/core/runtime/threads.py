@@ -62,7 +62,8 @@ class Turn(BaseModel):
         return cls(**data)
 
     def append(self, *messages: Message, pycontext: Optional[PyContext] = None) -> None:
-        self.added.extend(messages)
+        for item in messages:
+            self.added.append(item)
         if pycontext is not None:
             self.pycontext = pycontext
 
@@ -87,11 +88,14 @@ class Turn(BaseModel):
     def is_empty(self) -> bool:
         return (self.event is None or self.event.is_empty()) and not self.added
 
-    def is_from_client(self) -> bool:
-        return self.event is not None and self.event.from_task_id is None
+    def is_from_inputs(self) -> bool:
+        return self.event is not None and self.event.type == EventTypes.INPUT.value
 
     def is_from_self(self) -> bool:
-        return self.event is not None and self.event.from_self()
+        return self.event is not None and self.event.is_from_self()
+
+    def is_callback(self) -> bool:
+        return self.event is not None and self.event.callback
 
 
 class GoThreadInfo(BaseModel):

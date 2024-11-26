@@ -1,5 +1,5 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any
-from ghostos.errors import SessionError
+from ghostos.errors import StreamingError, SessionError
 from ghostos.abcd import (
     Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks,
     Messenger,
@@ -119,13 +119,13 @@ class SessionImpl(Session[Ghost]):
             state_values[key] = entity
         return state_values
 
-    def is_alive(self) -> bool:
+    def alive(self) -> bool:
         if self._failed or self._destroyed:
             return False
         return self._task_locker.acquired() and (self.upstream is None or self.upstream.alive())
 
     def _validate_alive(self):
-        if not self.is_alive():
+        if not self.alive():
             raise RuntimeError(f"Session is not alive")
 
     def to_messages(self, values: Iterable[Union[MessageKind, Any]]) -> List[Message]:
@@ -148,14 +148,14 @@ class SessionImpl(Session[Ghost]):
             self.task.errors = 0
             if event.context is not None:
                 self.task.context = event.context
-            if event.history:
-                self.thread = self.thread.reset_history(event.history)
-                event.history = []
 
         # other event
         elif self.task.is_dead():
             # dead task can only respond event from parent input.
             self.thread.new_turn(event)
+            self.logger.info(
+                "task %s is dead, save event %s without run", self.scope.task_id, event.event_id,
+            )
             return None, EmptyOperator()
 
         if EventTypes.ERROR.value == event.type:
@@ -181,7 +181,6 @@ class SessionImpl(Session[Ghost]):
                 self.fire_events(event)
             return None, EmptyOperator()
 
-        event.history = []
         event.context = None
         return event, None
 
@@ -207,7 +206,7 @@ class SessionImpl(Session[Ghost]):
         return self.ghost_driver.get_instructions(self)
 
     def refresh(self) -> bool:
-        if self._failed or self._destroyed or not self.is_alive():
+        if self._failed or self._destroyed or not self.alive():
             return False
         if self._task_locker.refresh():
             self._saved = False
@@ -239,8 +238,13 @@ class SessionImpl(Session[Ghost]):
         messages = self._message_parser.parse(messages)
         with self._respond_lock:
             messenger = self.messenger(stage)
-            messenger.send(messages)
+            try:
+                messenger.send(messages)
+            except StreamingError as e:
+                raise SessionError(f"session failed during streaming: {e}")
+
             buffer, callers = messenger.flush()
+            self.logger.info("append messages to thread: %s", buffer)
             self.thread.append(*buffer)
             return buffer, callers
 
@@ -396,7 +400,6 @@ class SessionImpl(Session[Ghost]):
         if self.upstream is not None and self.upstream.alive():
             message = MessageType.ERROR.new(content=str(err))
             self.upstream.deliver(message)
-            raise SessionError(str(err))
         return False
 
     def destroy(self) -> None:

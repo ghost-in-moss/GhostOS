@@ -79,9 +79,9 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
     if turn.summary is not None:
         st.info("summary:\n" + turn.summary)
 
-    if turn.is_from_client() or turn.is_from_self():
+    if turn.is_from_inputs() or turn.is_from_self():
         messages = list(turn.messages(False))
-        render_messages(messages, debug, prefix)
+        render_messages(messages, debug, in_expander=False, prefix=prefix)
         return len(messages)
     # from other task
     else:
@@ -90,24 +90,27 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
         if event is not None:
             sub_title = _("background event: ") + event.type
         with st.expander(sub_title, expanded=False):
-            messages = list(turn.messages(False))
-            render_messages(messages, debug, prefix)
+            event_messages = turn.event_messages()
+            render_messages(event_messages, debug, in_expander=True)
             render_event_object(event, debug)
-            return len(messages)
+        if turn.added:
+            render_messages(turn.added, debug, in_expander=False)
+        messages = list(turn.messages(False))
+        return len(messages)
 
 
 def render_event(event: Event, debug: bool):
     from ghostos.prototypes.streamlitapp.widgets.messages import render_messages
     if event is None:
         return
-    if event.from_task_id:
+    if event.callback:
         sub_title = _("background event: ") + event.type
         with st.expander(sub_title, expanded=False):
             messages = event.iter_message(show_instruction=True)
-            render_messages(messages, debug)
+            render_messages(messages, debug, in_expander=True)
     else:
         messages = event.iter_message(show_instruction=True)
-        render_messages(messages, debug)
+        render_messages(messages, debug, in_expander=False)
 
 
 def render_event_object(event: Event, debug: bool):

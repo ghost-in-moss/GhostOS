@@ -14,7 +14,7 @@ class MessageGroup(NamedTuple):
     messages: List[Message]
 
 
-def render_messages(messages: Iterable[Message], debug: bool, prefix: str = ""):
+def render_messages(messages: Iterable[Message], debug: bool, in_expander: bool, prefix: str = ""):
     groups: List[MessageGroup] = []
     group = MessageGroup("", "", "", [])
 
@@ -30,14 +30,11 @@ def render_messages(messages: Iterable[Message], debug: bool, prefix: str = ""):
     if group.messages:
         groups.append(group)
     for group in groups:
-        render_message_group(group, debug, prefix)
+        render_message_group(group, debug, in_expander, prefix)
 
 
-def render_message_group(group: MessageGroup, debug: bool, prefix: str = ""):
+def render_message_group(group: MessageGroup, debug: bool, in_expander: bool, prefix: str = ""):
     role = group.msg_role
-    if role not in {Role.ASSISTANT.value, Role.USER.value} and not debug:
-        # hide system messages.
-        return
     name = group.msg_name
     stage = group.stage
     caption = f"{role}: {name}" if name else role
@@ -47,12 +44,12 @@ def render_message_group(group: MessageGroup, debug: bool, prefix: str = ""):
             with st.chat_message(render_role):
                 st.caption(caption)
                 for msg in group.messages:
-                    render_message_in_content(msg, debug, prefix)
+                    render_message_in_content(msg, debug, prefix=prefix, in_expander=True)
     else:
         with st.chat_message(render_role):
             st.caption(caption)
             for msg in group.messages:
-                render_message_in_content(msg, debug, prefix)
+                render_message_in_content(msg, debug, prefix=prefix, in_expander=in_expander)
 
 
 def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
@@ -91,33 +88,43 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
             open_prompt_info_dialog(prompt_payload.prompt_id)
 
 
-def render_message_in_content(message: Message, debug: bool, prefix: str = ""):
-    if message.type == MessageType.ERROR:
+def render_message_in_content(message: Message, debug: bool, in_expander: bool, *, prefix: str = ""):
+    if message.type == MessageType.ERROR.value:
         st.error(f"Error: {message.content}")
+
     elif MessageType.is_text(message):
         st.markdown(message.content)
+
     elif MessageType.FUNCTION_CALL.match(message):
         callers = Caller.from_message(message)
-        render_message_caller(callers, debug)
+        render_message_caller(callers, debug, in_expander)
+
     elif MessageType.FUNCTION_OUTPUT.match(message):
-        render_message_caller_output(message, debug)
+        render_message_caller_output(message, debug, in_expander)
     # todo: more types
     else:
         st.write(message.model_dump(exclude_defaults=True))
         if message.callers:
-            render_message_caller(message.callers, debug)
+            render_message_caller(message.callers, debug, in_expander)
     render_message_payloads(message, debug, prefix)
     st.empty()
 
 
-def render_message_caller_output(message: Message, debug: bool):
-    with st.expander("Caller Output", expanded=debug):
+def render_message_caller_output(message: Message, debug: bool, in_expander: bool):
+    if not in_expander:
+        with st.expander("Caller Output", expanded=debug):
+            st.caption(f"function {message.name} output:")
+            st.write(message.content)
+    else:
         st.caption(f"function {message.name} output:")
         st.write(message.content)
 
 
-def render_message_caller(callers: Iterable[Caller], debug: bool):
-    with st.expander("Callers", expanded=debug):
+def render_message_caller(callers: Iterable[Caller], debug: bool, in_expander: bool):
+    if not in_expander:
+        with st.expander("Callers", expanded=debug):
+            _render_message_caller(callers)
+    else:
         _render_message_caller(callers)
 
 

@@ -21,3 +21,10 @@ def test_deque():
     assert e is not None
 
 
+def test_yield_from_deque():
+    d = deque([1, 2, 3, 4, 5])
+
+    def foo(dq: deque):
+        yield from dq
+
+    assert list(foo(d)) == [1, 2, 3, 4, 5]

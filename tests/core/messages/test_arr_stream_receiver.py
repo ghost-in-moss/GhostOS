@@ -1,7 +1,7 @@
 from typing import Iterable
 from ghostos.core.messages.transport import new_basic_connection, Stream, ReceiverBuffer
 from ghostos.core.messages.pipeline import SequencePipe
-from ghostos.core.messages.message import Message
+from ghostos.core.messages.message import Message, MessageType
 from threading import Thread
 import time
 
@@ -222,3 +222,62 @@ def test_array_receiver_buffer_async():
         buffer = buffer.next()
         assert buffer is None
     pool.shutdown(wait=True)
+
+
+def test_array_receiver_with_error():
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
+    content = "hello world"
+
+    def send_data(s: Stream, c: str):
+        with s:
+            s.send(iter_content(c, 0.02))
+            s.send([MessageType.ERROR.new(content="error")])
+
+    send_data(stream, content)
+    with retriever:
+        messages = retriever.wait()
+    assert len(messages) == 2
+    assert messages[1].is_complete()
+    assert messages[1].type == MessageType.ERROR
+
+
+def test_array_receiver_bad_case_1():
+    item = Message(
+        msg_id='25c6d3d9-9bb1-45e1-ac7e-585380975ea1',
+        ref_id='call_SyYPOCVP60bvyLIMP3gemVYy',
+        index=None,
+        type='function_call',
+        stage='',
+        role='assistant',
+        name='moss',
+        content='',
+        memory=None,
+        attrs=None,
+        payloads={'task_info': {'task_id': '8d98d7772baa6776c7a169ef2028c06a', 'task_name': 'SpheroGPT',
+                                'process_id': '7167a681-cc2e-43aa-aab8-1781f9308e3f',
+                                'shell_id': 'ghostos_streamlit_app', 'thread_id': '8d98d7772baa6776c7a169ef2028c06a'}},
+        callers=[],
+        seq='chunk',
+        created=1732633767.653,
+    )
+    item2 = Message(
+        **{
+            "msg_id": "",
+            "ref_id": None,
+            "index": None,
+            "type": "function_call",
+            "stage": "",
+            "role": "assistant",
+            "name": "SpheroGPT",
+            "content": "os",
+            "memory": None,
+            "attrs": None,
+            "payloads": {},
+            "callers": [],
+            "seq": "chunk",
+            "created": 0.0,
+        })
+
+    patched = item.patch(item2)
+    assert patched is not None
+    assert patched.name == "moss"

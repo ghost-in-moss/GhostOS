@@ -62,10 +62,11 @@ class SequencePipe(Pipe):
                         buffer = patched
                         continue
                     else:
-                        yield item.get_copy()
+                        yield item
                 else:
                     yield buffer.as_tail()
                     buffer = item.as_head()
+                    yield buffer.get_copy()
                     continue
         if buffer is not None:
             yield buffer.as_tail(copy=False)

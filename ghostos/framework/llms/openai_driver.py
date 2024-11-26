@@ -168,7 +168,6 @@ class OpenAIAdapter(LLMApi):
         try:
             chunks: Iterable[ChatCompletionChunk] = self._chat_completion(prompt, stream=True)
             messages = self._parser.from_chat_completion_chunks(chunks)
-            get_ghostos_logger().debug("++++++++++++messages %s", messages)
             prompt_payload = PromptPayload.from_prompt(prompt)
             output = []
             for chunk in messages:
@@ -177,7 +176,7 @@ class OpenAIAdapter(LLMApi):
                     self._model.set_payload(chunk)
                     prompt_payload.set_payload(chunk)
                     output.append(chunk)
-            prompt.output = output
+            prompt.added = output
         except Exception as e:
             prompt.error = str(e)
             raise

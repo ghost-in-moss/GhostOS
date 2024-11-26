@@ -175,7 +175,7 @@ def render_aifunc_exec_step(step: ExecStep):
             st.error(step.error.get_content())
 
     with st.expander(label=_("History"), expanded=True):
-        render_messages(step.iter_messages())
+        render_messages(step.iter_messages(), debug=False, in_expander=True)
 
     if step.frames:
         st.caption(f"{len(step.frames)} frames called")
@@ -201,7 +201,7 @@ def open_exec_frame_dialog(exec_frame: ExecFrame):
         idx = 0
         for step in exec_frame.steps:
             st.caption(f"step {idx}")
-            render_messages(step.iter_messages())
+            render_messages(step.iter_messages(), debug=False, in_expander=True)
             idx = idx + 1
 
     render_aifunc_frame_tail(exec_frame)
@@ -232,7 +232,7 @@ def main():
         elif route.frame:
             render_aifunc_executed_frame_head(route.frame)
             with st.expander(label=_("messages"), expanded=True):
-                render_messages(route.received)
+                render_messages(route.received, debug=False, in_expander=True)
 
             if route.frame:
                 render_aifunc_frame_tail(route.frame)

@@ -57,10 +57,6 @@ class Event(BaseModel):
         default_factory=list,
         description="list of messages sent by this event",
     )
-    history: Optional[List[Message]] = Field(
-        default=None,
-        description="if the event reset the history"
-    )
     instruction: str = Field(
         default="",
         description="instruction from the event telling what to do. wrapped by system type message after the messages",
@@ -77,7 +73,7 @@ class Event(BaseModel):
     def is_empty(self) -> bool:
         return not self.reason and not self.instruction and not self.messages
 
-    def from_self(self) -> bool:
+    def is_from_self(self) -> bool:
         """
         通过任务是否是自己触发的, 来判断是否要继续.
         """
@@ -90,7 +86,7 @@ class Event(BaseModel):
         return f"on_{self.event_type()}"
 
     def iter_message(self, show_instruction: bool = True) -> Iterable[Message]:
-        if EventTypes.CREATED.value != self.type and self.from_task_name and not self.from_self():
+        if EventTypes.CREATED.value != self.type and self.from_task_name and not self.is_from_self():
             reason = ""
             if self.reason:
                 reason = f" Reason: {self.reason}"
@@ -112,6 +108,7 @@ class Event(BaseModel):
             event_type: str,
             task_id: str,
             messages: List[Message],
+            callback: Optional[bool] = None,
             from_task_id: Optional[str] = None,
             from_task_name: Optional[str] = None,
             reason: str = "",
@@ -119,11 +116,12 @@ class Event(BaseModel):
             eid: Optional[str] = None,
             payloads: Optional[Dict] = None,
             context: Optional[EntityMeta] = None,
-            history: Optional[List[Message]] = None,
     ) -> "Event":
         id_ = eid if eid else uuid()
         type_ = event_type
         payloads = payloads if payloads is not None else {}
+        if callback is None:
+            callback = from_task_id is not None
         return cls(
             event_id=id_,
             type=type_,
@@ -135,7 +133,7 @@ class Event(BaseModel):
             messages=messages,
             payloads=payloads,
             context=context,
-            history=history,
+            callback=callback,
         )
 
 
@@ -181,6 +179,7 @@ class EventTypes(str, Enum):
             task_id: str,
             messages: List[Message],
             *,
+            callback: Optional[bool] = None,
             from_task_id: Optional[str] = None,
             from_task_name: Optional[str] = None,
             reason: str = "",
@@ -188,13 +187,13 @@ class EventTypes(str, Enum):
             eid: Optional[str] = None,
             payloads: Optional[Dict] = None,
             context: Optional[EntityMeta] = None,
-            history: Optional[List[Message]] = None,
     ) -> Event:
         type_ = str(self.value)
         payloads = payloads if payloads is not None else {}
         return Event.new(
             event_type=type_,
             task_id=task_id,
+            callback=callback,
             from_task_id=from_task_id,
             from_task_name=from_task_name,
             reason=reason,
@@ -203,7 +202,6 @@ class EventTypes(str, Enum):
             eid=eid,
             payloads=payloads,
             context=context,
-            history=history,
         )
 
 

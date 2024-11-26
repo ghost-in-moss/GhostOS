@@ -96,3 +96,17 @@ def test_function_call_message():
     assert patched.ref_id == "abc"
     assert patched.name == "abc"
     assert patched.content == "hello world"
+
+
+def test_message_path_bad_case():
+    item1 = Message(msg_id='d5ff6a6a-2b05-4819-864d-82afdf9ac5fc', ref_id=None,
+                    from_id='chatcmpl-AXs0YM2VxVZbo50C1lIOC0qlWumtN', index=None, type='function_call', stage='',
+                    role='assistant', name=None, content='{"', memory=None, attrs=None, payloads={}, callers=[],
+                    seq='chunk',
+                    created=0.0)
+    item2 = Message(msg_id='d5ff6a6a-2b05-4819-864d-82afdf9ac5fc', ref_id='call_DCaC3PJy336sZ9ryhxijgFlq',
+                    from_id='chatcmpl-AXs0YM2VxVZbo50C1lIOC0qlWumtN', index=None, type='function_call', stage='',
+                    role='assistant', name='moss', content='{"', memory=None, attrs=None, payloads={}, callers=[],
+                    seq='chunk', created=1732636557.282)
+    patched = item1.patch(item2)
+    assert patched is not None

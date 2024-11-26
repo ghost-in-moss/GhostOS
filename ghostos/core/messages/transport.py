@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import Iterable, Optional, Callable, Tuple, List, Self, Iterator
+from typing import Iterable, Optional, Tuple, List, Self, Iterator
 
 from typing_extensions import Protocol
 from collections import deque
 from abc import abstractmethod
 from ghostos.core.messages.message import Message, MessageType
 from ghostos.core.messages.pipeline import SequencePipe
+from ghostos.errors import StreamingError
 import time
 
 __all__ = [
@@ -257,11 +258,19 @@ class ArrayStream(Stream):
             self._alive = False
             self._error = self._receiver.error()
             if self._error is not None:
-                raise RuntimeError(f"stream is failed: {self._error.get_content()}")
+                raise StreamingError(
+                    f"streaming is failed: {self._error.get_content()}, message {item.model_dump_json()} unsent"
+                )
+            elif self._receiver.closed():
+                raise StreamingError(
+                    f"streaming is failed due to receiver is closed: , message {item.model_dump_json()} unsent"
+                )
             elif not self.alive():
-                raise RuntimeError(f"stream is closed")
+                raise StreamingError(
+                    f"streaming is closed, message {item.model_dump_json()} unsent",
+                )
             else:
-                raise RuntimeError(f"send stream failed")
+                raise StreamingError(f"send stream failed, message {item.model_dump_json()} unsent")
         return True
 
     def completes_only(self) -> bool:
@@ -376,7 +385,7 @@ class ReceiverBuffer:
 
 def new_basic_connection(
         *,
-        timeout: float = -1,
+        timeout: float = 0.0,
         idle: float = 0.2,
         complete_only: bool = False,
 ) -> Tuple[Stream, Receiver]:

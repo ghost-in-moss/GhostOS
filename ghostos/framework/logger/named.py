@@ -36,5 +36,4 @@ class DefaultLoggerProvider(Provider[LoggerItf]):
             handler.setFormatter(formatter)
             logger.addHandler(handler)
             logger.setLevel(logging.DEBUG)
-        wrapped = LoggerAdapter(logger, extra={})
-        return wrapped
+        return logger

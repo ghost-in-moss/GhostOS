@@ -223,3 +223,12 @@ def test_model_with_datetime():
 
     foo = Foo(now=int(time.time()))
     assert foo.now.timestamp() > 0
+
+
+def test_print_model():
+    class Foo(BaseModel):
+        foo: str = "hello"
+
+    f = Foo()
+    assert "(" not in str(f)
+    assert "(" in repr(f)

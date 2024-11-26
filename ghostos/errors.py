@@ -5,6 +5,10 @@ class SessionError(RuntimeError):
     pass
 
 
+class StreamingError(RuntimeError):
+    pass
+
+
 class ConversationError(RuntimeError):
     """
     Conversation level exception, conversation shall be closed

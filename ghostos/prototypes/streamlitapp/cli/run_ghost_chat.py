@@ -24,7 +24,7 @@ class StreamlitBackgroundApp(Background):
 
     def on_error(self, error: Exception) -> bool:
         logger.exception(error)
-        return False
+        return True
 
     def on_event(self, event: Event, messages: List[Message]) -> None:
         pass

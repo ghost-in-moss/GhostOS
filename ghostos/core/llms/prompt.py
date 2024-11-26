@@ -46,7 +46,6 @@ class Prompt(BaseModel):
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
 
     # system info
-    output: List[Message] = Field(default_factory=list)
     error: Optional[str] = Field(default=None, description="error message")
     created: int = Field(default_factory=timestamp)
     model: Optional[ModelConf] = Field(default=None, description="model conf")

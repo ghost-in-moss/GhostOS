@@ -13,7 +13,7 @@ class Timeleft:
     def left(self) -> float:
         passed = self.passed()
         timeleft = self.timeout - passed
-        return timeleft
+        return timeleft if timeleft > 0 else 0
 
     def alive(self) -> bool:
         return self.timeout <= 0 or self.passed() < self.timeout

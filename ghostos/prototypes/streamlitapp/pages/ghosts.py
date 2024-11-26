@@ -147,6 +147,7 @@ def chatting(route: GhostChatRoute, conversation: Conversation, inputs: List[Mes
         event, receiver = conversation.respond(inputs)
         render_event(event, debug)
         render_receiver(receiver, debug)
+
     while not route.input_type and rotate and conversation.available():
         if event := conversation.pop_event():
             render_event(event, debug)
@@ -159,7 +160,6 @@ def chatting(route: GhostChatRoute, conversation: Conversation, inputs: List[Mes
 @st.dialog("Textarea")
 def video_input_dialog(route: GhostChatRoute):
     text = st.text_area("You message", value="")
-    logger.debug("++++++++++++++++ set chat_text_input: %s", text)
     if text:
         st.session_state["chat_text_input"] = text
     logger.debug("end of text area input")
@@ -167,30 +167,33 @@ def video_input_dialog(route: GhostChatRoute):
 
 def render_receiver(receiver: Receiver, debug: bool):
     try:
-        with st.status("waiting..."):
-            buffer = ReceiverBuffer.new(receiver.recv())
-        if buffer is None:
-            return
         with receiver:
             with st.chat_message("assistant"):
+                with st.status("waiting..."):
+                    buffer = ReceiverBuffer.new(receiver.recv())
+                if buffer is None:
+                    return
                 while buffer is not None:
+                    st.logger.get_logger("ghostos").info("receive buffer head: %s", buffer.head())
                     if MessageType.is_text(buffer.head()):
-                        contents = chunks_to_st_stream(buffer.chunks())
                         with st.empty():
+                            contents = chunks_to_st_stream(buffer.chunks())
                             st.write_stream(contents)
                             with st.container():
-                                render_message_in_content(buffer.tail(), debug)
+                                render_message_in_content(buffer.tail(), debug, in_expander=False)
+
                     elif MessageType.FUNCTION_CALL.match(buffer.head()):
                         contents = chunks_to_st_stream(buffer.chunks())
                         with st.empty():
                             st.write_stream(contents)
                             with st.container():
-                                render_message_in_content(buffer.tail(), debug)
+                                render_message_in_content(buffer.tail(), debug, in_expander=False)
                     else:
-                        render_message_in_content(buffer.tail(), debug)
+                        render_message_in_content(buffer.tail(), debug, in_expander=False)
                     # render next item
                     buffer = buffer.next()
     except Exception as e:
+        st.error(str(e))
         st.exception(e)
 
 
@@ -292,6 +295,7 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
         count += render_turn(turn, debug)
     if count == 0:
         st.info("No thread messages yet")
+        render_empty()
 
 
 def render_event_object(event: Event, debug: bool):
