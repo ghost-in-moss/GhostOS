@@ -253,6 +253,8 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
 
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         # 创建首包, 并发送.
+        if messages is None:
+            return []
         buffer = None
         for item in messages:
             chunk = None

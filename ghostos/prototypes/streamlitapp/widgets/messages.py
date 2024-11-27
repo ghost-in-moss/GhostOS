@@ -128,9 +128,9 @@ def render_image_message(message: Message):
     got = get_asset_images(image_ids)
     for image_info, binary in got.values():
         if binary:
-            st.image(binary, use_column_width=True)
+            st.image(binary)
         elif image_info.url:
-            st.image(image_info.url, use_column_width=True)
+            st.image(image_info.url)
 
 
 def render_message_caller_output(message: Message, debug: bool, in_expander: bool):

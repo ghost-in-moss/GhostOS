@@ -8,8 +8,9 @@ from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.assets import ImagesAsset, ImageInfo
 from ghostos.contracts.documents import DocumentRegistry, Documents
+from PIL.Image import Image as ImageType
 from ghostos.core.messages.message_classes import ImageAssetMessage
-from ghostos.helpers import GHOSTOS_DOMAIN
+from ghostos.helpers import GHOSTOS_DOMAIN, uuid
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 
@@ -87,7 +88,6 @@ def get_images_asset() -> ImagesAsset:
 
 
 def save_uploaded_image(file: UploadedFile) -> ImageInfo:
-    assets = get_images_asset()
     image_info = ImageInfo(
         image_id=file.file_id,
         filename=file.name,
@@ -95,7 +95,28 @@ def save_uploaded_image(file: UploadedFile) -> ImageInfo:
         filetype=file.type,
     )
     binary = file.getvalue()
+    save_image_info(image_info, binary)
+    return image_info
+
+
+def save_image_info(image_info: ImageInfo, binary: bytes) -> None:
+    assets = get_images_asset()
     assets.save(image_info, binary)
+
+
+def save_pil_image(image: ImageType, desc: str) -> ImageInfo:
+    from io import BytesIO
+    file_id = uuid()
+    img_bytes = BytesIO()
+    image.save(img_bytes, format='PNG')
+    binary = img_bytes.getvalue()
+    image_info = ImageInfo(
+        image_id=file_id,
+        filename=file_id + ".png",
+        filetype="image/png",
+        description=desc
+    )
+    save_image_info(image_info, binary)
     return image_info
 
 

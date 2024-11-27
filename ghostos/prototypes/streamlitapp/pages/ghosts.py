@@ -1,6 +1,7 @@
 import streamlit as st
-import time
 import streamlit_react_jsonschema as srj
+import streamlit_paste_button as spb
+from PIL.Image import Image
 from typing import Iterable, List
 from ghostos.prototypes.streamlitapp.pages.router import (
     GhostChatRoute, GhostTaskRoute,
@@ -13,12 +14,15 @@ from ghostos.prototypes.streamlitapp.widgets.renderer import (
     render_object, render_event, render_turn,
     render_empty,
 )
-from ghostos.prototypes.streamlitapp.resources import get_app_conf, save_uploaded_image
+from ghostos.prototypes.streamlitapp.resources import (
+    get_app_conf, save_uploaded_image, save_pil_image,
+)
 from ghostos.core.runtime import GoThreadInfo, Event, GoTaskStruct
 from ghostos.core.messages import (
     Receiver, Role, ReceiverBuffer, MessageType, Message,
     ImageAssetMessage,
 )
+from ghostos.contracts.assets import ImageInfo
 from streamlit.logger import get_logger
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
@@ -56,17 +60,19 @@ def main_chat():
         st.subheader("chat options")
         with st.container(border=True):
             route.auto_run = st.toggle(
-                "auto run event",
-                help="automatic run background event",
+                _("auto run event"),
+                help=_("automatic run background event"),
                 value=True,
             )
             route.camera_input = st.toggle(
-                "camera_input",
+                _("camera_input"),
+                help=_("take picture from camera, the model shall support image type"),
                 value=route.camera_input,
                 key=route.generate_key(st.session_state, "camera_input"),
             )
             route.image_input = st.toggle(
                 "image input",
+                help=_("upload picture, the model shall support image type"),
                 value=route.image_input,
                 key=route.generate_key(st.session_state, "image input"),
             )
@@ -150,8 +156,18 @@ def chatting(route: GhostChatRoute, conversation: Conversation):
 
     pics: List[UploadedFile] = []
     if route.camera_input:
-        if pic := st.camera_input("Task picture"):
+        if pic := st.camera_input(_("Task picture")):
             pics.append(pic)
+    else:
+        st.empty()
+
+    if route.image_input:
+        if pic := st.file_uploader(_("Choose a picture"), type=["png", "jpg", "jpeg"]):
+            pics.append(pic)
+        paste = spb.paste_image_button(_("Paste a picture"))
+        if paste.image_data is not None:
+            st.image(paste.image_data, width=300)
+            pics.append(paste.image_data)
     else:
         st.empty()
 
@@ -161,8 +177,12 @@ def chatting(route: GhostChatRoute, conversation: Conversation):
         if pics:
             saved_images = []
             for p in pics:
-                image_info = save_uploaded_image(p)
-                saved_images.append(image_info)
+                if isinstance(p, UploadedFile):
+                    image_info = save_uploaded_image(p)
+                    saved_images.append(image_info)
+                elif isinstance(p, Image):
+                    image_info = save_pil_image(p, "user paste image")
+                    saved_images.append(image_info)
 
             message = ImageAssetMessage.from_image_asset(
                 name="",
