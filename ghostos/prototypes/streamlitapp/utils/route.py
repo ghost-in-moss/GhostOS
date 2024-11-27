@@ -174,13 +174,6 @@ class Route(SessionStateValue, BaseModel, ABC):
         st.session_state[session_key] = value
         return value
 
-    @classmethod
-    def bind_to_route(cls, value, key: str = ""):
-        if not key:
-            key = generate_import_path(type(value))
-        session_key = cls.session_state_key() + ":" + key
-        st.session_state[session_key] = value
-
 
 class Router:
 

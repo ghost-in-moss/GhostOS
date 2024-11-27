@@ -15,7 +15,7 @@ from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos.core.llms import PromptPipe, Prompt
-from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload, Receiver
+from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload, Receiver, Role
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
 from ghostos.identifier import get_identifier
@@ -278,6 +278,8 @@ class Shell(ABC):
             self,
             ghost: G,
             context: Optional[G.ContextType] = None,
+            username: str = "",
+            user_role: str = Role.USER.value,
     ) -> Conversation[G]:
         """
         create a top-level conversation with a ghost.
@@ -389,7 +391,7 @@ class Conversation(Protocol[G]):
     @abstractmethod
     def respond(
             self,
-            inputs: Iterable[Message],
+            inputs: Iterable[MessageKind],
             context: Optional[G.ContextType] = None,
     ) -> Tuple[Event, Receiver]:
         """

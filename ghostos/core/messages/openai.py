@@ -14,7 +14,7 @@ from ghostos.core.messages import (
     Message, MessageType, Role, Caller, Payload, MessageClass, MessageClassesParser
 )
 from ghostos.core.messages.message_classes import (
-    CallerOutput, VariableMessage,
+    CallerOutput, VariableMessage, ImageAssetMessage,
 )
 from ghostos.contracts.logger import LoggerItf, FakeLogger
 from ghostos.container import Provider, Container
@@ -105,6 +105,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             message_classes = [
                 CallerOutput,
                 VariableMessage,
+                ImageAssetMessage,
             ]
         self.class_parser = MessageClassesParser(message_classes)
         self.container: Optional[Container] = container

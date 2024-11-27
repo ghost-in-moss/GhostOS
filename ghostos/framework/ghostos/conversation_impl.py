@@ -4,8 +4,9 @@ from ghostos.container import Container
 from ghostos.abcd import Conversation, Scope, Ghost, Context
 from ghostos.abcd import run_session_event
 from ghostos.errors import SessionError
+from ghostos.contracts.variables import Variables
 from ghostos.core.messages import (
-    Message, Role,
+    Message, Role, MessageKind, MessageKindParser,
     Stream, Receiver, new_basic_connection,
 )
 from ghostos.core.runtime import (
@@ -51,12 +52,22 @@ class ConversationImpl(Conversation[G]):
             task_locker: TaskLocker,
             is_background: bool,
             shell_closed: Callable[[], bool],
+            username: str = "",
+            user_role: str = Role.USER.value,
     ):
         self._closed = False
         self._conf = conf
         self.task_id = task.task_id
         self._container = Container(parent=container, name="conversation")
         self.logger = self._container.force_fetch(LoggerItf)
+        self._username = username
+        self._user_role = user_role
+        variables = self._container.force_fetch(Variables)
+        self._message_parser = MessageKindParser(
+            variables,
+            name=self._username,
+            role=self._user_role,
+        )
         self._scope = Scope(
             shell_id=task.shell_id,
             process_id=task.process_id,
@@ -144,20 +155,21 @@ class ConversationImpl(Conversation[G]):
 
     def respond(
             self,
-            inputs: Iterable[Message],
+            inputs: Iterable[MessageKind],
             context: Optional[Ghost.ContextType] = None,
     ) -> Tuple[Event, Receiver]:
         self._validate_closed()
         if self._submit_session_thread:
             self._submit_session_thread.join()
             self._submit_session_thread = None
+        messages = list(self._message_parser.parse(inputs))
         context_meta = to_entity_meta(context) if context is not None else None
         if self._ctx is not None:
             context_meta = to_entity_meta(self._ctx)
             self._ctx = None
         event = EventTypes.INPUT.new(
             task_id=self._scope.task_id,
-            messages=list(inputs),
+            messages=messages,
             context=context_meta,
         )
         return event, self.respond_event(event)

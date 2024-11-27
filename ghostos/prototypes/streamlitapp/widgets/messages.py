@@ -2,7 +2,10 @@ import json
 
 import streamlit as st
 from typing import Iterable, List, NamedTuple
-from ghostos.core.messages import Message, Role, MessageType, Caller
+from ghostos.core.messages import (
+    Message, Role, MessageType, Caller,
+    ImageAssetMessage,
+)
 from ghostos.framework.messages import CompletionUsagePayload, TaskPayload, PromptPayload
 from ghostos.helpers import gettext as _
 
@@ -102,12 +105,32 @@ def render_message_in_content(message: Message, debug: bool, in_expander: bool, 
     elif MessageType.FUNCTION_OUTPUT.match(message):
         render_message_caller_output(message, debug, in_expander)
     # todo: more types
+    elif MessageType.IMAGE.match(message):
+        # render image type message
+        render_image_message(message)
     else:
         st.write(message.model_dump(exclude_defaults=True))
         if message.callers:
             render_message_caller(message.callers, debug, in_expander)
     render_message_payloads(message, debug, prefix)
     st.empty()
+
+
+def render_image_message(message: Message):
+    from ghostos.prototypes.streamlitapp.resources import get_asset_images
+    if message.type != MessageType.IMAGE.value:
+        return
+    image_msg = ImageAssetMessage.from_message(message)
+    content = image_msg.content
+    # render content first
+    st.markdown(content)
+    image_ids = [image_id.image_id for image_id in image_msg.attrs.images]
+    got = get_asset_images(image_ids)
+    for image_info, binary in got.values():
+        if binary:
+            st.image(binary, use_column_width=True)
+        elif image_info.url:
+            st.image(image_info.url, use_column_width=True)
 
 
 def render_message_caller_output(message: Message, debug: bool, in_expander: bool):

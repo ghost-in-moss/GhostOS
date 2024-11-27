@@ -45,9 +45,31 @@ class GhostChatRoute(Route):
     ghost_meta: Optional[EntityMeta] = Field(default=None, description="ghost meta")
     context_meta: Optional[EntityMeta] = Field(default=None, description="context meta")
     filename: Optional[str] = Field(default=None, description="filename to lunch the ghost")
-    input_type: str = Field(default="", description="input type")
+    camera_input: bool = Field(default=False, description="camera input")
+    image_input: bool = Field(default=False, description="image input")
+    auto_run: bool = Field(default=True, description="auto run")
 
     __ghost__ = None
+
+    def generate_key(self, session_state, key: str) -> str:
+        turn = self.get_render_turn(session_state)
+        return generate_import_path(self.__class__) + "-turn-" + str(turn) + "-key-" + key
+
+    def media_input(self) -> bool:
+        return self.camera_input or self.image_input
+
+    def get_render_turn(self, session_state) -> int:
+        key = generate_import_path(self.__class__) + ":turn"
+        if key not in session_state:
+            session_state[key] = 0
+        return session_state[key]
+
+    def new_render_turn(self, session_state) -> int:
+        key = generate_import_path(self.__class__) + ":turn"
+        if key not in session_state:
+            session_state[key] = 0
+        session_state[key] += 1
+        return session_state[key]
 
     def get_ghost(self) -> Ghost:
         if self.__ghost__ is None:

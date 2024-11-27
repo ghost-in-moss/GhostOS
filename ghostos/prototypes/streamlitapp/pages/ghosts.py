@@ -13,9 +13,12 @@ from ghostos.prototypes.streamlitapp.widgets.renderer import (
     render_object, render_event, render_turn,
     render_empty,
 )
-from ghostos.prototypes.streamlitapp.resources import get_app_conf
+from ghostos.prototypes.streamlitapp.resources import get_app_conf, save_uploaded_image
 from ghostos.core.runtime import GoThreadInfo, Event, GoTaskStruct
-from ghostos.core.messages import Receiver, Role, ReceiverBuffer, MessageType, Message
+from ghostos.core.messages import (
+    Receiver, Role, ReceiverBuffer, MessageType, Message,
+    ImageAssetMessage,
+)
 from streamlit.logger import get_logger
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
@@ -23,6 +26,7 @@ from ghostos.entity import to_entity_meta
 from ghostos.helpers import gettext as _
 from ghostos.helpers import generate_import_path, yaml_pretty_dump
 from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
+from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from pydantic import BaseModel
 import inspect
 
@@ -51,18 +55,23 @@ def main_chat():
 
         st.subheader("chat options")
         with st.container(border=True):
-            auto_run = st.toggle(
+            route.auto_run = st.toggle(
                 "auto run event",
                 help="automatic run background event",
                 value=True,
             )
-            show_video = st.toggle("show video")
-            show_image_file = st.toggle("upload image")
+            route.camera_input = st.toggle(
+                "camera_input",
+                value=route.camera_input,
+                key=route.generate_key(st.session_state, "camera_input"),
+            )
+            route.image_input = st.toggle(
+                "image input",
+                value=route.image_input,
+                key=route.generate_key(st.session_state, "image input"),
+            )
+            route.bind(st.session_state)
 
-        if show_video:
-            pic = st.camera_input("Task a picture")
-        if show_image_file:
-            image = st.file_uploader("Upload image", type=["png", "jpg", "jpeg"])
         render_empty()
 
     # header
@@ -105,14 +114,8 @@ def main_chat():
     # inputs
     if show_chatting:
         st.subheader("Chat")
-        inputs = []
-        if chat_input := st.chat_input("message"):
-            inputs = route.get_route_bound([], "inputs")
-            inputs.append(Role.USER.new(chat_input))
-            route.bind_to_route([], "inputs")
-            route.input_type = ""
 
-        chatting(route, conversation, inputs, auto_run)
+        chatting(route, conversation)
 
 
 def get_conversation(route: GhostChatRoute) -> Conversation:
@@ -138,23 +141,53 @@ def main_task():
     render_task_info_settings(task, thread)
 
 
-def chatting(route: GhostChatRoute, conversation: Conversation, inputs: List[Message], rotate: bool):
+def chatting(route: GhostChatRoute, conversation: Conversation):
+    chat_input = st.chat_input("message")
+
     thread = conversation.thread()
     render_thread_messages(thread, max_turn=20)
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
+
+    pics: List[UploadedFile] = []
+    if route.camera_input:
+        if pic := st.camera_input("Task picture"):
+            pics.append(pic)
+    else:
+        st.empty()
+
+    inputs = st.session_state["ghostos_inputs"] if "ghostos_inputs" in st.session_state else []
+    st.session_state["ghostos_inputs"] = []
+    if chat_input:
+        if pics:
+            saved_images = []
+            for p in pics:
+                image_info = save_uploaded_image(p)
+                saved_images.append(image_info)
+
+            message = ImageAssetMessage.from_image_asset(
+                name="",
+                content=chat_input,
+                images=saved_images,
+            )
+            inputs.append(message)
+            st.session_state["ghostos_inputs"] = inputs
+            route.new_render_turn(st.session_state)
+            st.rerun()
+        else:
+            inputs.append(Role.USER.new(chat_input))
 
     if inputs:
         event, receiver = conversation.respond(inputs)
         render_event(event, debug)
         render_receiver(receiver, debug)
 
-    while not route.input_type and rotate and conversation.available():
-        if event := conversation.pop_event():
-            render_event(event, debug)
-            receiver = conversation.respond_event(event)
-            render_receiver(receiver, debug)
-        else:
-            time.sleep(1)
+    # while not route.media_input() and route.auto_run and conversation.available():
+    #     if event := conversation.pop_event():
+    #         render_event(event, debug)
+    #         receiver = conversation.respond_event(event)
+    #         render_receiver(receiver, debug)
+    #     else:
+    #         time.sleep(1)
 
 
 @st.dialog("Textarea")

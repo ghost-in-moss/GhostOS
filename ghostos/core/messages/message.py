@@ -448,10 +448,10 @@ class MessageClass(ABC):
 
     @classmethod
     @abstractmethod
-    def from_message(cls, container: Message) -> Optional[Self]:
+    def from_message(cls, message: Message) -> Optional[Self]:
         """
         from a message container generate a strong-typed one.
-        :param container:
+        :param message:
         :return: None means type not match.
         """
         pass
@@ -509,13 +509,13 @@ class CallerOutput(BaseModel, MessageClass):
         )
 
     @classmethod
-    def from_message(cls, container: Message) -> Optional[Self]:
-        if container.type != MessageType.FUNCTION_OUTPUT.value:
+    def from_message(cls, message: Message) -> Optional[Self]:
+        if message.type != MessageType.FUNCTION_OUTPUT.value:
             return None
         return cls(
-            call_id=container.ref_id,
-            name=container.name,
-            content=container.content,
+            call_id=message.ref_id,
+            name=message.name,
+            content=message.content,
         )
 
     def to_openai_param(self, container: Optional[Container]) -> List[Dict]:

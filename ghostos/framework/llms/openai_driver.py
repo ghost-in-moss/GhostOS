@@ -119,7 +119,7 @@ class OpenAIAdapter(LLMApi):
         try:
             prompt.run_start = timestamp()
             get_ghostos_logger().debug(f"start chat completion for prompt %s", prompt.id)
-            get_ghostos_logger().debug(f"start chat completion messages %s", messages)
+            get_ghostos_logger().info(f"start chat completion messages %s", messages)
             functions = prompt.get_openai_functions()
             tools = prompt.get_openai_tools()
             if self._model.use_tools:
@@ -140,6 +140,8 @@ class OpenAIAdapter(LLMApi):
                 stream_options=include_usage,
                 **self._model.kwargs,
             )
+        except Exception as e:
+            get_ghostos_logger().error(f"error chat completion for prompt {prompt.id}: {e}")
         finally:
             get_ghostos_logger().debug(f"end chat completion for prompt {prompt.id}")
             prompt.run_end = timestamp()

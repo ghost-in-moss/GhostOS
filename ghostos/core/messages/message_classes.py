@@ -1,13 +1,21 @@
-from typing import Optional, Dict, List, Iterable, Any, Union
+import base64
+from typing import Optional, Dict, List, Iterable, Any, Union, Literal
 from typing_extensions import Self
 
 from ghostos.contracts.variables import Variables
+from ghostos.contracts.assets import ImageInfo
 from ghostos.container import Container
 from ghostos.prompter import get_defined_prompt
 from .message import Message, MessageClass, MessageType, CallerOutput, MessageKind, Role
+from ghostos.helpers import uuid
 from pydantic import BaseModel, Field
 
-__all__ = ["VariableMessage", "CallerOutput", "MessageKindParser"]
+__all__ = [
+    "VariableMessage",
+    "CallerOutput",
+    "ImageAssetMessage",
+    "MessageKindParser",
+]
 
 
 class VariableMessage(MessageClass, BaseModel):
@@ -17,15 +25,15 @@ class VariableMessage(MessageClass, BaseModel):
 
     __message_type__ = MessageType.VARIABLE.value
 
-    role: str = Field(default="", description="who send the message")
-    name: Optional[str] = Field(None, description="who send the message")
-
-    attrs: Variables.Var = Field(
-        description="variable pointer info"
-    )
+    msg_id: str = Field(default_factory=uuid, description="message id")
     payloads: Dict[str, Dict] = Field(
         default_factory=dict,
         description="payload type key to payload item. payload shall be a strong-typed dict"
+    )
+    role: str = Field(default="", description="who send the message")
+    name: Optional[str] = Field(None, description="who send the message")
+    attrs: Variables.Var = Field(
+        description="variable pointer info"
     )
 
     def to_message(self) -> Message:
@@ -35,6 +43,7 @@ class VariableMessage(MessageClass, BaseModel):
             role=self.role,
             name=self.name,
             attrs=self.attrs.model_dump(),
+            msg_id=self.msg_id,
         )
         message.payloads = self.payloads
         return message
@@ -45,6 +54,7 @@ class VariableMessage(MessageClass, BaseModel):
             return None
 
         obj = cls(
+            msg_id=message.msg_id,
             role=message.role,
             name=message.name,
             attrs=message.attrs,
@@ -70,6 +80,137 @@ desc: {self.attrs.desc}
             role=self.role,
             name=self.name,
         )]
+
+
+class ImageId(BaseModel):
+    image_id: str = Field(description="image id")
+    detail: Literal["auto", "high", "low"] = Field(default="auto", description="image quality")
+
+
+class ImageAttrs(BaseModel):
+    images: List[ImageId] = Field(default_factory=list, description="file id")
+
+
+class ImageAssetMessage(MessageClass, BaseModel):
+    msg_id: str = Field(default_factory=uuid, description="message id")
+    payloads: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="payload type key to payload item. payload shall be a strong-typed dict"
+    )
+    role: str = Field(default="", description="who send the message")
+    name: Optional[str] = Field(None, description="who send the message")
+    content: Optional[str] = Field("", description="content of the image message")
+
+    attrs: ImageAttrs = Field(description="image assert id")
+
+    __message_type__ = MessageType.IMAGE.value
+
+    def to_message(self) -> Message:
+        message = Message.new_tail(
+            role=self.role,
+            name=self.name,
+            content=self.content,
+            type_=self.__message_type__,
+            attrs=self.attrs.model_dump(),
+            msg_id=self.msg_id,
+        )
+        message.payloads = self.payloads
+        return message
+
+    @classmethod
+    def from_image_asset(
+            cls,
+            name: str,
+            content: str,
+            images: List[ImageInfo],
+            role: str = Role.USER.value,
+    ) -> Self:
+        attrs = ImageAttrs(images=[
+            ImageId(image_id=image_info.image_id)
+            for image_info in images
+        ])
+        return cls(
+            name=name,
+            content=content,
+            role=role,
+            attrs=attrs,
+        )
+
+    @classmethod
+    def from_message(cls, message: Message) -> Optional[Self]:
+        return cls(
+            msg_id=message.msg_id,
+            role=message.role,
+            name=message.name,
+            content=message.content,
+            attrs=message.attrs,
+            payloads=message.payloads,
+        )
+
+    def to_openai_param(self, container: Optional[Container]) -> List[Dict]:
+        from openai.types.chat.chat_completion_content_part_text_param import ChatCompletionContentPartTextParam
+        from openai.types.chat.chat_completion_content_part_image_param import (
+            ChatCompletionContentPartImageParam, ImageURL,
+        )
+        from openai.types.chat.chat_completion_user_message_param import (
+            ChatCompletionUserMessageParam,
+        )
+        from openai.types.chat.chat_completion_assistant_message_param import (
+            ChatCompletionAssistantMessageParam,
+        )
+        from ghostos.contracts.assets import ImagesAsset
+        content = self.content
+        image_id_and_desc = []
+        content_parts = []
+        if self.attrs is not None and self.attrs.images and container:
+            images = container.force_fetch(ImagesAsset)
+            for image_id_info in self.attrs.images:
+                got = images.get_binary_by_id(image_id_info.image_id)
+                if got is None:
+                    continue
+                image_info, binary = got
+                if binary:
+                    encoded = base64.b64encode(binary).decode('utf-8')
+                    url = f"data:{image_info.filetype};base64,{encoded}"
+                else:
+                    url = image_info.url
+                if not url:
+                    continue
+                content_parts.append(ChatCompletionContentPartImageParam(
+                    type="image_url",
+                    image_url=ImageURL(
+                        url=url,
+                        detail=image_id_info.detail,
+                    ),
+                ))
+                image_id_and_desc.append((image_id_info.image_id, image_info.description))
+        if image_id_and_desc:
+            attachment = "\n(about follow images:"
+            order = 0
+            for image_id, desc in image_id_and_desc:
+                order += 1
+                attachment += f"\n[{order}] id: `{image_id}` desc: `{desc}`"
+            content = content + attachment + ")"
+            content = content.strip()
+        if content:
+            content_parts.insert(0, ChatCompletionContentPartTextParam(
+                text=content,
+                type="text",
+            ))
+
+        if self.role == Role.ASSISTANT.value:
+            item = ChatCompletionAssistantMessageParam(
+                role=Role.ASSISTANT.value,
+                content=content_parts,
+            )
+        else:
+            item = ChatCompletionUserMessageParam(
+                role=Role.USER.value,
+                content=content_parts,
+            )
+        if self.name:
+            item["name"] = self.name
+        return [item]
 
 
 class MessageKindParser:

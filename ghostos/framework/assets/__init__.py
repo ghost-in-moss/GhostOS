@@ -1,0 +1,2 @@
+from ghostos.contracts.assets import ImagesAsset
+from ghostos.framework.assets.image_asset_provider import WorkspaceImagesAssetProvider

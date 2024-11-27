@@ -5,7 +5,7 @@ from ghostos.core.messages.message import (
     MessageClassesParser,
 )
 from ghostos.core.messages.message_classes import (
-    MessageKindParser, VariableMessage,
+    MessageKindParser, VariableMessage, ImageAssetMessage,
 )
 from ghostos.core.messages.payload import Payload
 from ghostos.core.messages.openai import (

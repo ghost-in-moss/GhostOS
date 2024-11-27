@@ -5,7 +5,7 @@ from ghostos.contracts.pool import Pool, DefaultPool
 from ghostos.container import Container, Provider
 from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
 from ghostos.abcd.utils import get_ghost_driver
-from ghostos.core.messages import Message, Receiver
+from ghostos.core.messages import Message, Receiver, Role
 from ghostos.core.runtime import (
     Event, GoProcess, EventBus,
     GoTasks, TaskState, GoTaskStruct,
@@ -96,7 +96,13 @@ class ShellImpl(Shell):
             notify = task.depth > 0
         self._eventbus.send_event(event, notify)
 
-    def sync(self, ghost: Ghost, context: Optional[Ghost.ContextType] = None) -> Conversation:
+    def sync(
+            self,
+            ghost: Ghost,
+            context: Optional[Ghost.ContextType] = None,
+            username: str = "",
+            user_role: str = Role.USER.value,
+    ) -> Conversation:
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self._scope)
         self.logger.debug("sync ghost with task id %s", task_id)
@@ -109,7 +115,7 @@ class ShellImpl(Shell):
         task.meta = to_entity_meta(ghost)
         if context is not None:
             task.context = to_entity_meta(context)
-        conversation = self.sync_task(task, throw=True, is_background=False)
+        conversation = self.sync_task(task, throw=True, is_background=False, username=username, user_role=user_role)
         return conversation
 
     def sync_task(
@@ -118,6 +124,8 @@ class ShellImpl(Shell):
             *,
             throw: bool,
             is_background: bool,
+            username: str = "",
+            user_role: str = "",
     ) -> Optional[Conversation]:
         locker = self._tasks.lock_task(task.task_id, self._conf.task_lock_overdue)
         if locker.acquire():
@@ -133,6 +141,8 @@ class ShellImpl(Shell):
                 task_locker=locker,
                 is_background=is_background,
                 shell_closed=self.closed,
+                username=username,
+                user_role=user_role,
             )
             exists = self._conversations
             running = []
