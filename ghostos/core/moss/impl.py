@@ -1,6 +1,7 @@
+import importlib
 import inspect
 from types import ModuleType
-from typing import Optional, Any, Dict, get_type_hints, Type, List, Callable
+from typing import Optional, Any, Dict, get_type_hints, Type, List, Callable, ClassVar
 import io
 
 from ghostos.container import Container, Provider
@@ -18,6 +19,23 @@ from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"
 
+__all__ = [
+    'MossStub',
+    'MossCompilerImpl',
+    'MossRuntimeImpl',
+    'DefaultMOSSProvider',
+    'MossTempModuleType',
+]
+
+
+class MossTempModuleType(ModuleType):
+    __instance_count__: ClassVar[int] = 0
+
+    def __del__(self):
+        if MOSS_VALUE_NAME in self.__dict__:
+            del self.__dict__[MOSS_VALUE_NAME]
+        MossTempModuleType.__instance_count__ -= 1
+
 
 class MossCompilerImpl(MossCompiler):
     def __init__(self, *, container: Container, pycontext: Optional[PyContext] = None):
@@ -31,10 +49,10 @@ class MossCompilerImpl(MossCompiler):
         self._injections: Dict[str, Any] = {}
         self._attr_prompts: List = []
         self._compiled = False
-        self._destroyed = False
+        self._closed = False
 
     def __del__(self):
-        self.destroy()
+        self.close()
 
     def container(self) -> Container:
         return self._container
@@ -60,19 +78,24 @@ class MossCompilerImpl(MossCompiler):
         return self
 
     def _compile(self, modulename: Optional[str] = None) -> ModuleType:
+        origin: Optional[ModuleType] = None
+        filename = "<moss_temp_module>"
+        origin_modulename = self._pycontext.module
+        if origin_modulename:
+            origin = importlib.import_module(origin_modulename)
+            filename = origin.__file__
+
         if modulename is None:
-            modulename = self._pycontext.module
-        if not modulename:
-            modulename = "__main__"
+            modulename = origin_modulename if origin_modulename else "__moss__"
         code = self.pycontext_code()
         # 创建临时模块.
-        module = ModuleType(modulename)
+        module = MossTempModuleType(modulename)
+        MossTempModuleType.__instance_count__ += 1
         module.__dict__.update(self._predefined_locals)
-        module.__dict__['__file__'] = "<moss_temp_module>"
+        module.__file__ = filename
         compiled = compile(code, modulename, "exec")
         exec(compiled, module.__dict__)
-        if self._pycontext.module:
-            origin = self._modules.import_module(self._pycontext.module)
+        if origin is not None:
             updating = self._filter_origin(origin)
             module.__dict__.update(updating)
         return module
@@ -115,38 +138,58 @@ class MossCompilerImpl(MossCompiler):
             code = IMPORT_FUTURE + "\n\n" + code.lstrip("\n")
         return code if code else ""
 
-    def destroy(self) -> None:
-        if self._destroyed:
+    def close(self) -> None:
+        if self._closed:
             return
-        self._destroyed = True
+        self._closed = True
         # container 先不 destroy.
         if not self._compiled:
-            self._container.destroy()
+            self._container.shutdown()
         del self._container
         del self._pycontext
         del self._predefined_locals
         del self._injections
 
 
+class MossStub(Moss):
+    instance_count: ClassVar[int] = 0
+    __pycontext__: PyContext
+    __container__: Container
+    __output__: str
+    __printer__: Callable
+
+    def __init__(self, pycontext: PyContext, container: Container, printer: Callable):
+        MossStub.instance_count += 1
+        self.__dict__['__pycontext__'] = pycontext
+        self.__dict__['__container__'] = container
+        self.__dict__['__output__'] = ""
+        self.__dict__['__printer__'] = printer
+
+    def fetch(self, abstract: Moss.T) -> Optional[Moss.T]:
+        return self.__container__.fetch(abstract)
+
+    def pprint(self, *args, **kwargs) -> None:
+        return self.__printer__(*args, **kwargs)
+
+    def __setattr__(self, _name, _value):
+        if self.__pycontext__.allow_prop(_value):
+            self.__pycontext__.set_prop(_name, _value)
+        self.__dict__[_name] = _value
+
+    def __del__(self):
+        MossStub.instance_count -= 1
+
+
 def new_moss_stub(cls: Type[Moss], container: Container, pycontext: PyContext, pprint: Callable) -> Moss:
     # cls 必须不包含参数.
-    class MossType(cls):
-        __pycontext__ = pycontext
-        __container__ = container
-        __output__ = ""
 
-        def fetch(self, abstract: Type[cls.T]) -> Optional[cls.T]:
-            return self.__container__.fetch(abstract)
+    stub = MossStub(pycontext, container, pprint)
+    # assert stub.instance_count > 0
+    for attr_name in dir(cls):
+        if not attr_name.startswith("_") and not hasattr(stub, attr_name):
+            attr_value = getattr(cls, attr_name)
+            setattr(stub, attr_name, attr_value)
 
-        def pprint(self, *args, **kwargs) -> None:
-            pprint(*args, **kwargs)
-
-        def __setattr__(self, _name, _value):
-            if self.__pycontext__.allow_prop(_value):
-                self.__pycontext__.set_prop(_name, _value)
-            self.__dict__[_name] = _value
-
-    stub = MossType()
     # 反向注入.
     for name, value in cls.__dict__.items():
         if name in pycontext.properties or name.startswith("_"):
@@ -179,14 +222,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._built: bool = False
         self._moss_prompt: Optional[str] = None
         self._attr_prompts: Dict[str, str] = attr_prompts
-        self._destroyed: bool = False
+        self._closed: bool = False
         self._injected = set()
         self._moss: Moss = self._compile_moss()
         MossRuntime.instance_count += 1
-
-    def __del__(self):
-        MossRuntime.instance_count -= 1
-        self.destroy()
 
     def _compile_moss(self) -> Moss:
         from .lifecycle import __moss_compiled__
@@ -233,7 +272,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         fn = __moss_compiled__
         if __moss_compiled__.__name__ in self._compiled.__dict__:
             fn = self._compiled.__dict__[__moss_compiled__.__name__]
-            fn(moss)
+        fn(moss)
         return moss
 
     def container(self) -> Container:
@@ -331,16 +370,20 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
 
         return "\n".join(results)
 
-    def destroy(self) -> None:
-        if self._destroyed:
+    def close(self) -> None:
+        if self._closed:
             return
-        self._destroyed = True
+        self._closed = True
         data = self._moss.__dict__
         for val in data.values():
             if isinstance(val, Injection):
                 val.on_destroy()
-        self._moss.__dict__ = {}
-        self._container.destroy()
+        self._container.shutdown()
+
+    def __del__(self):
+        if not self._closed:
+            self.close()
+        MossRuntime.instance_count -= 1
         del self._container
         del self._injections
         del self._compiled

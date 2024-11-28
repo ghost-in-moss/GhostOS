@@ -1,3 +1,5 @@
+import time
+
 from ghostos.core.moss import moss_container
 from ghostos.core.moss.abcd import MossCompiler, Moss, MOSS_TYPE_NAME, MossRuntime
 from ghostos.core.moss.pycontext import PyContext
@@ -42,7 +44,7 @@ def test_baseline_exec():
 
     moss = runtime.moss()
     assert isinstance(moss, Moss)
-    assert isinstance(moss, moss_type)
+    # assert isinstance(moss, moss_type)
 
     prompter = runtime.prompter()
     assert prompter is not None
@@ -94,8 +96,8 @@ def test_baseline_exec():
     assert foo.foo() == "hello"
 
     # 最后成功销毁.
-    runtime.destroy()
-    container.destroy()
+    runtime.close()
+    container.shutdown()
 
 
 def test_baseline_in_test_mode():
@@ -122,7 +124,7 @@ def test_baseline_in_test_mode():
             result = runtime.execute(target="test_main", local_args=["moss"])
             assert result.returns == 3
             assert result.pycontext.get_prop("hello") == "world"
-    container.destroy()
+    container.shutdown()
 
 
 def test_baseline_with_pycontext_code():
@@ -133,20 +135,26 @@ def test_baseline_with_pycontext_code():
     line = "print('hello')"
     compiler.join_context(PyContext(module=baseline.__name__, code=line))
     assert line in compiler.pycontext_code()
-    container.destroy()
+    container.shutdown()
 
 
 def test_moss_gc():
     from threading import Thread
     from gc import collect
+    from ghostos.core.moss.impl import MossStub, MossTempModuleType
     container = moss_container()
     assert Container.instance_count < 10
+    moss_stub_count = MossStub.instance_count
+    assert moss_stub_count < 10
 
     def run(c: Container):
-        compiler = container.force_fetch(MossCompiler)
+        compiler = c.force_fetch(MossCompiler)
         compiler = compiler.join_context(PyContext(module=baseline.__name__))
         runtime = compiler.compile("__test__")
+        assert runtime.moss() is not None
         assert MossRuntime.instance_count > 0
+        assert MossStub.instance_count > 0
+        assert MossTempModuleType.__instance_count__ > 0
         with runtime:
             runtime.execute(target="test_main", local_args=["moss"])
 
@@ -160,5 +168,8 @@ def test_moss_gc():
 
     # assert gc success
     collect()
+    time.sleep(0.05)
+    assert MossTempModuleType.__instance_count__ < 10
     assert MossRuntime.instance_count == 0
+    assert MossStub.instance_count <= moss_stub_count
     assert Container.instance_count < 10

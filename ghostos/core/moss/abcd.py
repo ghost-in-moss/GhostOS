@@ -220,7 +220,7 @@ class MossCompiler(ABC):
             self.__compiling__ = False
             self.__compiled__ = True
             # 手动管理一下, 避免外部解决内存泄漏的心智成本.
-            self.destroy()
+            self.close()
 
     @abstractmethod
     def _compile(self, modulename: Optional[str] = None) -> ModuleType:
@@ -239,7 +239,7 @@ class MossCompiler(ABC):
         pass
 
     @abstractmethod
-    def destroy(self) -> None:
+    def close(self) -> None:
         """
         主动做垃圾回收的准备, 避免 python 内存泄漏.
         """
@@ -249,7 +249,7 @@ class MossCompiler(ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.destroy()
+        self.close()
 
 
 class MossPrompter(ABC):
@@ -490,7 +490,7 @@ class MossRuntime(ABC):
         finally:
             self.__executing__ = False
 
-    def destroy(self) -> None:
+    def close(self) -> None:
         """
         方便垃圾回收.
         """
@@ -500,7 +500,7 @@ class MossRuntime(ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.destroy()
+        self.close()
 
 
 class Execution(NamedTuple):

@@ -124,7 +124,7 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def destroy(self) -> None:
+    def shutdown(self) -> None:
         """
         Manually delete the container to prevent memory leaks.
         """
@@ -169,16 +169,12 @@ class Container(IoCContainer):
         self._bootstrapper: List["Bootstrapper"] = []
         self._bootstrapped: bool = False
         self._aliases: Dict[Any, Any] = {}
-        self._destroyed: bool = False
+        self._is_shutdown: bool = False
         self._shutdown: List[Callable[[], None]] = []
         if inherit and parent is not None:
             self._inherit(parent)
 
         Container.instance_count += 1
-
-    def __del__(self):
-        self.destroy()
-        Container.instance_count -= 1
 
     def _inherit(self, parent: Container):
         """
@@ -408,18 +404,21 @@ class Container(IoCContainer):
                     yield provider
 
     def _check_destroyed(self) -> None:
-        if self._destroyed:
+        if self._is_shutdown:
             raise RuntimeError(f"container {self.bloodline} is called after destroyed")
 
-    def destroy(self) -> None:
+    def shutdown(self) -> None:
         """
         Manually delete the container to prevent memory leaks.
         """
-        if self._destroyed:
+        if self._is_shutdown:
             return
-        self._destroyed = True
+        self._is_shutdown = True
         for shutdown in self._shutdown:
             shutdown()
+
+    def __del__(self):
+        self.shutdown()
         del self._shutdown
         del self._instances
         del self.parent
@@ -428,6 +427,7 @@ class Container(IoCContainer):
         del self._bootstrapper
         del self._bootstrapped
         del self._aliases
+        Container.instance_count -= 1
 
 
 Factory = Callable[[Container], Any]

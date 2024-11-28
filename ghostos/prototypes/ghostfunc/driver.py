@@ -255,7 +255,7 @@ class GhostFuncDriver:
                 )
                 return None, False
         finally:
-            runtime.destroy()
+            runtime.close()
 
         result, ok = executed.returns
         if not ok:

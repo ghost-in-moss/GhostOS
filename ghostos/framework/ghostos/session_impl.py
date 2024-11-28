@@ -416,7 +416,7 @@ class SessionImpl(Session[Ghost]):
             return
         self._destroyed = True
         del self._task_locker
-        self.container.destroy()
+        self.container.shutdown()
         del self.container
         del self._firing_events
         del self.task

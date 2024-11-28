@@ -332,13 +332,16 @@ class ShellImpl(Shell):
                 continue
             self.logger.info("closing shell conversation %s", conversation.task_id)
             conversation.close()
-        del self._conversations
         self.logger.info("shell conversations are closed")
-        self._container.destroy()
+        self._container.shutdown()
         self.logger.info("shell container destroyed")
         self.logger.info("shutting down shell pool")
         self._pool.shutdown(cancel_futures=True)
         self.logger.info("shell pool is shut")
+
+    def __del__(self):
+        self.close()
+        del self._conversations
         del self._container
         del self._eventbus
         del self._tasks

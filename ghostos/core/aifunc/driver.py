@@ -280,7 +280,7 @@ class DefaultAIFuncDriverImpl(AIFuncDriver):
             else:
                 finish = False
         finally:
-            runtime.destroy()
+            runtime.close()
         return thread, result, finish
 
     def parse_moss_code_in_message(self, message: Message) -> str:

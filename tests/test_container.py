@@ -186,5 +186,5 @@ def test_container_shutdown():
     container.set(Foo, f)
     container.add_shutdown(f.shutdown)
     assert Foo.instance_count == 1
-    container.destroy()
+    container.shutdown()
     assert Foo.instance_count == 0

@@ -268,10 +268,6 @@ class ConversationImpl(Conversation[G]):
 
     def __del__(self):
         self.close()
-
-    def _destroy(self):
-        self.logger.info("conversation %s is destroying", self.task_id)
-        self._container.destroy()
         del self._container
         del self._tasks
         del self._threads
@@ -287,7 +283,9 @@ class ConversationImpl(Conversation[G]):
         if self._submit_session_thread:
             self._submit_session_thread = None
         self._locker.release()
-        self._destroy()
+        self.logger.info("conversation %s is destroying", self.task_id)
+        self._container.shutdown()
+        self._container = None
 
     def closed(self) -> bool:
         return self._closed
