@@ -22,6 +22,10 @@ def __moss_agent_providers__(agent: A) -> Iterable[Provider]:
     return []
 
 
+def __moss_agent_creating__(agent: A, session: Session) -> None:
+    pass
+
+
 def __moss_agent_truncate__(agent: MossAgent, session: Session) -> GoThreadInfo:
     """
     default truncate logic of the agent

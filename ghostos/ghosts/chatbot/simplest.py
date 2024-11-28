@@ -61,6 +61,9 @@ class ChatbotDriver(GhostDriver[Chatbot]):
             return method(session, event)
         return self.default_handle_event(session, event)
 
+    def on_creating(self, session: Session) -> None:
+        return
+
     def thought(self, session: Session) -> Thought:
         thought = LLMThought(llm_api=self.ghost.llm_api)
         return thought

@@ -82,7 +82,7 @@ def main_run(bootstrap: BOOTSTRAP) -> None:
         #     icon=":material/menu:",
         #     use_container_width=True,
         # )
-        with st.expander(label="Options", expanded=False, icon=":material/settings:"):
+        with st.expander(label="Options", expanded=True, icon=":material/settings:"):
             AppConf.BoolOpts.HELP_MODE.render_toggle(
                 label=_("Help Mode"),
                 tips=_("switch help mode at every page"),

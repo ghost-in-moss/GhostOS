@@ -141,6 +141,10 @@ class GhostDriver(Generic[G], ABC):
         pass
 
     @abstractmethod
+    def on_creating(self, session: Session) -> None:
+        pass
+
+    @abstractmethod
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
         """
         all the state machine is only handling session event with the predefined operators.

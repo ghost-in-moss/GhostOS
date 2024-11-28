@@ -1,5 +1,5 @@
 import time
-from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable, Dict
+from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.contracts.pool import Pool, DefaultPool
 from ghostos.container import Container, Provider
@@ -14,6 +14,7 @@ from ghostos.core.messages import Stream
 from ghostos.helpers import uuid, Timeleft, import_from_path
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
+from threading import Lock
 from pydantic import BaseModel, Field
 from .conversation_impl import ConversationImpl, ConversationConf
 
@@ -47,6 +48,7 @@ class ShellImpl(Shell):
             process: GoProcess,
             providers: List[Provider],
     ):
+        self._conversation_mutex = Lock()
         self._conf = config
         self._container = Container(parent=container, name="shell")
         # prepare container
@@ -77,7 +79,6 @@ class ShellImpl(Shell):
         self._container.set(Shell, self)
         self._container.set(ShellImpl, self)
         self._container.set(ShellConf, config)
-
         self._container.bootstrap()
         self._conversations: List[Conversation] = []
 
@@ -144,6 +145,14 @@ class ShellImpl(Shell):
                 username=username,
                 user_role=user_role,
             )
+            self._join_conversation(conversation)
+            return conversation
+        elif throw:
+            raise RuntimeError(f'create conversation failed, Task {task.task_id} already locked')
+        return None
+
+    def _join_conversation(self, conversation: Conversation):
+        with self._conversation_mutex:
             exists = self._conversations
             running = []
             # remove closed ones
@@ -153,10 +162,6 @@ class ShellImpl(Shell):
                 running.append(c)
             running.append(conversation)
             self._conversations = running
-            return conversation
-        elif throw:
-            raise RuntimeError(f'create conversation failed, Task {task.task_id} already locked')
-        return None
 
     def call(
             self,

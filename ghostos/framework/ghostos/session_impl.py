@@ -134,6 +134,11 @@ class SessionImpl(Session[Ghost]):
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
         self._validate_alive()
         driver = get_ghost_driver(self.ghost)
+        if self.task.state == TaskState.NEW.value:
+            driver.on_creating(self)
+            self.task.state = TaskState.RUNNING.value
+            return event, None
+
         # always let ghost driver decide event handling logic first.
         event = driver.parse_event(self, event)
         if event is None:
@@ -146,6 +151,7 @@ class SessionImpl(Session[Ghost]):
         if EventTypes.INPUT.value == event.type:
             # only input event can reset errors.
             self.task.errors = 0
+            self.task.state = TaskState.RUNNING.value
             if event.context is not None:
                 self.task.context = event.context
 
@@ -344,6 +350,9 @@ class SessionImpl(Session[Ghost]):
 
         task.thread_id = thread.id
         task.state_values = state_values
+        if task.state == TaskState.RUNNING.value:
+            task.state = TaskState.WAITING.value
+
         tasks = self.container.force_fetch(GoTasks)
         threads = self.container.force_fetch(GoThreads)
         self.logger.debug("task info %s", task.model_dump())

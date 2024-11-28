@@ -132,8 +132,15 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         moss_action = MossAction(runtime)
         yield moss_action
 
-    def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
+    def on_creating(self, session: Session) -> None:
+        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_creating__ as fn
+        m = self.get_module()
+        if fn.__name__ in m.__dict__:
+            fn = m.__dict__[fn.__name__]
+        fn(self.ghost, session)
+        return
 
+    def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
         compiler = self._get_moss_compiler(session)
         with compiler:
             rtm = compiler.compile(self.ghost.compile_module)
