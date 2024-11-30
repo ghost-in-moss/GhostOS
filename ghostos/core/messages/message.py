@@ -457,7 +457,7 @@ class MessageClass(ABC):
         pass
 
     @abstractmethod
-    def to_openai_param(self, container: Optional[Container]) -> List[Dict]:
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
         pass
 
 
@@ -518,7 +518,7 @@ class CallerOutput(BaseModel, MessageClass):
             content=message.content,
         )
 
-    def to_openai_param(self, container: Optional[Container]) -> List[Dict]:
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
         from openai.types.chat.chat_completion_tool_message_param import ChatCompletionToolMessageParam
         from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
         if self.call_id:
@@ -551,11 +551,16 @@ class MessageClassesParser:
         item = cls.from_message(message)
         return item
 
-    def to_openai_params(self, message: Message, container: Optional[Container]) -> Optional[List[Dict]]:
+    def to_openai_params(
+            self,
+            message: Message,
+            container: Optional[Container],
+            compatible: bool = False,
+    ) -> Optional[List[Dict]]:
         parsed = self.parse(message)
         if parsed is None:
             return None
-        return parsed.to_openai_param(container)
+        return parsed.to_openai_param(container, compatible)
 
 
 MessageKind = Union[Message, MessageClass, str, EntityType]

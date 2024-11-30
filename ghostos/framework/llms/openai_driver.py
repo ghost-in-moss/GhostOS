@@ -21,7 +21,7 @@ from ghostos.core.llms import (
 from ghostos.container import Bootstrapper, Container
 
 __all__ = [
-    'OpenAIDriver', 'OpenAIAdapter', 'OpenAIDriverBootstrapper',
+    'OpenAIDriver', 'OpenAIAdapter',
     'LitellmAdapter', 'LiteLLMDriver',
 ]
 
@@ -75,12 +75,14 @@ class OpenAIAdapter(LLMApi):
             model_conf: ModelConf,
             parser: OpenAIMessageParser,
             storage: PromptStorage,
+            logger: LoggerItf,
             # deprecated:
             functional_token_prompt: Optional[str] = None,
     ):
         self._service = service_conf
         self._model = model_conf
         self._storage: PromptStorage = storage
+        self._logger = logger
         http_client = None
         if service_conf.proxy:
             transport = SyncProxyTransport.from_url(service_conf.proxy)
@@ -107,10 +109,11 @@ class OpenAIAdapter(LLMApi):
         raise NotImplemented("text_completion is deprecated, implement it later")
 
     def parse_message_params(self, messages: List[Message]) -> List[ChatCompletionMessageParam]:
-        return list(self._parser.parse_message_list(messages))
+        return list(self._parser.parse_message_list(messages, self._model.message_types))
 
     def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         prompt = self.parse_prompt(prompt)
+        self._logger.debug(f"start chat completion for prompt %s", prompt.id)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = prompt.get_messages()
         messages = self.parse_message_params(messages)
@@ -118,8 +121,7 @@ class OpenAIAdapter(LLMApi):
             raise AttributeError("empty chat!!")
         try:
             prompt.run_start = timestamp()
-            get_ghostos_logger().debug(f"start chat completion for prompt %s", prompt.id)
-            get_ghostos_logger().info(f"start chat completion messages %s", messages)
+            self._logger.debug(f"start chat completion messages %s", messages)
             functions = prompt.get_openai_functions()
             tools = prompt.get_openai_tools()
             if self._model.use_tools:
@@ -141,9 +143,10 @@ class OpenAIAdapter(LLMApi):
                 **self._model.kwargs,
             )
         except Exception as e:
-            get_ghostos_logger().error(f"error chat completion for prompt {prompt.id}: {e}")
+            self._logger.error(f"error chat completion for prompt {prompt.id}: {e}")
+            raise
         finally:
-            get_ghostos_logger().debug(f"end chat completion for prompt {prompt.id}")
+            self._logger.debug(f"end chat completion for prompt {prompt.id}")
             prompt.run_end = timestamp()
 
     def chat_completion(self, prompt: Prompt) -> Message:
@@ -195,9 +198,10 @@ class OpenAIDriver(LLMDriver):
     adapter
     """
 
-    def __init__(self, storage: PromptStorage, parser: Optional[OpenAIMessageParser] = None):
+    def __init__(self, storage: PromptStorage, logger: LoggerItf, parser: Optional[OpenAIMessageParser] = None):
         if parser is None:
             parser = DefaultOpenAIMessageParser(None, None)
+        self._logger = logger
         self._parser = parser
         self._storage = storage
 
@@ -206,7 +210,7 @@ class OpenAIDriver(LLMDriver):
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
         get_ghostos_logger().debug(f"new llm api %s at service %s", model.model, service.name)
-        return OpenAIAdapter(service, model, self._parser, self._storage)
+        return OpenAIAdapter(service, model, self._parser, self._storage, self._logger)
 
 
 class LitellmAdapter(OpenAIAdapter):
@@ -250,15 +254,4 @@ class LiteLLMDriver(OpenAIDriver):
         return LITELLM_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
-        return LitellmAdapter(service, model, self._parser, self._storage)
-
-
-class OpenAIDriverBootstrapper(Bootstrapper):
-
-    def bootstrap(self, container: Container) -> None:
-        llms = container.force_fetch(LLMs)
-        storage = container.force_fetch(PromptStorage)
-        openai_driver = OpenAIDriver(storage)
-        lite_llm_driver = LiteLLMDriver(storage)
-        llms.register_driver(openai_driver)
-        llms.register_driver(lite_llm_driver)
+        return LitellmAdapter(service, model, self._parser, self._storage, self._logger)

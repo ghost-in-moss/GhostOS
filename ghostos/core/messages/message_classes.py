@@ -3,7 +3,7 @@ from typing import Optional, Dict, List, Iterable, Any, Union, Literal
 from typing_extensions import Self
 
 from ghostos.contracts.variables import Variables
-from ghostos.contracts.assets import ImageInfo
+from ghostos.contracts.assets import FileInfo
 from ghostos.container import Container
 from ghostos.prompter import get_defined_prompt
 from .message import Message, MessageClass, MessageType, CallerOutput, MessageKind, Role
@@ -62,13 +62,13 @@ class VariableMessage(MessageClass, BaseModel):
         )
         return obj
 
-    def to_openai_param(self, container: Optional[Container]) -> List[Dict]:
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
         content = f"""variable message:
 vid: {self.attrs.vid} 
 type: {self.attrs.type}
 desc: {self.attrs.desc}
 """
-        if container and container.bound(Variables):
+        if container and container.bound(Variables) and compatible:
             variables = container.force_fetch(Variables)
             v = variables.load(self.attrs.vid)
             prompt = get_defined_prompt(v)
@@ -122,11 +122,11 @@ class ImageAssetMessage(MessageClass, BaseModel):
             cls,
             name: str,
             content: str,
-            images: List[ImageInfo],
+            images: List[FileInfo],
             role: str = Role.USER.value,
     ) -> Self:
         attrs = ImageAttrs(images=[
-            ImageId(image_id=image_info.image_id)
+            ImageId(image_id=image_info.fileid)
             for image_info in images
         ])
         return cls(
@@ -147,7 +147,7 @@ class ImageAssetMessage(MessageClass, BaseModel):
             payloads=message.payloads,
         )
 
-    def to_openai_param(self, container: Optional[Container]) -> List[Dict]:
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
         from openai.types.chat.chat_completion_content_part_text_param import ChatCompletionContentPartTextParam
         from openai.types.chat.chat_completion_content_part_image_param import (
             ChatCompletionContentPartImageParam, ImageURL,
@@ -158,12 +158,12 @@ class ImageAssetMessage(MessageClass, BaseModel):
         from openai.types.chat.chat_completion_assistant_message_param import (
             ChatCompletionAssistantMessageParam,
         )
-        from ghostos.contracts.assets import ImagesAsset
+        from ghostos.contracts.assets import ImageAssets
         content = self.content
         image_id_and_desc = []
         content_parts = []
-        if self.attrs is not None and self.attrs.images and container:
-            images = container.force_fetch(ImagesAsset)
+        if not compatible and self.attrs is not None and self.attrs.images and container:
+            images = container.force_fetch(ImageAssets)
             for image_id_info in self.attrs.images:
                 got = images.get_binary_by_id(image_id_info.image_id)
                 if got is None:
@@ -180,7 +180,7 @@ class ImageAssetMessage(MessageClass, BaseModel):
                     type="image_url",
                     image_url=ImageURL(
                         url=url,
-                        detail=image_id_info.detail,
+                        detail="auto",
                     ),
                 ))
                 image_id_and_desc.append((image_id_info.image_id, image_info.description))
@@ -211,6 +211,43 @@ class ImageAssetMessage(MessageClass, BaseModel):
         if self.name:
             item["name"] = self.name
         return [item]
+
+
+class AudioMessage(MessageClass, BaseModel):
+    msg_id: str = Field(default_factory=uuid, description="message id")
+    payloads: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="payload type key to payload item. payload shall be a strong-typed dict"
+    )
+    role: str = Field(default="", description="who send the message")
+    name: Optional[str] = Field(None, description="who send the message")
+    content: str = Field("", description="transcription of the audio message")
+
+    __message_type__ = MessageType.AUDIO.value
+
+    def to_message(self) -> Message:
+        message = Message.new_tail(
+            role=self.role,
+            name=self.name,
+            content=self.content,
+            type_=self.__message_type__,
+            msg_id=self.msg_id,
+        )
+        message.payloads = self.payloads
+        return message
+
+    @classmethod
+    def from_message(cls, message: Message) -> Optional[Self]:
+        return cls(
+            msg_id=message.msg_id,
+            role=message.role,
+            name=message.name,
+            content=message.content,
+            payloads=message.payloads,
+        )
+
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
+        raise NotImplementedError("todo")
 
 
 class MessageKindParser:

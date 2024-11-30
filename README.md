@@ -149,7 +149,7 @@ export OPENAI_PROXY="xxxx" # OPENAI proxy if you need
 
 ### Config LLMs API
 
-`GhostOS` use yaml file to configure the [LLMs](ghostos/core/llms/llm.py) library.
+`GhostOS` use yaml file to configure the [LLMs](ghostos/core/llms/abcd.py) library.
 You can edit [ghostos/demo/configs/llms_conf.yml](ghostos/demo/configs/llms_conf.yml) as you want,
 the yaml structure follows [LLMConfig](ghostos/core/llms/configs.py)
 

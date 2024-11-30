@@ -1,4 +1,4 @@
-from typing import Optional, AnyStr, Iterable
+from typing import Optional, Iterable
 from abc import ABC, abstractmethod
 
 __all__ = ['Storage', 'FileStorage']

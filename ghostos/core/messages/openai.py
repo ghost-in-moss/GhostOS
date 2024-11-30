@@ -35,6 +35,7 @@ class OpenAIMessageParser(ABC):
     def parse_message(
             self,
             message: Message,
+            types: Optional[List[str]] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
         """
         parse a Message to OpenAI chat completion message form.
@@ -43,12 +44,16 @@ class OpenAIMessageParser(ABC):
         """
         pass
 
-    def parse_message_list(self, messages: Iterable[Message]) -> Iterable[ChatCompletionMessageParam]:
+    def parse_message_list(
+            self,
+            messages: Iterable[Message],
+            types: Optional[List[str]] = None,
+    ) -> Iterable[ChatCompletionMessageParam]:
         """
         syntax suger
         """
         for message in messages:
-            items = self.parse_message(message)
+            items = self.parse_message(message, types)
             for item in items:
                 yield item
 
@@ -115,11 +120,20 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         if not self.logger:
             self.logger = FakeLogger()
 
-    def parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
+    def parse_message(
+            self,
+            message: Message,
+            types: Optional[List[str]] = None,
+    ) -> Iterable[ChatCompletionMessageParam]:
         if not message.is_complete():
             return []
+        compatible = False
+        if types is not None:
+            types_set = set(types)
+            if message.type not in types_set:
+                compatible = True
 
-        wrapped = self.class_parser.to_openai_params(message, self.container)
+        wrapped = self.class_parser.to_openai_params(message, self.container, compatible)
         if wrapped is not None:
             yield from wrapped
         else:
@@ -168,8 +182,6 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                         role="function",
                     )
                 ]
-        elif not MessageType.is_text(message):
-            return []
 
         if message.role == Role.ASSISTANT:
             return self._parse_assistant_chat_completion(message)

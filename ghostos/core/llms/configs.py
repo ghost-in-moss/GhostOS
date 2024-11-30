@@ -33,6 +33,7 @@ class ModelConf(Payload):
     request_timeout: float = Field(default=40, description="request timeout")
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="kwargs")
     use_tools: bool = Field(default=True, description="use tools")
+    message_types: Optional[List[str]] = Field(None, description="model allow message types")
 
 
 class ServiceConf(BaseModel):

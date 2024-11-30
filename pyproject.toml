@@ -53,6 +53,10 @@ pytest = "^8.1.1"
 spherov2 = "^0.12.1"
 bleak = "^0.22.3"
 
+
+[tool.poetry.group.audio.dependencies]
+pyaudio = "^0.2.14"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

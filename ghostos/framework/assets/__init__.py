@@ -1,2 +1,3 @@
-from ghostos.contracts.assets import ImagesAsset
-from ghostos.framework.assets.image_asset_provider import WorkspaceImagesAssetProvider
+from ghostos.contracts.assets import ImageAssets, AudioAssets
+from ghostos.framework.assets.workspace_image_provider import WorkspaceImageAssetsProvider
+from ghostos.framework.assets.workspace_audio_provider import WorkspaceAudioAssetsProvider

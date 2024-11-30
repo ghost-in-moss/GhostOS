@@ -119,7 +119,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.framework.logger import LoggerItf
     from ghostos.framework.documents import DocumentRegistry
     from ghostos.framework.ghostos import GhostOS
-    from ghostos.framework.assets import ImagesAsset
+    from ghostos.framework.assets import ImageAssets, AudioAssets
     from ghostos.core.aifunc import AIFuncExecutor, AIFuncRepository
 
     return Contracts([
@@ -127,7 +127,9 @@ def default_application_contracts() -> Contracts:
         Workspace,  # application workspace implementation
         Configs,  # application configs repository
         Variables,
-        ImagesAsset,
+
+        ImageAssets,
+        AudioAssets,
 
         # system contracts
         Shutdown,  # graceful shutdown register
@@ -178,7 +180,7 @@ def default_application_providers(
     from ghostos.core.messages.openai import DefaultOpenAIParserProvider
     from ghostos.framework.workspaces import BasicWorkspaceProvider
     from ghostos.framework.configs import WorkspaceConfigsProvider
-    from ghostos.framework.assets import WorkspaceImagesAssetProvider
+    from ghostos.framework.assets import WorkspaceImageAssetsProvider, WorkspaceAudioAssetsProvider
     from ghostos.framework.processes import WorkspaceProcessesProvider
     from ghostos.framework.threads import MsgThreadsRepoByWorkSpaceProvider
     from ghostos.framework.tasks import WorkspaceTasksProvider
@@ -204,8 +206,10 @@ def default_application_providers(
         WorkspaceProcessesProvider(runtime_processes_dir),
         WorkspaceTasksProvider(runtime_tasks_dir),
         ConfiguredDocumentRegistryProvider("documents_registry.yml"),
+
         WorkspaceVariablesProvider(),
-        WorkspaceImagesAssetProvider(),
+        WorkspaceImageAssetsProvider(),
+        WorkspaceAudioAssetsProvider(),
 
         # --- messages --- #
         DefaultOpenAIParserProvider(),
