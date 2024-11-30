@@ -3,7 +3,6 @@ from typing import Optional, Tuple, Union
 from pydantic import BaseModel, Field
 from ghostos.contracts.storage import Storage
 from ghostos.helpers import uuid, yaml_pretty_dump
-from io import BytesIO
 import yaml
 
 
@@ -28,20 +27,6 @@ class FileAssets(ABC):
         :param file: the file info
         :param binary: binary data of the file. if None, the url must be provided
         :return: relative file path of the saved file
-        """
-        pass
-
-    @abstractmethod
-    def save_stream(self, file: FileInfo, stream: BytesIO) -> None:
-        """
-        save file info from stream
-        """
-        pass
-
-    @abstractmethod
-    def get_stream(self, file: FileInfo) -> Optional[BytesIO]:
-        """
-        get file stream from file info
         """
         pass
 
