@@ -55,9 +55,12 @@ class Command(BaseModel):
         # import types in case you need.
         from spherov2.types import Color, ToyType
 
+        # strip the spaces before each line.
+        code = "\n".join([line.strip() for line in self.code.splitlines()])
+
         # eval the python code defined in the command.
         # this is how the command work
-        eval(self.code)
+        eval(code)
 
     @classmethod
     def once(cls, name: str, code: str, duration: float):
