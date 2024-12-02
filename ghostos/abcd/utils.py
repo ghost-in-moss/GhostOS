@@ -53,11 +53,9 @@ def fire_session_event(session: Session, event: Event) -> Optional[Operator]:
         # if event is intercepted, stop the run.
         return None
     driver = get_ghost_driver(session.ghost)
-    session.task.state = TaskState.RUNNING.value
-    session.thread = driver.truncate(session)
+    session.thread = session.get_truncated_thread()
     op = driver.on_event(session, event)
-    if op is None:
-        session.task.state = TaskState.WAITING.value
+    # only session and driver can change event.
     return op
 
 

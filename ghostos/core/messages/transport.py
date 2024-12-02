@@ -317,9 +317,9 @@ class ReceiverBuffer:
         self._next: Optional[Self] = None
 
     @classmethod
-    def new(cls, receiver: Iterable[Message]) -> Optional[Self]:
+    def new(cls, receiving: Iterable[Message]) -> Optional[Self]:
         try:
-            iterator = iter(receiver)
+            iterator = iter(receiving)
             head = next(iterator)
         except StopIteration:
             return None

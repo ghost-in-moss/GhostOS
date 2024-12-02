@@ -8,18 +8,18 @@ from enum import Enum
 from ghostos.prototypes.realtime.abcd import (
     ConversationProtocol,
     State,
-    OperationType, Operator,
+    OperationType, RealtimeOperator,
 )
 from ghostos.helpers import uuid
+from ghostos.abcd import Conversation
 from ghostos.contracts.logger import LoggerItf, get_logger
 from ghostos.core.messages import Message, MessageType
 from ghostos.container import Container
 from pydantic import BaseModel, Field
 from collections import deque
-from .protocols import *
-from .conversation import AbsConversation
+from .event_from_server import *
 from .ws import OpenAIWebsocketsConf, OpenAIWSConnection
-from .configs import AgentConf
+from .configs import OpenAIRealtimeConf
 from .broadcast import SimpleBroadcaster, Broadcaster
 from .utils import parse_message_to_client_event, parse_server_event_to_message
 
@@ -28,44 +28,17 @@ class StateCtx:
 
     def __init__(
             self,
-            conf: AgentConf,
+            conf: OpenAIRealtimeConf,
             container: Container,
-            funcs: Dict[str, List[Function]],
-            conversation: ConversationProtocol,
-            broadcaster: Broadcaster,
+            conversation: Conversation,
             logger: LoggerItf,
-            session: Optional[OpenAISessionObj],
             connection: Optional[OpenAIWSConnection],
-            connect_sock: Optional[Callable],
     ):
-        self.conf: AgentConf = conf
+        self.conf: OpenAIRealtimeConf = conf
         self.container = container
         self.logger: LoggerItf = logger
-        self.funcs: Dict[str, List[Function]] = funcs
-        self.conversation: ConversationProtocol = conversation
-        self.broadcaster: Broadcaster = broadcaster
-        self.session: Optional[OpenAISessionObj] = session
+        self.conversation: Conversation = conversation
         self.connection: Optional[OpenAIWSConnection] = connection
-        self.connect_sock: Optional[Callable] = connect_sock
-
-    def get_session_obj(self) -> Optional[OpenAISessionObj]:
-        """
-        if the created session exists, return it
-        otherwise try to create a new session from conf.
-        """
-        if self.session is not None:
-            return self.session
-        if self.conf.session:
-            tools = []
-            for shell_name, funcs in self.funcs.items():
-                for fn in funcs:
-                    name = f"{shell_name}.{fn.name}"
-                    target = fn.with_name(name)
-                    tools.append(target)
-            obj = self.conf.session.model_copy(deep=True)
-            obj.tools = tools
-            return obj
-        return None
 
     def recv_from_server_nowait(self) -> Union[dict, None]:
         if self.connection is None:
@@ -141,7 +114,7 @@ class AbsState(State, ABC):
         op = self._op_queue.popleft()
         return self._run_operator(op)
 
-    def run_server_event(self) -> Union[State, None]:
+    def run_frame(self) -> Union[State, None]:
         e = self._ctx.recv_from_server_nowait()
         if e is None:
             return None
@@ -405,7 +378,7 @@ class OperatorType(str, Enum):
     update_session = "update_session"
 
 
-class AbsOperator(Operator):
+class AbsOperator(RealtimeOperator):
 
     def on_accept(self, ctx: StateCtx):
         return
@@ -447,7 +420,7 @@ class FunctionOutput(AbsOperator):
         pass
 
 
-class UpdateSession(Operator):
+class UpdateSession(RealtimeOperator):
     type = OperatorType.update_session
 
     instruction: Optional[str] = Field(

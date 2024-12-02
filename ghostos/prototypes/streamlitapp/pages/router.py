@@ -48,6 +48,7 @@ class GhostChatRoute(Route):
     camera_input: bool = Field(default=False, description="camera input")
     image_input: bool = Field(default=False, description="image input")
     auto_run: bool = Field(default=True, description="auto run")
+    realtime: bool = Field(default=False, description="realtime")
 
     __ghost__ = None
 

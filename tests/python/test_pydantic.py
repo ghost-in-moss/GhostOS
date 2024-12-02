@@ -232,3 +232,11 @@ def test_print_model():
     f = Foo()
     assert "(" not in str(f)
     assert "(" in repr(f)
+
+
+def test_enum_with_none():
+    class Foo(BaseModel):
+        foo: Optional[str] = Field(None, enum={"hello", "world"})
+
+    f = Foo()
+    assert f.foo is None

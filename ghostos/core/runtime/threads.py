@@ -186,14 +186,14 @@ class GoThreadInfo(BaseModel):
                     turns.append(turn)
         return turns
 
-    def get_history_messages(self, truncate: bool) -> Iterable[Message]:
+    def get_history_messages(self, truncated: bool) -> Iterable[Message]:
         """
         返回所有的历史消息.
         """
         yield from self.on_created.messages(False)
-        turns = self.get_history_turns(truncate)
+        turns = self.get_history_turns(truncated)
         for turn in turns:
-            yield from turn.messages(truncate)
+            yield from turn.messages(truncated)
 
     def get_pycontext(self) -> PyContext:
         """

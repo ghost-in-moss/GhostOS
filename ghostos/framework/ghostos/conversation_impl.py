@@ -103,11 +103,14 @@ class ConversationImpl(Conversation[G]):
         self._validate_closed()
         return self._tasks.get_task(self._scope.task_id)
 
-    def thread(self) -> GoThreadInfo:
+    def thread(self, truncated: bool = False) -> GoThreadInfo:
         self._validate_closed()
         task = self.task()
-        thread_id = task.thread_id
-        return self._threads.get_thread(thread_id, create=True)
+        if not truncated:
+            thread_id = task.thread_id
+            return self._threads.get_thread(thread_id, create=True)
+        session = self._create_session(task, self._locker, None)
+        return session.get_truncated_thread()
 
     def update_thread(self, thread: GoThreadInfo) -> None:
         self._validate_closed()

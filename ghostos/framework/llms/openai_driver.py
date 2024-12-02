@@ -113,7 +113,7 @@ class OpenAIAdapter(LLMApi):
 
     def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         prompt = self.parse_prompt(prompt)
-        self._logger.debug(f"start chat completion for prompt %s", prompt.id)
+        self._logger.info(f"start chat completion for prompt %s", prompt.id)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = prompt.get_messages()
         messages = self.parse_message_params(messages)
@@ -121,7 +121,7 @@ class OpenAIAdapter(LLMApi):
             raise AttributeError("empty chat!!")
         try:
             prompt.run_start = timestamp()
-            self._logger.debug(f"start chat completion messages %s", messages)
+            self._logger.info(f"start chat completion messages %s", messages)
             functions = prompt.get_openai_functions()
             tools = prompt.get_openai_tools()
             if self._model.use_tools:

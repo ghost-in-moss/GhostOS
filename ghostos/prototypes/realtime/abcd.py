@@ -1,73 +1,159 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import (
+    Generic,
     Protocol, Literal, List, ClassVar, Iterable, Tuple, TypeVar, Optional, Dict, Callable, Type,
     Self,
     Union,
 )
-from ghostos.core.messages import Message
+from ghostos.abcd import Conversation
+from ghostos.core.messages import Message, ReceiverBuffer
 import time
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from queue import Queue
 from contextlib import contextmanager
 
 
+# class State(ABC):
+#     state_name: ClassVar[str]
+#
+#     @abstractmethod
+#     def conversation(self) -> Conversation:
+#         pass
+#
+#     @abstractmethod
+#     def operate(self, op: Operator) -> Tuple[str, str | None]:
+#         """
+#         :param op:
+#         :return: accept level | error message
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def run_operator(self) -> Union["State", None]:
+#         """
+#         :return: None means no operation, go on handle event
+#         """
+#         pass
+#
+#     @abstractmethod
+#     def run_server_event(self) -> Union[State, None]:
+#         """
+#         :return: a new state, or continue
+#         """
+#         pass
+#
+#     def tick(self) -> Union[State, None]:
+#         """
+#         :return: if not none, means a new state is returned. and:
+#         1. replace current state with new state
+#         2. put the current state to a recycling queue, join it without blocking.
+#         """
+#         new_state = self.run_operator()
+#         if new_state:
+#             return new_state
+#         new_state = self.run_server_event()
+#         if new_state:
+#             return new_state
+#         return None
+#
+#     @abstractmethod
+#     def join(self):
+#         """
+#         """
+#         pass
+#
+#
+# S = TypeVar("S", bound=State)
 
-class State(ABC):
-    state_name: ClassVar[str]
 
+class Realtime(ABC):
     @abstractmethod
-    def conversation(self) -> ConversationProtocol:
+    def create(self, conversation: Conversation, app_name: str = "") -> RealtimeApp:
         pass
 
     @abstractmethod
-    def operate(self, op: Operator) -> Tuple[OperationType, str | None]:
-        """
-        :param op:
-        :return: accept level | error message
-        """
+    def register(self, driver: RealtimeDriver):
+        pass
+
+
+class RealtimeAppConfig(BaseModel):
+
+    @abstractmethod
+    def driver_name(self) -> str:
+        pass
+
+
+class RealtimeConfig(BaseModel):
+    apps: Dict[str, RealtimeAppConfig] = Field(
+        default_factory=dict,
+    )
+
+
+C = TypeVar("C", bound=RealtimeAppConfig)
+
+
+class RealtimeDriver(Generic[C], ABC):
+
+    @abstractmethod
+    def driver_name(self) -> str:
         pass
 
     @abstractmethod
-    def run_operator(self) -> Union["State", None]:
-        """
-        :return: None means no operation, go on handle event
-        """
+    def create(
+            self,
+            config: C,
+            conversation: Conversation,
+            listener: Optional[Listener] = None,
+            speaker: Optional[Speaker] = None,
+    ) -> RealtimeApp:
+        pass
+
+
+class Listener(ABC):
+
+    @abstractmethod
+    def hearing(self) -> Optional[bytes]:
         pass
 
     @abstractmethod
-    def run_server_event(self) -> Union[State, None]:
-        """
-        :return: a new state, or continue
-        """
+    def flush(self) -> bytes:
         pass
-
-    def tick(self) -> Union[State, None]:
-        """
-        :return: if not none, means a new state is returned. and:
-        1. replace current state with new state
-        2. put the current state to a recycling queue, join it without blocking.
-        """
-        new_state = self.run_operator()
-        if new_state:
-            return new_state
-        new_state = self.run_server_event()
-        if new_state:
-            return new_state
-        return None
 
     @abstractmethod
-    def join(self):
-        """
-        """
+    def __enter__(self):
+        pass
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
 
-S = TypeVar("S", bound=State)
+class Speaker(ABC):
+    @abstractmethod
+    def __enter__(self):
+        pass
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    @abstractmethod
+    def speak(self, data: bytes):
+        pass
+
+    @abstractmethod
+    def flush(self) -> bytes:
+        pass
 
 
-class RealtimeAgent(Protocol[S]):
+class Operator(Protocol):
+    name: str
+    description: str
+
+
+class RealtimeApp(ABC):
     """
     realtime agent in multi-threading programming pattern.
     it will develop several threads during runtime to exchange parallel events and actions.
@@ -107,17 +193,21 @@ class RealtimeAgent(Protocol[S]):
     """
 
     @abstractmethod
-    def run_util_stop(
-            self,
-            *shells: Shell,
-    ) -> None:
+    def start(self):
+        """
+        start realtime session
+        """
         pass
 
-
-class ConversationProtocol(Protocol):
+    @abstractmethod
+    def close(self):
+        """
+        close realtime session and release resources
+        """
+        pass
 
     @abstractmethod
-    def id(self) -> str:
+    def is_closed(self) -> bool:
         pass
 
     @abstractmethod
@@ -125,118 +215,42 @@ class ConversationProtocol(Protocol):
         pass
 
     @abstractmethod
-    def add(self, message: Message) -> None:
-        pass
-
-
-class Function(BaseModel):
-    name: str
-    description: str
-    parameters: Dict
-
-    def with_name(self, name: str) -> Self:
-        return self.model_copy(update={"name": name}, deep=True)
-
-
-class Ghost(Protocol[S]):
-
-    @abstractmethod
-    def operate(self, op: Operator) -> Tuple[OperationType, str | None]:
+    def state(self) -> Tuple[List[Operator], bool]:
         """
-        :param op:
-        :return: accept level | error message
+        :return: (operators, is_outputting)
         """
         pass
 
     @abstractmethod
-    def state(self) -> S:
-        pass
-
-    @abstractmethod
-    def messages(self) -> Iterable[Message]:
-        pass
-
-
-class Shell(Protocol):
-
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @abstractmethod
-    def functions(self) -> List[Function]:
-        pass
-
-    @abstractmethod
-    def subscribing(self) -> List[str]:
-        pass
-
-    @abstractmethod
-    def on_sync(self, ghost: Ghost) -> ChanIn[Union[dict, None]]:
+    def operate(self, operator: Operator) -> Tuple[bool, Optional[str]]:
         """
-        sync the ghost with shell,
-        and return a channel that the agent publish the subscribed event to the shell.
-        :param ghost:
-        :return: Queue[event: dict, None]. None means the agent is stopped.
-        """
-        pass
-
-
-class FunctionCall(Protocol):
-    id: Optional[str]
-    name: str
-    arguments: str
-
-
-# --- channels --- #
-
-E = TypeVar("E")
-
-
-class ChanIn(Protocol[E]):
-    """
-    the receiver create the put chan
-    compatible to queue.Queue
-    but not necessary?
-    """
-
-    @abstractmethod
-    def put(self, item: E, block=True, timeout=None) -> None:
-        """
-        :param item: dict | None
-        :param block: boolean
-        :param timeout: float | None
+        :param operator:
+        :return: (allowed, [error message])
         """
         pass
 
     @abstractmethod
-    def task_done(self) -> None:
+    def fail(self, error: Exception) -> bool:
         """
-        notify task is done.
+        receive an exception
+        :return: if the error is able to intercept
         """
-        pass
-
-
-class ChanOut(Protocol[E]):
-
-    @abstractmethod
-    def get(self, block=True, timeout=None) -> E:
         pass
 
     @abstractmethod
-    def get_nowait(self):
+    def output(self) -> Optional[ReceiverBuffer]:
+        """
+        output messages. if None, check status again.
+        """
         pass
 
+    def __enter__(self):
+        self.start()
+        return self
 
-# --- basic operators --- #
-
-class Operator(BaseModel, ABC):
-    """
-    to operate the agent's ghost state machine
-    is a protocol defined by the agent.
-    """
-    type: str
-    shell: str = ""
-
-
-OperationType = Literal["", "queued", "blocked", "illegal"]
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        intercepted = None
+        if exc_val is not None:
+            intercepted = self.fail(exc_val)
+        self.close()
+        return intercepted

@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit_react_jsonschema as srj
 import streamlit_paste_button as spb
+import time
 from PIL.Image import Image
 from typing import Iterable, List
 from ghostos.prototypes.streamlitapp.pages.router import (
@@ -22,7 +23,6 @@ from ghostos.core.messages import (
     Receiver, Role, ReceiverBuffer, MessageType, Message,
     ImageAssetMessage,
 )
-from ghostos.contracts.assets import ImageInfo
 from streamlit.logger import get_logger
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
@@ -59,23 +59,33 @@ def main_chat():
 
         st.subheader("chat options")
         with st.container(border=True):
-            route.auto_run = st.toggle(
-                _("auto run event"),
-                help=_("automatic run background event"),
-                value=True,
+            route.realtime = st.toggle(
+                _("voice chat"),
+                help=_("chat with agent by voice"),
+                value=route.realtime
             )
-            route.camera_input = st.toggle(
-                _("camera_input"),
-                help=_("take picture from camera, the model shall support image type"),
-                value=route.camera_input,
-                key=route.generate_key(st.session_state, "camera_input"),
-            )
-            route.image_input = st.toggle(
-                "image input",
-                help=_("upload picture, the model shall support image type"),
-                value=route.image_input,
-                key=route.generate_key(st.session_state, "image input"),
-            )
+            if route.realtime:
+                route.auto_run = False
+                route.camera_input = False
+                route.image_input = False
+            else:
+                route.auto_run = st.toggle(
+                    _("auto run event"),
+                    help=_("automatic run background event"),
+                    value=route.auto_run,
+                )
+                route.camera_input = st.toggle(
+                    _("camera_input"),
+                    help=_("take picture from camera, the model shall support image type"),
+                    value=route.camera_input,
+                    key=route.generate_key(st.session_state, "camera_input"),
+                )
+                route.image_input = st.toggle(
+                    "image input",
+                    help=_("upload picture, the model shall support image type"),
+                    value=route.image_input,
+                    key=route.generate_key(st.session_state, "image input"),
+                )
             route.bind(st.session_state)
 
         render_empty()
@@ -120,8 +130,16 @@ def main_chat():
     # inputs
     if show_chatting:
         st.subheader("Chat")
+        if not route.realtime:
+            chatting(route, conversation)
+        else:
+            realtime(route, conversation)
 
-        chatting(route, conversation)
+
+def realtime(route: GhostChatRoute, conversation: Conversation):
+    thread = conversation.thread()
+    render_thread_messages(thread, max_turn=20)
+    debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
 
 
 def get_conversation(route: GhostChatRoute) -> Conversation:
@@ -198,16 +216,18 @@ def chatting(route: GhostChatRoute, conversation: Conversation):
 
     if inputs:
         event, receiver = conversation.respond(inputs)
-        render_event(event, debug)
-        render_receiver(receiver, debug)
+        with st.container():
+            render_event(event, debug)
+            render_receiver(receiver, debug)
 
-    # while not route.media_input() and route.auto_run and conversation.available():
-    #     if event := conversation.pop_event():
-    #         render_event(event, debug)
-    #         receiver = conversation.respond_event(event)
-    #         render_receiver(receiver, debug)
-    #     else:
-    #         time.sleep(1)
+    while not route.media_input() and route.auto_run and conversation.available():
+        if event := conversation.pop_event():
+            with st.container():
+                render_event(event, debug)
+                receiver = conversation.respond_event(event)
+                render_receiver(receiver, debug)
+        else:
+            time.sleep(1)
 
 
 @st.dialog("Textarea")
@@ -221,30 +241,33 @@ def video_input_dialog(route: GhostChatRoute):
 def render_receiver(receiver: Receiver, debug: bool):
     try:
         with receiver:
-            with st.chat_message("assistant"):
-                with st.status("waiting..."):
-                    buffer = ReceiverBuffer.new(receiver.recv())
-                if buffer is None:
-                    return
-                while buffer is not None:
-                    st.logger.get_logger("ghostos").info("receive buffer head: %s", buffer.head())
-                    if MessageType.is_text(buffer.head()):
-                        with st.empty():
-                            contents = chunks_to_st_stream(buffer.chunks())
-                            st.write_stream(contents)
-                            with st.container():
-                                render_message_in_content(buffer.tail(), debug, in_expander=False)
+            with st.container():
+                with st.empty():
+                    with st.status("thinking"):
+                        buffer = ReceiverBuffer.new(receiver.recv())
+                    st.empty()
+                    if buffer is None:
+                        return
+                with st.chat_message("assistant"):
+                    while buffer is not None:
+                        st.logger.get_logger("ghostos").info("receive buffer head: %s", buffer.head())
+                        if MessageType.is_text(buffer.head()):
+                            with st.empty():
+                                contents = chunks_to_st_stream(buffer.chunks())
+                                st.write_stream(contents)
+                                with st.container():
+                                    render_message_in_content(buffer.tail(), debug, in_expander=False)
 
-                    elif MessageType.FUNCTION_CALL.match(buffer.head()):
-                        contents = chunks_to_st_stream(buffer.chunks())
-                        with st.empty():
-                            st.write_stream(contents)
-                            with st.container():
-                                render_message_in_content(buffer.tail(), debug, in_expander=False)
-                    else:
-                        render_message_in_content(buffer.tail(), debug, in_expander=False)
-                    # render next item
-                    buffer = buffer.next()
+                        elif MessageType.FUNCTION_CALL.match(buffer.head()):
+                            contents = chunks_to_st_stream(buffer.chunks())
+                            with st.empty():
+                                st.write_stream(contents)
+                                with st.container():
+                                    render_message_in_content(buffer.tail(), debug, in_expander=False)
+                        else:
+                            render_message_in_content(buffer.tail(), debug, in_expander=False)
+                        # render next item
+                        buffer = buffer.next()
     except Exception as e:
         st.error(str(e))
         st.exception(e)

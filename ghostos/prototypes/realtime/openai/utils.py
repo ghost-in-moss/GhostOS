@@ -1,6 +1,6 @@
 from typing import Union
 from ghostos.core.messages import Message
-from .protocols import ClientEvent
+from .event_from_server import ClientEvent
 
 __all__ = ['parse_message_to_client_event', 'parse_server_event_to_message']
 

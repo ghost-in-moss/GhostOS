@@ -1,10 +1,10 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 from .ws import OpenAIWebsocketsConf
-from .protocols import OpenAISessionObj
+from .event_data_objects import SessionObject
 
 
-class AgentConf(BaseModel):
+class OpenAIRealtimeConf(BaseModel):
     name: str = Field(
         description="Name of the agent",
     )
@@ -15,7 +15,7 @@ class AgentConf(BaseModel):
         default_factory=OpenAIWebsocketsConf,
         description="OpenAI Websockets configuration",
     )
-    session: Optional[OpenAISessionObj] = Field(
+    session: Optional[SessionObject] = Field(
         default=None,
         description="basic session settings, if None, use openai default session",
     )

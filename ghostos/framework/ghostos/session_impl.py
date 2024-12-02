@@ -110,6 +110,11 @@ class SessionImpl(Session[Ghost]):
         self.container.register(provide(Subtasks, False)(lambda c: self.subtasks()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
         self.container.bootstrap()
+        # truncate thread.
+
+    def get_truncated_thread(self) -> GoThreadInfo:
+        thread = self.ghost_driver.truncate(self)
+        return thread
 
     @staticmethod
     def unmarshal_state(task: GoTaskStruct) -> Dict[str, EntityType]:
@@ -134,6 +139,7 @@ class SessionImpl(Session[Ghost]):
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
         self._validate_alive()
         driver = get_ghost_driver(self.ghost)
+        # if the task is new, initialize the task.
         if self.task.state == TaskState.NEW.value:
             driver.on_creating(self)
             self.task.state = TaskState.RUNNING.value
@@ -143,6 +149,7 @@ class SessionImpl(Session[Ghost]):
         event = driver.parse_event(self, event)
         if event is None:
             return None, None
+
         # notification do not trigger the handling
         if EventTypes.NOTIFY.value == event.type:
             self.thread.new_turn(event)
@@ -175,16 +182,18 @@ class SessionImpl(Session[Ghost]):
             self.task.errors = 0
             self.thread.new_turn(event)
             self.task.state = TaskState.CANCELLED.value
-            for child_id in self.task.children:
-                event = EventTypes.CANCEL.new(
-                    task_id=child_id,
-                    messages=[],
-                    from_task_id=self.task.task_id,
-                    from_task_name=self.task.name,
-                    reason="parent task is canceled",
-                    instruction="cancel what you are doing",
-                )
-                self.fire_events(event)
+            # cancel children.
+            if self.task.children:
+                for child_id in self.task.children:
+                    event = EventTypes.CANCEL.new(
+                        task_id=child_id,
+                        messages=[],
+                        from_task_id=self.task.task_id,
+                        from_task_name=self.task.name,
+                        reason="parent task is canceled",
+                        instruction="cancel what you are doing",
+                    )
+                    self.fire_events(event)
             return None, EmptyOperator()
 
         event.context = None
@@ -329,7 +338,7 @@ class SessionImpl(Session[Ghost]):
             return
         tasks = self.get_task_briefs(*children)
         for tid, tb in tasks:
-            if TaskState.is_dead(tb.state):
+            if TaskState.is_dead(tb.status):
                 continue
             children.append(tid)
         self.task.children = children

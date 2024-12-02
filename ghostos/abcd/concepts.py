@@ -344,6 +344,8 @@ class Conversation(Protocol[G]):
     """
     task_id: str
 
+    logger: LoggerItf
+
     @abstractmethod
     def container(self) -> Container:
         """
@@ -356,7 +358,7 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def thread(self) -> GoThreadInfo:
+    def thread(self, truncated: bool = False) -> GoThreadInfo:
         pass
 
     @abstractmethod
@@ -558,6 +560,10 @@ class Session(Generic[G], ABC):
         2. task 持有了锁.
         3. 设置的超时时间没有过.
         """
+        pass
+
+    @abstractmethod
+    def get_truncated_thread(self) -> GoThreadInfo:
         pass
 
     @abstractmethod
