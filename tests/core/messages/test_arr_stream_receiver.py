@@ -244,7 +244,7 @@ def test_array_receiver_with_error():
 def test_array_receiver_bad_case_1():
     item = Message(
         msg_id='25c6d3d9-9bb1-45e1-ac7e-585380975ea1',
-        ref_id='call_SyYPOCVP60bvyLIMP3gemVYy',
+        call_id='call_SyYPOCVP60bvyLIMP3gemVYy',
         index=None,
         type='function_call',
         stage='',
@@ -263,7 +263,7 @@ def test_array_receiver_bad_case_1():
     item2 = Message(
         **{
             "msg_id": "",
-            "ref_id": None,
+            "call_id": None,
             "index": None,
             "type": "function_call",
             "stage": "",

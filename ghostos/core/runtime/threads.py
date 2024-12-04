@@ -78,8 +78,7 @@ class Turn(BaseModel):
 
     def messages(self, truncate: bool) -> Iterable[Message]:
         if truncate and self.summary is not None:
-            yield Role.SYSTEM.new("summary of omitted history messages" + self.summary)
-            return
+            return [Role.SYSTEM.new("summary of omitted history messages" + self.summary)]
 
         yield from self.event_messages()
         if self.added:
@@ -96,6 +95,18 @@ class Turn(BaseModel):
 
     def is_callback(self) -> bool:
         return self.event is not None and self.event.callback
+
+    def update_message(self, message: Message) -> bool:
+        messages = []
+        found = False
+        for exists in self.added:
+            if exists.msg_id == message.msg_id:
+                Found = True
+                exists = message
+            messages.append(exists)
+        if found:
+            self.added = messages
+        return found
 
 
 class GoThreadInfo(BaseModel):
@@ -194,6 +205,19 @@ class GoThreadInfo(BaseModel):
         turns = self.get_history_turns(truncated)
         for turn in turns:
             yield from turn.messages(truncated)
+
+    def get_messages(self, truncated: bool) -> Iterable[Message]:
+        yield from self.get_history_messages(truncated)
+        if self.current:
+            yield from self.current.messages(False)
+
+    def update_message(self, message: Message) -> bool:
+        if not message.is_complete():
+            return False
+        for turn in self.turns():
+            if turn.update_message(message):
+                return True
+        return False
 
     def get_pycontext(self) -> PyContext:
         """

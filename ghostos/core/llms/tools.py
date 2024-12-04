@@ -38,6 +38,9 @@ class LLMFunc(BaseModel):
             del parameters["title"]
         return cls(name=name, description=desc, parameters=parameters)
 
+    def to_dict(self) -> dict:
+        return self.model_dump(exclude_defaults=True, exclude_none=True)
+
     @classmethod
     def from_model(
             cls,

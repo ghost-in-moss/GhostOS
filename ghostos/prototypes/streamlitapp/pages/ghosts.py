@@ -52,7 +52,7 @@ def main_chat():
         with st.container(border=True):
             GhostTaskRoute().render_page_link(use_container_width=True)
         if st.button("Clear Messages", use_container_width=True):
-            thread = conversation.thread()
+            thread = conversation.get_thread()
             thread = thread.reset_history([])
             conversation.update_thread(thread)
             st.rerun()
@@ -137,14 +137,14 @@ def main_chat():
 
 
 def realtime(route: GhostChatRoute, conversation: Conversation):
-    thread = conversation.thread()
+    thread = conversation.get_thread()
     render_thread_messages(thread, max_turn=20)
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
 
 
 def get_conversation(route: GhostChatRoute) -> Conversation:
     conversation = Singleton.get(Conversation, st.session_state, force=False)
-    if not conversation or conversation.closed():
+    if not conversation or conversation.is_closed():
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
         conversation = shell.sync(route.get_ghost(), route.get_context())
@@ -159,8 +159,8 @@ def main_task():
         with st.container(border=True):
             route.render_page_link(use_container_width=True)
     conversation = get_conversation(route)
-    task = conversation.task()
-    thread = conversation.thread()
+    task = conversation.get_task()
+    thread = conversation.get_thread()
     st.title("Ghost Task Info")
     render_task_info_settings(task, thread)
 
@@ -168,7 +168,7 @@ def main_task():
 def chatting(route: GhostChatRoute, conversation: Conversation):
     chat_input = st.chat_input("message")
 
-    thread = conversation.thread()
+    thread = conversation.get_thread()
     render_thread_messages(thread, max_turn=20)
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
 

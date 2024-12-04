@@ -46,7 +46,7 @@ class DefaultMessenger(Messenger):
             messages.append(message)
             if message.type == MessageType.FUNCTION_CALL:
                 callers.append(Caller(
-                    id=message.ref_id,
+                    id=message.call_id,
                     name=message.name,
                     arguments=message.content,
                 ))

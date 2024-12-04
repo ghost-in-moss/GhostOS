@@ -1,55 +1,68 @@
+import base64
 from typing import Self, Literal, List, Optional, Union, Dict, Protocol, ClassVar, Set
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
+from ghostos.core.messages import Message as GhostOSMessage
 from .event_data_objects import (
-    RateLimit, Response, MessageItem, Content, DeltaIndex, ConversationObject, Error, SessionObject,
+    RateLimit, Response, MessageItem,
+    DeltaIndex, ConversationObject, Error, SessionObject,
+    Content,
 )
 
+__all__ = [
+    'ServerEventType',
+    'ServerEvent',
+    # 28 server events
 
-# class StateName(str, Enum):
-#     # --- can not change
-#     stopped = "stopped"
-#
-#     # --- blocking
-#     connecting = "connecting"
-#     session_updating = "session_updating"
-#
-#     # --- interruptible
-#     responding = "responding"
-#     input_audio = "audio_input"
-#     listening = "listening"  # vad
-#
-#     idle = "idle"
-#
-#     # --- special operations allowed
-#     failed = "failed"  # failed but reconnect-able
-#
-#     # I think this state is parallel, need test
-#     # creating_conversation_item = "creating_conversation_item"
-#
-#
-# class OperatorName(str, Enum):
-#     # --- idempotent or immediately
-#     stop = "stop"  # highest priority
-#     reconnect = "reconnect"  # second to stop
-#
-#     # --- parallel actions
-#     text_input = "text_input"
-#     function_output = "function_output"
-#
-#     # --- blocking
-#     session_update = "session_updating"
-#
-#     # --- idempotent or illegal
-#     create_response = "create_response"
-#     input_audio = "input_audio"  # push-to-talk mode
-#     start_listening = "start_listening"  # start vad listening
-#
-#     # --- immediately or illegal
-#     truncate_listening = "truncate_listening"  # vad only
-#     response_cancel = "response_cancel"
-#
+    'ServerError',
+
+    # 2 session events
+    'ServerSessionUpdated',
+    'ServerSessionCreated',
+
+    'ConversationCreated',
+
+    # rate event
+    'RateLimitsUpdated',
+
+    # 4 input audio
+    'InputAudioBufferSpeechStarted',
+    'InputAudioBufferCommitted',
+    'InputAudioBufferCleared',
+    'InputAudioBufferSpeechStopped',
+
+    # 5 conversation item events
+    'ConversationItemCreated',
+    'ConversationItemTruncated',
+    'ConversationInputAudioTranscriptionCompleted',
+    'ConversationInputAudioTranscriptionFailed',
+    'ConversationItemDeleted',
+
+    # 14 response events
+    'ResponseCreated',
+    'ResponseDone',
+
+    'ResponseOutputItemAdded',
+    'ResponseOutputItemDone',
+
+    'ResponseContentPartAdded',
+    'ResponseContentPartDone',
+    # delta
+    'ResponseAudioDelta',
+    'ResponseAudioDone',
+
+    'ResponseAudioTranscriptDelta',
+    'ResponseAudioTranscriptDone',
+
+    'ResponseTextDelta',
+    'ResponseTextDone',
+
+    'ResponseFunctionCallArgumentsDelta',
+    'ResponseFunctionCallArgumentsDone',
+
+]
+
 
 class ServerEventType(str, Enum):
     # recover-able error
@@ -58,38 +71,42 @@ class ServerEventType(str, Enum):
     # non-block inform
     session_created = "session.created"
     session_updated = "session.updated"
+
     conversation_created = "conversation.created"
 
     # streaming items
 
     # complete message item alignments
     conversation_item_created = "conversation.item.created"
-
     conversation_item_input_audio_transcription_completed = "conversation.item.input_audio_transcription.completed"
     conversation_item_input_audio_transcription_failed = "conversation.item.input_audio_transcription.failed"
-
     conversation_item_truncated = "conversation.item.truncated"
     conversation_item_deleted = "conversation.item.deleted"
 
     input_audio_buffer_committed = "input_audio_buffer.committed"
     input_audio_buffer_cleared = "input_audio_buffer.cleared"
-
     input_audio_buffer_speech_started = "input_audio_buffer.speech_started"
     input_audio_buffer_speech_stopped = "input_audio_buffer.speech_stopped"
 
+    # 14 response events
     response_created = "response.created"
     response_done = "response.done"
 
     response_output_item_added = "response.output_item.added"
     response_output_item_done = "response.output_item.done"
+
     response_content_part_added = "response.content_part.added"
     response_content_part_done = "response.content_part.done"
+
     response_text_delta = "response.text.delta"
     response_text_done = "response.text.done"
+
     response_audio_transcript_delta = "response.audio_transcript.delta"
     response_audio_transcript_done = "response.audio_transcript.done"
+
     response_audio_delta = "response.audio.delta"
     response_audio_done = "response.audio.done"
+
     response_function_call_arguments_delta = "response.function_call_arguments.delta"
     response_function_call_arguments_done = "response.function_call_arguments.done"
 
@@ -142,6 +159,16 @@ class ServerEventType(str, Enum):
             return event["response_id"]
         return None
 
+    @classmethod
+    def get_item_id(cls, event: dict) -> Optional[str]:
+        if "item_id" in event:
+            return event["item_id"]
+        elif "item" in event:
+            item = event['item']
+            if isinstance(item, dict) and "item_id" in item:
+                return item["item_id"]
+        return None
+
     def match(self, event: dict) -> bool:
         return "type" in event and event["type"] == self.value
 
@@ -151,6 +178,11 @@ class ServerEventType(str, Enum):
 class ServerEvent(BaseModel, ABC):
     type: ClassVar[str]
     event_id: str = Field(description="Optional client-generated ID used to identify this event.")
+
+
+class ServerError(ServerEvent):
+    type: ClassVar[str] = ServerEventType.error.value
+    error: Error
 
 
 class ServerSessionCreated(ServerEvent):
@@ -169,6 +201,18 @@ class ConversationCreated(ServerEvent):
 
 
 class ConversationItemCreated(ServerEvent):
+    """
+    Returned when a conversation item is created.
+    There are several scenarios that produce this event:
+
+    1. The server is generating a Response,
+       which if successful will produce either one or two Items,
+       which will be of type message (role assistant) or type function_call.
+    2. The input audio buffer has been committed,
+       either by the client or the server (in server_vad mode).
+       The server will take the content of the input audio buffer and add it to a new user message Item.
+    3. The client has sent a conversation.item.create event to add a new Item to the Conversation.
+    """
     type: ClassVar[str] = ServerEventType.conversation_item_created.value
     previous_item_id: str = Field("")
     item: MessageItem = Field()
@@ -180,6 +224,18 @@ class ConversationItemDeleted(ServerEvent):
 
 
 class ConversationInputAudioTranscriptionCompleted(ServerEvent):
+    """
+    This event is the output of audio transcription for user audio written to the user audio buffer.
+    Transcription begins when the input audio buffer is committed by the client or server
+    (in server_vad mode).
+    Transcription runs asynchronously with Response creation,
+    so this event may come before or after the Response events.
+    Realtime API models accept audio natively,
+    and thus input transcription is a separate process run on a separate ASR (Automatic Speech Recognition) model,
+    currently always whisper-1.
+    Thus the transcript may diverge somewhat from the model's interpretation,
+    and should be treated as a rough guide.
+    """
     type: ClassVar[str] = ServerEventType.conversation_item_input_audio_transcription_completed.value
     item_id: str = Field("")
     content_index: int = Field(default=0)
@@ -194,6 +250,13 @@ class ConversationInputAudioTranscriptionFailed(ServerEvent):
 
 
 class ConversationItemTruncated(ServerEvent):
+    """
+    Returned when an earlier assistant audio message item is truncated by the client with
+    a conversation.item.truncate event.
+    This event is used to synchronize the server's understanding of the audio with the client's playback.
+    This action will truncate the audio and remove the server-side text transcript
+    to ensure there is no text in the context that hasn't been heard by the user.
+    """
     type: ClassVar[str] = ServerEventType.conversation_item_truncated.value
     item_id: str = Field("")
     content_index: int = Field(default=0)
@@ -249,9 +312,26 @@ class ResponseOutputItemDone(ServerEvent):
 class ResponseContentPartAdded(ServerEvent):
     type: ClassVar[str] = ServerEventType.response_content_part_added.value
     response_id: str = Field("")
+    content_index: int = Field(0)
     output_index: int = Field(0)
     item_id: str = Field("")
-    part: Content = Field()
+    part: Content = Field(None, description="The content part that was added. shall not be None.")
+
+    def as_message_chunk(self) -> Optional[GhostOSMessage]:
+        if self.part is None:
+            return None
+        if self.part.transcript:
+            return GhostOSMessage.new_chunk(
+                msg_id=self.item_id,
+                content=self.part.transcript,
+            )
+        elif self.part.text:
+            return GhostOSMessage.new_chunk(
+                msg_id=self.item_id,
+                content=self.part.text,
+            )
+        else:
+            return None
 
 
 class ResponseContentPartDone(ServerEvent):
@@ -261,30 +341,89 @@ class ResponseContentPartDone(ServerEvent):
     item_id: str = Field("")
     part: Content = Field()
 
+    def as_message_chunk(self) -> Optional[GhostOSMessage]:
+        if self.part is None:
+            return None
+        if self.part.transcript:
+            return GhostOSMessage.new_chunk(
+                msg_id=self.item_id,
+                content=self.part.transcript,
+            )
+        elif self.part.text:
+            return GhostOSMessage.new_chunk(
+                msg_id=self.item_id,
+                content=self.part.text,
+            )
+        else:
+            return None
+
 
 class ResponseTextDelta(DeltaIndex, ServerEvent):
     type: ClassVar[str] = ServerEventType.response_text_delta.value
     delta: str = Field("")
+
+    def as_content(self) -> Content:
+        return Content(
+            type="text",
+            text=self.delta,
+        )
+
+    def as_message_chunk(self) -> Optional[GhostOSMessage]:
+        if self.delta:
+            return GhostOSMessage.new_chunk(
+                msg_id=self.item_id,
+                content=self.delta,
+            )
+        return None
 
 
 class ResponseTextDone(DeltaIndex, ServerEvent):
     type: ClassVar[str] = ServerEventType.response_text_done.value
     text: str = Field("")
 
+    def as_content(self) -> Content:
+        return Content(
+            type="text",
+            text=self.text,
+        )
+
 
 class ResponseAudioTranscriptDelta(DeltaIndex, ServerEvent):
     type: ClassVar[str] = ServerEventType.response_audio_transcript_delta.value
     delta: str = Field("")
+
+    def as_content(self) -> Content:
+        return Content(
+            type="audio",
+            transcript=self.delta,
+        )
+
+    def as_message_chunk(self) -> Optional[GhostOSMessage]:
+        if self.delta:
+            return GhostOSMessage.new_chunk(
+                msg_id=self.item_id,
+                content=self.delta,
+            )
+        return None
 
 
 class ResponseAudioTranscriptDone(DeltaIndex, ServerEvent):
     type: ClassVar[str] = ServerEventType.response_audio_transcript_done.value
     transcript: str = Field("")
 
+    def as_content(self) -> Content:
+        return Content(
+            type="audio",
+            transcript=self.delta,
+        )
+
 
 class ResponseAudioDelta(DeltaIndex, ServerEvent):
     type: ClassVar[str] = ServerEventType.response_audio_delta.value
     delta: str = Field("")
+
+    def get_audio_bytes(self) -> bytes:
+        return base64.b64decode(self.audio_bytes)
 
 
 class ResponseAudioDone(DeltaIndex, ServerEvent):
@@ -294,6 +433,14 @@ class ResponseAudioDone(DeltaIndex, ServerEvent):
 class ResponseFunctionCallArgumentsDelta(DeltaIndex, ServerEvent):
     type: ClassVar[str] = ServerEventType.response_function_call_arguments_delta.value
     delta: str = Field("")
+
+    def as_message_chunk(self) -> Optional[GhostOSMessage]:
+        if self.delta:
+            return GhostOSMessage.new_chunk(
+                msg_id=self.item_id,
+                content=self.delta,
+            )
+        return None
 
 
 class ResponseFunctionCallArgumentsDone(DeltaIndex, ServerEvent):

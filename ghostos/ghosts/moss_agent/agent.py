@@ -112,6 +112,17 @@ class MossAgentDriver(GhostDriver[MossAgent]):
             with rtm:
                 return self._get_instructions(session, rtm)
 
+    def functions(self, session: Session) -> List[LLMFunc]:
+        compiler = self._get_moss_compiler(session)
+        result = []
+        with compiler:
+            runtime = compiler.compile(self.ghost.moss_module)
+            actions = self.get_actions(session, runtime)
+            for action in actions:
+                if fn := action.as_function():
+                    result.append(fn)
+        return result
+
     def thought(self, session: Session, runtime: MossRuntime) -> Thought:
         from .for_meta_ai import __moss_agent_thought__ as fn
         compiled = runtime.module()
@@ -310,14 +321,19 @@ class MossAction(Action, PromptPipe):
     def name(self) -> str:
         return self.Argument.name
 
-    def update_prompt(self, prompt: Prompt) -> Prompt:
+    def as_function(self) -> Optional[LLMFunc]:
         parameters = self.Argument.model_json_schema()
         llm_func = LLMFunc(
             name=self.name(),
             description=MOSS_FUNCTION_DESC,
             parameters=parameters,
         )
-        prompt.functions.append(llm_func)
+        return llm_func
+
+    def update_prompt(self, prompt: Prompt) -> Prompt:
+        llm_func = self.as_function()
+        if llm_func is not None:
+            prompt.functions.append(llm_func)
         return prompt
 
     def run(self, session: Session, caller: Caller) -> Union[Operator, None]:

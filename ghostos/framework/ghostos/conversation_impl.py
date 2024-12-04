@@ -14,8 +14,9 @@ from ghostos.core.runtime import (
     GoTaskStruct, TaskLocker, GoTasks, TaskState,
     GoThreadInfo, GoThreads,
 )
+from ghostos.core.llms import LLMFunc
 from ghostos.contracts.pool import Pool
-from ghostos.contracts.logger import LoggerItf
+from ghostos.contracts.logger import LoggerItf, wrap_logger
 from ghostos.entity import to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
@@ -59,7 +60,6 @@ class ConversationImpl(Conversation[G]):
         self._conf = conf
         self.task_id = task.task_id
         self._container = Container(parent=container, name="conversation")
-        self.logger = self._container.force_fetch(LoggerItf)
         self._username = username
         self._user_role = user_role
         variables = self._container.force_fetch(Variables)
@@ -68,16 +68,22 @@ class ConversationImpl(Conversation[G]):
             name=self._username,
             role=self._user_role,
         )
-        self._scope = Scope(
+
+        self.scope = Scope(
             shell_id=task.shell_id,
             process_id=task.process_id,
             task_id=task.task_id,
             parent_task_id=task.parent,
         )
+        self.logger = wrap_logger(
+            self._container.force_fetch(LoggerItf),
+            dict(scope=self.scope.model_dump(exclude_defaults=True)),
+        )
+
         self._pool = self._container.force_fetch(Pool)
         self._is_background = is_background
         self._ctx: Optional[Context] = None
-        self._locker = task_locker
+        self._task_locker = task_locker
         self._tasks = container.force_fetch(GoTasks)
         self._threads = container.force_fetch(GoThreads)
         self._eventbus = container.force_fetch(EventBus)
@@ -99,50 +105,58 @@ class ConversationImpl(Conversation[G]):
         self._validate_closed()
         return self._container
 
-    def task(self) -> GoTaskStruct:
+    def get_task(self) -> GoTaskStruct:
         self._validate_closed()
-        return self._tasks.get_task(self._scope.task_id)
+        return self._tasks.get_task(self.scope.task_id)
 
-    def thread(self, truncated: bool = False) -> GoThreadInfo:
+    def get_thread(self, truncated: bool = False) -> GoThreadInfo:
         self._validate_closed()
-        task = self.task()
+        task = self.get_task()
         if not truncated:
             thread_id = task.thread_id
             return self._threads.get_thread(thread_id, create=True)
-        session = self._create_session(task, self._locker, None)
+        session = self._create_session(task, None)
         return session.get_truncated_thread()
 
     def update_thread(self, thread: GoThreadInfo) -> None:
         self._validate_closed()
-        task = self.task()
+        task = self.get_task()
         thread.id = task.thread_id
         self._threads.save_thread(thread)
 
     def get_ghost(self) -> Ghost:
         self._validate_closed()
-        task = self.task()
+        task = self.get_task()
         return get_entity(task.meta, Ghost)
 
     def get_context(self) -> Optional[Context]:
         self._validate_closed()
-        task = self.task()
+        task = self.get_task()
         if task.context is None:
             return None
         return get_entity(task.context, Context)
 
+    def get_functions(self) -> List[LLMFunc]:
+        self._validate_closed()
+        session = self._create_session(self.get_task(), None)
+        return self.get_ghost_driver().functions(session)
+
     def get_instructions(self) -> str:
         self._validate_closed()
-        session = self._create_session(self.task(), self._locker, None)
+        session = self._create_session(self.get_task(), None)
         try:
             instructions = session.get_instructions()
             return instructions
         finally:
             session.destroy()
 
+    def refresh(self) -> bool:
+        return self._task_locker.refresh()
+
     def get_artifact(self) -> Tuple[Union[Ghost.ArtifactType, None], TaskState]:
         self._validate_closed()
-        task = self.task()
-        session = self._create_session(task, self._locker, None)
+        task = self.get_task()
+        session = self._create_session(task, None)
         with session:
             return session.get_artifact(), TaskState(session.task.state)
 
@@ -171,7 +185,7 @@ class ConversationImpl(Conversation[G]):
             context_meta = to_entity_meta(self._ctx)
             self._ctx = None
         event = EventTypes.INPUT.new(
-            task_id=self._scope.task_id,
+            task_id=self.scope.task_id,
             messages=messages,
             context=context_meta,
         )
@@ -187,7 +201,7 @@ class ConversationImpl(Conversation[G]):
             raise RuntimeError("conversation is handling event")
         # complete task_id
         if not event.task_id:
-            event.task_id = self._scope.task_id
+            event.task_id = self.scope.task_id
         self.logger.debug("start to respond event %s", event.event_id)
 
         stream, retriever = new_basic_connection(
@@ -203,6 +217,7 @@ class ConversationImpl(Conversation[G]):
         return retriever
 
     def _validate_closed(self):
+        # todo: change error to defined error
         if self._closed:
             raise RuntimeError(f"Conversation is closed")
         if self._shell_closed():
@@ -215,7 +230,7 @@ class ConversationImpl(Conversation[G]):
             try:
                 with stream:
                     task = self._tasks.get_task(event.task_id)
-                    session = self._create_session(task, self._locker, stream)
+                    session = self._create_session(task, stream)
                     self.logger.debug(
                         f"create session from event id %s, task_id is %s",
                         event.event_id, task.task_id,
@@ -234,21 +249,25 @@ class ConversationImpl(Conversation[G]):
     def _create_session(
             self,
             task: GoTaskStruct,
-            locker: TaskLocker,
             stream: Optional[Stream],
     ) -> SessionImpl:
         return SessionImpl(
             container=self.container(),
+            logger=self.logger,
+            scope=self.scope,
             stream=stream,
             task=task,
-            locker=locker,
+            refresh_callback=self.refresh,
+            alive_check=self.is_alive,
             max_errors=self._conf.max_task_errors,
         )
 
     def pop_event(self) -> Optional[Event]:
-        return self._eventbus.pop_task_event(self._scope.task_id)
+        self._validate_closed()
+        return self._eventbus.pop_task_event(self.scope.task_id)
 
     def send_event(self, event: Event) -> None:
+        self._validate_closed()
         task = self._tasks.get_task(event.task_id)
         notify = True
         if task:
@@ -285,15 +304,18 @@ class ConversationImpl(Conversation[G]):
         self._handling_event = False
         if self._submit_session_thread:
             self._submit_session_thread = None
-        self._locker.release()
+        self._task_locker.release()
         self.logger.info("conversation %s is destroying", self.task_id)
         self._container.shutdown()
         self._container = None
 
-    def closed(self) -> bool:
+    def is_closed(self) -> bool:
         return self._closed
 
+    def is_alive(self) -> bool:
+        return not self._closed
+
     def available(self) -> bool:
-        if self.closed() or self._shell_closed() or self._handling_event:
+        if self.is_closed() or self._shell_closed() or self._handling_event:
             return False
         return True

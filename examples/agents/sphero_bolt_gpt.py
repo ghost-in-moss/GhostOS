@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 
 def __moss_attr_prompts__():
     yield "MossAgent", ""
-    yield from exports.items()
+    yield from exports.conversation_item_states()
 
 
 def __moss_agent_providers__(agent):

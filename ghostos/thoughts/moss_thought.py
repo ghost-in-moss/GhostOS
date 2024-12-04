@@ -47,7 +47,7 @@ class BasicMossThoughtDriver(ABC):
         if self.moss_runtime is not None:
             return self.moss_runtime
 
-        thread = g.session().thread()
+        thread = g.session().get_thread()
         compiler = g.moss()
         # init default pycontext
         default_pycontext = self.init_pycontext()
@@ -93,7 +93,7 @@ class MossThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[MossThought]):
 
     def on_created(self, g: Ghost, e: Event) -> Optional[Operator]:
         session = g.session()
-        thread = session.thread()
+        thread = session.get_thread()
         pycontext = self.init_pycontext()
         thread.update_pycontext(pycontext)
         return super().on_created(g, e)

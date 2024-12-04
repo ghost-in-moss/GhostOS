@@ -1,4 +1,4 @@
-from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any
+from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any, Callable
 from ghostos.errors import StreamingError, SessionError
 from ghostos.abcd import (
     Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks,
@@ -49,26 +49,25 @@ class SessionImpl(Session[Ghost]):
     def __init__(
             self,
             container: Container,
+            logger: LoggerItf,
+            scope: Scope,
             stream: Optional[Stream],
             task: GoTaskStruct,
-            locker: TaskLocker,
+            refresh_callback: Callable[[], bool],
+            alive_check: Callable[[], bool],
             max_errors: int,
     ):
         # session level container
         self.container = Container(parent=container, name="session")
         self.upstream = stream
         self.task = task
-        self.logger = self.container.force_fetch(LoggerItf)
-        self._task_locker = locker
+        self.logger = logger
+        self._refresh_callback = refresh_callback
+        self._alive_check = alive_check
         threads = container.force_fetch(GoThreads)
         thread = threads.get_thread(task.thread_id, create=True)
         self.thread = thread
-        self.scope = Scope(
-            shell_id=task.shell_id,
-            process_id=task.process_id,
-            task_id=task.task_id,
-            parent_task_id=task.parent,
-        )
+        self.scope = scope
 
         self.ghost: G = get_entity(self.task.meta, Ghost)
         self.ghost_driver: GhostDriver[G] = get_ghost_driver(self.ghost)
@@ -127,7 +126,7 @@ class SessionImpl(Session[Ghost]):
     def alive(self) -> bool:
         if self._failed or self._destroyed:
             return False
-        return self._task_locker.acquired() and (self.upstream is None or self.upstream.alive())
+        return self._alive_check() and self._refresh_callback() and (self.upstream is None or self.upstream.alive())
 
     def _validate_alive(self):
         if not self.alive():
@@ -223,7 +222,7 @@ class SessionImpl(Session[Ghost]):
     def refresh(self) -> bool:
         if self._failed or self._destroyed or not self.alive():
             return False
-        if self._task_locker.refresh():
+        if self._refresh_callback():
             self._saved = False
             return True
         return False

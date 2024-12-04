@@ -124,6 +124,7 @@ class OpenAIWSConnection:
 
 connect = OpenAIWSConnection
 
+# some local tests
 if __name__ == "__main__":
     import os
     from ghostos.helpers import Timeleft

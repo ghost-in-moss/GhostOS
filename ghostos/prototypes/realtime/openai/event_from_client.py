@@ -4,6 +4,25 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from .event_data_objects import SessionObject, MessageItem
 
+__all__ = [
+    'ClientEventType',
+    'ClientEvent',
+
+    # 9 client events
+
+    'SessionUpdate',
+    'ConversationItemCreate',
+    'ConversationItemDelete',
+    'ConversationItemTruncate',
+
+    'InputAudioBufferClear',
+    'InputAudioBufferAppend',
+    'InputAudioBufferCommit',
+
+    'ResponseCreate',
+    'ResponseCancel'
+]
+
 
 class ClientEventType(str, Enum):
     session_update = "session.updated"
@@ -54,13 +73,16 @@ class ClientEvent(BaseModel, ABC):
         description="Optional client-generated ID used to identify this event.",
     )
 
+    def to_dict(self) -> dict:
+        return self.model_dump(exclude_none=True)
 
-class ClientSessionUpdate(ClientEvent):
+
+class SessionUpdate(ClientEvent):
     type: ClassVar[str] = ClientEventType.session_update.value
     session: SessionObject
 
 
-class ClientInputAudioBufferAppend(ClientEvent):
+class InputAudioBufferAppend(ClientEvent):
     type: ClassVar[str] = ClientEventType.input_audio_buffer_append.value
     audio: str = Field()
 
@@ -69,7 +91,7 @@ class ClientInputAudioBufferAppend(ClientEvent):
         raise NotImplementedError("todo")
 
 
-class ClientInputAudioBufferCommit(ClientEvent):
+class InputAudioBufferCommit(ClientEvent):
     """
     Send this event to commit the user input audio buffer,
     which will create a new user message item in the conversation.
@@ -83,7 +105,7 @@ class ClientInputAudioBufferCommit(ClientEvent):
     type: ClassVar[str] = ClientEventType.input_audio_buffer_commit.value
 
 
-class ClientInputAudioBufferClear(ClientEvent):
+class InputAudioBufferClear(ClientEvent):
     """
     Send this event to clear the audio bytes in the buffer.
     The server will respond with an input_audio_buffer.cleared event.

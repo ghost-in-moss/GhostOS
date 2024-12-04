@@ -232,7 +232,7 @@ class SpheroBoltProvider(BootstrapProvider):
         conversation = con.force_fetch(Conversation)
         eventbus = con.force_fetch(EventBus)
         logger = con.force_fetch(LoggerItf)
-        task = conversation.task()
+        task = conversation.get_task()
         return SpheroBoltImpl(
             logger,
             eventbus,

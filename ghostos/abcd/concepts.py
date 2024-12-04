@@ -14,7 +14,7 @@ from ghostos.core.runtime import (
 from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
-from ghostos.core.llms import PromptPipe, Prompt
+from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
 from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload, Receiver, Role
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
@@ -125,6 +125,10 @@ class GhostDriver(Generic[G], ABC):
         pass
 
     @abstractmethod
+    def functions(self, session: Session) -> List[LLMFunc]:
+        pass
+
+    @abstractmethod
     def providers(self) -> Iterable[Provider]:
         """
         ghost return conversation level container providers.
@@ -209,6 +213,10 @@ class Operator(ABC):
 class Action(PromptPipe, ABC):
     @abstractmethod
     def name(self) -> str:
+        pass
+
+    @abstractmethod
+    def as_function(self) -> Optional[LLMFunc]:
         pass
 
     @abstractmethod
@@ -344,6 +352,8 @@ class Conversation(Protocol[G]):
     """
     task_id: str
 
+    scope: Scope
+
     logger: LoggerItf
 
     @abstractmethod
@@ -354,11 +364,11 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def task(self) -> GoTaskStruct:
+    def get_task(self) -> GoTaskStruct:
         pass
 
     @abstractmethod
-    def thread(self, truncated: bool = False) -> GoThreadInfo:
+    def get_thread(self, truncated: bool = False) -> GoThreadInfo:
         pass
 
     @abstractmethod
@@ -380,6 +390,10 @@ class Conversation(Protocol[G]):
 
     @abstractmethod
     def get_instructions(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_functions(self) -> List[LLMFunc]:
         pass
 
     @abstractmethod
@@ -445,7 +459,7 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def closed(self) -> bool:
+    def is_closed(self) -> bool:
         """
         closed
         """
@@ -455,7 +469,7 @@ class Conversation(Protocol[G]):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.closed():
+        if self.is_closed():
             return
         if exc_val is not None:
             return self.fail(exc_val)

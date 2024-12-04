@@ -1,226 +1,356 @@
 from __future__ import annotations
+from typing import List, Optional, Tuple, Protocol, Self
 from abc import ABC, abstractmethod
-from queue import Queue
-from collections import deque
-import time
-from typing import List, Optional, Dict, Iterable, Tuple, Callable, Union
-from threading import Thread
-from ghostos.abcd import Conversation
-from ghostos.core.messages import ReceiverBuffer
-from ghostos.prototypes.realtime.abcd import (
-    RealtimeApp,
-    Listener, Speaker,
-    RealtimeOperator,
-)
-from collections import deque
-from ghostos.container import Container
-from ghostos.core.messages import (
-    Message,
-)
-from ghostos.contracts.logger import LoggerItf, get_logger
-from ghostos.contracts.pool import DefaultPool
-# from concurrent.futures import ThreadPoolExecutor
-# from queue import Queue
-# from .protocols import StateName, ServerEventType
 from .configs import OpenAIRealtimeConf
-from .ws import OpenAIWSConnection, OpenAIWebsocketsConf
-
-from abc import ABC, abstractmethod
-
-from .app import RealtimeApp
-from .event_from_server import *
-from .configs import OpenAIRealtimeConf
-from ghostos.prototypes.realtime.abcd import RealtimeOperator, State
+from ghostos.core.messages import Message
+from enum import Enum
 
 
-class OpenAIRealtimeContext:
+class AppState(str, Enum):
+    closed = "closed"
+
+    connecting = "connecting"
+    """connecting to the websocket server"""
+
+    synchronizing = "synchronizing"
+    """synchronizing conversation with the websocket server"""
+
+    waiting_response = "waiting response"
+
+    updating = "updating"
+    """updating the local conversation from server state"""
+
+    listening = "listening"
+    """listening on the local audio inputs"""
+
+    responding = "responding"
+    """responding from the server"""
+
+    idle = "idle"
+
+    function_call = "function calling"
+    """local conversation function call"""
+
+
+class OperatorName(str, Enum):
+    listen = "listen"
+    commit = "commit"
+    stop_listen = "stop listen"
+    clear_audio = "clear"
+    respond = "respond"
+    cancel_responding = "cancel"
+
+
+class Client(Protocol):
+    conf: OpenAIRealtimeConf
+
+    @abstractmethod
+    def reconnect(self) -> None:
+        """
+        recreate the ws connection.
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def synchronize_server_session(self):
+        """
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def update_local_conversation(self) -> None:
+        pass
+
+    @abstractmethod
+    def cancel_responding(self) -> bool:
+        pass
+
+    @abstractmethod
+    def start_listening(self) -> bool:
+        pass
+
+    @abstractmethod
+    def stop_listening(self) -> bool:
+        pass
+
+    @abstractmethod
+    def is_listening(self) -> bool:
+        pass
+
+    @abstractmethod
+    def commit_audio_input(self) -> bool:
+        """
+        and stop listening.
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def clear_audio_input(self) -> bool:
+        pass
+
+    @abstractmethod
+    def create_response(self) -> bool:
+        pass
+
+    @abstractmethod
+    def is_responding(self) -> bool:
+        pass
+
+    @abstractmethod
+    def receive_server_event(self) -> bool:
+        pass
+
+    @abstractmethod
+    def send_error_message(self, error: str) -> None:
+        pass
+
+
+class StateOfClient(ABC):
 
     def __init__(
             self,
-            conversation: Conversation,
-            conf: OpenAIRealtimeConf,
-            logger: LoggerItf,
+            client: Client,
     ):
-        self.conversation = conversation
-        self.logger = logger
-        self.error: Optional[Exception] = None
-        self.conf: OpenAIRealtimeConf = conf
-        self.listening: bool = False
-        self.speaking_queue: Queue = Queue()
-        self.speaking_id: Optional[str] = None
-        self.buffer: List[Message] = []
-        self.outputting_completed: Dict[int, Message] = {}
-        self.outputting_chunks: Dict[int, List[Message]] = {}
-        self.outputting_id: Optional[int] = None
-        self.connection: Optional[OpenAIWSConnection] = None
-        self.closed: bool = False
+        self.client = client
 
-    def is_closed(self) -> bool:
-        return self.closed or self.conversation.closed()
-
-    def stop_speaking(self):
-        self.speaking_id = None
-        self.speaking_queue.put(None)
-        self.speaking_queue = Queue()
-
-    def start_speaking(self, speaking_id: str):
-        self.speaking_queue.put(None)
-        self.speaking_id = speaking_id
-        self.speaking_queue = Queue()
-
-    def messages(self) -> Iterable[Message]:
+    @abstractmethod
+    def on_init(self):
+        """
+        同步阻塞逻辑.
+        """
         pass
 
-    def push_message(self, message: Message):
+    @abstractmethod
+    def status(self) -> str:
+        """
+
+        :return:
+        """
         pass
 
-    def add_message_to_server(self, message: Message):
+    def rotate(self) -> bool:
+        return self.client.receive_server_event()
+
+    @abstractmethod
+    def operate(self, operator: str) -> Optional[Self]:
         pass
 
-    def default_handle_server_event(self, event: dict):
-        if ServerEventType.error.match(event):
-            pass
-        elif ServerEventType.session_created.match(event):
-            pass
-        elif ServerEventType.session_updated.match(event):
-            pass
-        elif ServerEventType.conversation_created.match(event):
-            pass
-        elif ServerEventType.conversation_item_created.match(event):
-            pass
-        elif ServerEventType.conversation_item_deleted.match(event):
-            pass
-        elif ServerEventType.audio_transcript_created.match(event):
-            pass
-        elif ServerEventType.audio_transcript_failed.match(event):
-            pass
-        elif ServerEventType.response_output_item_done.match(event):
-            pass
+    def allow(self, operator: str) -> bool:
+        operators = self.operators()
+        return operator in operators
+
+    @abstractmethod
+    def operators(self) -> List[str]:
+        pass
+
+    @abstractmethod
+    def tick_frame(self) -> Optional[Self]:
+        pass
+
+    def destroy(self):
+        self.client = None
+
+    def default_mode(self) -> Self:
+        if self.client.conf.start_mode == "listening":
+            return ListeningState(self.client)
+        elif self.client.conf.start_mode == "idle":
+            return IdleState(self.client)
+        elif self.client.is_responding():
+            return RespondingState(self.client)
+        else:
+            return IdleState(self.client)
 
 
-class Connecting(State):
+class ConnectingState(StateOfClient):
+    """
+    connecting the websocket server
+    """
 
-    def __init__(self, ctx: OpenAIRealtimeContext):
-        self.ctx = ctx
+    def status(self) -> str:
+        # when connecting nothing is able to do.
+        return AppState.connecting.value
 
-    def name(self) -> str:
-        return "Connecting"
+    def on_init(self):
+        self.client.reconnect()
 
-    def is_outputting(self) -> bool:
+    def allow(self, operator: str) -> bool:
         return False
 
-    def run_frame(self) -> Optional[State]:
-        ws_conf = self.ctx.conf.ws_conf
-        if self.ctx.connection:
-            self.ctx.connection.close()
-        self.ctx.connection = OpenAIWSConnection(ws_conf, logger=self.ctx.logger)
-        return Connected(self.ctx)
+    def operate(self, operator: str) -> Optional[Self]:
+        return None
 
-    def allow(self, op: RealtimeOperator) -> Tuple[bool, Optional[str]]:
-        return False, "not implemented"
+    def rotate(self) -> bool:
+        return False
 
-    def handle(self, op: RealtimeOperator) -> Optional[State]:
-        event = self.ctx.connection.recv()
-        if event is None:
+    def operators(self) -> List[str]:
+        return []
+
+    def tick_frame(self) -> Optional[Self]:
+        return SynchronizingState(self.client)
+
+
+class SynchronizingState(StateOfClient):
+    """
+    synchronizing conversation history to the websocket server
+    """
+
+    def status(self) -> str:
+        return AppState.synchronizing.value
+
+    def allow(self, operator: str) -> bool:
+        return False
+
+    def rotate(self) -> bool:
+        return False
+
+    def operate(self, operator: str) -> Optional[Self]:
+        return None
+
+    def operators(self) -> List[str]:
+        return []
+
+    def on_init(self):
+        self.client.synchronize_server_session()
+
+    def tick_frame(self) -> Optional[Self]:
+        return self.default_mode()
+
+
+class ListeningState(StateOfClient):
+
+    def on_init(self):
+        self.client.start_listening()
+
+    def status(self) -> str:
+        return AppState.listening.value
+
+    def operators(self) -> List[str]:
+        return [
+            OperatorName.respond,
+            OperatorName.stop_listen,
+            OperatorName.commit,
+            OperatorName.clear_audio,
+        ]
+
+    def operate(self, operator: str) -> Optional[Self]:
+        if operator == OperatorName.respond.value:
+            self.client.commit_audio_input()
+            return CreateResponseState(self.client)
+
+        elif operator == OperatorName.commit.value:
+            self.client.commit_audio_input()
+            self.client.stop_listening()
+            return IdleState(self.client)
+
+        elif operator == OperatorName.stop_listen:
+            self.client.stop_listening()
+            self.client.clear_audio_input()
+            return IdleState(self.client)
+
+        elif operator == OperatorName.clear_audio:
+            self.client.clear_audio_input()
+            # clear and go on listening
             return None
 
-        return self
-
-    def destroy(self):
-        del self.ctx
-
-
-class Connected(State):
-
-    def __init__(self, ctx: OpenAIRealtimeContext):
-        self.ctx = ctx
-
-    def name(self) -> str:
-        return "Connected"
-
-    def allow(self, op: RealtimeOperator) -> Tuple[bool, Optional[str]]:
-        pass
-
-    def is_outputting(self) -> bool:
-        pass
-
-    def handle(self, op: RealtimeOperator) -> Optional[State]:
-        pass
-
-    def run_frame(self) -> Optional[State]:
-        event = self.ctx.connection.recv()
-        if event is None:
-            return None
-        if ServerEventType.session_created.match(event):
-            return SyncConversation(self.ctx)
-
-    def destroy(self):
-        pass
-
-
-class SyncConversation(State):
-    def __init__(self, ctx: OpenAIRealtimeContext):
-        self.ctx = ctx
-
-    def name(self) -> str:
-        pass
-
-    def allow(self, op: RealtimeOperator) -> Tuple[bool, Optional[str]]:
-        pass
-
-    def is_outputting(self) -> bool:
-        pass
-
-    def handle(self, op: RealtimeOperator) -> Optional[State]:
-        pass
-
-    def run_frame(self) -> Optional[State]:
-        for msg in self.ctx.messages():
-            self.ctx.add_message_to_server(msg)
-
-    def destroy(self):
-        pass
-
-
-class WaitingServer(State):
-    def __init__(self, ctx: OpenAIRealtimeContext):
-        self.ctx = ctx
-
-    def name(self) -> str:
-        pass
-
-    def allow(self, op: RealtimeOperator) -> Tuple[bool, Optional[str]]:
-        pass
-
-    def is_outputting(self) -> bool:
-        pass
-
-    def handle(self, op: RealtimeOperator) -> Optional[State]:
-        pass
-
-    def run_frame(self) -> Optional[State]:
-        event = self.ctx.connection.recv()
-        if event is None:
-            return None
-        if ServerEventType.conversation_created.match(event):
-            # todo
+        else:
             return None
 
-    def destroy(self):
-        pass
+    def tick_frame(self) -> Optional[Self]:
+        if self.client.is_responding():
+            # responding not cancel listening
+            return RespondingState(self.client)
+        return None
 
 
-class Listening(State):
-    def __init__(self, ctx: OpenAIRealtimeContext):
-        self.ctx = ctx
+class CreateResponseState(StateOfClient):
 
-    def is_outputting(self) -> bool:
-        return True
+    def on_init(self):
+        if self.client.is_responding():
+            self.client.cancel_responding()
+        if self.client.is_listening():
+            self.client.commit_audio_input()
+        self.client.create_response()
+        return
+
+    def status(self) -> Tuple[str, List[str]]:
+        return AppState.waiting_response, self.operators()
+
+    def operate(self, operator: str) -> Optional[Self]:
+        # todo: test later
+        return None
+
+    def operators(self) -> List[str]:
+        # todo: test later
+        return []
+
+    def tick_frame(self) -> Optional[Self]:
+        if self.client.is_responding():
+            return RespondingState(self.client)
+        return None
 
 
-class Responding(State):
-    def __init__(self, ctx: OpenAIRealtimeContext):
-        self.ctx = ctx
+class RespondingState(StateOfClient):
 
-    def is_outputting(self) -> bool:
-        return True
+    def on_init(self):
+        if not self.client.is_responding():
+            self.client.send_error_message("enter responding state but server is not responding")
+        return
+
+    def status(self) -> str:
+        return AppState.responding.value
+
+    def operate(self, operator: str) -> Optional[Self]:
+        if operator == OperatorName.cancel_responding.value:
+            if self.client.is_responding():
+                self.client.cancel_responding()
+            return self.default_mode()
+        elif operator == OperatorName.listen.value:
+            if self.client.is_responding():
+                self.client.cancel_responding()
+            return ListeningState(self.client)
+        else:
+            return None
+
+    def operators(self) -> List[str]:
+        return [
+            OperatorName.cancel_responding,
+            OperatorName.listen,
+        ]
+
+    def tick_frame(self) -> Optional[Self]:
+        if self.client.is_responding():
+            return None
+        else:
+            return self.default_mode()
+
+
+class IdleState(StateOfClient):
+
+    def on_init(self):
+        if self.client.is_listening():
+            self.client.stop_listening()
+        elif self.client.is_responding():
+            self.client.cancel_responding()
+        # when idle, update local conversation.
+        self.client.update_local_conversation()
+        return
+
+    def status(self) -> str:
+        return AppState.idle.value
+
+    def operate(self, operator: str) -> Optional[Self]:
+        if operator == OperatorName.listen.value:
+            return ListeningState(self.client)
+        return None
+
+    def operators(self) -> List[str]:
+        return [
+            OperatorName.listen.value,
+        ]
+
+    def tick_frame(self) -> Optional[Self]:
+        self.client.update_local_conversation()
+        return None

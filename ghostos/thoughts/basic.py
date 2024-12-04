@@ -28,7 +28,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         assistant_name = g.identifier().name
         yield OtherAgentOrTaskPipe(
             assistant_name=assistant_name,
-            task_id=g.session().task().task_id,
+            task_id=g.session().get_task.task_id,
         )
 
     @abstractmethod
@@ -47,7 +47,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
 
     def initialize_chat(self, g: Ghost, e: Event) -> Prompt:
         session = g.session()
-        thread = session.thread()
+        thread = session.get_thread()
         system_prompt = g.system_prompt()
         thought_instruction = self.instruction(g, e)
         content = "\n\n".join([system_prompt, thought_instruction])
@@ -86,7 +86,7 @@ class LLMThoughtDriver(Generic[T], BasicThoughtDriver[T], ABC):
         llm_api.deliver_chat_completion(chat, messenger)
         messages, callers = messenger.flush()
         # set chat system prompt to thread
-        session.thread().system_prompt = chat.system_prompt()
+        session.get_thread().system_prompt = chat.system_prompt()
 
         # callback actions
         for caller in callers:

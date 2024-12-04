@@ -309,9 +309,11 @@ class ArrayStream(Stream):
 
 
 class ReceiverBuffer:
-    def __init__(self, head: Message, receiver: Iterator[Message]):
+    def __init__(self, head: Message, iterator: Iterator[Message]):
+        if head.is_chunk():
+            head = head.as_head()
         self._head = head
-        self._receiver = receiver
+        self._iterator = iterator
         self._chunks = []
         self._done: Optional[Message] = None
         self._next: Optional[Self] = None
@@ -341,7 +343,7 @@ class ReceiverBuffer:
         yield self._head
         head = self._head.get_copy()
         try:
-            item = next(self._receiver)
+            item = next(self._iterator)
         except StopIteration:
             self._done = head.as_tail()
             return None
@@ -358,11 +360,11 @@ class ReceiverBuffer:
             else:
                 if self._done is None:
                     self._done = head.as_tail()
-                self._next = ReceiverBuffer(item, self._receiver)
-                self._receiver = None
+                self._next = ReceiverBuffer(item, self._iterator)
+                self._iterator = None
                 break
             try:
-                item = next(self._receiver)
+                item = next(self._iterator)
             except StopIteration:
                 break
         if self._done is None:
@@ -375,7 +377,7 @@ class ReceiverBuffer:
             return self._done
         list(self.chunks())
         if self._done is None:
-            raise RuntimeError(f"tail failed")
+            self._done = self._head.as_tail()
         return self._done
 
     def next(self) -> Optional[Self]:

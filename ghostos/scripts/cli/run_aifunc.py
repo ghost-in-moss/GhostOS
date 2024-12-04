@@ -39,7 +39,7 @@ def find_aifunc_by_name(filename_or_modulename: str) -> FoundAIFunc:
         is_temp = False
 
     aifunc = None
-    for name, value in module.__dict__.items():
+    for name, value in module.__dict__.conversation_item_states():
         if name.startswith("_"):
             continue
         if not inspect.isclass(value):

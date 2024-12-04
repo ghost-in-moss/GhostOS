@@ -6,16 +6,74 @@ from ghostos.contracts.variables import Variables
 from ghostos.contracts.assets import FileInfo
 from ghostos.container import Container
 from ghostos.prompter import get_defined_prompt
-from .message import Message, MessageClass, MessageType, CallerOutput, MessageKind, Role
+from .message import Message, MessageClass, MessageType, CallerOutput, MessageKind, Role, Caller
 from ghostos.helpers import uuid
 from pydantic import BaseModel, Field
 
 __all__ = [
     "VariableMessage",
+    "FunctionCallMessage",
+    "FunctionCallOutputMessage",
     "CallerOutput",
     "ImageAssetMessage",
+    "AudioMessage",
     "MessageKindParser",
 ]
+
+FunctionCallOutputMessage = CallerOutput
+
+
+class FunctionCallMessage(MessageClass, BaseModel):
+    __message_type__ = MessageType.FUNCTION_CALL.value
+
+    msg_id: str = Field(default_factory=uuid, description="message id")
+    payloads: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="payload type key to payload item. payload shall be a strong-typed dict"
+    )
+    role: str = Field(default="", description="who send the message")
+    caller: Caller
+
+    def to_message(self) -> Message:
+        return Message.new_tail(
+            type_=self.__message_type__,
+            msg_id=self.msg_id,
+            role=self.role,
+            name=self.caller.name,
+            call_id=self.caller.id,
+            content=self.caller.arguments,
+        )
+
+    @classmethod
+    def from_message(cls, message: Message) -> Optional[Self]:
+        return cls(
+            msg_id=message.msg_id,
+            payloads=message.payloads,
+            role=message.role,
+            caller=Caller(
+                id=message.call_id,
+                name=message.name,
+                arguments=message.content,
+            )
+        )
+
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
+        from openai.types.chat.chat_completion_assistant_message_param import (
+            ChatCompletionAssistantMessageParam, FunctionCall,
+        )
+        from openai.types.chat.chat_completion_message_tool_call_param import ChatCompletionMessageToolCallParam
+
+        return [ChatCompletionAssistantMessageParam(
+            role="assistant",
+            tool_calls=[ChatCompletionMessageToolCallParam(
+                id=self.caller.id,
+                function=FunctionCall(
+                    name=self.caller.name,
+                    arguments=self.caller.arguments,
+                ),
+                type="function"
+            )]
+        )]
 
 
 class VariableMessage(MessageClass, BaseModel):
@@ -261,11 +319,11 @@ class MessageKindParser:
             *,
             name: Optional[str] = None,
             role: str = Role.ASSISTANT.value,
-            ref_id: Optional[str] = None,
+            call_id: Optional[str] = None,
     ) -> None:
         self.variables = variables
         self.role = role
-        self.ref_id = ref_id
+        self.call_id = call_id
         self.name = name
 
     def parse(self, messages: Iterable[Union[MessageKind, Any]]) -> Iterable[Message]:
@@ -291,8 +349,8 @@ class MessageKindParser:
                 yield vm.to_message()
 
     def _with_ref(self, item: Message) -> Message:
-        if self.ref_id is not None:
-            item.ref_id = self.ref_id
+        if self.call_id is not None:
+            item.call_id = self.call_id
         if not item.role and self.role:
             item.role = self.role
         if not item.name and self.name:

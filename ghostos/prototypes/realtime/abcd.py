@@ -148,7 +148,7 @@ class Speaker(ABC):
         pass
 
 
-class Operator(Protocol):
+class RealtimeOP(Protocol):
     name: str
     description: str
 
@@ -211,21 +211,23 @@ class RealtimeApp(ABC):
         pass
 
     @abstractmethod
-    def messages(self) -> List[Message]:
-        pass
-
-    @abstractmethod
-    def state(self) -> Tuple[List[Operator], bool]:
+    def messages(self) -> Iterable[Message]:
         """
-        :return: (operators, is_outputting)
+        return history messages.
         """
         pass
 
     @abstractmethod
-    def operate(self, operator: Operator) -> Tuple[bool, Optional[str]]:
+    def state(self) -> Tuple[str, List[str]]:
         """
-        :param operator:
-        :return: (allowed, [error message])
+        :return: (operators, operators)
+        """
+        pass
+
+    @abstractmethod
+    def operate(self, operator: str) -> bool:
+        """
+        run operator.
         """
         pass
 
@@ -254,3 +256,50 @@ class RealtimeApp(ABC):
             intercepted = self.fail(exc_val)
         self.close()
         return intercepted
+
+
+def example(app: RealtimeApp):
+    with app:
+        while True:
+            state, ops = app.state()
+            print(state, ops)
+            outputting = app.output()
+            if outputting is None:
+                time.sleep(0.1)
+                continue
+            while outputting is not None:
+                print(outputting.head())
+                chunks = outputting.chunks()
+                for c in chunks:
+                    print(c)
+                print(outputting.tail())
+
+
+def streamlit_example(app: RealtimeApp):
+    import streamlit as st
+    with app:
+        for message in app.messages():
+            with st.container():
+                st.write(message)
+
+        while True:
+            with st.empty():
+                rendered = False
+                while not rendered:
+                    state, operators = app.state()
+                    with st.container():
+                        if operators:
+                            for op in operators:
+                                st.write(op)
+                        with st.status(state):
+                            buffer = app.output()
+                            if buffer is None:
+                                continue
+                            rendered = buffer
+                            if rendered is None:
+                                time.sleep(0.1)
+                            else:
+                                break
+                with st.container():
+                    st.write(buffer.tail())
+                break

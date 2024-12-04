@@ -157,7 +157,7 @@ class ShellImpl(Shell):
             running = []
             # remove closed ones
             for c in exists:
-                if c.closed():
+                if c.is_closed():
                     continue
                 running.append(c)
             running.append(conversation)
@@ -188,7 +188,7 @@ class ShellImpl(Shell):
             send_message(r)
 
             while timeleft.alive():
-                task = conversation.task()
+                task = conversation.get_task()
                 if task.is_dead():
                     break
                 e = conversation.pop_event()
@@ -328,7 +328,7 @@ class ShellImpl(Shell):
             len(self._conversations)
         )
         for conversation in self._conversations:
-            if conversation.closed():
+            if conversation.is_closed():
                 continue
             self.logger.info("closing shell conversation %s", conversation.task_id)
             conversation.close()

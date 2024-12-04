@@ -62,6 +62,9 @@ class SequencePipe(Pipe):
                         buffer = patched
                         continue
                     else:
+                        # add msg_id to item, keep every chunk has it id
+                        if not item.msg_id:
+                            item.msg_id = buffer.msg_id
                         yield item
                 else:
                     yield buffer.as_tail()

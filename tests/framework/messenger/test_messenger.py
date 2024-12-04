@@ -40,7 +40,7 @@ def test_messenger_with_function_call():
         msg = Message.new_chunk(content=c)
         items.append(msg)
     for c in content:
-        msg = Message.new_chunk(content=c, typ_=MessageType.FUNCTION_CALL, ref_id="123", name="good")
+        msg = Message.new_chunk(content=c, typ_=MessageType.FUNCTION_CALL, call_id="123", name="good")
         items.append(msg)
     with stream:
         messenger.send(items)

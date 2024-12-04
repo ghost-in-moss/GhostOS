@@ -1,5 +1,7 @@
+import os
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union
+from mimetypes import guess_type
 from pydantic import BaseModel, Field
 from ghostos.contracts.storage import Storage
 from ghostos.helpers import uuid, yaml_pretty_dump
@@ -19,6 +21,24 @@ class FileInfo(BaseModel):
 
 
 class FileAssets(ABC):
+
+    @classmethod
+    def new_fileinfo(
+            cls,
+            fileid: str,
+            filename: str,
+            description: str = "",
+            filetype: Optional[str] = None,
+    ) -> FileInfo:
+        if filetype is None:
+            filetype = guess_type(filename)
+        fileinfo = FileInfo(
+            fileid=fileid,
+            filename=filename,
+            description=description,
+            filetype=filetype,
+        )
+        return fileinfo
 
     @abstractmethod
     def save(self, file: FileInfo, binary: Optional[bytes]) -> str:
@@ -46,6 +66,10 @@ class FileAssets(ABC):
         :param fileid: the file id
         :return: None if no file info is available
         """
+        pass
+
+    @abstractmethod
+    def has_binary(self, fileid: str) -> bool:
         pass
 
     def get_binary_by_id(self, fileid: str) -> Optional[Tuple[FileInfo, Union[bytes, None]]]:
@@ -80,10 +104,10 @@ class StorageFileAssets(FileAssets):
     def save(self, file: FileInfo, binary: Optional[bytes]) -> str:
         if binary is None and file.url is None:
             raise AttributeError("failed to save image: binary is None and image info is not from url.")
-        image_info_filename = self._get_fileinfo_filename(file.fileid)
+        fileinfo_filename = self._get_fileinfo_filename(file.fileid)
         data = file.model_dump(exclude_none=True)
         content = yaml_pretty_dump(data)
-        self._storage.put(image_info_filename, content.encode())
+        self._storage.put(fileinfo_filename, content.encode())
         if binary:
             self._storage.put(file.filename, binary)
         return file.filename
@@ -93,10 +117,17 @@ class StorageFileAssets(FileAssets):
             return self._storage.get(filename)
         return None
 
+    def has_binary(self, fileid: str) -> bool:
+        fileinfo = self.get_fileinfo(fileid)
+        if fileinfo is None:
+            return False
+        filename = fileinfo.filename
+        return self._storage.exists(filename)
+
     def get_fileinfo(self, fileid: str) -> Optional[FileInfo]:
-        image_info_filename = self._get_fileinfo_filename(fileid)
-        if not self._storage.exists(image_info_filename):
+        fileinfo_filename = self._get_fileinfo_filename(fileid)
+        if not self._storage.exists(fileinfo_filename):
             return None
-        content = self._storage.get(image_info_filename)
+        content = self._storage.get(fileinfo_filename)
         data = yaml.safe_load(content)
         return FileInfo(**data)

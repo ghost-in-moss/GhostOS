@@ -141,12 +141,12 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
 
     def _parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
         if message.type == MessageType.FUNCTION_CALL.value:
-            if message.ref_id:
+            if message.call_id:
                 return [
                     ChatCompletionAssistantMessageParam(
                         role="assistant",
                         tool_calls=[ChatCompletionMessageToolCallParam(
-                            id=message.ref_id,
+                            id=message.call_id,
                             function=FunctionCall(
                                 name=message.name,
                                 arguments=message.content,
@@ -166,10 +166,10 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                     )
                 ]
         elif message.type == MessageType.FUNCTION_OUTPUT:
-            if message.ref_id:
+            if message.call_id:
                 return [
                     ChatCompletionToolMessageParam(
-                        tool_call_id=message.ref_id,
+                        tool_call_id=message.call_id,
                         content=message.content,
                         role="tool",
                     )
@@ -288,7 +288,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             if chunk is None:
                 continue
             elif item.id:
-                chunk.from_id = item.id
+                chunk.msg_id = item.id
 
             if buffer is None:
                 buffer = chunk.as_head(copy=True)
@@ -333,7 +333,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             for item in delta.tool_calls:
                 pack = Message.new_chunk(
                     typ_=MessageType.FUNCTION_CALL.value,
-                    ref_id=item.id,
+                    call_id=item.id,
                     name=item.function.name,
                     content=item.function.arguments,
                 )

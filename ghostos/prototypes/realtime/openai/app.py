@@ -10,7 +10,7 @@ from ghostos.core.messages import ReceiverBuffer
 from ghostos.prototypes.realtime.abcd import (
     RealtimeApp,
     Listener, Speaker,
-    RealtimeOperator,
+    RealtimeOP,
 )
 from collections import deque
 from ghostos.container import Container
@@ -23,12 +23,13 @@ from ghostos.contracts.pool import DefaultPool
 # from queue import Queue
 # from .protocols import StateName, ServerEventType
 from .configs import OpenAIRealtimeConf
-from .state_of_client import OpenAIRealtimeContext
+from .context import Context
+from .state_of_client import StateOfClient
+from .state_of_server import StateOfServer
 from .ws import OpenAIWSConnection
 
 
 # from .broadcast import SimpleBroadcaster, Broadcaster
-
 
 
 class OpenAIRealtimeApp(RealtimeApp):
@@ -42,17 +43,15 @@ class OpenAIRealtimeApp(RealtimeApp):
             proxy: Optional[Callable] = None,
     ):
         self._conf = conf
-        self._state: State = State()
+        self._state: StateOfClient = StateOfClient()
         self._conversation = conversation
         self._proxy = proxy
         self._logger = conversation.logger
         self._pool = DefaultPool(10)
-        self._ctx: OpenAIRealtimeContext = OpenAIRealtimeContext(
-            conversation=conversation,
-            connection=None,
-            logger=self._logger,
-        )
-        self._operators: deque[RealtimeOperator] = deque()
+        self._ctx: Context = ""
+        self._server_state: StateOfServer = StateOfServer()
+        self._client_state: StateOfClient = StateOfClient()
+        self._operators: deque[RealtimeOP] = deque()
         self._listener: Listener = listener
         self._speaker: Speaker = speaker
         # status.
@@ -88,52 +87,39 @@ class OpenAIRealtimeApp(RealtimeApp):
     def get_state_desc(self) -> Tuple[str, bool]:
         return self._state.name(), self._state.is_outputting()
 
-    def operate(self, op: RealtimeOperator) -> Tuple[bool, Optional[str]]:
+    def operate(self, op: RealtimeOP) -> Tuple[bool, Optional[str]]:
         ok, error = self._state.allow(op)
         if ok:
             self._operators.append(op)
         return ok, error
 
     def output(self) -> Optional[ReceiverBuffer]:
-        outputting_id = self._ctx.outputting_id
-        if outputting_id is None:
-            return None
-        iterator = self._output_messages(outputting_id)
+        iterator = self._output_messages()
         if iterator is None:
             return None
         return ReceiverBuffer.new(iterator)
 
-    def messages(self) -> List[Message]:
-        messages = []
-        thread = self._ctx.conversation.thread(truncated=True)
-        for message in thread.get_history_messages(truncated=True):
-            messages.append(message)
-        for message in self._ctx.buffer:
-            messages.append(message)
-        return messages
+    def messages(self) -> Iterable[Message]:
+        # clear unsync messages.
+        self._ctx.sync_ghostos_conversation()
+        return self._ctx.thread.get_messages(truncated=True)
 
-    def _output_messages(self, outputting_id: int) -> Optional[Iterable[Message]]:
-        if outputting_id not in self._ctx.outputting_chunks:
+    def _output_messages(self) -> Optional[Iterable[Message]]:
+        response_id = self._ctx.response_id
+        if response_id is None:
             return None
-        sending = 0
-        while not self._ctx.is_closed():
-            chunks = self._ctx.outputting_chunks[outputting_id]
-            chunks_length = len(chunks)
-            if chunks_length > sending:
-                yield chunks[sending]
-                sending += 1
-                continue
-            elif chunks_length == sending:
-                if outputting_id in self._ctx.outputting_completed:
-                    yield self._ctx.outputting_completed[outputting_id]
-                    break
+        msg_id = None
+        while response_id == self._ctx.response_id and not self.is_closed():
+            if self._ctx.response_queue is None:
+                return None
 
-            time.sleep(0.1)
-            continue
+            if msg_id and msg_id in self._ctx.buffer_messages:
+                break
+            self._ctx.
 
     @staticmethod
     def _destroy_state(state: State) -> None:
-        state.destroy()
+        state._destroy()
 
     def _main_state_loop(self):
         while not self._ctx.is_closed():
@@ -142,7 +128,7 @@ class OpenAIRealtimeApp(RealtimeApp):
                 op = self._operators.popleft()
                 next_state = state.handle(op)
                 if next_state is not None:
-                    self._pool.submit(state.destroy)
+                    self._pool.submit(state._destroy)
                     state = next_state
                     # clear all
                     self._operators.clear()
@@ -150,7 +136,7 @@ class OpenAIRealtimeApp(RealtimeApp):
 
             next_state = state.run_frame()
             if next_state is not None:
-                self._pool.submit(state.destroy)
+                self._pool.submit(state._destroy)
                 self._state = next_state
 
     def _listening_thread(self):

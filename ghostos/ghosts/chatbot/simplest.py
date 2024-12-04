@@ -1,11 +1,11 @@
-from typing import Union, Iterable, ClassVar
+from typing import Union, Iterable, ClassVar, List
 
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
 from ghostos.abcd.thoughts import LLMThought, Thought
 from ghostos.container import Provider
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.messages import Role
-from ghostos.core.llms import Prompt
+from ghostos.core.llms import Prompt, LLMFunc
 from ghostos.entity import ModelEntity
 from ghostos.prompter import TextPrmt, Prompter
 from ghostos.identifier import Identifier
@@ -42,6 +42,9 @@ class ChatbotDriver(GhostDriver[Chatbot]):
 
     def get_instructions(self, session: Session) -> str:
         return self.get_system_prompter().get_prompt(session.container)
+
+    def functions(self, session: Session) -> List[LLMFunc]:
+        return []
 
     def providers(self) -> Iterable[Provider]:
         return []

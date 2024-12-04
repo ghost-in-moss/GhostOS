@@ -78,14 +78,30 @@ class MessageType(str, enum.Enum):
             role: str = Role.ASSISTANT.value,
             memory: Optional[str] = None,
             name: Optional[str] = None,
+            msg_id: Optional[str] = None,
+            call_id: Optional[str] = None,
     ) -> "Message":
-        return Message(content=content, memory=memory, name=name, type=self.value, role=role).as_tail()
+        return Message(
+            msg_id=msg_id or "",
+            content=content, memory=memory, name=name, type=self.value, role=role,
+            call_id=call_id,
+        ).as_tail(copy=False)
 
     def new_assistant(
-            self, *,
-            content: str, memory: Optional[str] = None, name: Optional[str] = None,
+            self,
+            *,
+            content: str,
+            memory: Optional[str] = None,
+            name: Optional[str] = None,
+            msg_id: Optional[str] = None,
     ):
-        return self.new(content=content, role=Role.ASSISTANT.value, memory=memory, name=name)
+        return self.new(
+            content=content,
+            role=Role.ASSISTANT.value,
+            memory=memory,
+            name=name,
+            msg_id=msg_id or None,
+        )
 
     def new_system(
             self, *,
@@ -170,8 +186,7 @@ class Message(BaseModel):
     """ message protocol """
 
     msg_id: str = Field(default="", description="unique message id. ")
-    ref_id: Optional[str] = Field(default=None, description="the referenced message id.")
-    from_id: Optional[str] = Field(default=None, description="the origin message id.")
+    call_id: Optional[str] = Field(default=None, description="the call id message id.")
     index: Optional[int] = Field(default=None, description="the index of the message.")
     type: str = Field(default="", description="default message type, if empty, means text")
     stage: str = Field(default="", description="message stage")
@@ -219,7 +234,7 @@ class Message(BaseModel):
             memory: Optional[str] = None,
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
-            ref_id: Optional[str] = None,
+            call_id: Optional[str] = None,
     ):
         """
         create a head chunk message
@@ -229,13 +244,17 @@ class Message(BaseModel):
         :param memory:
         :param name:
         :param msg_id:
-        :param ref_id:
+        :param call_id:
         # :param created:
         :return:
         """
         if msg_id is None:
             msg_id = uuid()
         created = round(time.time(), 3)
+        if isinstance(role, Role):
+            role = role.value
+        if isinstance(typ_, MessageType):
+            typ_ = typ_.value
         return cls(
             role=role,
             name=name,
@@ -243,7 +262,7 @@ class Message(BaseModel):
             memory=memory,
             seq="head",
             type=typ_,
-            ref_id=ref_id,
+            call_id=call_id,
             msg_id=msg_id,
             created=created,
         )
@@ -257,7 +276,8 @@ class Message(BaseModel):
             memory: Optional[str] = None,
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
-            ref_id: Optional[str] = None,
+            # todo: change to call id
+            call_id: Optional[str] = None,
             attrs: Optional[Dict[str, Any]] = None,
     ):
         """
@@ -268,7 +288,7 @@ class Message(BaseModel):
         :param memory:
         :param name:
         :param msg_id:
-        :param ref_id:
+        :param call_id:
         :param attrs:
         :return:
         """
@@ -279,7 +299,7 @@ class Message(BaseModel):
             memory=memory,
             typ_=type_,
             msg_id=msg_id,
-            ref_id=ref_id,
+            call_id=call_id,
         )
         msg.seq = "complete"
         msg.attrs = attrs
@@ -293,7 +313,8 @@ class Message(BaseModel):
             content: Optional[str] = None,
             memory: Optional[str] = None,
             name: Optional[str] = None,
-            ref_id: Optional[str] = None,
+            call_id: Optional[str] = None,
+            msg_id: Optional[str] = None,
     ):
         """
         create a chunk message.
@@ -302,7 +323,8 @@ class Message(BaseModel):
         return cls(
             role=role, name=name, content=content, memory=memory,
             type=typ_,
-            ref_id=ref_id,
+            call_id=call_id,
+            msg_id=msg_id or "",
             seq="chunk",
         )
 
@@ -323,7 +345,7 @@ class Message(BaseModel):
         """
         # if the type is not same, it can't be patched
         pack_type = chunk.get_type()
-        if pack_type and pack_type != self.get_type():
+        if pack_type and self.type and pack_type != self.type:
             return None
         # the chunk message shall have the same message id or empty one
         if chunk.msg_id and self.msg_id and chunk.msg_id != self.msg_id:
@@ -367,11 +389,12 @@ class Message(BaseModel):
         if not self.msg_id:
             # 当前消息的 msg id 不会变更.
             self.msg_id = pack.msg_id
-        if not self.ref_id:
-            self.ref_id = pack.ref_id
+        if not self.call_id:
+            self.call_id = pack.call_id
         if not self.type:
-            # type 也不会变更.
+            # only update when self type is empty (default)
             self.type = pack.type
+
         if not self.role:
             self.role = pack.role
         if self.name is None:
@@ -468,6 +491,8 @@ class Caller(BaseModel):
     id: Optional[str] = Field(default=None, description="caller 的 id, 用来 match openai 的 tool call 协议. ")
     name: str = Field(description="方法的名字.")
     arguments: str = Field(description="方法的参数. ")
+
+    # deprecated
     functional_token: bool = Field(default=False, description="caller 是否是基于协议生成的?")
 
     def add(self, message: "Message") -> None:
@@ -484,7 +509,7 @@ class Caller(BaseModel):
     def from_message(cls, message: Message) -> Iterable[Caller]:
         if message.type == MessageType.FUNCTION_CALL.value:
             yield Caller(
-                id=message.ref_id,
+                id=message.call_id,
                 name=message.name,
                 arguments=message.content,
             )
@@ -492,20 +517,29 @@ class Caller(BaseModel):
             yield from message.callers
 
 
+# todo: history code, optimize later
 class CallerOutput(BaseModel, MessageClass):
     __message_type__ = MessageType.FUNCTION_OUTPUT.value
 
     call_id: Optional[str] = Field(None, description="caller id")
-    name: str = Field(description="caller name")
+    name: Optional[str] = Field(
+        default=None,
+        description="caller name, caller id and caller name can not both be empty",
+    )
     content: Optional[str] = Field(description="caller output")
+
+    msg_id: Optional[str] = Field(None)
+    payloads: Dict[str, Dict] = Field(default_factory=dict)
 
     def to_message(self) -> Message:
         return Message(
-            ref_id=self.call_id,
+            msg_id=self.msg_id,
+            call_id=self.call_id,
             type=MessageType.FUNCTION_OUTPUT.value,
             name=self.name,
             role="",
             content=self.content,
+            payloads=self.payloads,
         )
 
     @classmethod
@@ -513,9 +547,11 @@ class CallerOutput(BaseModel, MessageClass):
         if message.type != MessageType.FUNCTION_OUTPUT.value:
             return None
         return cls(
-            call_id=message.ref_id,
+            msg_id=message.msg_id,
+            call_id=message.call_id,
             name=message.name,
             content=message.content,
+            payloads=message.payloads,
         )
 
     def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:

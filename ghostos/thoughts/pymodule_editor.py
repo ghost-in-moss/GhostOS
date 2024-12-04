@@ -103,7 +103,7 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         )
         if self.thought.referencing:
             referencing = "\n\n# referencing\n\nThere are some references for you:"
-            for import_path, prompt in self.thought.referencing.items():
+            for import_path, prompt in self.thought.referencing.conversation_item_states():
                 target = import_from_path(import_path)
                 source = inspect.getsource(target)
                 referencing += f"""

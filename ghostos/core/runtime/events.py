@@ -148,6 +148,8 @@ class EventTypes(str, Enum):
 
     INPUT = "input"
 
+    ACTION_CALL = "action_call"
+
     NOTIFY = "notify"
 
     CANCEL = "cancel"
