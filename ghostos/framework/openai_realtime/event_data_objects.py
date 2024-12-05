@@ -265,7 +265,3 @@ class SessionObject(SessionObjectBase):
     tool_choice: str = Field(default="auto")
     temperature: float = Field(default=0.8)
     max_response_output_tokens: Union[int, Literal['inf']] = Field(default='inf')
-
-    def get_update_event(self) -> dict:
-        data = self.model_dump(exclude={'id'})
-        return data

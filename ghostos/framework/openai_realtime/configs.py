@@ -1,10 +1,18 @@
-from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from typing import Optional, ClassVar
+from pydantic import Field
+from ghostos.abcd.realtime import RealtimeAppConfig
+from ghostos.contracts.configs import YamlConfig
 from .ws import OpenAIWebsocketsConf
 from .event_data_objects import SessionObject
 
+__all__ = ['OPENAI_REALTIME_DRIVER_NAME', 'OpenAIRealtimeAppConf']
 
-class OpenAIRealtimeConf(BaseModel):
+OPENAI_REALTIME_DRIVER_NAME = "openai_realtime_driver"
+
+
+class OpenAIRealtimeAppConf(YamlConfig, RealtimeAppConfig):
+    relative_path: ClassVar[str] = "openai_realtime_config.yml"
+
     name: str = Field(
         description="Name of the agent",
     )
@@ -19,6 +27,8 @@ class OpenAIRealtimeConf(BaseModel):
         default=None,
         description="basic session settings, if None, use openai default session",
     )
-    start_mode: Literal["listening", "idle"] = Field("idle")
 
     session_created_timeout: int = Field(10)
+
+    def driver_name(self) -> str:
+        return OPENAI_REALTIME_DRIVER_NAME

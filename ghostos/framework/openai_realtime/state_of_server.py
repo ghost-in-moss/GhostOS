@@ -2,10 +2,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Protocol, Optional, Dict, Self, List, Union
 from .event_from_server import *
-from .configs import SessionObject
 from .event_data_objects import (
     MessageItem,
     RateLimit,
+    SessionObject,
 )
 from pydantic import ValidationError
 from ghostos.core.messages import Message, MessageType
@@ -16,11 +16,11 @@ class ServerContext(Protocol):
     logger: LoggerItf
 
     @abstractmethod
-    def send_response_chunk(self, response_id: str, chunk: Union[Message, None]) -> bool:
+    def respond_message_chunk(self, response_id: str, chunk: Union[Message, None]) -> bool:
         pass
 
     @abstractmethod
-    def send_error_message(self, error: str) -> None:
+    def respond_error_message(self, error: str) -> None:
         pass
 
     @abstractmethod
@@ -28,7 +28,11 @@ class ServerContext(Protocol):
         pass
 
     @abstractmethod
-    def add_message_item(self, item: MessageItem, previous_item_id: str) -> None:
+    def update_local_conversation(self) -> None:
+        pass
+
+    @abstractmethod
+    def add_message_item(self, item: MessageItem, previous_item_id: Optional[str] = None) -> None:
         pass
 
     @abstractmethod
@@ -36,11 +40,15 @@ class ServerContext(Protocol):
         pass
 
     @abstractmethod
+    def get_responding_id(self) -> Optional[str]:
+        pass
+
+    @abstractmethod
     def stop_response(self, response_id: str) -> bool:
         pass
 
     @abstractmethod
-    def send_speaking_audio_chunk(self, response_id: str, data: bytes) -> bool:
+    def respond_speaking_audio_chunk(self, response_id: str, data: bytes) -> bool:
         pass
 
     @abstractmethod
@@ -90,7 +98,7 @@ class StateOfServer(ABC):
         error = "Received invalid event: %r" % se
         self.ctx.logger.error(error)
         # send error message.
-        return self.ctx.send_error_message(error)
+        return self.ctx.respond_error_message(error)
 
     def ack_server_event(self, event: ServerEvent):
         self.ctx.logger.info(
@@ -486,6 +494,7 @@ class ResponseState(StateOfServer):
             # update history messages again
             for item in rd.response.output:
                 self.ctx.update_history_message(item.to_complete_message())
+            self.ctx.update_local_conversation()
         return self.ack_server_event(rd)
 
     def _on_response_output_item_added(self, event: dict) -> None:
@@ -519,7 +528,7 @@ class ResponseItemState(StateOfServer):
         return self.item.status in {"completed"}
 
     def _on_response_output_item_added(self, event: ResponseOutputItemAdded):
-        self.ctx.send_response_chunk(event.response_id, event.item.to_message_head())
+        self.ctx.respond_message_chunk(event.response_id, event.item.to_message_head())
         return self.ack_server_event(event)
 
     def recv(self, event: dict) -> None:
@@ -543,7 +552,7 @@ class ResponseItemState(StateOfServer):
 
         elif ServerEventType.response_text_delta.value == type_name:
             se = ResponseTextDelta(**event)
-            self.ctx.send_response_chunk(se.response_id, se.as_message_chunk())
+            self.ctx.respond_message_chunk(se.response_id, se.as_message_chunk())
             return self.ack_server_event(se)
 
         elif ServerEventType.response_text_done.value == type_name:
@@ -553,7 +562,7 @@ class ResponseItemState(StateOfServer):
 
         elif ServerEventType.response_audio_delta.value == type_name:
             se = ResponseAudioDelta(**event)
-            self.ctx.send_speaking_audio_chunk(se.response_id, se.get_audio_bytes())
+            self.ctx.respond_speaking_audio_chunk(se.response_id, se.get_audio_bytes())
             return self.ack_server_event(se)
 
         elif ServerEventType.response_audio_done.value == type_name:
@@ -562,7 +571,7 @@ class ResponseItemState(StateOfServer):
 
         elif ServerEventType.response_audio_transcript_delta.value == type_name:
             se = ResponseAudioTranscriptDelta(**event)
-            self.ctx.send_response_chunk(se.response_id, se.as_message_chunk())
+            self.ctx.respond_message_chunk(se.response_id, se.as_message_chunk())
             return self.ack_server_event(se)
 
         elif ServerEventType.response_audio_transcript_done.value == type_name:
@@ -571,7 +580,7 @@ class ResponseItemState(StateOfServer):
 
         elif ServerEventType.response_function_call_arguments_delta.value == type_name:
             se = ResponseFunctionCallArgumentsDelta(**event)
-            self.ctx.send_response_chunk(se.response_id, se.as_message_chunk())
+            self.ctx.respond_message_chunk(se.response_id, se.as_message_chunk())
             return self.ack_server_event(se)
 
         elif ServerEventType.response_function_call_arguments_done.value == type_name:
@@ -583,7 +592,7 @@ class ResponseItemState(StateOfServer):
 
     def _on_response_output_item_done(self, event: ResponseOutputItemDone) -> None:
         self.item = event.item
-        self.ctx.send_response_chunk(event.response_id, event.item.to_complete_message())
+        self.ctx.respond_message_chunk(event.response_id, event.item.to_complete_message())
         return self.ack_server_event(event)
 
     def _on_response_content_part_added(self, event: ResponseContentPartAdded) -> None:

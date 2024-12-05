@@ -19,6 +19,10 @@ __all__ = [
     'Entity', 'EntityType',
     'EntityClass', 'ModelEntity',
 
+    'ModelEntityMeta',
+    'to_entity_model_meta',
+    'from_entity_model_meta',
+
 ]
 
 
@@ -74,11 +78,27 @@ class EntityMeta(TypedDict):
     content: Required[str]
 
 
+class ModelEntityMeta(TypedDict):
+    type: Required[str]
+    data: Required[dict]
+
+
 EntityType = Union[Entity, EntityMeta, BaseModel]
 
 
 def is_entity_type(value: Any) -> bool:
     return hasattr(value, '__to_entity_meta__')
+
+
+def to_entity_model_meta(value: BaseModel) -> ModelEntityMeta:
+    type_ = generate_import_path(type(value))
+    data = value.model_dump(exclude_defaults=True)
+    return ModelEntityMeta(type=type_, data=data)
+
+
+def from_entity_model_meta(value: ModelEntityMeta) -> BaseModel:
+    cls = import_from_path(value['type'])
+    return cls(**value['data'])
 
 
 def to_entity_meta(value: Union[EntityType, Any]) -> EntityMeta:

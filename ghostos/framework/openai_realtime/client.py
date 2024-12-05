@@ -1,11 +1,11 @@
-from typing import Dict, Optional, List, Set, Self, Union
-from queue import Queue
+import base64
+from typing import Dict, Optional, List
 from ghostos.abcd import Conversation
 from ghostos.contracts.logger import LoggerItf
-from ghostos.contracts.assets import AudioAssets, FileInfo
+from ghostos.contracts.assets import AudioAssets
 from ghostos.core.messages import Message, MessageType
-from ghostos.core.runtime import GoThreadInfo, Event as GhostOSEvent, EventTypes as GhostOSEventTypes
-from .configs import OpenAIRealtimeConf
+from ghostos.core.runtime import Turn, Event as GhostOSEvent, EventTypes as GhostOSEventTypes
+from .configs import OpenAIRealtimeAppConf
 from .ws import OpenAIWSConnection
 from .event_data_objects import MessageItem, SessionObject
 from .event_from_server import ServerSessionCreated
@@ -17,9 +17,11 @@ from .event_from_client import (
     ResponseCreate,
     InputAudioBufferCommit,
     InputAudioBufferClear,
+    InputAudioBufferAppend,
 )
 from .state_of_server import ServerContext, SessionState
 from .state_of_client import Client
+from .output import OutputBuffer
 
 
 class Context(ServerContext):
@@ -27,6 +29,8 @@ class Context(ServerContext):
     def __init__(
             self,
             conversation: Conversation,
+            listening: bool,
+            output: OutputBuffer,
             logger: Optional[LoggerItf] = None,
     ):
         self.conversation: Conversation = conversation
@@ -41,16 +45,11 @@ class Context(ServerContext):
 
         self.buffer_message_ids: List[str] = []
         self.buffer_messages: Dict[str, Message] = {}
-        self.error_messages: List[Message] = []
-        """ errors """
+        self.output_buffer: OutputBuffer = output
+        self.listening: bool = listening
 
-        # status.
-        self.unsent_message_ids: List[str] = []
-        self.sent_message_ids: Set[str] = set()
-        self.response_id: Optional[str] = None
-        self.response_queue: Optional[Queue] = None
-        self.speaking_queue: Optional[Queue] = None
-        self.listening: bool = False
+    def get_responding_id(self) -> Optional[str]:
+        return self.output_buffer.get_response_id()
 
     def _reset_history_messages(self):
         self.history_messages: Dict[str, Message] = {}
@@ -62,16 +61,17 @@ class Context(ServerContext):
     def _reset_buffer_messages(self):
         self.buffer_message_ids = []
         self.buffer_messages: Dict[str, Message] = {}
-        self.unsent_message_ids = []
-        self.sent_message_ids = set()
 
     def update_local_conversation(self) -> None:
-        self.stop_response(self.response_id)
+        self.output_buffer.stop_response()
         self.listening = False
 
         buffered = []
         function_call = False
         for msg_id in self.buffer_message_ids:
+            if msg_id in self.history_messages:
+                # already updated.
+                continue
             message = self.buffer_messages[msg_id]
             if not message.is_complete():
                 continue
@@ -92,19 +92,12 @@ class Context(ServerContext):
         self.thread = self.conversation.get_thread(True)
         self._reset_history_messages()
 
-    def send_response_chunk(self, response_id: str, chunk: Optional[Message]) -> bool:
-        if chunk is None:
-            return False
-        if response_id != self.response_id:
-            return False
-        if self.response_queue is not None:
-            self.response_queue.put(chunk)
-            return True
-        return False
+    def respond_message_chunk(self, response_id: str, chunk: Optional[Message]) -> bool:
+        return self.output_buffer.add_response_chunk(response_id, chunk)
 
-    def send_error_message(self, error: str) -> None:
+    def respond_error_message(self, error: str) -> None:
         message = MessageType.ERROR.new(content=error)
-        self.error_messages.append(message)
+        self.output_buffer.add_error_message(message)
 
     def save_audio_data(self, item: MessageItem) -> None:
         if not item.has_audio():
@@ -135,108 +128,96 @@ class Context(ServerContext):
                 self.buffer_message_ids.append(message.msg_id)
 
             self.buffer_messages[message.msg_id] = message
-            if message.msg_id not in self.sent_message_ids:
-                self.unsent_message_ids.append(message.msg_id)
 
-    def add_message_item(self, item: MessageItem, previous_item_id: str) -> None:
+    def add_message_item(self, item: MessageItem, previous_item_id: Optional[str] = None) -> None:
         if item is None:
             return
         message = item.to_complete_message()
-        self.update_history_message(message)
-        if previous_item_id:
-            self_item_id = message.msg_id
-            new_buffer_ids = []
-            inserted = False
-            for buffer_id in self.buffer_message_ids:
-                if buffer_id == self_item_id:
-                    continue
-                else:
-                    new_buffer_ids.append(buffer_id)
-
-                if buffer_id == previous_item_id:
-                    new_buffer_ids.append(self_item_id)
-                    inserted = True
-            if not inserted:
-                new_buffer_ids.append(self_item_id)
-            self.buffer_message_ids = new_buffer_ids
+        if message is not None:
+            self.update_history_message(message)
+            self.output_buffer.add_message(message, previous_item_id)
 
     def start_response(self, response_id: str) -> None:
-        if response_id == self.response_id:
-            return
-        if self.response_queue is not None:
-            queue = self.response_queue
-            queue.put_nowait(None)
-
-        self.response_id = response_id
-        self.response_queue = Queue()
-        self.speaking_queue = Queue()
+        if response_id:
+            self.output_buffer.start_response(response_id)
 
     def is_responding(self) -> bool:
-        return self.response_id is not None
+        return self.output_buffer.get_response_id() is not None
 
     def stop_response(self, response_id: str) -> bool:
-        if response_id == self.response_id:
-            self.response_id = None
-            if self.response_queue is not None:
-                self.response_queue.put(None)
-            if self.speaking_queue is not None:
-                self.speaking_queue.put(None)
-            self.response_queue = None
-            self.speaking_queue = None
-            return True
-        return False
+        if response_id != self.get_responding_id():
+            return False
+        self.output_buffer.stop_response()
+        return True
 
-    def send_speaking_audio_chunk(self, response_id: str, data: bytes) -> bool:
-        if response_id == self.response_id and self.response_id is not None:
-            if self.speaking_queue is not None:
-                self.speaking_queue.put_nowait(data)
-                return True
-            else:
-                self.logger.error("speaking audio chunk but queue is not exists")
-        self.logger.debug(
-            "speaking audio chunk of response id %s is not current response %s",
-            response_id, self.response_id,
-        )
-        return False
+    def respond_speaking_audio_chunk(self, response_id: str, data: bytes) -> bool:
+        if self.get_responding_id() != response_id:
+            return False
+        return self.respond_speaking_audio_chunk(response_id, data)
 
 
 class AppClient(Client):
 
     def __init__(
             self,
-            conf: OpenAIRealtimeConf,
+            conf: OpenAIRealtimeAppConf,
             conversation: Conversation,
     ):
-        self.conf: OpenAIRealtimeConf = conf
+        self.conf: OpenAIRealtimeAppConf = conf
         self.conversation: Conversation = conversation
-        self.logger: LoggerItf = conversation.logger
-        self.ctx = Context(conversation=conversation)
+        self.ctx: Context = Context(conversation=conversation, listening=True, logger=conversation.logger)
+        self.logger = conversation.logger
         self.connection: OpenAIWSConnection = self.connect()
         self.session_state: SessionState = self._create_session_state()
         self.synchronized: bool = False
+        self._closed: bool = False
 
     def connect(self) -> OpenAIWSConnection:
+        self._validate_closed()
         return OpenAIWSConnection(
             self.conf.ws_conf,
-            logger=self.logger,
+            logger=self.ctx.logger,
         )
 
+    def _validate_closed(self):
+        if self._closed:
+            raise RuntimeError("App Client is closed")
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+
+    def get_session_id(self) -> str:
+        self._validate_closed()
+        if self.session_state:
+            return self.session_state.session_id
+        return ""
+
     def reconnect(self) -> None:
+        self._validate_closed()
         if self.connection is not None:
             connection = self.connection
             connection.close()
         if self.session_state is not None:
             self.session_state.destroy()
+        self.session_state = None
 
         self.connection: OpenAIWSConnection = self.connect()
         self.session_state: SessionState = self._create_session_state()
         self.synchronized = False
 
-    def _create_session_state(self) -> SessionState:
-        ce = SessionUpdate(
-            session=self.get_session_obj(),
+    def audio_buffer_append(self, buffer: bytes) -> None:
+        content = base64.b64encode(buffer).decode()
+        ce = InputAudioBufferAppend(
+            audio=content
         )
         self._send_client_event(ce)
+
+    def is_listening(self) -> bool:
+        return self.ctx.listening and not self.ctx.is_responding()
+
+    def _create_session_state(self) -> SessionState:
         e = self.connection.recv(timeout=self.conf.session_created_timeout, timeout_error=True)
         se = ServerSessionCreated(**e)
         return SessionState(self.ctx, se)
@@ -246,6 +227,11 @@ class AppClient(Client):
             return
         previous_item_id = ""
         count = 0
+        ce = SessionUpdate(
+            session=self.get_session_obj(),
+        )
+        self._send_client_event(ce)
+
         for msg_id in self.ctx.history_message_order:
             message = self.ctx.history_messages[msg_id]
             self._send_message_to_server(message, previous_item_id)
@@ -254,33 +240,28 @@ class AppClient(Client):
             count += 1
         self.logger.info("Synchronizing server session done with item %d", count)
 
-    def update_local_conversation(self) -> None:
-        # todo: function calling
-        self.ctx.update_local_conversation()
-
     def cancel_responding(self) -> bool:
         if self.ctx.is_responding():
             ce = ResponseCancel()
             self._send_client_event(ce)
-            self.ctx.stop_response(self.ctx.response_id)
+            response_id = self.ctx.get_responding_id()
+            self.ctx.stop_response(response_id)
             return True
         return False
 
     def start_listening(self) -> bool:
         if not self.ctx.listening:
             self.ctx.listening = True
-            self.ctx.stop_response(self.ctx.response_id)
+            self.cancel_responding()
             return True
         return False
 
     def stop_listening(self) -> bool:
         if self.ctx.listening:
+            # stop listening
             self.ctx.listening = False
             return True
         return False
-
-    def is_listening(self) -> bool:
-        return self.ctx.listening
 
     def commit_audio_input(self) -> bool:
         if self.ctx.listening:
@@ -315,7 +296,7 @@ class AppClient(Client):
         self._send_client_event(ce)
         return True
 
-    def is_responding(self) -> bool:
+    def is_server_responding(self) -> bool:
         return self.ctx.is_responding()
 
     def receive_server_event(self) -> bool:
@@ -325,7 +306,11 @@ class AppClient(Client):
             return True
         return False
 
-    def _send_message_to_server(self, message: Message, previous_item_id: str = "") -> None:
+    def handle_ghostos_event(self, event: GhostOSEvent):
+        for msg in Turn.iter_event_message(event):
+            self._send_message_to_server(msg)
+
+    def _send_message_to_server(self, message: Message, previous_item_id: Optional[str] = None) -> None:
         ce = ConversationItemCreate(
             previous_item_id=previous_item_id,
             item=MessageItem.from_message(message),
@@ -335,5 +320,5 @@ class AppClient(Client):
     def _send_client_event(self, event: ClientEvent):
         self.connection.send(event.to_dict())
 
-    def send_error_message(self, error: str) -> None:
-        self.ctx.send_error_message(error)
+    def respond_error_message(self, error: str) -> None:
+        self.ctx.respond_error_message(error)

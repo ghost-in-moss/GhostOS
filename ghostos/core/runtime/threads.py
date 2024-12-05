@@ -101,8 +101,8 @@ class Turn(BaseModel):
         found = False
         for exists in self.added:
             if exists.msg_id == message.msg_id:
-                Found = True
-                exists = message
+                found = True
+                exists = message.get_copy()
             messages.append(exists)
         if found:
             self.added = messages

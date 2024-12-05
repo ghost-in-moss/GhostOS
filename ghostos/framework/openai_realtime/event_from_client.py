@@ -115,7 +115,7 @@ class InputAudioBufferClear(ClientEvent):
 
 class ConversationItemCreate(ClientEvent):
     type: ClassVar[str] = ClientEventType.conversation_item_create.value
-    previous_item_id: str = Field("")
+    previous_item_id: Optional[str] = Field(None)
     item: MessageItem = Field()
 
 

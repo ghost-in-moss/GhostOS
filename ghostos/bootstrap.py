@@ -120,6 +120,7 @@ def default_application_contracts() -> Contracts:
     from ghostos.framework.documents import DocumentRegistry
     from ghostos.framework.ghostos import GhostOS
     from ghostos.framework.assets import ImageAssets, AudioAssets
+    from ghostos.framework.realtime import Realtime
     from ghostos.core.aifunc import AIFuncExecutor, AIFuncRepository
 
     return Contracts([
@@ -159,6 +160,8 @@ def default_application_contracts() -> Contracts:
 
         # root
         GhostOS,
+
+        Realtime,
     ])
 
 
@@ -189,8 +192,9 @@ def default_application_providers(
     from ghostos.framework.logger import DefaultLoggerProvider
     from ghostos.framework.variables import WorkspaceVariablesProvider
     from ghostos.framework.ghostos import GhostOSProvider
-    from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
     from ghostos.framework.documents import ConfiguredDocumentRegistryProvider
+    from ghostos.framework.realtime import ConfigBasedRealtimeProvider
+    from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
     return [
 
         # --- logger ---#
@@ -234,7 +238,8 @@ def default_application_providers(
         DefaultAIFuncExecutorProvider(),
         AIFuncRepoByConfigsProvider(runtime_frame_dir="aifunc_frames"),
 
-        GhostOSProvider()
+        GhostOSProvider(),
+        ConfigBasedRealtimeProvider(),
     ]
 
 

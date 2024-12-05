@@ -337,7 +337,7 @@ class SessionImpl(Session[Ghost]):
             return
         tasks = self.get_task_briefs(*children)
         for tid, tb in tasks:
-            if TaskState.is_dead(tb.status):
+            if TaskState.is_dead(tb.state_name):
                 continue
             children.append(tid)
         self.task.children = children

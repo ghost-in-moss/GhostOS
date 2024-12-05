@@ -1,0 +1,5 @@
+default: "openai"
+apps:
+  openai:
+    type: "ghostos.framework.openai_realtime.configs:OpenAIRealtimeAppConf"
+    data: { }

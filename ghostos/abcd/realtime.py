@@ -2,75 +2,29 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import (
     Generic,
-    Protocol, Literal, List, ClassVar, Iterable, Tuple, TypeVar, Optional, Dict, Callable, Type,
-    Self,
-    Union,
+    List, Iterable, Tuple, TypeVar, Optional, Dict,
 )
+import time
 from ghostos.abcd import Conversation
 from ghostos.core.messages import Message, ReceiverBuffer
-import time
-from enum import Enum
+from ghostos.entity import ModelEntityMeta, to_entity_model_meta, from_entity_model_meta
 from pydantic import BaseModel, Field
-from queue import Queue
-from contextlib import contextmanager
-
-
-# class State(ABC):
-#     state_name: ClassVar[str]
-#
-#     @abstractmethod
-#     def conversation(self) -> Conversation:
-#         pass
-#
-#     @abstractmethod
-#     def operate(self, op: Operator) -> Tuple[str, str | None]:
-#         """
-#         :param op:
-#         :return: accept level | error message
-#         """
-#         pass
-#
-#     @abstractmethod
-#     def run_operator(self) -> Union["State", None]:
-#         """
-#         :return: None means no operation, go on handle event
-#         """
-#         pass
-#
-#     @abstractmethod
-#     def run_server_event(self) -> Union[State, None]:
-#         """
-#         :return: a new state, or continue
-#         """
-#         pass
-#
-#     def tick(self) -> Union[State, None]:
-#         """
-#         :return: if not none, means a new state is returned. and:
-#         1. replace current state with new state
-#         2. put the current state to a recycling queue, join it without blocking.
-#         """
-#         new_state = self.run_operator()
-#         if new_state:
-#             return new_state
-#         new_state = self.run_server_event()
-#         if new_state:
-#             return new_state
-#         return None
-#
-#     @abstractmethod
-#     def join(self):
-#         """
-#         """
-#         pass
-#
-#
-# S = TypeVar("S", bound=State)
 
 
 class Realtime(ABC):
     @abstractmethod
-    def create(self, conversation: Conversation, app_name: str = "") -> RealtimeApp:
+    def create(
+            self,
+            conversation: Conversation,
+            listener: Listener,
+            speaker: Speaker,
+            app_name: str = "",
+            config: Optional[RealtimeAppConfig] = None,
+    ) -> RealtimeApp:
+        pass
+
+    @abstractmethod
+    def get_config(self) -> RealtimeConfig:
         pass
 
     @abstractmethod
@@ -86,9 +40,22 @@ class RealtimeAppConfig(BaseModel):
 
 
 class RealtimeConfig(BaseModel):
-    apps: Dict[str, RealtimeAppConfig] = Field(
+    default: str = Field(description="default app")
+    apps: Dict[str, ModelEntityMeta] = Field(
         default_factory=dict,
     )
+
+    def add_app_conf(self, name: str, app_conf: RealtimeAppConfig):
+        self.apps[name] = to_entity_model_meta(app_conf)
+
+    def get_app_conf(self, name: str) -> Optional[RealtimeAppConfig]:
+        data = self.apps.get(name, None)
+        if data is None:
+            return None
+        conf = from_entity_model_meta(data)
+        if not isinstance(conf, RealtimeAppConfig):
+            raise TypeError(f"App config {name} is not a RealtimeAppConfig")
+        return conf
 
 
 C = TypeVar("C", bound=RealtimeAppConfig)
@@ -114,7 +81,7 @@ class RealtimeDriver(Generic[C], ABC):
 class Listener(ABC):
 
     @abstractmethod
-    def hearing(self) -> Optional[bytes]:
+    def hearing(self, second: float = 1) -> Optional[bytes]:
         pass
 
     @abstractmethod
@@ -146,11 +113,6 @@ class Speaker(ABC):
     @abstractmethod
     def flush(self) -> bytes:
         pass
-
-
-class RealtimeOP(Protocol):
-    name: str
-    description: str
 
 
 class RealtimeApp(ABC):
@@ -218,6 +180,10 @@ class RealtimeApp(ABC):
         pass
 
     @abstractmethod
+    def set_mode(self, *, listening: bool):
+        pass
+
+    @abstractmethod
     def state(self) -> Tuple[str, List[str]]:
         """
         :return: (operators, operators)
@@ -258,48 +224,49 @@ class RealtimeApp(ABC):
         return intercepted
 
 
-def example(app: RealtimeApp):
-    with app:
-        while True:
-            state, ops = app.state()
-            print(state, ops)
-            outputting = app.output()
-            if outputting is None:
-                time.sleep(0.1)
-                continue
-            while outputting is not None:
-                print(outputting.head())
-                chunks = outputting.chunks()
-                for c in chunks:
-                    print(c)
-                print(outputting.tail())
+if __name__ == "__example__":
+    def example(app: RealtimeApp):
+        with app:
+            while True:
+                state, ops = app.state()
+                print(state, ops)
+                outputting = app.output()
+                if outputting is None:
+                    time.sleep(0.1)
+                    continue
+                while outputting is not None:
+                    print(outputting.head())
+                    chunks = outputting.chunks()
+                    for c in chunks:
+                        print(c)
+                    print(outputting.tail())
 
 
-def streamlit_example(app: RealtimeApp):
-    import streamlit as st
-    with app:
-        for message in app.messages():
-            with st.container():
-                st.write(message)
-
-        while True:
-            with st.empty():
-                rendered = False
-                while not rendered:
-                    state, operators = app.state()
-                    with st.container():
-                        if operators:
-                            for op in operators:
-                                st.write(op)
-                        with st.status(state):
-                            buffer = app.output()
-                            if buffer is None:
-                                continue
-                            rendered = buffer
-                            if rendered is None:
-                                time.sleep(0.1)
-                            else:
-                                break
+    def streamlit_example(app: RealtimeApp):
+        import streamlit as st
+        with app:
+            for message in app.messages():
                 with st.container():
-                    st.write(buffer.tail())
-                break
+                    st.write(message)
+
+            while True:
+                with st.empty():
+                    rendered = False
+                    while not rendered:
+                        state, operators = app.state()
+                        with st.container():
+                            if operators:
+                                for op in operators:
+                                    st.write(op)
+                            with st.status(state):
+                                buffer = app.output()
+                                if buffer is None:
+                                    continue
+                                rendered = buffer
+                                if rendered is None:
+                                    time.sleep(0.1)
+                                else:
+                                    break
+                    with st.container():
+                        st.write(buffer.tail())
+                    break

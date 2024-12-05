@@ -20,7 +20,7 @@ class Timeleft:
 
     def passed(self) -> float:
         now = time.time()
-        return now - self.start
+        return round(now - self.start, 4)
 
 
 def timestamp_datetime() -> datetime:

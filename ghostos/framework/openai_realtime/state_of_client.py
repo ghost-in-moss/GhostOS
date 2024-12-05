@@ -1,12 +1,13 @@
 from __future__ import annotations
 from typing import List, Optional, Tuple, Protocol, Self
 from abc import ABC, abstractmethod
-from .configs import OpenAIRealtimeConf
-from ghostos.core.messages import Message
+from .configs import OpenAIRealtimeAppConf
+from ghostos.core.runtime import Event as GhostOSEvent
 from enum import Enum
 
 
 class AppState(str, Enum):
+    created = "created"
     closed = "closed"
 
     connecting = "connecting"
@@ -42,7 +43,7 @@ class OperatorName(str, Enum):
 
 
 class Client(Protocol):
-    conf: OpenAIRealtimeConf
+    conf: OpenAIRealtimeAppConf
 
     @abstractmethod
     def reconnect(self) -> None:
@@ -57,10 +58,6 @@ class Client(Protocol):
         """
         :return:
         """
-        pass
-
-    @abstractmethod
-    def update_local_conversation(self) -> None:
         pass
 
     @abstractmethod
@@ -80,6 +77,10 @@ class Client(Protocol):
         pass
 
     @abstractmethod
+    def audio_buffer_append(self, buffer: bytes) -> None:
+        pass
+
+    @abstractmethod
     def commit_audio_input(self) -> bool:
         """
         and stop listening.
@@ -96,7 +97,7 @@ class Client(Protocol):
         pass
 
     @abstractmethod
-    def is_responding(self) -> bool:
+    def is_server_responding(self) -> bool:
         pass
 
     @abstractmethod
@@ -104,7 +105,11 @@ class Client(Protocol):
         pass
 
     @abstractmethod
-    def send_error_message(self, error: str) -> None:
+    def respond_error_message(self, error: str) -> None:
+        pass
+
+    @abstractmethod
+    def handle_ghostos_event(self, event: GhostOSEvent):
         pass
 
 
@@ -124,14 +129,14 @@ class StateOfClient(ABC):
         pass
 
     @abstractmethod
-    def status(self) -> str:
+    def state_name(self) -> str:
         """
 
         :return:
         """
         pass
 
-    def rotate(self) -> bool:
+    def recv_server_event(self) -> bool:
         return self.client.receive_server_event()
 
     @abstractmethod
@@ -158,7 +163,7 @@ class StateOfClient(ABC):
             return ListeningState(self.client)
         elif self.client.conf.start_mode == "idle":
             return IdleState(self.client)
-        elif self.client.is_responding():
+        elif self.client.is_server_responding():
             return RespondingState(self.client)
         else:
             return IdleState(self.client)
@@ -169,7 +174,7 @@ class ConnectingState(StateOfClient):
     connecting the websocket server
     """
 
-    def status(self) -> str:
+    def state_name(self) -> str:
         # when connecting nothing is able to do.
         return AppState.connecting.value
 
@@ -182,7 +187,7 @@ class ConnectingState(StateOfClient):
     def operate(self, operator: str) -> Optional[Self]:
         return None
 
-    def rotate(self) -> bool:
+    def recv_server_event(self) -> bool:
         return False
 
     def operators(self) -> List[str]:
@@ -197,13 +202,13 @@ class SynchronizingState(StateOfClient):
     synchronizing conversation history to the websocket server
     """
 
-    def status(self) -> str:
+    def state_name(self) -> str:
         return AppState.synchronizing.value
 
     def allow(self, operator: str) -> bool:
         return False
 
-    def rotate(self) -> bool:
+    def recv_server_event(self) -> bool:
         return False
 
     def operate(self, operator: str) -> Optional[Self]:
@@ -224,7 +229,7 @@ class ListeningState(StateOfClient):
     def on_init(self):
         self.client.start_listening()
 
-    def status(self) -> str:
+    def state_name(self) -> str:
         return AppState.listening.value
 
     def operators(self) -> List[str]:
@@ -259,7 +264,7 @@ class ListeningState(StateOfClient):
             return None
 
     def tick_frame(self) -> Optional[Self]:
-        if self.client.is_responding():
+        if self.client.is_server_responding():
             # responding not cancel listening
             return RespondingState(self.client)
         return None
@@ -268,14 +273,14 @@ class ListeningState(StateOfClient):
 class CreateResponseState(StateOfClient):
 
     def on_init(self):
-        if self.client.is_responding():
+        if self.client.is_server_responding():
             self.client.cancel_responding()
         if self.client.is_listening():
             self.client.commit_audio_input()
         self.client.create_response()
         return
 
-    def status(self) -> Tuple[str, List[str]]:
+    def state_name(self) -> Tuple[str, List[str]]:
         return AppState.waiting_response, self.operators()
 
     def operate(self, operator: str) -> Optional[Self]:
@@ -287,7 +292,7 @@ class CreateResponseState(StateOfClient):
         return []
 
     def tick_frame(self) -> Optional[Self]:
-        if self.client.is_responding():
+        if self.client.is_server_responding():
             return RespondingState(self.client)
         return None
 
@@ -295,20 +300,20 @@ class CreateResponseState(StateOfClient):
 class RespondingState(StateOfClient):
 
     def on_init(self):
-        if not self.client.is_responding():
-            self.client.send_error_message("enter responding state but server is not responding")
+        if not self.client.is_server_responding():
+            self.client.respond_error_message("enter responding state but server is not responding")
         return
 
-    def status(self) -> str:
+    def state_name(self) -> str:
         return AppState.responding.value
 
     def operate(self, operator: str) -> Optional[Self]:
         if operator == OperatorName.cancel_responding.value:
-            if self.client.is_responding():
+            if self.client.is_server_responding():
                 self.client.cancel_responding()
             return self.default_mode()
         elif operator == OperatorName.listen.value:
-            if self.client.is_responding():
+            if self.client.is_server_responding():
                 self.client.cancel_responding()
             return ListeningState(self.client)
         else:
@@ -321,7 +326,7 @@ class RespondingState(StateOfClient):
         ]
 
     def tick_frame(self) -> Optional[Self]:
-        if self.client.is_responding():
+        if self.client.is_server_responding():
             return None
         else:
             return self.default_mode()
@@ -332,13 +337,12 @@ class IdleState(StateOfClient):
     def on_init(self):
         if self.client.is_listening():
             self.client.stop_listening()
-        elif self.client.is_responding():
+        elif self.client.is_server_responding():
             self.client.cancel_responding()
         # when idle, update local conversation.
-        self.client.update_local_conversation()
         return
 
-    def status(self) -> str:
+    def state_name(self) -> str:
         return AppState.idle.value
 
     def operate(self, operator: str) -> Optional[Self]:
@@ -352,5 +356,6 @@ class IdleState(StateOfClient):
         ]
 
     def tick_frame(self) -> Optional[Self]:
-        self.client.update_local_conversation()
+        if self.client.is_listening():
+            return ListeningState(self.client)
         return None

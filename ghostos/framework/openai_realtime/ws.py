@@ -2,19 +2,18 @@ from __future__ import annotations
 import time
 
 import socks
-from typing import Union
+from typing import Union, Optional
 
+import urllib3.util
 import websockets
 import json
 import logging
 from websockets.sync.client import connect as ws_connect, ClientConnection
-from threading import Thread
-from queue import Queue, Empty
-from collections import deque
-from pydantic import BaseModel, Field
-from ghostos.prototypes.realtime.abcd import ChanIn
 from ghostos.contracts.logger import LoggerItf, get_console_logger
 from ghostos.helpers import get_openai_key
+from pydantic import BaseModel, Field
+
+__all__ = ['OpenAIWSConnection', 'OpenAIWebsocketsConf']
 
 
 # 拆一个 base model 方便未来做成表单.
@@ -23,6 +22,7 @@ class OpenAIWebsocketsConf(BaseModel):
         default_factory=get_openai_key,
         description="The OpenAI key used to authenticate with WebSockets.",
     )
+    proxy: Optional[str] = Field(None, description="The proxy to connect to. only support socket v5 now")
     uri: str = Field("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01")
     close_check: float = Field(
         default=0.5,
@@ -42,19 +42,19 @@ class OpenAIWSConnection:
             self,
             conf: OpenAIWebsocketsConf,
             *,
-            sock=None,
             logger: LoggerItf = None,
     ):
         """
-
         :param conf:
-        :param sock:
         :param logger:
         """
         self._running = False
         self._closed = False
         self._logger = logger if logger else logging.getLogger()
         self._conf = conf
+        sock = None
+        if conf.proxy is not None:
+            sock = self._create_socket(conf.proxy, conf.uri)
         # 同步创建 connection.
         self._ws = ws_connect(
             uri=self._conf.uri,
@@ -64,6 +64,19 @@ class OpenAIWSConnection:
             },
             sock=sock,
         )
+
+    def _create_socket(self, proxy: str, uri: str):
+        parsed = urllib3.util.parse_url(proxy)
+        if parsed.scheme != "socks5":
+            raise NotImplementedError(f"Only socks5 is supported, got {parsed.scheme}")
+        host = parsed.hostname
+        port = parsed.port
+        s = socks.socksocket()
+        s.set_proxy(socks.SOCKS5, host, port)
+
+        uri_parsed = urllib3.util.parse_url(uri)
+        s.connect((uri_parsed.hostname, 443))
+        return s
 
     def client(self) -> ClientConnection:
         if self._closed:
@@ -129,17 +142,12 @@ if __name__ == "__main__":
     import os
     from ghostos.helpers import Timeleft
 
-    s = socks.socksocket()
-    s.set_proxy(socks.SOCKS5, "localhost", 1080)
-    s.connect(("api.openai.com", 443))
-    socket = s
-
     _token = os.environ["OPENAI_API_KEY"]
     print("+++++ token", _token)
     _conf = OpenAIWebsocketsConf(token=_token)
+    _conf.proxy = "socks5://127.0.0.1:1080"
     _c = connect(
         _conf,
-        sock=socket,
         logger=get_console_logger(debug=True),
     )
 
