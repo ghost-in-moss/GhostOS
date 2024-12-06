@@ -33,7 +33,7 @@ class Command(BaseModel):
     """
     Sphero Bolt Command that execute frame by frame in time.
     """
-    name: str = Field(description="aim of the command in simple words")
+    name: str = Field("", description="aim of the command in simple words")
     duration: float = Field(
         default=0.0,
         description="the command running duration in seconds. "
@@ -54,13 +54,12 @@ class Command(BaseModel):
         """
         # import types in case you need.
         from spherov2.types import Color, ToyType
-
-        # strip the spaces before each line.
-        code = "\n".join([line.strip() for line in self.code.splitlines()])
-
         # eval the python code defined in the command.
         # this is how the command work
-        eval(code)
+        for line in self.code.splitlines():
+            line = line.strip()
+            if line:
+                eval(line)
 
     @classmethod
     def once(cls, name: str, code: str, duration: float):
@@ -197,7 +196,7 @@ class SpheroBoltImpl(SpheroBolt):
                     else:
                         time.sleep(0.5)
                 except Exception as e:
-                    self._logger.error(f"SpheroBolt exception: {e}")
+                    self._logger.exception(e)
                     self._reset_command_at(
                         f"stopped because of error {e}",
                         successful=False,
@@ -255,7 +254,41 @@ exports = {
     SpheroEduAPI.__name__: reflect_class_with_methods(SpheroEduAPI),
 }
 
-if __name__ == "__main__":
+if __name__ == "__exports__":
     from ghostos.helpers import yaml_pretty_dump
 
     print(yaml_pretty_dump(exports))
+
+if __name__ == "__main__":
+    from ghostos.framework.eventbuses import MemEventBusImpl
+    from ghostos.contracts.logger import get_console_logger
+
+    _logger = get_console_logger()
+    _eventbus = MemEventBusImpl()
+    sb = SpheroBoltImpl(_logger, _eventbus, "task_id", False)
+    sb.bootstrap()
+
+    # class TestCommand(Command):
+    #     code: str = ""
+    #
+    #     def run_frame(self, api: SpheroEduAPI, passed: float, frame: int) -> None:
+    #         api.roll(0, 100, 1)
+    #         api.roll(90, 100, 1)
+    #         api.roll(180, 100, 1)
+    #         api.roll(270, 100, 1)
+    #         api.roll(0, 100, 1)
+    c = Command(
+        name="roll in a circle",
+        code="""
+api.set_speed(100)
+api.roll(0, 100, 1)
+api.roll(90, 100, 1)
+api.roll(180, 100, 1)
+api.roll(270, 100, 1)
+api.roll(360, 100, 1)
+api.set_speed(0)
+""",
+        duration=5
+    )
+
+    sb.run(c)

@@ -88,7 +88,6 @@ def main_chat():
                 )
             route.bind(st.session_state)
 
-        render_empty()
 
     # header
     st.title("Ghost")
@@ -357,8 +356,7 @@ def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):
         st.write(task.model_dump(exclude_defaults=True))
 
     st.subheader("Thread Info")
-    with st.container(border=True):
-        render_thread_messages(thread, max_turn=0)
+    render_thread_messages(thread, max_turn=0)
 
 
 def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
@@ -371,7 +369,6 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
         count += render_turn(turn, debug)
     if count == 0:
         st.info("No thread messages yet")
-        render_empty()
 
 
 def render_event_object(event: Event, debug: bool):
