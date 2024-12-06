@@ -6,6 +6,7 @@ except ImportError:
     exit("This script requires the spherov2 to be installed.")
 
 from spherov2 import scanner
+from spherov2.types import Color, ToyType
 
 from abc import ABC, abstractmethod
 from typing import Optional, List
@@ -111,7 +112,8 @@ class SpheroBoltImpl(SpheroBolt):
     def bootstrap(self):
         try:
             self._logger.info("SpheroBolt Bootstrap started")
-            self._main_thread = Thread(target=self._main)
+            _bolt = scanner.find_BOLT()
+            self._main_thread = Thread(target=self._main, args=(_bolt,))
             self._main_thread.start()
         except Exception as e:
             raise NotImplementedError("Could not find the Bolt device. " + str(e))
@@ -155,12 +157,11 @@ class SpheroBoltImpl(SpheroBolt):
         )
         self._eventbus.send_event(event, self._notify)
 
-    def _main(self) -> None:
+    def _main(self, bolt) -> None:
         while not self._destroyed:
-            _bolt = scanner.find_BOLT()
             self._logger.info("SpheroBolt toy connected")
             try:
-                self._run_toy(_bolt)
+                self._run_toy(bolt)
             except Exception as e:
                 self._logger.error(str(e))
                 self._logger.info("SpheroBolt toy reconnecting")
@@ -171,6 +172,7 @@ class SpheroBoltImpl(SpheroBolt):
             while not self._destroyed:
                 try:
                     if self._executing_command and self._timeleft:
+                        api.set_front_led(Color(0, 100, 0))
                         has_duration = self._executing_command.duration > 0
                         must_run = self._ticked_frames == 0
                         run_every = self._executing_command.run_every
@@ -186,6 +188,7 @@ class SpheroBoltImpl(SpheroBolt):
                             continue
                         else:
                             self._command_succeeded()
+                            api.set_front_led(Color(0, 0, 0))
                             continue
                     elif len(self._command_stack) > 0:
                         current: Command = self._command_stack.pop(0)

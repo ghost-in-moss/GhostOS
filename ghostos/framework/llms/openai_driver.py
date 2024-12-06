@@ -121,7 +121,7 @@ class OpenAIAdapter(LLMApi):
             raise AttributeError("empty chat!!")
         try:
             prompt.run_start = timestamp()
-            self._logger.info(f"start chat completion messages %s", messages)
+            self._logger.debug(f"start chat completion messages %s", messages)
             functions = prompt.get_openai_functions()
             tools = prompt.get_openai_tools()
             if self._model.use_tools:

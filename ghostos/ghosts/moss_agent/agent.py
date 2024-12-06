@@ -339,8 +339,12 @@ class MossAction(Action, PromptPipe):
     def run(self, session: Session, caller: Caller) -> Union[Operator, None]:
         # prepare arguments.
         arguments = caller.arguments
-        data = json.loads(arguments)
-        args = self.Argument(**data)
+        try:
+            data = json.loads(arguments)
+            args = self.Argument(**data)
+        except json.JSONDecodeError:
+            content = arguments
+            args = self.Argument(code=content)
         code = args.code.strip()
 
         # if code is not exists, inform the llm

@@ -3,7 +3,7 @@ import streamlit_react_jsonschema as srj
 import streamlit_paste_button as spb
 import time
 from PIL.Image import Image
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 from ghostos.prototypes.streamlitapp.pages.router import (
     GhostChatRoute, GhostTaskRoute,
 )
@@ -88,7 +88,6 @@ def main_chat():
                 )
             route.bind(st.session_state)
 
-
     # header
     st.title("Ghost")
     with st.container(border=True):
@@ -165,8 +164,17 @@ def main_task():
 
 
 def chatting(route: GhostChatRoute, conversation: Conversation):
+    if "rerun_chat" not in st.session_state:
+        st.session_state["rerun_chat"] = 0
+    st.session_state["rerun_chat"] += 1
+    for i in range(st.session_state["rerun_chat"]):
+        st.empty()
     chat_input = st.chat_input("message")
+    with st.container():
+        _chatting(route, conversation, chat_input)
 
+
+def _chatting(route: GhostChatRoute, conversation: Conversation, chat_input: Optional[str]):
     thread = conversation.get_thread()
     render_thread_messages(thread, max_turn=20)
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
@@ -369,6 +377,7 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
         count += render_turn(turn, debug)
     if count == 0:
         st.info("No thread messages yet")
+        st.empty()
 
 
 def render_event_object(event: Event, debug: bool):

@@ -110,7 +110,8 @@ def render_event(event: Event, debug: bool):
             render_messages(messages, debug, in_expander=True)
     else:
         messages = event.iter_message(show_instruction=True)
-        render_messages(messages, debug, in_expander=False)
+        with st.container():
+            render_messages(messages, debug, in_expander=False)
 
 
 def render_event_object(event: Event, debug: bool):

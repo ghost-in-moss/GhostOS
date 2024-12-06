@@ -126,7 +126,7 @@ class SessionImpl(Session[Ghost]):
     def alive(self) -> bool:
         if self._failed or self._destroyed:
             return False
-        return self._alive_check() and self._refresh_callback() and (self.upstream is None or self.upstream.alive())
+        return self._alive_check() and (self.upstream is None or self.upstream.alive())
 
     def _validate_alive(self):
         if not self.alive():
@@ -219,13 +219,27 @@ class SessionImpl(Session[Ghost]):
     def get_instructions(self) -> str:
         return self.ghost_driver.get_instructions(self)
 
-    def refresh(self) -> bool:
-        if self._failed or self._destroyed or not self.alive():
+    def refresh(self, throw: bool = False) -> bool:
+        if self._failed:
+            if throw:
+                raise RuntimeError(f"Session is already failed")
+            return False
+        if self._destroyed:
+            if throw:
+                raise RuntimeError(f"Session is already destroyed")
+            return False
+
+        if not self.alive():
+            if throw:
+                raise RuntimeError(f"Session is not alive")
             return False
         if self._refresh_callback():
             self._saved = False
             return True
-        return False
+        elif throw:
+            raise RuntimeError(f"session refresh callback failed")
+        else:
+            return False
 
     def _reset(self):
         self._fetched_task_briefs = {}
@@ -394,7 +408,7 @@ class SessionImpl(Session[Ghost]):
         self._firing_events = []
 
     def __enter__(self):
-        if not self.refresh():
+        if not self.refresh(throw=True):
             raise RuntimeError(f"Failed to start session")
         return self
 
