@@ -292,11 +292,13 @@ class Shell(ABC):
             context: Optional[G.ContextType] = None,
             username: str = "",
             user_role: str = Role.USER.value,
+            force: bool = False,
     ) -> Conversation[G]:
         """
         create a top-level conversation with a ghost.
         top-level means task depth is 0.
         So it never locked until the conversation is created.
+        if force is True, the conversation will seize the task locker anyway.
         """
         pass
 

@@ -1,4 +1,4 @@
-from ghostos.prototypes.spherogpt.bolt import Command, SpheroBolt, SpheroEduAPI, exports
+from ghostos.prototypes.spherogpt.bolt_command_control import Command, SpheroBolt, SpheroEduAPI, exports
 from ghostos.core.moss import Moss as Parent
 
 
@@ -28,7 +28,7 @@ def __moss_attr_prompts__():
 
 
 def __moss_agent_providers__(agent):
-    from ghostos.prototypes.spherogpt.bolt import SpheroBoltProvider
+    from ghostos.prototypes.spherogpt.bolt_command_control import SpheroBoltProvider
     return [SpheroBoltProvider()]
 
 

@@ -101,8 +101,10 @@ class ShellImpl(Shell):
             self,
             ghost: Ghost,
             context: Optional[Ghost.ContextType] = None,
+            *,
             username: str = "",
             user_role: str = Role.USER.value,
+            force: bool = False,
     ) -> Conversation:
         driver = get_ghost_driver(ghost)
         task_id = driver.make_task_id(self._scope)
@@ -116,7 +118,14 @@ class ShellImpl(Shell):
         task.meta = to_entity_meta(ghost)
         if context is not None:
             task.context = to_entity_meta(context)
-        conversation = self.sync_task(task, throw=True, is_background=False, username=username, user_role=user_role)
+        conversation = self.sync_task(
+            task,
+            throw=True,
+            is_background=False,
+            username=username,
+            user_role=user_role,
+            force=force,
+        )
         return conversation
 
     def sync_task(
@@ -127,8 +136,9 @@ class ShellImpl(Shell):
             is_background: bool,
             username: str = "",
             user_role: str = "",
+            force: bool = False,
     ) -> Optional[Conversation]:
-        locker = self._tasks.lock_task(task.task_id, self._conf.task_lock_overdue)
+        locker = self._tasks.lock_task(task.task_id, self._conf.task_lock_overdue, force)
         if locker.acquire():
             conf = ConversationConf(
                 max_session_steps=self._conf.max_session_steps,

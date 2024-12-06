@@ -17,12 +17,13 @@ class SimpleStorageLocker(TaskLocker):
         lock_id: str
         created: float
 
-    def __init__(self, storage: Storage, task_id: str, overdue: float):
+    def __init__(self, storage: Storage, task_id: str, overdue: float, force: bool = False):
         self.task_id = task_id
         self.storage = storage
         self.lock_id = uuid()
         self._acquired = False
         self._overdue = overdue
+        self._force = force
 
     def acquire(self) -> bool:
         filename = self.locker_file_name()
@@ -32,6 +33,10 @@ class SimpleStorageLocker(TaskLocker):
             lock = self.LockData(**data)
             now = time.time()
             if lock['lock_id'] == self.lock_id or now - float(lock["created"]) > self._overdue:
+                self.create_lock()
+                return True
+            if not self._acquired and self._force:
+                self.storage.remove(filename)
                 self.create_lock()
                 return True
             return False
@@ -114,8 +119,8 @@ class StorageGoTasksImpl(GoTasks):
         for task in self.get_tasks(task_ids, states):
             yield TaskBrief.from_task(task)
 
-    def lock_task(self, task_id: str, overdue: float = 30) -> TaskLocker:
-        return SimpleStorageLocker(self._storage, task_id, overdue)
+    def lock_task(self, task_id: str, overdue: float = 30, force: bool = False) -> TaskLocker:
+        return SimpleStorageLocker(self._storage, task_id, overdue, force)
 
 
 class StorageTasksImplProvider(Provider[GoTasks]):

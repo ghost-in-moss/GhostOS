@@ -146,7 +146,7 @@ def get_conversation(route: GhostChatRoute) -> Conversation:
     if not conversation or conversation.is_closed():
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
-        conversation = shell.sync(route.get_ghost(), route.get_context())
+        conversation = shell.sync(route.get_ghost(), route.get_context(), force=True)
         Singleton(conversation, Conversation).bind(st.session_state)
     return conversation
 

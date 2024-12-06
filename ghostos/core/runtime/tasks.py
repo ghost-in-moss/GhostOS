@@ -1,5 +1,3 @@
-import time
-from datetime import datetime
 from typing import Optional, List, ClassVar, Dict, Self
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -365,8 +363,13 @@ class GoTasks(ABC):
         pass
 
     @abstractmethod
-    def lock_task(self, task_id: str, overdue: float) -> TaskLocker:
+    def lock_task(self, task_id: str, overdue: float, force: bool = False) -> TaskLocker:
         """
+        get task locker
+        :param task_id:
+        :param overdue: when the locker is overdue
+        :param force: if force is True, will preempt the locker
+        :return:
         """
         pass
 
