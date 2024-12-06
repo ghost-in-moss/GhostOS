@@ -37,12 +37,12 @@ def render_messages(messages: Iterable[Message], debug: bool, in_expander: bool,
 
 
 def render_message_group(group: MessageGroup, debug: bool, in_expander: bool, prefix: str = ""):
+    role = group.msg_role
+    name = group.msg_name
+    stage = group.stage
+    caption = f"{role}: {name}" if name else role
+    render_role = "user" if role == Role.USER.value else "assistant"
     with st.container():
-        role = group.msg_role
-        name = group.msg_name
-        stage = group.stage
-        caption = f"{role}: {name}" if name else role
-        render_role = "user" if role == Role.USER.value else "assistant"
         if stage:
             with st.expander(stage, expanded=False):
                 with st.chat_message(render_role):

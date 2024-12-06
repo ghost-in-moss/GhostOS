@@ -36,7 +36,6 @@ class SimpleStorageLocker(TaskLocker):
                 self.create_lock()
                 return True
             if not self._acquired and self._force:
-                self.storage.remove(filename)
                 self.create_lock()
                 return True
             return False

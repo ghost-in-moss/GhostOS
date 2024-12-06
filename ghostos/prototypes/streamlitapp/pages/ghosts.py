@@ -169,12 +169,11 @@ def chatting(route: GhostChatRoute, conversation: Conversation):
     st.session_state["rerun_chat"] += 1
     for i in range(st.session_state["rerun_chat"]):
         st.empty()
+    _chatting(route, conversation)
+
+
+def _chatting(route: GhostChatRoute, conversation: Conversation):
     chat_input = st.chat_input("message")
-    with st.container():
-        _chatting(route, conversation, chat_input)
-
-
-def _chatting(route: GhostChatRoute, conversation: Conversation, chat_input: Optional[str]):
     thread = conversation.get_thread()
     render_thread_messages(thread, max_turn=20)
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
