@@ -60,6 +60,6 @@ def test_openai_parser_bad_case_1():
     with receiver:
         got = receiver.wait()
         assert len(got) == 2
-    assert got[0].msg_id != got[1].msg_id
+    assert got[0].get_unique_id() != got[1].get_unique_id()
     assert got[0].type == ""
     assert got[1].type == MessageType.FUNCTION_CALL

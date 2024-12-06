@@ -10,7 +10,7 @@ from ghostos.abcd import GhostDriver, Operator, Agent, Session, StateValue, Acti
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, PyContext, MossRuntime
 from ghostos.entity import ModelEntity
-from ghostos.core.messages import Message, Caller, Role
+from ghostos.core.messages import Caller, Role
 from ghostos.core.llms import (
     Prompt, PromptPipe, AssistantNamePipe, run_prompt_pipeline,
     LLMFunc,

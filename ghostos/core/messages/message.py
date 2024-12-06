@@ -182,6 +182,10 @@ class MessageType(str, enum.Enum):
 # 6. 所有的完整消息要么能被解析成模型的消息, 要么就应该忽略它. 避免展示加工不了的.
 # 7. 用一个 caller 兼容各种模型的 action caller.
 # 8. 流式传输的消息包, 应该有 首包 / 间包 / 尾包. 尾包是一个粘包后的完整包.
+# todo: openai 的 realtime api 协议比较整齐, 应该考虑用这个思路重构. 需要考虑几点:
+# todo: 1. 传输协议和存储协议分开.
+# todo: 2. 传输用弱类型.
+# todo: 3. delta 用于流式传输, content part 用来解决富文本, item 解决消息体.
 class Message(BaseModel):
     """ message protocol """
 
@@ -197,6 +201,8 @@ class Message(BaseModel):
         default=None,
         description="Message content that for client side. empty means it shall not be showed",
     )
+
+    # todo: remove memory, use stage instead.
     memory: Optional[str] = Field(
         default=None,
         description="Message memory that for llm, if none, means content is memory",
@@ -345,8 +351,10 @@ class Message(BaseModel):
         """
         # if the type is not same, it can't be patched
         pack_type = chunk.get_type()
-        if pack_type and self.type and pack_type != self.type:
-            return None
+        if pack_type and pack_type != self.type:
+            is_text = pack_type == MessageType.TEXT.value and not self.type
+            if not is_text:
+                return None
         # the chunk message shall have the same message id or empty one
         if chunk.msg_id and self.msg_id and chunk.msg_id != self.msg_id:
             return None
@@ -380,6 +388,9 @@ class Message(BaseModel):
         item = self.as_head(copy)
         item.seq = "complete"
         return item
+
+    def get_unique_id(self) -> str:
+        return f"{self.type}:{self.msg_id}"
 
     def update(self, pack: "Message") -> None:
         """
@@ -528,7 +539,7 @@ class CallerOutput(BaseModel, MessageClass):
     )
     content: Optional[str] = Field(description="caller output")
 
-    msg_id: Optional[str] = Field(None)
+    msg_id: str = Field("")
     payloads: Dict[str, Dict] = Field(default_factory=dict)
 
     def to_message(self) -> Message:
