@@ -26,10 +26,12 @@ class Workspace(ABC):
         pass
 
     @abstractmethod
+    def runtime_cache(self) -> FileStorage:
+        pass
+
+    @abstractmethod
     def configs(self) -> FileStorage:
         """
         config path that configs located
         """
         pass
-
-

@@ -1,4 +1,4 @@
-from typing import Union, TypedDict, Optional
+from typing import Union, TypedDict, Optional, Literal
 import inspect
 
 
@@ -69,3 +69,11 @@ def test_attr_typehint():
     assert typehints['car'] is str
     assert 'good' not in typehints
     assert 'loo' not in typehints
+
+
+def test_literal_int():
+    def foo(v: Literal[1, 2, 3]) -> int:
+        return v
+
+    a = foo(3)
+    assert a == 3

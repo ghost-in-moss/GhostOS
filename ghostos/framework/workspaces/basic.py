@@ -25,6 +25,9 @@ class BasicWorkspace(Workspace):
     def runtime(self) -> FileStorage:
         return self._runtime_storage
 
+    def runtime_cache(self) -> FileStorage:
+        return self._runtime_storage.sub_storage("cache")
+
     def assets(self) -> FileStorage:
         return self._assets_storage
 

@@ -376,6 +376,7 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
         count += render_turn(turn, debug)
     if count == 0:
         st.info("No thread messages yet")
+    else:
         st.empty()
 
 

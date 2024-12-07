@@ -383,6 +383,7 @@ class MossAction(Action, PromptPipe):
                 return None
 
         except Exception as e:
+            session.logger.exception(e)
             return self.fire_error(session, caller, f"error during executing moss code: {e}")
 
     @staticmethod
