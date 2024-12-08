@@ -617,7 +617,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def refresh(self) -> bool:
+    def refresh(self, throw: bool = False) -> bool:
         """
         refresh the session, update overdue time and task lock.
         """

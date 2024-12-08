@@ -155,18 +155,13 @@ def render_message_caller(callers: Iterable[Caller], debug: bool, in_expander: b
 def _render_message_caller(callers: Iterable[Caller]):
     from ghostos.ghosts.moss_agent import MossAction
     for caller in callers:
-        if caller.name == MossAction.Argument.name:
-            try:
-                data = json.loads(caller.arguments)
-                arguments = MossAction.Argument(**data)
-            except json.JSONDecodeError:
-                arguments = MossAction.Argument(code=caller.arguments)
-
+        if caller.name == MossAction.DEFAULT_NAME:
             st.caption(f"function call: {caller.name}")
-            st.code(arguments.code)
+            code = MossAction.unmarshal_arguments(caller.arguments)
+            st.code(code)
         else:
             st.caption(f"function call: {caller.name}")
-            st.json(caller.arguments)
+            st.write(caller.arguments)
 
 
 def render_message_item(msg: Message, debug: bool):

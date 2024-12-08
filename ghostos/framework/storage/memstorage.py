@@ -1,16 +1,19 @@
 from typing import Optional, Iterable, Dict
 
-from ghostos.contracts.storage import Storage
+from ghostos.contracts.storage import FileStorage
 from os.path import join
 
 __all__ = ["MemStorage"]
 
 
-class MemStorage(Storage):
+class MemStorage(FileStorage):
 
     def __init__(self, saved: Dict[str, bytes] = None, namespace: str = ""):
         self._namespace = namespace
         self._saved: Dict[str, bytes] = saved if saved else {}
+
+    def abspath(self) -> str:
+        return "/test/mem/"
 
     def sub_storage(self, relative_path: str) -> "Storage":
         namespace = self._namespace

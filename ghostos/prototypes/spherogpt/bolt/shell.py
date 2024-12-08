@@ -1,17 +1,20 @@
-from typing import Self, Optional, Callable, List, Literal, NamedTuple, Union
+from typing import Self, Optional, Callable, List, Literal, Tuple
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 
 
-class CurveRoll(BaseModel):
+class RollFunc(BaseModel):
     """
     to define a curve rolling frame by frame.
     """
-    desc: str = Field(description="describe this curve in very few words")
     heading: int = Field(0, description="Heading angle of the sphero bolt in degrees from -180 ~ 180", ge=-180, le=180)
     speed: int = Field(90, description="speed of the sphero bolt rolling", ge=0, le=255)
     duration: float = Field(1, description="duration of the rolling, if 0, means forever")
-    code: str = Field(description="the python code to change self heading, speed, stop at each frame of rolling.")
+    code: str = Field(
+        default="",
+        description="the python code to change self heading, speed, stop at each frame of rolling."
+                    "if empty, means run straight",
+    )
 
     def run_frame(self, passed: float) -> bool:
         """
@@ -26,9 +29,20 @@ class CurveRoll(BaseModel):
         # for example, a sin cure:
         # self.speed = 90
         # self.heading = int(math.sin(passed % 3) * 180)) % 360
-        for line in self.code.splitlines():
-            eval(line)
-        return self.duration == 0 or passed > self.duration
+        if self.code:
+            code = "\n".join([line.lstrip() for line in self.code.splitlines()])
+            exec(code)
+        return not (self.duration == 0 or passed < self.duration)
+
+
+class Straight(RollFunc):
+    heading: int = Field(0)
+    speed: int = Field(90)
+    duration: float = Field(1)
+    code: str = ""
+
+    def run_frame(self, passed: float) -> bool:
+        return not (self.duration == 0 or passed < self.duration)
 
 
 class Move(ABC):
@@ -59,7 +73,7 @@ class Move(ABC):
         pass
 
     @abstractmethod
-    def roll_curve(self, curve: CurveRoll) -> Self:
+    def roll_by_func(self, fn: RollFunc) -> Self:
         """
         run a curve rolling frame by frame until it reach the duration.
         """
@@ -120,16 +134,73 @@ class Move(ABC):
         pass
 
 
+class Animation(BaseModel):
+    """
+    to define an animation by sequence of frame.
+    the animation will be played on Sphero Bolt 8*8 led matrix.
+    """
+    fps: int = Field(1, description="frames per second", ge=1, le=30),
+    transition: bool = Field(True, description="if true, fade between frames"),
+    palette: List[str] = Field(
+        default_factory=lambda: ["000000", "ff0000", "00ff00", "0000ff", "ffffff"],
+        description="define color palette, the index is the color id. "
+                    "in default case: 0 is black, 1 is red, 2 is green, 3 is blue, 4 is white",
+    ),
+    loop: bool = Field(
+        default=True,
+        description="loop count for animation",
+    ),
+    duration: float = Field(default=0.0, description="duration of animation in seconds, clear matrix after animation"),
+    frames: List[List[List[int]]] = Field(
+        default_factory=lambda: [
+            [
+                # a simple smile
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 0, 0, 1, 1, 0],
+                [1, 0, 0, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 1, 0],
+                [0, 0, 1, 1, 1, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+            ]
+        ],
+        description="list of animation frame, every frame is a 8*8 matrix, each element is an palette color index",
+    )
+
+    def add_frame(self, frame: List[List[int]]) -> None:
+        self.frames.append(frame)
+
+    def add_frame_by_node(
+            self,
+            nodes: List[Tuple[int, int, int]],
+            background_color: int = 0,
+    ):
+        """
+        add a frame by declare several nodes only.
+        :param nodes: list of nodes. [(row, col, color), ...]
+        :param background_color: color index from palette
+        """
+        row = [background_color] * 8
+        frame = [row] * 8  # create an empty
+        for node in nodes:
+            row_idx, col_idx, color_idx = node
+            target_row = frame[row_idx]
+            target_row[col_idx] = color_idx
+        self.add_frame(frame)
+
+
 class Ball(ABC):
     """
     Sphero bolt body (which is a rolling ball) control interface.
     """
 
     @abstractmethod
-    def new_move(self, run_immediately: bool = False) -> Move:
+    def new_move(self, run_immediately: bool = False, animation: Optional[Animation] = None) -> Move:
         """
         create a new Move instance, to define a sequence of movements.
         :param run_immediately: run immediately if True, otherwise the move will not execute until run it.
+        :param animation: if animation is not none, it will execute while run it.
         """
         pass
 
@@ -146,7 +217,7 @@ class Ball(ABC):
     def save_move(self, name: str, description: str, move: Move) -> None:
         """
         define a move that you can call it anytime with the name only.
-        **remember** only save the important move
+        **remember** only save the important one
         :param name: move name
         :param description: describe the move, in less than 100 words
         :param move: the Move instance.
@@ -154,10 +225,9 @@ class Ball(ABC):
         pass
 
     @abstractmethod
-    def set_matrix_rotation(self, rotation: Literal[0, 90, 180, 360] = 0) -> None:
+    def delete_move(self, name: str) -> None:
         """
-        Rotates the LED matrix
-        :param rotation: 0 to 90, 180, 360 degrees
+        delete move by name
         """
         pass
 
@@ -167,6 +237,14 @@ class Ball(ABC):
         run a defined move
         :param name: the name of the move. make sure you have run save_move() before calling it.
         :raise: NotImplementedError if move is not defined
+        """
+        pass
+
+    @abstractmethod
+    def set_matrix_rotation(self, rotation: Literal[0, 90, 180, 360] = 0) -> None:
+        """
+        Rotates the LED matrix
+        :param rotation: 0 to 90, 180, 360 degrees
         """
         pass
 
@@ -191,85 +269,16 @@ class Ball(ABC):
         pass
 
 
-class Color(NamedTuple):
-    """
-    tuple of RGB colors
-    """
-    r: int
-    g: int
-    b: int
-
-
-class Animation(ABC):
-    """
-    to define an animation by sequence of frame.
-    the animation will be played on Sphero Bolt 8*8 led matrix.
-    """
-
-    @abstractmethod
-    def frame(self, matrix: List[List[Union[str, Color]]]) -> Self:
-        """
-        define a frame of the Bolt LED matrix.
-        :param matrix: 8 * 8 array, each element is either an RGB Color tuple or a defined palette color name.
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def scroll_matrix_text(self, text: str, color_name: str, fps: int, wait: bool) -> Self:
-        """
-        Scrolls text on the matrix, with specified color.
-        text max 25 characters
-        Fps 1 to 30
-        wait: if the programs wait until completion
-        """
-        pass
-
-    @abstractmethod
-    def set_matrix_character(self, character: str, color_name: str):
-        """
-        Sets a character on the matrix with color specified
-        """
-        pass
-
-
 class LedMatrix(ABC):
 
     @abstractmethod
-    def new_animation(self, fps: int = 1, transition: bool = True) -> Animation:
+    def play_animation(
+            self,
+            animation: Animation,
+    ) -> None:
         """
         create a new animation instance, to define a sequence of frames.
-        :param fps:
-        :param transition:
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def play_animation(self, animation: Animation, loop: int = 0) -> None:
-        pass
-
-    @abstractmethod
-    def save_expression(self, name: str, description: str, animation: Animation) -> None:
-        """
-        save animation as an expression, that you can play it when every you feel it.
-        """
-        pass
-
-    @abstractmethod
-    def play_expression(self, name: str, loop: int = 0) -> None:
-        """
-        :param name: name of the defined expression animation.
-        :param loop: how many times the animation is played. zero means play forever.
-        """
-        pass
-
-    @abstractmethod
-    def save_palette(self, color_name: str, color: Color) -> None:
-        """
-        save the color to the palette
-        :param color_name: such as 'red', 'green', 'blue'
-        :param color: RGB Color tuple
+        :param animation: the animation instance
         """
         pass
 
@@ -291,5 +300,60 @@ class LedMatrix(ABC):
     def clear_matrix(self):
         """
         clear the matrix.
+        """
+        pass
+
+    @abstractmethod
+    def scroll_matrix_text(self, text: str, color: str = 'ffffff', fps: int = 1, wait: bool = True) -> Self:
+        """
+        Scrolls text on the matrix, with specified color.
+        *this is a better way to print character on matrix*, with it, you do not need to write matrix frame yourself.
+
+        :param text: max 25 characters, only allow char byte in 0~256
+        :param color: color of the char
+        :param fps: 1 to 30
+        :param wait: if the programs wait until completion
+        """
+        pass
+
+    @abstractmethod
+    def set_matrix_character(self, character: str, color: str):
+        """
+        Sets a character on the matrix with color specified
+        :param character: output character
+        :param color: 6 digit hex RGB color, e.g. "ffffff", '00ff00'
+        """
+        pass
+
+
+class SpheroBoltGPT(ABC):
+    """
+    the sphero bolt robot api
+    """
+    body: Ball
+    """your ball body"""
+
+    face: LedMatrix
+    """your ball face"""
+
+    def save_expression(
+            self,
+            name: str,
+            desc: str,
+            builder: Callable[[Ball, LedMatrix], None]
+    ) -> None:
+        """
+        create a named expression that express your feelings and can call it by name later.
+        :param name: name of the expression
+        :param desc: desc of the expression
+        :param builder: define the movement and the animation combined that express your feeling.
+        :return:
+        """
+        pass
+
+    def run(self, expression_name: str) -> None:
+        """
+        run a defined expression
+        :param expression_name: saved expression name
         """
         pass

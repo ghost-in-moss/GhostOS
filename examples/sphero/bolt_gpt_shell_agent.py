@@ -1,7 +1,9 @@
 from ghostos.prototypes.spherogpt.bolt import (
-    CurveRoll,
+    RollFunc,
     Ball,
     Move,
+    LedMatrix,
+    Animation,
 )
 from ghostos.core.moss import Moss as Parent
 
@@ -9,6 +11,9 @@ from ghostos.core.moss import Moss as Parent
 class Moss(Parent):
     body: Ball
     """your sphero ball body"""
+
+    face: LedMatrix
+    """you 8*8 led matrix face"""
 
 
 def example_spin_the_bolt(moss: Moss):
@@ -26,8 +31,12 @@ def __moss_attr_prompts__():
 
 
 def __moss_agent_providers__(agent):
-    from ghostos.prototypes.spherogpt.bolt import SpheroBoltBallAPIProvider, ConvoLevelSpheroBoltRuntimeProvider
-    return [SpheroBoltBallAPIProvider(), ConvoLevelSpheroBoltRuntimeProvider()]
+    from ghostos.prototypes.spherogpt.bolt import (
+        SpheroBoltBallAPIProvider,
+        ConvoLevelSpheroBoltRuntimeProvider,
+        SpheroBoltLedMatrixProvider,
+    )
+    return [SpheroBoltBallAPIProvider(), ConvoLevelSpheroBoltRuntimeProvider(), SpheroBoltLedMatrixProvider()]
 
 
 __ghost__ = MossAgent(

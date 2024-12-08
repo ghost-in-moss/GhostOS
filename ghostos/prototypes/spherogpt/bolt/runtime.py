@@ -4,12 +4,15 @@ from ghostos.entity import ModelEntity
 from spherov2.sphero_edu import SpheroEduAPI
 from pydantic import BaseModel, Field
 
+from ghostos.prototypes.spherogpt.bolt.shell import Animation
+
 _STOPPED = bool
 
 
 class BoltBallMovement(BaseModel, ABC):
     desc: str = Field("", description="description of the command")
     stop_at_first: bool = Field(default=False, description="stop the world at first")
+    animation: Optional[Animation] = Field(default=None)
 
     @abstractmethod
     def start(self, api: SpheroEduAPI) -> None:
@@ -32,11 +35,14 @@ class BoltBallMovement(BaseModel, ABC):
         pass
 
 
-class BoltLedMatrixAnimation(ModelEntity, ABC):
+class BoltLedMatrixCommand(ModelEntity, ABC):
 
     @abstractmethod
     def start(self, api: SpheroEduAPI) -> None:
         pass
+
+    def end(self, api: SpheroEduAPI, passed: float) -> bool:
+        return True
 
 
 class SpheroBoltRuntime(ABC):
@@ -58,7 +64,7 @@ class SpheroBoltRuntime(ABC):
         pass
 
     @abstractmethod
-    def add_animation(self, command: BoltLedMatrixAnimation):
+    def add_matrix_command(self, command: BoltLedMatrixCommand):
         pass
 
     @abstractmethod

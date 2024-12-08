@@ -1,9 +1,6 @@
-from typing import Optional, Callable, Type, Self, ClassVar
-from .runtime import SpheroBoltRuntime, BoltLedMatrixAnimation, BoltBallMovement
+from typing import Optional, Callable, Type
 import time
 
-from spherov2 import scanner
-from spherov2.sphero_edu import SpheroEduAPI, EventType as SpheroEventType
 from ghostos.contracts.logger import LoggerItf
 from ghostos.core.messages import MessageType
 from ghostos.core.runtime import EventBus, Event, EventTypes as GhostOSEventTypes
@@ -12,6 +9,9 @@ from ghostos.abcd import Conversation
 from ghostos.helpers import Timeleft
 from threading import Thread, Event
 from collections import deque
+from .sphero_edu_api_patch import SpheroEduAPI, Color, SpheroEventType, scanner
+from .runtime import SpheroBoltRuntime, BoltLedMatrixCommand, BoltBallMovement
+from .led_matrix_impl import PlayAnimation
 
 __all__ = ['SpheroBoltRuntimeImpl', 'ConvoLevelSpheroBoltRuntimeProvider']
 
@@ -36,10 +36,24 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
         self._error: Optional[str] = None
         self._main_thread = Thread(target=self._main_thread)
         self._move_queue = deque()
+        self._animation_queue = deque()
+        self._current_animation: Optional[BoltLedMatrixCommand] = None
+        self._current_animation_timeleft: Optional[Timeleft] = None
+        self._clear_matrix_timeleft: Optional[Timeleft] = None
         self._current_movement: Optional[BoltBallMovement] = None
         self._current_movement_timeleft: Optional[Timeleft] = None
         self._charging_callback: str = "feeling at charging"
+        self._breathing: bool = False
+        self._moving: bool = False
         self._off_charging_callback: str = "feeling stop charging"
+
+    def _reset_all_state(self):
+        self._current_animation = None
+        self._current_animation_timeleft = None
+        self._current_movement = None
+        self._current_movement_timeleft = None
+        self._animation_queue.clear()
+        self._move_queue.clear()
 
     def bootstrap(self):
         if self._bootstrapped:
@@ -56,7 +70,15 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
                 _bolt = scanner.find_BOLT()
                 self._logger.info("SpheroBolt Bootstrap connected")
                 connected_error = 0
-                self._run_bolt_loop(_bolt)
+                # run the loop until errors.
+                try:
+                    self._run_bolt_loop(_bolt)
+                except Exception as exc:
+                    self._logger.exception(exc)
+                    self._send_event(GhostOSEventTypes.ERROR, "error occur during runtime: %s" % str(exc))
+                    self._reset_all_state()
+                    continue
+
             except Exception as e:
                 self._logger.exception(e)
                 self._logger.info("SpheroBolt Bootstrap failed")
@@ -67,22 +89,58 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
                     self._send_event(GhostOSEventTypes.ERROR, "sphero bolt failed to connected")
                     raise RuntimeError(self._error)
 
+    def _strobe(self, api: SpheroEduAPI, passed: float):
+        if self._moving:
+            return
+        if int(passed) % 6 < 3:
+            if not self._breathing:
+                api.set_front_led(Color(0, 25, 0))
+                api.set_back_led(Color(0, 25, 0))
+                self._breathing = True
+        elif self._breathing:
+            api.set_front_led(Color(0, 0, 0))
+            api.set_back_led(Color(0, 0, 0))
+            self._breathing = False
+
+    def _set_current_animation(self, animation: BoltLedMatrixCommand, api: SpheroEduAPI):
+        animation.start(api)
+        self._current_animation = animation
+        self._current_animation_timeleft = Timeleft(0)
+
+    def _check_end_of_animation(self, api: SpheroEduAPI):
+        if self._current_animation is None or self._current_animation_timeleft is None:
+            return
+        if self._current_animation.end(api, self._current_animation_timeleft.passed()):
+            self._current_animation = None
+            self._current_animation_timeleft = None
+
     def _run_bolt_loop(self, _bolt):
+        start_at = Timeleft(0)
         with SpheroEduAPI(_bolt) as api:
             self._init_sphero_edu_api(api)
             while not self._stopped.is_set():
+                if len(self._animation_queue) > 0:
+                    self._current_animation = None
+                    self._current_movement_timeleft = None
+                    animation_command: Optional[BoltLedMatrixCommand] = self._animation_queue.popleft()
+                    # animation command execute immediately
+                    self._set_current_animation(animation_command, api)
+
+                # trigger end of animation.
+                self._check_end_of_animation(api)
+
                 if self._current_movement is None:
-                    movement = self._start_new_movement(api)
+                    movement = self._get_new_movement()
                     if movement is not None:
-                        self._set_current_movement(movement)
+                        self._set_current_movement(movement, api)
                     else:
-                        # wait for new command.
+                        self._strobe(api, start_at.passed())
                         time.sleep(0.5)
                     continue
-
-                stopped = self._current_movement.run_frame(api, self._current_movement_timeleft.passed())
-                if stopped:
-                    self._clear_current_movement()
+                else:
+                    stopped = self._current_movement.run_frame(api, self._current_movement_timeleft.passed())
+                    if stopped:
+                        self._clear_current_movement(api)
 
     def _init_sphero_edu_api(self, api):
         events = [
@@ -97,10 +155,10 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
     def _get_listener(self, event_type: SpheroEventType, api: SpheroEduAPI) -> Callable[[], None]:
         def callback():
             if self._current_movement is not None:
-                self._clear_current_movement(event_type.name)
+                self._clear_current_movement(api, event_type.name)
                 move = self._current_movement.on_event(event_type.name)
                 if move is not None:
-                    self._set_current_movement(move)
+                    self._set_current_movement(move, api)
                 else:
                     self._default_on_event(event_type, api)
 
@@ -115,14 +173,30 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
             self._send_event(GhostOSEventTypes.NOTIFY, self._off_charging_callback)
         return
 
-    def _set_current_movement(self, movement: BoltBallMovement):
+    def _set_current_movement(self, movement: BoltBallMovement, api: SpheroEduAPI):
         if movement is None:
             return
+
         self._current_movement = movement
         self._current_movement_timeleft = Timeleft(0)
+        self._moving = True
+        # always clear matrix at first.
+        if movement.animation is not None:
+            api.clear_matrix()
+            pa = PlayAnimation(animation=movement.animation)
+            self.add_matrix_command(pa)
 
-    def _clear_current_movement(self, interrupt: Optional[str] = None):
+        api.set_front_led(Color(0, 200, 0))
+        self._logger.debug("start new movement %r", movement)
+        movement.start(api)
+
+    def _clear_current_movement(self, api: SpheroEduAPI, interrupt: Optional[str] = None):
         if self._current_movement is not None and self._current_movement_timeleft is not None:
+            api.stop_roll()
+            api.set_front_led(Color(0, 0, 0))
+            self._moving = False
+            if self._current_movement.animation is not None:
+                api.clear_matrix()
             if not interrupt:
                 log = self._current_movement.succeed_log(self._current_movement_timeleft.passed())
                 if log:
@@ -135,12 +209,10 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
         self._current_movement = None
         self._current_movement_timeleft = None
 
-    def _start_new_movement(self, api: SpheroEduAPI) -> Optional[BoltBallMovement]:
+    def _get_new_movement(self) -> Optional[BoltBallMovement]:
         if len(self._move_queue) == 0:
             return None
         movement: BoltBallMovement = self._move_queue.popleft()
-        self._logger.debug("start new movement %r", movement)
-        movement.start(api)
         return movement
 
     def _send_event(self, event_type: GhostOSEventTypes, content: str):
@@ -158,8 +230,8 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
         else:
             self._move_queue.append(move)
 
-    def add_animation(self, command: BoltLedMatrixAnimation):
-        pass
+    def add_matrix_command(self, command: BoltLedMatrixCommand):
+        self._animation_queue.append(command)
 
     def close(self):
         if self._closed:

@@ -9,16 +9,17 @@ from ghostos.helpers import yaml_pretty_dump
 from ghostos.prompter import Prompter
 from ghostos.container import Container, Provider
 from pydantic import BaseModel, Field
-from .shell import Ball, Move, CurveRoll
-from .runtime import SpheroBoltRuntime, BoltBallMovement
-from .movements import (
+from ghostos.prototypes.spherogpt.bolt.shell import Ball, Move, RollFunc, Animation
+from ghostos.prototypes.spherogpt.bolt.runtime import SpheroBoltRuntime, BoltBallMovement
+from ghostos.prototypes.spherogpt.bolt.led_matrix_impl import PauseAnimation, PlayAnimation
+from ghostos.prototypes.spherogpt.bolt.movements import (
     GroupMovement,
     RunAPIMovement,
     CurveRollMovement,
 )
 import yaml
 
-__all__ = ['SpheroBoltBallAPIProvider', 'BallApi']
+__all__ = ['SpheroBoltBallAPIProvider', 'BallImpl']
 
 
 class SavedMove(BaseModel):
@@ -44,6 +45,12 @@ class MovesMemoryCache(BaseModel):
     def add_saved(self, saved: SavedMove):
         self.moves[saved.name] = saved
 
+    def get_move(self, name: str) -> Optional[BoltBallMovement]:
+        got = self.moves.get(name, None)
+        if got is None:
+            return None
+        return from_entity_model_meta(got.move_meta)
+
     @staticmethod
     def filename(unique_id: str) -> str:
         return f"{unique_id}_sphero_moves.yml"
@@ -58,20 +65,22 @@ class MoveAdapter(Move):
             self,
             runtime: SpheroBoltRuntime,
             run_immediately: bool,
+            animation: Optional[Animation] = None,
             event_desc: Optional[str] = None,
     ):
         self._runtime = runtime
         self._run_immediately = run_immediately
+        self._animation = animation
         self._move_added: int = 0
         self.buffer: GroupMovement = GroupMovement(desc="", event_desc=event_desc)
 
     def _add_move(self, movement: BoltBallMovement):
         if self._run_immediately:
             movement.stop_at_first = self._move_added == 0
-            self._runtime.add_movement(movement)
-        else:
+            movement.animation = self._animation
             self._runtime.add_movement(movement)
 
+        self.buffer.add_child(movement)
         self._move_added += 1
 
     def roll(self, heading: int, speed: int, duration: float) -> Self:
@@ -101,10 +110,10 @@ class MoveAdapter(Move):
         ))
         return self
 
-    def roll_curve(self, curve: CurveRoll) -> Self:
+    def roll_by_func(self, fn: RollFunc) -> Self:
         self._add_move(CurveRollMovement(
             desc="roll_curve",
-            curve=curve,
+            curve=fn,
         ))
         return self
 
@@ -162,7 +171,7 @@ class MoveAdapter(Move):
         self._add_event_callback("on_landing", log, callback)
 
 
-class BallApi(Ball, Prompter):
+class BallImpl(Ball, Prompter):
 
     def __init__(
             self,
@@ -183,8 +192,8 @@ class BallApi(Ball, Prompter):
         content = self._memory_cache.to_content()
         self._memory_cache_storage.put(self._memory_cache_file, content.encode())
 
-    def new_move(self, run_immediately: bool = False) -> Move:
-        return MoveAdapter(self._runtime, run_immediately)
+    def new_move(self, run_immediately: bool = False, animation: Optional[Animation] = None) -> Move:
+        return MoveAdapter(self._runtime, run_immediately, animation=animation)
 
     def run(self, move: Move, stop_at_first: bool = True) -> None:
         if not isinstance(move, MoveAdapter):
@@ -199,6 +208,11 @@ class BallApi(Ball, Prompter):
         saved_move = SavedMove.new(name=name, description=description, move=move.buffer)
         self._memory_cache.add_saved(saved_move)
         self._save_cache()
+
+    def delete_move(self, name: str) -> None:
+        if name in self._memory_cache.moves:
+            del self._memory_cache.moves[name]
+            self._save_cache()
 
     def set_matrix_rotation(self, rotation: Literal[0, 90, 180, 270] = 0) -> None:
         rotations = {
@@ -215,10 +229,11 @@ class BallApi(Ball, Prompter):
         self._runtime.add_movement(move)
 
     def run_move(self, name: str) -> None:
-        got = self._memory_cache.moves.get(name, None)
+        got = self._memory_cache.get_move(name)
         if got is None:
             raise NotImplementedError(f"move {name} not implemented")
-        self.run(got, stop_at_first=True)
+        got.stop_at_first = True
+        self._runtime.add_movement(got)
 
     def on_charging(self, log: str = "feeling at charging") -> None:
         self._runtime.set_charging_callback(log)
@@ -233,7 +248,12 @@ class BallApi(Ball, Prompter):
         for move in self._memory_cache.moves.values():
             line = f"- `{move.name}`: {move.description}"
             lines.append(line)
-        return "saved moves, from name to description:\n".join(lines) + "\n\nyou can run the saved move by it's name"
+        saved_content = "\n".join(lines)
+        return f"""
+your saved moves, from name to description are below:
+{saved_content}
+you can run the saved move by it's name
+"""
 
     def get_title(self) -> str:
         return "SpheroBolt Ball saved moves"
@@ -242,9 +262,9 @@ class BallApi(Ball, Prompter):
 class SpheroBoltBallAPIProvider(Provider[Ball]):
 
     def singleton(self) -> bool:
-        return True
+        return False
 
     def factory(self, con: Container) -> Optional[Ball]:
         runtime = con.force_fetch(SpheroBoltRuntime)
         workspace = con.force_fetch(Workspace)
-        return BallApi(runtime, workspace.runtime_cache())
+        return BallImpl(runtime, workspace.runtime_cache())

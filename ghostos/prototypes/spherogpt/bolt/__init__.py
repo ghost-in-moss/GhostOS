@@ -1,11 +1,11 @@
-from ghostos.prototypes.spherogpt.bolt.shell_impl import SpheroBoltBallAPIProvider
+from ghostos.prototypes.spherogpt.bolt.ball_impl import SpheroBoltBallAPIProvider
 from ghostos.prototypes.spherogpt.bolt.runtime_impl import ConvoLevelSpheroBoltRuntimeProvider
+from ghostos.prototypes.spherogpt.bolt.led_matrix_impl import SpheroBoltLedMatrixProvider
 
 from ghostos.prototypes.spherogpt.bolt.shell import (
-    CurveRoll,
+    RollFunc,
     Ball,
     Move,
     LedMatrix,
-    Color,
     Animation,
 )

@@ -309,17 +309,19 @@ class SessionPyContext(PyContext, StateValue):
 
 
 class MossAction(Action, PromptPipe):
+    DEFAULT_NAME: ClassVar[str] = "moss"
+
     class Argument(BaseModel):
-        name: ClassVar[str] = "moss"
         code: str = Field(
             description="generated moss code",
         )
 
-    def __init__(self, runtime: MossRuntime):
+    def __init__(self, runtime: MossRuntime, name: str = DEFAULT_NAME):
         self.runtime: MossRuntime = runtime
+        self._name = name
 
     def name(self) -> str:
-        return self.Argument.name
+        return self._name
 
     def as_function(self) -> Optional[LLMFunc]:
         parameters = self.Argument.model_json_schema()
@@ -336,16 +338,24 @@ class MossAction(Action, PromptPipe):
             prompt.functions.append(llm_func)
         return prompt
 
+    @classmethod
+    def unmarshal_arguments(cls, arguments: str) -> str:
+        try:
+            data = json.loads(arguments)
+            args = cls.Argument(**data)
+        except json.JSONDecodeError:
+            content = arguments
+            args = cls.Argument(code=content)
+        code = args.code.strip()
+        return code.strip()
+
     def run(self, session: Session, caller: Caller) -> Union[Operator, None]:
         # prepare arguments.
         arguments = caller.arguments
-        try:
-            data = json.loads(arguments)
-            args = self.Argument(**data)
-        except json.JSONDecodeError:
-            content = arguments
-            args = self.Argument(code=content)
-        code = args.code.strip()
+        code = self.unmarshal_arguments(arguments)
+        if code.startswith("{") and code.endswith("}"):
+            # unmarshal again.
+            code = self.unmarshal_arguments(code)
 
         # if code is not exists, inform the llm
         if not code:

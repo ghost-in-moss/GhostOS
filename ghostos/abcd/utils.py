@@ -77,7 +77,7 @@ def run_session_event(session: Session, event: Event, max_step: int) -> None:
         step += 1
         if step > max_step:
             raise RuntimeError(f"Max step {max_step} reached")
-        if not session.refresh():
+        if not session.refresh(True):
             raise RuntimeError("Session refresh failed")
         session.logger.debug("start session op %s", repr(op))
         next_op = op.run(session)

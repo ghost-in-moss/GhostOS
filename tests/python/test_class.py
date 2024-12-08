@@ -276,3 +276,22 @@ def test_class_var_list():
     assert b.bar == ["a", "b"]
     # be updated
     assert Bar.bar == ["a", "b"]
+
+
+def test_class_eval():
+    class Foo:
+        def __init__(self, code: str):
+            self.code = code
+            self.foo = 1
+
+        def run(self):
+            code = "\n".join([line.lstrip() for line in self.code.splitlines()])
+            exec(code)
+
+    f = Foo(
+        "print(self)\n"
+        "print(self.foo)\n"
+        "self.foo = 2\n"
+    )
+    f.run()
+    assert f.foo == 2

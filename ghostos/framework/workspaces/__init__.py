@@ -1,1 +1,1 @@
-from ghostos.framework.workspaces.basic import BasicWorkspaceProvider
+from ghostos.framework.workspaces.basic import BasicWorkspaceProvider, BasicWorkspace
