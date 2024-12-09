@@ -1,6 +1,6 @@
 from ghostos.prototypes.spherogpt.bolt.runtime import SpheroBoltRuntime
 from ghostos.prototypes.spherogpt.bolt.runtime_impl import SpheroBoltRuntimeImpl
-from ghostos.prototypes.spherogpt.bolt.shell import Ball, RollFunc
+from ghostos.prototypes.spherogpt.bolt.bolt_shell import Ball, RollFunc
 from ghostos.prototypes.spherogpt.bolt.ball_impl import SpheroBoltBallAPIProvider
 from ghostos.framework.eventbuses import MemEventBusImpl, EventBus
 from ghostos.framework.workspaces import BasicWorkspace

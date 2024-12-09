@@ -79,6 +79,9 @@ class Moss(ABC):
 
     T = TypeVar('T')
 
+    executing_code: Optional[str]
+    """the code that execute the moss instance."""
+
     @abstractmethod
     def fetch(self, abstract: Type[T]) -> Optional[T]:
         """
@@ -465,6 +468,7 @@ class MossRuntime(ABC):
         :exception: any exception will be raised, handle them outside
         """
         from ghostos.core.moss.lifecycle import __moss_exec__
+        self.update_executing_code(code)
         if self.__executing__:
             raise RuntimeError(f"Moss already executing")
         try:
@@ -490,6 +494,11 @@ class MossRuntime(ABC):
         finally:
             self.__executing__ = False
 
+    @abstractmethod
+    def update_executing_code(self, code: Optional[str] = None) -> None:
+        pass
+
+    @abstractmethod
     def close(self) -> None:
         """
         方便垃圾回收.

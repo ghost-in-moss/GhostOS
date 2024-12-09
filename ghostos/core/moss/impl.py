@@ -184,6 +184,7 @@ def new_moss_stub(cls: Type[Moss], container: Container, pycontext: PyContext, p
     # cls 必须不包含参数.
 
     stub = MossStub(pycontext, container, pprint)
+    stub.executing_code = None
     # assert stub.instance_count > 0
     for attr_name in dir(cls):
         if not attr_name.startswith("_") and not hasattr(stub, attr_name):
@@ -369,6 +370,12 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     results.append(line)
 
         return "\n".join(results)
+
+    def update_executing_code(self, code: Optional[str] = None) -> None:
+        if code is None:
+            return
+        self._pycontext.execute_code = code
+        self._moss.executing_code = code
 
     def close(self) -> None:
         if self._closed:

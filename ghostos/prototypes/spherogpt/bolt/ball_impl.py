@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Callable, Self, Dict
+from typing import Literal, Optional, Callable, Self, Dict, Tuple
 
 from spherov2.commands.io import FrameRotationOptions
 
@@ -9,9 +9,8 @@ from ghostos.helpers import yaml_pretty_dump
 from ghostos.prompter import Prompter
 from ghostos.container import Container, Provider
 from pydantic import BaseModel, Field
-from ghostos.prototypes.spherogpt.bolt.shell import Ball, Move, RollFunc, Animation
+from ghostos.prototypes.spherogpt.bolt.bolt_shell import Ball, Move, RollFunc, Animation
 from ghostos.prototypes.spherogpt.bolt.runtime import SpheroBoltRuntime, BoltBallMovement
-from ghostos.prototypes.spherogpt.bolt.led_matrix_impl import PauseAnimation, PlayAnimation
 from ghostos.prototypes.spherogpt.bolt.movements import (
     GroupMovement,
     RunAPIMovement,
@@ -26,6 +25,7 @@ class SavedMove(BaseModel):
     name: str = Field(description="move name")
     description: str = Field(description="move description")
     move_meta: ModelEntityMeta = Field(description="move meta")
+    generated_code: str = Field(default="", description="the code creating this move")
 
     @classmethod
     def new(cls, name: str, description: str, move: BoltBallMovement) -> Self:
@@ -67,17 +67,20 @@ class MoveAdapter(Move):
             run_immediately: bool,
             animation: Optional[Animation] = None,
             event_desc: Optional[str] = None,
+            buffer: Optional[GroupMovement] = None,
     ):
         self._runtime = runtime
         self._run_immediately = run_immediately
-        self._animation = animation
         self._move_added: int = 0
-        self.buffer: GroupMovement = GroupMovement(desc="", event_desc=event_desc)
+        if buffer is None:
+            buffer = GroupMovement(desc="", event_desc=event_desc, animation=animation)
+        if animation is not None:
+            buffer.animation = animation
+        self.buffer: GroupMovement = buffer
 
     def _add_move(self, movement: BoltBallMovement):
         if self._run_immediately:
             movement.stop_at_first = self._move_added == 0
-            movement.animation = self._animation
             self._runtime.add_movement(movement)
 
         self.buffer.add_child(movement)
@@ -177,8 +180,10 @@ class BallImpl(Ball, Prompter):
             self,
             runtime: SpheroBoltRuntime,
             memory_cache: FileStorage,
+            executing_code: Optional[str] = None,
     ):
         self._runtime = runtime
+        self._executing_code = executing_code
         self._memory_cache_storage = memory_cache
         self._memory_cache_file = MovesMemoryCache.filename(self._runtime.get_task_id())
         if self._memory_cache_storage.exists(self._memory_cache_file):
@@ -192,13 +197,19 @@ class BallImpl(Ball, Prompter):
         content = self._memory_cache.to_content()
         self._memory_cache_storage.put(self._memory_cache_file, content.encode())
 
-    def new_move(self, run_immediately: bool = False, animation: Optional[Animation] = None) -> Move:
+    def new_move(
+            self,
+            animation: Optional[Animation] = None,
+            run_immediately: bool = False,
+    ) -> Move:
         return MoveAdapter(self._runtime, run_immediately, animation=animation)
 
     def run(self, move: Move, stop_at_first: bool = True) -> None:
         if not isinstance(move, MoveAdapter):
             raise TypeError(f"move instance must be created by this api new_move()")
         movement = move.buffer
+        if movement.animation is not None:
+            self._runtime.add_animation(movement.animation)
         movement.stop_at_first = stop_at_first
         self._runtime.add_movement(movement)
 
@@ -206,6 +217,7 @@ class BallImpl(Ball, Prompter):
         if not isinstance(move, MoveAdapter):
             raise TypeError(f"move instance must be created by this api new_move()")
         saved_move = SavedMove.new(name=name, description=description, move=move.buffer)
+        saved_move.generated_code = self._executing_code or ""
         self._memory_cache.add_saved(saved_move)
         self._save_cache()
 
@@ -235,6 +247,18 @@ class BallImpl(Ball, Prompter):
         got.stop_at_first = True
         self._runtime.add_movement(got)
 
+    def read_move(self, name: str) -> Tuple[Move, str]:
+        saved = self._memory_cache.moves.get(name, None)
+        if saved is None:
+            raise NotImplementedError(f"move {name} not implemented")
+        got = self._memory_cache.get_move(name)
+        move = MoveAdapter(
+            self._runtime,
+            run_immediately=False,
+            buffer=got,
+        )
+        return move, saved.generated_code
+
     def on_charging(self, log: str = "feeling at charging") -> None:
         self._runtime.set_charging_callback(log)
 
@@ -252,7 +276,8 @@ class BallImpl(Ball, Prompter):
         return f"""
 your saved moves, from name to description are below:
 {saved_content}
-you can run the saved move by it's name
+
+you can run the saved move by it's name.
 """
 
     def get_title(self) -> str:

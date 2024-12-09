@@ -196,11 +196,15 @@ class Ball(ABC):
     """
 
     @abstractmethod
-    def new_move(self, run_immediately: bool = False, animation: Optional[Animation] = None) -> Move:
+    def new_move(
+            self,
+            animation: Optional[Animation] = None,
+            run_immediately: bool = False
+    ) -> Move:
         """
         create a new Move instance, to define a sequence of movements.
         :param run_immediately: run immediately if True, otherwise the move will not execute until run it.
-        :param animation: if animation is not none, it will execute while run it.
+        :param animation: if animation is not none, it will be played while run the move.
         """
         pass
 
@@ -221,6 +225,16 @@ class Ball(ABC):
         :param name: move name
         :param description: describe the move, in less than 100 words
         :param move: the Move instance.
+        """
+        pass
+
+    @abstractmethod
+    def read_move(self, name: str) -> Tuple[Move, str]:
+        """
+        read a saved move with the code that generated it.
+        print the code to see details.
+        :param name: move name
+        :return: (move instance, the code that generated it.)
         """
         pass
 
@@ -270,17 +284,6 @@ class Ball(ABC):
 
 
 class LedMatrix(ABC):
-
-    @abstractmethod
-    def play_animation(
-            self,
-            animation: Animation,
-    ) -> None:
-        """
-        create a new animation instance, to define a sequence of frames.
-        :param animation: the animation instance
-        """
-        pass
 
     @abstractmethod
     def pause_animation(self) -> None:

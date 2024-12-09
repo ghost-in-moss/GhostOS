@@ -4,7 +4,7 @@ from ghostos.entity import ModelEntityMeta, to_entity_model_meta, from_entity_mo
 
 from .runtime import BoltBallMovement
 from .sphero_edu_api_patch import SpheroEduAPI
-from .shell import RollFunc, Animation
+from .bolt_shell import RollFunc, Animation
 
 
 class RunAPIMovement(BoltBallMovement):
@@ -46,6 +46,7 @@ class CurveRollMovement(BoltBallMovement):
 
 
 class GroupMovement(BoltBallMovement):
+    animation: Optional[Animation] = Field(None)
     children: List[ModelEntityMeta] = Field(default_factory=list)
     event_desc: Optional[str] = Field(default=None)
     event_moves: Dict[str, ModelEntityMeta] = Field(default_factory=dict)

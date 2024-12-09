@@ -9,6 +9,8 @@ from ghostos.abcd import Conversation
 from ghostos.helpers import Timeleft
 from threading import Thread, Event
 from collections import deque
+
+from .bolt_shell import Animation
 from .sphero_edu_api_patch import SpheroEduAPI, Color, SpheroEventType, scanner
 from .runtime import SpheroBoltRuntime, BoltLedMatrixCommand, BoltBallMovement
 from .led_matrix_impl import PlayAnimation
@@ -121,7 +123,7 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
             while not self._stopped.is_set():
                 if len(self._animation_queue) > 0:
                     self._current_animation = None
-                    self._current_movement_timeleft = None
+                    self._current_animation_timeleft = None
                     animation_command: Optional[BoltLedMatrixCommand] = self._animation_queue.popleft()
                     # animation command execute immediately
                     self._set_current_animation(animation_command, api)
@@ -138,7 +140,8 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
                         time.sleep(0.5)
                     continue
                 else:
-                    stopped = self._current_movement.run_frame(api, self._current_movement_timeleft.passed())
+                    passed = self._current_movement_timeleft.passed()
+                    stopped = self._current_movement.run_frame(api, passed)
                     if stopped:
                         self._clear_current_movement(api)
 
@@ -229,6 +232,10 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
             self._move_queue.append(move)
         else:
             self._move_queue.append(move)
+
+    def add_animation(self, animation: Animation) -> None:
+        pa = PlayAnimation(animation=animation)
+        self.add_matrix_command(pa)
 
     def add_matrix_command(self, command: BoltLedMatrixCommand):
         self._animation_queue.append(command)

@@ -2,7 +2,7 @@ from typing import List, Dict, Self, Optional, AnyStr
 
 from .sphero_edu_api_patch import SpheroEduAPI
 
-from ghostos.prototypes.spherogpt.bolt.shell import LedMatrix, Animation
+from ghostos.prototypes.spherogpt.bolt.bolt_shell import LedMatrix, Animation
 from ghostos.prototypes.spherogpt.bolt.runtime import BoltLedMatrixCommand, SpheroBoltRuntime
 from ghostos.prototypes.spherogpt.bolt.sphero_edu_api_patch import Color
 from ghostos.container import Container, Provider
@@ -67,7 +67,7 @@ class PlayAnimation(BoltLedMatrixCommand):
 
     def start(self, api: SpheroEduAPI) -> None:
         frames = self.animation.frames
-        fps = self.animation.fps
+        fps = int(self.animation.fps)
         palette = []
         for color in self.animation.palette:
             rgb = parse_str_to_color(color)
@@ -77,7 +77,7 @@ class PlayAnimation(BoltLedMatrixCommand):
             frames,
             fps=fps,
             palette=palette,
-            transition=self.animation.transition,
+            transition=bool(self.animation.transition),
         )
         aid = api.get_animation_id()
         api.play_matrix_animation(aid, self.animation.loop)
