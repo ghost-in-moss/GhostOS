@@ -92,3 +92,6 @@ class GroupMovement(BoltBallMovement):
             meta = self.event_moves[event_type]
             return from_entity_model_meta(meta)
         return None
+
+    def add_event_move(self, event_type: str, move: BoltBallMovement):
+        self.event_moves[event_type] = to_entity_model_meta(move)

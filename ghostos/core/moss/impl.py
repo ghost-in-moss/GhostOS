@@ -226,10 +226,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._closed: bool = False
         self._injected = set()
         self._moss: Moss = self._compile_moss()
+        self._initialize_moss()
         MossRuntime.instance_count += 1
 
     def _compile_moss(self) -> Moss:
-        from .lifecycle import __moss_compiled__
         moss_type = self.moss_type()
         if not issubclass(moss_type, Moss):
             raise TypeError(f"Moss type {moss_type} is not subclass of {generate_module_and_attr_name(Moss)}")
@@ -237,6 +237,13 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         # 创建 stub.
         pycontext = self._pycontext
         moss = new_moss_stub(moss_type, self._container, pycontext, self.pprint)
+        return moss
+
+    def _initialize_moss(self) -> None:
+        from .lifecycle import __moss_compiled__
+        moss = self._moss
+        pycontext = self._pycontext
+        moss_type = self.moss_type()
 
         def inject(attr_name: str, injected: Any) -> Any:
             if isinstance(injected, Injection):
@@ -274,7 +281,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         if __moss_compiled__.__name__ in self._compiled.__dict__:
             fn = self._compiled.__dict__[__moss_compiled__.__name__]
         fn(moss)
-        return moss
+        self._moss = moss
 
     def container(self) -> Container:
         return self._container

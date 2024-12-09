@@ -147,8 +147,8 @@ class RotateOperator(Operator):
         if self.sync:
             return fire_session_event(session, event)
         else:
-            msg = Role.SYSTEM.new(content=f"issue observation at turn {task.turns}")
-            session.thread.append(msg)
+            # msg = Role.SYSTEM.new(content=f"issue observation at turn {task.turns}")
+            # session.thread.append(msg)
             event.reason = f"receive observation at turn {task.turns}"
             session.fire_events(event)
             session.task.state = TaskState.WAITING.value

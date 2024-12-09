@@ -7,7 +7,7 @@ class RollFunc(BaseModel):
     """
     to define a curve rolling frame by frame.
     """
-    heading: int = Field(0, description="Heading angle of the sphero bolt in degrees from -180 ~ 180", ge=-180, le=180)
+    heading: int = Field(0, description="Heading angle of the sphero bolt in degrees from -180 ~ 180", ge=-360, le=360)
     speed: int = Field(90, description="speed of the sphero bolt rolling", ge=0, le=255)
     duration: float = Field(1, description="duration of the rolling, if 0, means forever")
     code: str = Field(
@@ -101,7 +101,6 @@ class Move(ABC):
     @abstractmethod
     def on_collision(
             self,
-            log: str = "feeling collision",
             callback: Optional[Callable[[Self], None]] = None,
     ) -> None:
         """
@@ -114,7 +113,6 @@ class Move(ABC):
     @abstractmethod
     def on_freefall(
             self,
-            log: str = "feeling freefall",
             callback: Optional[Callable[[Self], None]] = None,
     ) -> None:
         """
@@ -125,9 +123,8 @@ class Move(ABC):
     @abstractmethod
     def on_landing(
             self,
-            log: str = "feeling landing",
             callback: Optional[Callable[[Self], None]] = None,
-    ) -> Self:
+    ) -> None:
         """
         when the bolt feeling landing. default is stop.
         """
@@ -198,6 +195,7 @@ class Ball(ABC):
     @abstractmethod
     def new_move(
             self,
+            *,
             animation: Optional[Animation] = None,
             run_immediately: bool = False
     ) -> Move:
@@ -259,26 +257,6 @@ class Ball(ABC):
         """
         Rotates the LED matrix
         :param rotation: 0 to 90, 180, 360 degrees
-        """
-        pass
-
-    @abstractmethod
-    def on_charging(
-            self,
-            log: str = "feeling at charging",
-    ) -> None:
-        """
-        when the bolt feeling start charging
-        """
-        pass
-
-    @abstractmethod
-    def on_not_charging(
-            self,
-            log: str = "feeling stop charging",
-    ) -> None:
-        """
-        when the bolt feeling stop charging
         """
         pass
 

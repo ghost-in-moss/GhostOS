@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Self
 from ghostos.entity import ModelEntity
-from spherov2.sphero_edu import SpheroEduAPI
 from pydantic import BaseModel, Field
+from .sphero_edu_api_patch import SpheroEduAPI
 
 from ghostos.prototypes.spherogpt.bolt.bolt_shell import Animation
 
@@ -28,7 +28,8 @@ class BoltBallMovement(BaseModel, ABC):
         return f"done `{self.desc}` after {round(passed, 4)} seconds"
 
     def interrupt_log(self, reason: str, passed: float) -> str:
-        return f"interrupt `{self.desc}` running because `{reason}` after {round(passed, 4)} seconds"
+        desc = self.desc or str(type(self))
+        return f"interrupt `{desc}` running because `{reason}` after {round(passed, 4)} seconds"
 
     @abstractmethod
     def on_event(self, event_type: str) -> Optional[Self]:

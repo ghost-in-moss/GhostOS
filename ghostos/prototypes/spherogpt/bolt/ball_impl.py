@@ -8,7 +8,9 @@ from ghostos.entity import ModelEntityMeta, from_entity_model_meta, to_entity_mo
 from ghostos.helpers import yaml_pretty_dump
 from ghostos.prompter import Prompter
 from ghostos.container import Container, Provider
+from ghostos.core.moss import Injection, MossRuntime
 from pydantic import BaseModel, Field
+from ghostos.prototypes.spherogpt.bolt.sphero_edu_api_patch import SpheroEventType
 from ghostos.prototypes.spherogpt.bolt.bolt_shell import Ball, Move, RollFunc, Animation
 from ghostos.prototypes.spherogpt.bolt.runtime import SpheroBoltRuntime, BoltBallMovement
 from ghostos.prototypes.spherogpt.bolt.movements import (
@@ -66,14 +68,14 @@ class MoveAdapter(Move):
             runtime: SpheroBoltRuntime,
             run_immediately: bool,
             animation: Optional[Animation] = None,
-            event_desc: Optional[str] = None,
+            event_desc: str = "",
             buffer: Optional[GroupMovement] = None,
     ):
         self._runtime = runtime
         self._run_immediately = run_immediately
         self._move_added: int = 0
         if buffer is None:
-            buffer = GroupMovement(desc="", event_desc=event_desc, animation=animation)
+            buffer = GroupMovement(desc="move", event_desc=event_desc or "", animation=animation)
         if animation is not None:
             buffer.animation = animation
         self.buffer: GroupMovement = buffer
@@ -87,12 +89,17 @@ class MoveAdapter(Move):
         self._move_added += 1
 
     def roll(self, heading: int, speed: int, duration: float) -> Self:
-        self._add_move(RunAPIMovement(
-            desc="roll",
-            method="roll",
+        roll_fn = RollFunc(
+            heading=heading,
+            speed=speed,
             duration=duration,
-            args=[heading, speed, duration],
-        ))
+            code="",
+        )
+        move = CurveRollMovement(
+            desc="roll",
+            curve=roll_fn,
+        )
+        self._add_move(move)
         return self
 
     def spin(self, angle: int, duration: float) -> Self:
@@ -147,8 +154,13 @@ class MoveAdapter(Move):
         ))
         return self
 
-    def on_collision(self, log: str = "feeling collision", callback: Optional[Callable[[Self], None]] = None) -> None:
-        self._add_event_callback("on_collision", log, callback)
+    def on_collision(
+            self,
+            callback: Optional[Callable[[Self], None]] = None,
+            *,
+            log: str = "feeling collision",
+    ) -> None:
+        self._add_event_callback(SpheroEventType.on_collision.name, log, callback)
 
     def _add_event_callback(
             self,
@@ -165,16 +177,26 @@ class MoveAdapter(Move):
             callback(sub_move)
         event_move = sub_move.buffer
         event_move.stop_at_first = True
-        self.buffer.event_moves[event_name] = event_move
+        self.buffer.add_event_move(event_name, event_move)
 
-    def on_freefall(self, log: str = "feeling freefall", callback: Optional[Callable[[Self], None]] = None) -> None:
-        self._add_event_callback("on_freefall", log, callback)
+    def on_freefall(
+            self,
+            log: str = "feeling freefall",
+            *,
+            callback: Optional[Callable[[Self], None]] = None,
+    ) -> None:
+        self._add_event_callback(SpheroEventType.on_freefall.name, log, callback)
 
-    def on_landing(self, log: str = "feeling landing", callback: Optional[Callable[[Self], None]] = None) -> Self:
-        self._add_event_callback("on_landing", log, callback)
+    def on_landing(
+            self,
+            callback: Optional[Callable[[Self], None]] = None,
+            *,
+            log: str = "feeling landing",
+    ) -> None:
+        self._add_event_callback(SpheroEventType.on_landing.name, log, callback)
 
 
-class BallImpl(Ball, Prompter):
+class BallImpl(Ball, Injection, Prompter):
 
     def __init__(
             self,
@@ -197,8 +219,16 @@ class BallImpl(Ball, Prompter):
         content = self._memory_cache.to_content()
         self._memory_cache_storage.put(self._memory_cache_file, content.encode())
 
+    def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
+        self._executing_code = runtime.moss().executing_code
+        return self
+
+    def on_destroy(self) -> None:
+        return None
+
     def new_move(
             self,
+            *,
             animation: Optional[Animation] = None,
             run_immediately: bool = False,
     ) -> Move:

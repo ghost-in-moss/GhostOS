@@ -1,18 +1,7 @@
-from spherov2 import scanner
-from spherov2.sphero_edu import SpheroEduAPI as API, EventType as SpheroEventType, Color
 import struct
 from spherov2.commands.sensor import Sensor, CollisionDetected
 
-__all__ = ["SpheroEduAPI", "SpheroEventType", "Color"]
-
-
-class SpheroEduAPI(API):
-
-    def get_animation_id(self) -> int:
-        _id = self.__animation_index - 1
-        if _id < 0:
-            return 0
-        return _id
+__all__ = ["SpheroEduAPI", "SpheroEventType", "Color", "scanner"]
 
 
 def __collision_detected_notify_helper(listener, packet):
@@ -27,3 +16,15 @@ def __collision_detected_notify_helper(listener, packet):
 
 
 Sensor.collision_detected_notify = (24, 18, 0xff), __collision_detected_notify_helper
+
+from spherov2 import scanner
+from spherov2.sphero_edu import SpheroEduAPI as Api, EventType as SpheroEventType, Color
+
+
+class SpheroEduAPI(Api):
+
+    def get_animation_id(self) -> int:
+        _id = self.__animation_index - 1
+        if _id < 0:
+            return 0
+        return _id
