@@ -216,13 +216,14 @@ class Ball(ABC):
         pass
 
     @abstractmethod
-    def save_move(self, name: str, description: str, move: Move) -> None:
+    def save_move(self, name: str, description: str, move: Move, animation: Optional[Animation] = None) -> None:
         """
         define a move that you can call it anytime with the name only.
         **remember** only save the important one
         :param name: move name
         :param description: describe the move, in less than 100 words
         :param move: the Move instance.
+        :param animation: if animation is not none, it will be played while run the move.
         """
         pass
 

@@ -243,9 +243,11 @@ class BallImpl(Ball, Injection, Prompter):
         movement.stop_at_first = stop_at_first
         self._runtime.add_movement(movement)
 
-    def save_move(self, name: str, description: str, move: Move) -> None:
+    def save_move(self, name: str, description: str, move: Move, animation: Optional[Animation] = None) -> None:
         if not isinstance(move, MoveAdapter):
             raise TypeError(f"move instance must be created by this api new_move()")
+        if animation:
+            move.buffer.animation = animation
         saved_move = SavedMove.new(name=name, description=description, move=move.buffer)
         saved_move.generated_code = self._executing_code or ""
         self._memory_cache.add_saved(saved_move)

@@ -10,8 +10,8 @@ from .bolt_shell import RollFunc, Animation
 class RunAPIMovement(BoltBallMovement):
     desc: str = Field(description="desc of the movement")
     method: str = Field(description="sphero edu api name")
-    args: List[Union[str, int, float]] = Field(default_factory=list, description="args")
-    kwargs: Dict[str, Union[str, int, float]] = Field(default_factory=dict, description="kwargs")
+    args: List[Union[str, int, float, None]] = Field(default_factory=list, description="args")
+    kwargs: Dict[str, Union[str, int, float, None]] = Field(default_factory=dict, description="kwargs")
     duration: float = Field(0.0, description="duration of the movement")
 
     def start(self, api: SpheroEduAPI) -> None:

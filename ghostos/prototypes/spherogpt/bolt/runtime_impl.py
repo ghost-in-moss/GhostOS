@@ -1,4 +1,4 @@
-from typing import Optional, Callable, Type
+from typing import Optional, Callable, Type, ClassVar, Self
 import time
 
 from ghostos.contracts.logger import LoggerItf
@@ -19,6 +19,7 @@ __all__ = ['SpheroBoltRuntimeImpl', 'ConvoLevelSpheroBoltRuntimeProvider']
 
 
 class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
+    __instance__: ClassVar[Optional[Self]] = None
 
     def __init__(
             self,
@@ -49,6 +50,13 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
         self._breathing: bool = False
         self._moving: bool = False
         self._off_charging_callback: str = "feeling stop charging"
+        SpheroBoltRuntimeImpl.__instance__ = self
+
+    @classmethod
+    def singleton(cls) -> Optional[Self]:
+        if cls.__instance__ and not cls.__instance__._closed:
+            return cls.__instance__
+        return None
 
     def _reset_all_state(self):
         self._current_animation = None
@@ -302,6 +310,8 @@ class ConvoLevelSpheroBoltRuntimeProvider(BootstrapProvider):
         return False
 
     def factory(self, con: Container) -> Optional[SpheroBoltRuntime]:
+        if singleton := SpheroBoltRuntimeImpl.singleton():
+            return singleton
         logger = con.force_fetch(LoggerItf)
         logger.error("runtime bootstrap at container %s", con.bloodline)
         conversation = con.force_fetch(Conversation)
