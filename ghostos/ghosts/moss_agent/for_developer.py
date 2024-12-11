@@ -40,11 +40,15 @@ def __moss_agent_truncate__(agent: MossAgent, session: Session) -> GoThreadInfo:
     turns = thread.get_history_turns(True)
     # do the truncate
     if len(turns) > agent.truncate_at_turns:
+        # the history turns to remove
         truncated = agent.truncate_at_turns - agent.truncate_to_turns
         if truncated <= 0:
             return thread
         turns = turns[:truncated]
-        target = turns[truncated]
+        # last turn of the truncated turns
+        if len(turns) < 1:
+            return thread
+        target = turns[-1]
         messages = []
         for turn in turns:
             messages.extend(turn.messages(False))
