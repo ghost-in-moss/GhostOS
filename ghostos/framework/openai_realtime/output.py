@@ -164,6 +164,8 @@ class DefaultOutputBuffer(OutputBuffer):
 
     def start_speaking(self):
         self._is_speaking = True
+        if self.speak_queue is not None:
+            self.speak_queue.put(None, block=False)
         self.speak_queue = Queue()
         self.logger.debug("start output speaking")
 

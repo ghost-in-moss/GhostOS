@@ -581,8 +581,8 @@ class ResponseState(StateOfServer):
             # update history messages again
             for item in rd.response.output:
                 self.ctx.update_history_message(item.to_complete_message())
-            # update local conversation when response is done.
-            self.ctx.update_local_conversation()
+        # update local conversation when response is done.
+        self.ctx.update_local_conversation()
         return self.ack_server_event(rd)
 
     def _on_response_output_item_added(self, event: dict) -> None:
