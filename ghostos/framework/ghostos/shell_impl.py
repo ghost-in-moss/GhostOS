@@ -348,10 +348,3 @@ class ShellImpl(Shell):
         self.logger.info("shutting down shell pool")
         self._pool.shutdown(cancel_futures=True)
         self.logger.info("shell pool is shut")
-
-    def __del__(self):
-        self.close()
-        del self._conversations
-        del self._container
-        del self._eventbus
-        del self._tasks

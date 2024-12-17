@@ -209,6 +209,8 @@ class Container(IoCContainer):
         设置一个实例, 不会污染父容器.
         """
         self._check_destroyed()
+        if abstract in self._providers:
+            del self._providers[abstract]
         self._set_instance(abstract, instance)
 
     def _add_bound_contract(self, abstract: ABSTRACT) -> None:
@@ -535,13 +537,16 @@ class ProviderAdapter(Provider):
         return f" <ghostos.container.ProviderAdapter for {self.contract()}>"
 
 
-def get_caller_info(backtrace: int = 1) -> str:
+def get_caller_info(backtrace: int = 1, with_full_file: bool = True) -> str:
     stack = inspect.stack()
     # 获取调用者的上下文信息
     caller_frame_record = stack[backtrace]
     frame = caller_frame_record[0]
     info = inspect.getframeinfo(frame)
-    return f"{info.filename}:{info.lineno}"
+    filename = info.filename
+    if not with_full_file:
+        filename = filename.split("/")[-1]
+    return f"{filename}:{info.lineno}"
 
 
 def provide(

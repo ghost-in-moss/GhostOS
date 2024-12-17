@@ -241,8 +241,8 @@ class GhostOS(Protocol):
     def create_shell(
             self,
             name: str,
-            shell_id: str,
             *,
+            shell_id: str = "",
             providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
     ) -> Shell:

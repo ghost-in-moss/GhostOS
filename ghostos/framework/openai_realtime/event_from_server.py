@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Message as GhostOSMessage
-from .event_data_objects import (
+from ghostos.framework.openai_realtime.event_data_objects import (
     RateLimit, Response, MessageItem,
     DeltaIndex, ConversationObject, Error, SessionObject,
     Content,
@@ -133,7 +133,7 @@ class ServerEventType(str, Enum):
     def is_respond_event(cls, event: dict, e_type: Optional[str] = None) -> bool:
         if e_type is None:
             e_type = event.get("type", "")
-        return e_type.startswith("conversation.")
+        return e_type.startswith("response.")
 
     @classmethod
     def is_conversation_event(cls, event: dict, e_type: Optional[str] = None) -> bool:
@@ -214,7 +214,7 @@ class ConversationItemCreated(ServerEvent):
     3. The client has sent a conversation.item.create event to add a new Item to the Conversation.
     """
     type: ClassVar[str] = ServerEventType.conversation_item_created.value
-    previous_item_id: str = Field("")
+    previous_item_id: Optional[str] = Field(None)
     item: MessageItem = Field()
 
 
@@ -265,7 +265,7 @@ class ConversationItemTruncated(ServerEvent):
 
 class InputAudioBufferCommitted(ServerEvent):
     type: ClassVar[str] = ServerEventType.input_audio_buffer_committed.value
-    previous_item_id: str = Field("")
+    previous_item_id: Optional[str] = Field(None)
     item_id: str = Field("")
 
 
@@ -423,7 +423,7 @@ class ResponseAudioDelta(DeltaIndex, ServerEvent):
     delta: str = Field("")
 
     def get_audio_bytes(self) -> bytes:
-        return base64.b64decode(self.audio_bytes)
+        return base64.b64decode(self.delta)
 
 
 class ResponseAudioDone(DeltaIndex, ServerEvent):

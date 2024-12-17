@@ -3,12 +3,13 @@ from __future__ import annotations
 import base64
 
 from pydantic import BaseModel, Field
-from typing import Optional, Literal, List, Dict, Union
+from typing import Optional, Literal, List, Union
 from io import BytesIO
 from ghostos.core.messages import (
     MessageType, Message, AudioMessage, FunctionCallMessage, FunctionCallOutputMessage,
     Caller, Role,
 )
+from ghostos.helpers import md5
 
 
 class RateLimit(BaseModel):
@@ -34,9 +35,9 @@ class Usage(BaseModel):
 
 class Error(BaseModel):
     type: str = Field("")
-    code: str = Field("")
-    message: str = Field("")
-    param: str = Field("")
+    code: Optional[str] = Field(None)
+    message: Optional[str] = Field(None)
+    param: Optional[str] = Field(None)
 
 
 class ResponseStatusDetails(BaseModel):
@@ -62,16 +63,16 @@ class Content(BaseModel):
     and message items of role assistant support text content.
     """
     type: Literal["input_text", "input_audio", "text", "audio"] = Field()
-    text: str = Field("")
-    audio: str = Field("")
-    transcript: str = Field("")
+    text: Optional[str] = Field(None)
+    audio: Optional[str] = Field(None)
+    transcript: Optional[str] = Field(None)
 
 
 class MessageItem(BaseModel):
     """
     The item to add to the conversation.
     """
-    id: str = Field()
+    id: Optional[str] = Field(None)
     type: Literal["message", "function_call", "function_call_output"] = Field("")
     status: Optional[str] = Field(None, enum={"completed", "incomplete"})
     role: Optional[str] = Field(None, enum={"assistant", "user", "system"})
@@ -83,12 +84,19 @@ class MessageItem(BaseModel):
 
     @classmethod
     def from_message(cls, message: Message) -> Optional[MessageItem]:
+        if message is None or not message.content:
+            return None
         id_ = message.msg_id
+        if len(id_) > 32:
+            id_ = md5(id_)
         call_id = None
         output = None
         arguments = None
         content = None
         role = message.role
+        if not role:
+            role = Role.ASSISTANT.value
+
         if message.type == MessageType.FUNCTION_CALL.value:
             type_ = "function_call"
             call_id = message.call_id
@@ -98,25 +106,32 @@ class MessageItem(BaseModel):
             call_id = message.call_id
             output = message.content
         else:
-            if not message.content:
-                return None
 
             type_ = "message"
             if role == Role.ASSISTANT.value:
                 content_type = "text"
+                content = [
+                    Content(type=content_type, text=message.content),
+                ]
             elif role == Role.USER.value:
                 content_type = "input_text"
+                content = [
+                    Content(type=content_type, text=message.content),
+                ]
             elif role == Role.SYSTEM.value:
                 content_type = "input_text"
+                content = [
+                    Content(type=content_type, text=message.content),
+                ]
             else:
                 content_type = "input_text"
-
-            content = [
-                Content(type=content_type, text=message.content),
-            ]
+                content = [
+                    Content(type=content_type, text=message.content),
+                ]
         return cls(
             id=id_,
             type=type_,
+            role=role,
             content=content,
             arguments=arguments,
             call_id=call_id,
@@ -142,7 +157,7 @@ class MessageItem(BaseModel):
                 buffer.write(data)
         return buffer.getvalue()
 
-    def to_message_head(self) -> Optional[Message]:
+    def to_message_head(self) -> Message:
 
         if self.type == "function_call_output":
             return Message.new_head(
@@ -155,6 +170,7 @@ class MessageItem(BaseModel):
         elif self.type == "function_call":
             return Message.new_head(
                 typ_=MessageType.FUNCTION_CALL.value,
+                msg_id=self.id,
                 role=self.role,
                 name=self.name,
                 call_id=self.call_id,
@@ -167,8 +183,6 @@ class MessageItem(BaseModel):
                     content += c.text
                 elif c.transcript:
                     content += c.transcript
-            if not content:
-                return None
 
             typ_ = MessageType.DEFAULT.value
             if self.role == Role.ASSISTANT.value:
@@ -176,12 +190,16 @@ class MessageItem(BaseModel):
 
             return Message.new_head(
                 typ_=typ_,
-                role=self.role,
+                msg_id=self.id,
+                role=self.role or "",
                 content=content,
             )
 
         else:
-            return None
+            return Message.new_head(
+                msg_id=self.id,
+                role=self.role or "",
+            )
 
     def to_complete_message(self) -> Optional[Message]:
         if self.status == "incomplete":
@@ -192,7 +210,7 @@ class MessageItem(BaseModel):
                 name=self.name,
                 call_id=self.call_id,
                 content=self.output,
-            )
+            ).to_message()
         elif self.type == "function_call":
             return FunctionCallMessage(
                 msg_id=self.id,
@@ -202,7 +220,7 @@ class MessageItem(BaseModel):
                     name=self.name,
                     arguments=self.arguments,
                 )
-            )
+            ).to_message()
         elif self.type == "message":
             parsed_type = MessageType.TEXT
             if self.role == Role.ASSISTANT.value or self.has_audio():
@@ -214,12 +232,15 @@ class MessageItem(BaseModel):
                     parsed_content = parsed_content + c.text
                 elif c.transcript:
                     parsed_content = parsed_content + c.transcript
+            if not parsed_content:
+                return None
 
             if parsed_type is MessageType.AUDIO:
                 return AudioMessage(
                     msg_id=self.id,
+                    role=self.role or "",
                     content=parsed_content,
-                )
+                ).to_message()
             else:
                 return Message.new_tail(
                     msg_id=self.id,
@@ -242,16 +263,56 @@ class ConversationObject(BaseModel):
     object: str = Field("realtime.conversation")
 
 
+class TurnDetection(BaseModel):
+    type: str = Field("server_vad")
+    threshold: float = Field(
+        0.5,
+        description="Activation threshold for VAD (0.0 to 1.0), "
+                    "this defaults to 0.5. A higher threshold will require louder audio to activate the model, "
+                    "and thus might perform better in noisy environments.",
+    )
+    prefix_padding_ms: int = Field(
+        default=300,
+        description="Amount of audio to include before the VAD detected speech (in milliseconds). Defaults to 300ms."
+    )
+    silence_duration_ms: int = Field(
+        default=500,
+        description="Duration of silence to detect speech stop (in milliseconds). "
+                    "Defaults to 500ms. "
+                    "With shorter values the model will respond more quickly, "
+                    "but may jump in on short pauses from the user."
+    )
+
+
+class InputAudioTranscription(BaseModel):
+    model: str = Field("whisper-1")
+
+
 class SessionObjectBase(BaseModel):
     """
     immutable configuration for the openai session object
     """
     model: str = Field("gpt-4o-realtime-preview-2024-10-01")
-    modalities: List[str] = Field(default_factory=list, enum={"text", "audio"})
-    voice: str = Field(default="alloy", enum={"alloy", "echo", "shimmer"})
+    modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
+    voice: str = Field(default="coral", enum={"alloy", "echo", "shimmer", "ash", "ballad", "coral", "sage", "verse"})
     input_audio_format: str = Field(default="pcm16", enum={"pcm16", "g711_ulaw", "g711_alaw"})
     output_audio_format: str = Field(default="pcm16", enum={"pcm16", "g711_ulaw", "g711_alaw"})
-    turn_detection: Union[Dict, None] = Field(None)
+    turn_detection: Union[TurnDetection, None] = Field(
+        default_factory=TurnDetection,
+        description="Configuration for turn detection. "
+                    "Can be set to null to turn off. "
+                    "Server VAD means that the model will detect the start and end of speech based on audio volume "
+                    "and respond at the end of user speech."
+    )
+    input_audio_transcription: Optional[InputAudioTranscription] = Field(
+        default_factory=InputAudioTranscription,
+        description="Configuration for input audio transcription. "
+    )
+    instructions: str = Field(default="", description="instructions of the session")
+    tools: List[dict] = Field(default_factory=list)
+    tool_choice: str = Field(default="auto")
+    temperature: float = Field(default=0.8)
+    max_response_output_tokens: Union[int, Literal['inf']] = Field(default='inf')
 
 
 class SessionObject(SessionObjectBase):
@@ -260,8 +321,3 @@ class SessionObject(SessionObjectBase):
     """
     id: str = Field(default="", description="id of the session")
     object: Literal["realtime.session"] = "realtime.session"
-    instructions: str = Field(default="", description="instructions of the session")
-    tools: List[dict] = Field(default_factory=list)
-    tool_choice: str = Field(default="auto")
-    temperature: float = Field(default=0.8)
-    max_response_output_tokens: Union[int, Literal['inf']] = Field(default='inf')

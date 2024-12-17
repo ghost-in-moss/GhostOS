@@ -548,10 +548,9 @@ class CallerOutput(BaseModel, MessageClass):
             call_id=self.call_id,
             type=MessageType.FUNCTION_OUTPUT.value,
             name=self.name,
-            role="",
             content=self.content,
             payloads=self.payloads,
-        )
+        ).as_tail(copy=True)
 
     @classmethod
     def from_message(cls, message: Message) -> Optional[Self]:

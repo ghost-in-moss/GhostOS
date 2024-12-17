@@ -3,9 +3,10 @@ try:
 except ImportError:
     raise ImportError(f"Pyaudio is required, please install pyaudio or ghostos[audio] first")
 
-from typing import Optional
+from typing import Callable, Union
+from ghostos.abcd.realtime import Listener, Listening
+from threading import Thread, Event
 from io import BytesIO
-from ghostos.abcd.realtime import Listener
 
 CHUNK = 1024
 FORMAT = paInt16
@@ -13,46 +14,48 @@ CHANNELS = 1
 RATE = 44100
 
 
-class PyAudioListener(Listener):
+class PyAudioPCM16Listener(Listener):
 
-    def __init__(self):
-        self.stream: Optional[PyAudio.Stream] = None
-        self.buffer: Optional[BytesIO] = None
-
-    def __enter__(self):
-        if self.stream is not None:
-            raise RuntimeError("PyAudioSpeaker already initialized")
-        self.buffer = BytesIO()
+    def __init__(self, rate: int = 24000, chunk_size: int = CHUNK):
+        self.rate = rate
+        self.chunk_size = chunk_size
         self.stream = PyAudio().open(
             format=paInt16,
             channels=1,
-            rate=44100,
+            rate=self.rate,
             input=True,
         )
-        return self
+
+    def listen(self, sender: Callable[[bytes], None]) -> Listening:
+        return PyAudioPCM16Listening(self.stream, sender, self.rate, self.chunk_size)
+
+    def __del__(self):
+        self.stream.close()
+
+
+class PyAudioPCM16Listening(Listening):
+
+    def __init__(self, stream, sender: Callable[[bytes], None], rate: int = 24000, chunk: int = CHUNK):
+        self.sender = sender
+        self.stream = stream
+        self.rate = rate
+        self.chunk = chunk
+        self.stopped = Event()
+        self.thread = Thread(target=self._listening)
+
+    def _listening(self):
+        self.stream.start_stream()
+        while not self.stopped.is_set():
+            buffer = BytesIO()
+            for i in range(int(self.rate / self.chunk * 0.5)):
+                data = self.stream.read(self.chunk, exception_on_overflow=False)
+                buffer.write(data)
+            self.sender(buffer.getvalue())
+        self.stream.stop_stream()
+
+    def __enter__(self):
+        self.thread.start()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.stream is not None:
-            self.stream.stop_stream()
-            self.stream.close()
-            self.stream = None
-            self.buffer = None
-
-    def hearing(self, second: float = 1) -> Optional[bytes]:
-        if self.stream is None:
-            return None
-        sending_buffer = BytesIO()
-        for i in range(0, int((RATE / CHUNK) * second)):
-            data = self.stream.read(CHUNK)
-            sending_buffer.write(data)
-            self.buffer.write(data)
-
-        return sending_buffer.getvalue()
-
-    def flush(self) -> bytes:
-        if self.buffer is None:
-            return bytes()
-        value = self.buffer.getvalue()
-        self.buffer.close()
-        self.buffer = None
-        return value
+        self.stopped.set()
+        self.thread.join()

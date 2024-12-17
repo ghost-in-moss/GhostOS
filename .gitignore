@@ -1,6 +1,7 @@
 # ide
 .idea/
 debug.log
+.DS_Store
 *.thread.yml
 # Byte-compiled / optimized / DLL files
 __pycache__/

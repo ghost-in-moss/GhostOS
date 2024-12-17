@@ -54,8 +54,8 @@ class GhostOSImpl(GhostOS):
     def create_shell(
             self,
             name: str,
-            shell_id: str,
             *,
+            shell_id: str = "",
             providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
     ) -> Shell:
@@ -63,6 +63,8 @@ class GhostOSImpl(GhostOS):
             shell_conf = ShellConf()
         else:
             shell_conf = self._ghostos_config.shells[name]
+        if not shell_id:
+            shell_id = name
         process = self._processes.get_process(shell_id)
         if process is None:
             process = GoProcess.new(shell_id=shell_id, process_id=process_id)

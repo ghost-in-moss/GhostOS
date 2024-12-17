@@ -31,7 +31,7 @@ class FileAssets(ABC):
             filetype: Optional[str] = None,
     ) -> FileInfo:
         if filetype is None:
-            filetype = guess_type(filename)
+            filetype, _ = guess_type(filename)
         fileinfo = FileInfo(
             fileid=fileid,
             filename=filename,

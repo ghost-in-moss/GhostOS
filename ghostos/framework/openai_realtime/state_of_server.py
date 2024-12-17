@@ -1,8 +1,8 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Protocol, Optional, Dict, Self, List, Union
-from .event_from_server import *
-from .event_data_objects import (
+from ghostos.framework.openai_realtime.event_from_server import *
+from ghostos.framework.openai_realtime.event_data_objects import (
     MessageItem,
     RateLimit,
     SessionObject,
@@ -10,6 +10,7 @@ from .event_data_objects import (
 from pydantic import ValidationError
 from ghostos.core.messages import Message, MessageType
 from ghostos.contracts.logger import LoggerItf
+from ghostos.container import get_caller_info
 
 
 class ServerContext(Protocol):
@@ -17,42 +18,97 @@ class ServerContext(Protocol):
 
     @abstractmethod
     def respond_message_chunk(self, response_id: str, chunk: Union[Message, None]) -> bool:
+        """
+        respond a message chunk usually a text chunk.
+        :param response_id:
+        :param chunk:
+        :return:
+        """
         pass
 
     @abstractmethod
     def respond_error_message(self, error: str) -> None:
+        """
+        output error message
+        :param error:
+        :return:
+        """
         pass
 
     @abstractmethod
-    def update_history_message(self, message: Union[Message, None]) -> None:
+    def update_history_message(self, message: Message) -> None:
+        """
+        update history message
+        :param message:
+        :return:
+        """
         pass
 
     @abstractmethod
     def update_local_conversation(self) -> None:
+        """
+        update realtime conversation with local conversation
+        """
         pass
 
     @abstractmethod
     def add_message_item(self, item: MessageItem, previous_item_id: Optional[str] = None) -> None:
+        """
+        add realtime message item to update history message
+        :param item:
+        :param previous_item_id:
+        :return:
+        """
         pass
 
     @abstractmethod
-    def start_response(self, response_id: str) -> None:
+    def respond_audio_chunk(self, response_id: str, item_id: str, data: bytes) -> bool:
+        """
+        respond
+        :param response_id:
+        :param item_id:
+        :param data:
+        :return:
+        """
         pass
 
     @abstractmethod
-    def get_responding_id(self) -> Optional[str]:
+    def save_audio_item(self, item: MessageItem) -> None:
+        """
+        save audio data to local storage
+        :param item:
+        :return:
+        """
         pass
 
     @abstractmethod
-    def stop_response(self, response_id: str) -> bool:
+    def start_server_response(self, response_id: str) -> None:
+        """
+        start server response
+        :param response_id:
+        :return:
+        """
         pass
 
     @abstractmethod
-    def respond_speaking_audio_chunk(self, response_id: str, data: bytes) -> bool:
+    def get_server_response_id(self) -> Optional[str]:
         pass
 
     @abstractmethod
-    def save_audio_data(self, item: MessageItem) -> None:
+    def end_server_response(self, response_id: str) -> bool:
+        """
+        end but not cancel a response.
+        :param response_id:
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def stop_listening(self) -> None:
+        """
+        stop listening inputs.
+        :return:
+        """
         pass
 
 
@@ -94,16 +150,20 @@ class StateOfServer(ABC):
         pass
 
     def recv_invalid_event(self, event: dict):
-        se = ServerError(**event)
-        error = "Received invalid event: %r" % se
-        self.ctx.logger.error(error)
-        # send error message.
-        return self.ctx.respond_error_message(error)
+        type_ = ServerEventType.get_type(event)
+        if ServerEventType.error.value == type_:
+            se = ServerError(**event)
+            # send error message.
+            self.ctx.logger.error("state %s recv server error: %r", type(self), se.error)
+            return self.ctx.respond_error_message(se.error.message)
+        else:
+            self.ctx.logger.error("state %s receive invalid event: %s", type(self), str(event)[:100])
 
     def ack_server_event(self, event: ServerEvent):
-        self.ctx.logger.info(
-            "handled server event type `%s` and event id `%s'",
-            type(event).__name__, event.id,
+        line = get_caller_info(2, with_full_file=False)
+        self.ctx.logger.debug(
+            "ack event: event `%s`  id `%s' by state %s at line `%s`",
+            event.type, event.event_id, type(self), line,
         )
 
 
@@ -121,7 +181,7 @@ class SessionState(StateOfServer):
         self.conversation = ConversationState(ctx, session_id="", conversation_id="")
         self.session_id = session_created.session.id
         self.session_obj: SessionObject = session_created.session
-        self.input_audio = InputAudiState(ctx)
+        self.input_audio = InputAudioState(ctx)
         self.tokens_rate_limit: Optional[RateLimit] = None
         self.requests_rate_limit: Optional[RateLimit] = None
 
@@ -130,9 +190,13 @@ class SessionState(StateOfServer):
 
     def recv(self, event: dict):
         type_name = ServerEventType.get_type(event)
-        if ServerEventType.is_session_event(event, type_name):
+        if ServerEventType.error.value == type_name:
+            se = ServerError(**event)
+            raise RuntimeError(se.error)
+        elif ServerEventType.is_session_event(event, type_name):
             return self._recv_session_event(event, type_name)
-        elif ServerEventType.rate_limits_updated:
+
+        elif ServerEventType.rate_limits_updated.value == type_name:
             return self._update_rate_limit(event)
 
         # input audio event
@@ -160,12 +224,12 @@ class SessionState(StateOfServer):
     def _recv_session_event(self, event: dict, e_type: str):
         if e_type == ServerSessionCreated.type:
             obj = ServerSessionCreated(**event)
-            self.session_id = obj.session_id
+            self.session_id = obj.session.id
             self.session_obj = obj.session
 
         elif e_type == ServerSessionUpdated.type:
             obj = ServerSessionUpdated(**event)
-            if self.session_id and obj.session_id != self.session_id:
+            if self.session_id and obj.session.id != self.session_id:
                 # recv other session event, which is not possible.
                 return self.recv_invalid_event(event)
             self.session_obj = obj.session
@@ -185,12 +249,13 @@ class SessionState(StateOfServer):
     def _update_rate_limit(self, event: dict):
         # todo: use rate limit in future.
         rlu = RateLimitsUpdated(**event)
-        for limit in rlu.ratelimits:
+        for limit in rlu.rate_limits:
             if limit.name == "requests":
                 self.requests_rate_limit = limit
             elif limit.name == "tokens":
                 self.tokens_rate_limit = limit
         self.ctx.logger.info(f"Rate limit updated {rlu}")
+        self.ack_server_event(rlu)
 
 
 class ConversationState(StateOfServer):
@@ -245,14 +310,13 @@ class ConversationState(StateOfServer):
             current_item_id = next_item_trace[current_item_id]
         return items
 
-    @abstractmethod
     def recv(self, event: dict):
         type_name = ServerEventType.get_type(event)
         # conversation events
         if ServerEventType.conversation_created.match(event):
             return self._conversation_created(event)
         elif ServerEventType.conversation_item_created.value == type_name:
-            return self._item_created(event)
+            return self._conversation_item_created(event)
         elif ServerEventType.conversation_item_deleted.value == type_name:
             return self._delete_item(event)
 
@@ -275,7 +339,7 @@ class ConversationState(StateOfServer):
         self.conversation_id = cic.conversation_id
         return self.ack_server_event(cic)
 
-    def _item_created(self, event: dict):
+    def _conversation_item_created(self, event: dict):
         server_event = ConversationItemCreated(**event)
         item = server_event.item
         if item.id not in self.conversation_item_states:
@@ -284,14 +348,19 @@ class ConversationState(StateOfServer):
                 created_event=server_event,
             )
             self.conversation_item_states[item.id] = conversation_item_state
-
-        # let conversation_item_state handle the item event.
-        state = self.conversation_item_states[item.id]
-        return state.recv(event)
+            if len(self.conversation_item_states) > 4:
+                first = list(self.conversation_item_states.keys())[0]
+                if first != item.id:
+                    del self.conversation_item_states[first]
+        else:
+            # let conversation_item_state handle the item event.
+            state = self.conversation_item_states[item.id]
+            return state.recv(event)
 
     def _delete_item(self, event: dict):
         cid = ConversationItemDeleted(**event)
         item_id = cid.item_id
+        # delete exists conversation item.
         if item_id in self.conversation_item_states:
             del self.conversation_item_states[item_id]
             self.ctx.logger.info(f"Deleted item {item_id}")
@@ -309,7 +378,8 @@ class ConversationState(StateOfServer):
                 self.ctx.logger.error("Response is not created")
             else:
                 rc = ResponseCreated(**event)
-                self.response = self._create_response(rc)
+                response = self._create_response(rc)
+                self.responses[response.response_id] = response
                 return None
         # response exists.
         response = self.responses[response_id]
@@ -340,8 +410,9 @@ class ConversationItemState(StateOfServer):
             created_event: ConversationItemCreated,
     ):
         super().__init__(ctx)
-        self.previous_item_id: str = created_event.previous_item_id
+        self.previous_item_id: Optional[str] = created_event.previous_item_id
         self.item: MessageItem = created_event.item
+        self.message = created_event.item.to_message_head().as_tail(copy=True)
         self._on_conversation_item_created(created_event)
 
     def _destroy(self):
@@ -351,7 +422,7 @@ class ConversationItemState(StateOfServer):
         type_name = ServerEventType.get_type(event)
 
         # conversation item is created yet.
-        if ServerEventType.conversation_created.value == type_name:
+        if ServerEventType.conversation_item_created.value == type_name:
             obj = ConversationItemCreated(**event)
             return self._on_conversation_item_created(obj)
 
@@ -363,10 +434,10 @@ class ConversationItemState(StateOfServer):
         elif ServerEventType.conversation_item_input_audio_transcription_completed.value == type_name:
             obj = ConversationInputAudioTranscriptionCompleted(**event)
             # update transcription.
-            if self.message is not None and self.message.type == MessageType.AUDIO.value:
-                self.message.content = obj.transcript
-                self.ctx.update_history_message(self.message)
-                return self.ack_server_event(obj)
+            self.message.content = obj.transcript
+            self.message.type = MessageType.AUDIO.value
+            self.ctx.update_history_message(self.message)
+            return self.ack_server_event(obj)
 
         elif ServerEventType.conversation_item_input_audio_transcription_failed.value == type_name:
             obj = ConversationInputAudioTranscriptionFailed(**event)
@@ -379,15 +450,16 @@ class ConversationItemState(StateOfServer):
     def _on_conversation_item_created(self, server_event: ConversationItemCreated):
         self.previous_item_id = server_event.previous_item_id
         self.item = server_event.item
-        self.message = self.item.to_complete_message()
+        self.message = self.item.to_message_head().as_tail(copy=True)
         # add new message item.
         self.ctx.add_message_item(server_event.item, server_event.previous_item_id)
         if self.item.has_audio():
-            self.ctx.save_audio_data(item)
+            # save audio.
+            self.ctx.save_audio_item(self.item)
         return self.ack_server_event(server_event)
 
 
-class InputAudiState(StateOfServer):
+class InputAudioState(StateOfServer):
 
     def recv(self, event: dict):
         type_name = ServerEventType.get_type(event)
@@ -402,15 +474,23 @@ class InputAudiState(StateOfServer):
 
     def _on_input_audio_buffer_stopped(self, event: dict):
         se = InputAudioBufferSpeechStopped(**event)
+        self.ctx.stop_listening()
         # todo: truncate audio
         return self.ack_server_event(se)
 
     def _on_input_audio_buffer_started(self, event: dict):
+        """
+        the input audio started.
+        :param event
+        :return:
+        """
         se = InputAudioBufferSpeechStarted(**event)
+        # todo: start to truncate input audio.
         return self.ack_server_event(se)
 
     def _on_input_audio_buffer_committed(self, event: dict):
         se = InputAudioBufferCommitted(**event)
+        # todo:
         return self.ack_server_event(se)
 
     def _on_input_audio_buffer_cleared(self, event: dict):
@@ -433,7 +513,7 @@ class ResponseState(StateOfServer):
     ):
         super().__init__(ctx)
         self.response_id = event.response.id
-        self.response = event.response
+        self.response_obj = event.response
         self.item_states: dict[str, ResponseItemState] = {}
         self.responding_item_id: Optional[str] = None
         self._on_response_created(event)
@@ -444,11 +524,12 @@ class ResponseState(StateOfServer):
         self.item_states = {}
 
     def is_done(self) -> bool:
-        return self.response.status in {"completed", "cancelled", "failed"}
+        return self.response_obj.status in {"completed", "cancelled", "failed"}
 
     def recv(self, event: dict) -> None:
         type_name = ServerEventType.get_type(event)
         response_id = ServerEventType.get_response_id(event)
+        # receive current response event only
         if response_id != self.response_id:
             return self.recv_invalid_event(event)
 
@@ -475,11 +556,11 @@ class ResponseState(StateOfServer):
             return self.recv_invalid_event(event)
 
     def _on_response_created(self, event: ResponseCreated):
-        self.response = event.response
+        self.response_obj = event.response
         self.response_id = event.response.id
 
         # start response
-        self.ctx.start_response(self.response_id)
+        self.ctx.start_server_response(self.response_id)
         return self.ack_server_event(event)
 
     def _on_response_done(self, event: dict) -> None:
@@ -488,12 +569,19 @@ class ResponseState(StateOfServer):
         """
         rd = ResponseDone(**event)
         # update message item
-        self.response = rd.response
-        self.ctx.stop_response(rd.response.id)
-        if rd.response.output:
+        self.response_obj = rd.response
+        self.ctx.end_server_response(rd.response.id)
+        if rd.response.status not in ["completed", "cancelled"] and rd.response.status_details:
+            error = rd.response.status_details.error
+            if error:
+                self.ctx.logger.error("response done with error: %s", error)
+                self.ctx.respond_error_message(repr(error))
+
+        elif rd.response.output:
             # update history messages again
             for item in rd.response.output:
                 self.ctx.update_history_message(item.to_complete_message())
+            # update local conversation when response is done.
             self.ctx.update_local_conversation()
         return self.ack_server_event(rd)
 
@@ -506,9 +594,6 @@ class ResponseState(StateOfServer):
         state = ResponseItemState(self.ctx, se)
         self.item_states[item_id] = state
         self.responding_item_id = item_id
-
-        # todo: 最后统一处理消息发送.
-        return self.ack_server_event(se)
 
 
 class ResponseItemState(StateOfServer):
@@ -557,12 +642,11 @@ class ResponseItemState(StateOfServer):
 
         elif ServerEventType.response_text_done.value == type_name:
             se = ResponseTextDone(**event)
-            # no need to handle
             return self.ack_server_event(se)
 
         elif ServerEventType.response_audio_delta.value == type_name:
             se = ResponseAudioDelta(**event)
-            self.ctx.respond_speaking_audio_chunk(se.response_id, se.get_audio_bytes())
+            self.ctx.respond_audio_chunk(se.response_id, se.item_id, se.get_audio_bytes())
             return self.ack_server_event(se)
 
         elif ServerEventType.response_audio_done.value == type_name:

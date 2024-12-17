@@ -13,6 +13,13 @@ def test_slice_negative_index():
     assert arr[:-1] == [0]
 
 
+def test_slice_pop_0():
+    arr = [0, 1]
+    arr.pop(0)
+    arr.pop(0)
+    assert arr == []
+
+
 def test_thread_safe_append():
     from threading import Thread
 

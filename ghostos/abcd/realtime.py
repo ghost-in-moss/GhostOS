@@ -2,16 +2,21 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import (
     Generic,
-    List, Iterable, Tuple, TypeVar, Optional, Dict,
+    List, Iterable, Tuple, TypeVar, Optional, Dict, Callable, Union, Self
 )
-import time
 from ghostos.abcd import Conversation
 from ghostos.core.messages import Message, ReceiverBuffer
 from ghostos.entity import ModelEntityMeta, to_entity_model_meta, from_entity_model_meta
+from contextlib import contextmanager
 from pydantic import BaseModel, Field
+from enum import Enum
 
 
 class Realtime(ABC):
+    """
+    realtime wrapper
+    """
+
     @abstractmethod
     def create(
             self,
@@ -21,6 +26,15 @@ class Realtime(ABC):
             app_name: str = "",
             config: Optional[RealtimeAppConfig] = None,
     ) -> RealtimeApp:
+        """
+        create an Realtime App instance
+        :param conversation:
+        :param listener:
+        :param speaker:
+        :param app_name:
+        :param config:
+        :return:
+        """
         pass
 
     @abstractmethod
@@ -74,22 +88,29 @@ class RealtimeDriver(Generic[C], ABC):
             conversation: Conversation,
             listener: Optional[Listener] = None,
             speaker: Optional[Speaker] = None,
+            vad_mode: bool = False,
     ) -> RealtimeApp:
         pass
 
 
 class Listener(ABC):
+    """
+    read audio bytes
+    """
 
     @abstractmethod
-    def hearing(self, second: float = 1) -> Optional[bytes]:
+    def listen(self, sender: Callable[[bytes], None]) -> Listening:
+        """
+        read audio bytes in seconds.
+        :param sender: sender hearing data
+        :return:
+        """
         pass
 
-    @abstractmethod
-    def flush(self) -> bytes:
-        pass
 
+class Listening(ABC):
     @abstractmethod
-    def __enter__(self):
+    def __enter__(self) -> Self:
         pass
 
     @abstractmethod
@@ -98,21 +119,56 @@ class Listener(ABC):
 
 
 class Speaker(ABC):
+
     @abstractmethod
-    def __enter__(self):
+    def speak(self, queue: Callable[[], Union[bytes, None]]) -> Speaking:
+        pass
+
+
+class Speaking(ABC):
+    @abstractmethod
+    def __enter__(self) -> Self:
+        """
+        start to speak
+        :return:
+        """
         pass
 
     @abstractmethod
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    @abstractmethod
-    def speak(self, data: bytes):
+    def done(self) -> bool:
         pass
 
     @abstractmethod
-    def flush(self) -> bytes:
+    def wait(self):
         pass
+
+
+class Operator(BaseModel):
+    name: str = Field(description="name of the operator")
+    description: str = Field(description="description of the operator")
+
+
+class OperatorName(str, Enum):
+    listen = "listen"
+    """start listening"""
+
+    stop_listen = "stop listen"
+    """stop listening, commit the audio buffer, but not create response"""
+
+    respond = "respond"
+    """create response"""
+
+    clear_audio = "clear"
+    """clear audio buffer """
+
+    cancel_responding = "cancel"
+    """cancel responding"""
+
+    def new(self, description: str) -> Operator:
+        return Operator(name=self.value, description=description)
 
 
 class RealtimeApp(ABC):
@@ -173,25 +229,25 @@ class RealtimeApp(ABC):
         pass
 
     @abstractmethod
-    def messages(self) -> Iterable[Message]:
+    def history_messages(self) -> Iterable[Message]:
         """
         return history messages.
         """
         pass
 
     @abstractmethod
-    def set_mode(self, *, listening: bool):
+    def set_mode(self, *, vad_mode: bool):
         pass
 
     @abstractmethod
-    def state(self) -> Tuple[str, List[str]]:
+    def state(self) -> Tuple[str, List[Operator]]:
         """
         :return: (operators, operators)
         """
         pass
 
     @abstractmethod
-    def operate(self, operator: str) -> bool:
+    def operate(self, operator: Operator) -> bool:
         """
         run operator.
         """
@@ -202,6 +258,16 @@ class RealtimeApp(ABC):
         """
         receive an exception
         :return: if the error is able to intercept
+        """
+        pass
+
+    @abstractmethod
+    def add_message(self, message: Message, previous_message_id: Optional[str] = None):
+        """
+        add message to the conversation.
+        :param message:
+        :param previous_message_id:
+        :return:
         """
         pass
 
@@ -222,51 +288,3 @@ class RealtimeApp(ABC):
             intercepted = self.fail(exc_val)
         self.close()
         return intercepted
-
-
-if __name__ == "__example__":
-    def example(app: RealtimeApp):
-        with app:
-            while True:
-                state, ops = app.state()
-                print(state, ops)
-                outputting = app.output()
-                if outputting is None:
-                    time.sleep(0.1)
-                    continue
-                while outputting is not None:
-                    print(outputting.head())
-                    chunks = outputting.chunks()
-                    for c in chunks:
-                        print(c)
-                    print(outputting.tail())
-
-
-    def streamlit_example(app: RealtimeApp):
-        import streamlit as st
-        with app:
-            for message in app.messages():
-                with st.container():
-                    st.write(message)
-
-            while True:
-                with st.empty():
-                    rendered = False
-                    while not rendered:
-                        state, operators = app.state()
-                        with st.container():
-                            if operators:
-                                for op in operators:
-                                    st.write(op)
-                            with st.status(state):
-                                buffer = app.output()
-                                if buffer is None:
-                                    continue
-                                rendered = buffer
-                                if rendered is None:
-                                    time.sleep(0.1)
-                                else:
-                                    break
-                    with st.container():
-                        st.write(buffer.tail())
-                    break

@@ -19,10 +19,12 @@ class OpenAIRealtimeDriver(RealtimeDriver[OpenAIRealtimeAppConf]):
             conversation: Conversation,
             listener: Optional[Listener] = None,
             speaker: Optional[Speaker] = None,
+            vad_mode: bool = False,
     ) -> RealtimeApp:
         return RealtimeAppImpl(
-            config,
-            conversation,
-            listener,
-            speaker,
+            conf=config,
+            vad_mode=vad_mode,
+            conversation=conversation,
+            listener=listener,
+            speaker=speaker,
         )

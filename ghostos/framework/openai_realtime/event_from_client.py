@@ -1,8 +1,8 @@
 from typing import Optional, ClassVar, Self
-from abc import ABC, abstractmethod
+from abc import ABC
 from enum import Enum
 from pydantic import BaseModel, Field
-from .event_data_objects import SessionObject, MessageItem
+from ghostos.framework.openai_realtime.event_data_objects import SessionObject, SessionObjectBase, MessageItem
 
 __all__ = [
     'ClientEventType',
@@ -25,7 +25,7 @@ __all__ = [
 
 
 class ClientEventType(str, Enum):
-    session_update = "session.updated"
+    session_update = "session.update"
     input_audio_buffer_append = "input_audio_buffer.append"
     input_audio_buffer_commit = "input_audio_buffer.commit"
     """
@@ -73,22 +73,20 @@ class ClientEvent(BaseModel, ABC):
         description="Optional client-generated ID used to identify this event.",
     )
 
-    def to_dict(self) -> dict:
-        return self.model_dump(exclude_none=True)
+    def to_event_dict(self) -> dict:
+        data = self.model_dump(exclude_none=True)
+        data["type"] = self.type
+        return data
 
 
 class SessionUpdate(ClientEvent):
     type: ClassVar[str] = ClientEventType.session_update.value
-    session: SessionObject
+    session: SessionObjectBase
 
 
 class InputAudioBufferAppend(ClientEvent):
     type: ClassVar[str] = ClientEventType.input_audio_buffer_append.value
     audio: str = Field()
-
-    @classmethod
-    def new(cls, audio: bytes) -> Self:
-        raise NotImplementedError("todo")
 
 
 class InputAudioBufferCommit(ClientEvent):

@@ -68,7 +68,7 @@ def bootstrap():
     container = get_container()
     if shell is None:
         logger.debug("start shell background run")
-        shell = ghostos.create_shell("ghostos_streamlit_app", "ghostos_streamlit_app")
+        shell = ghostos.create_shell("ghostos_streamlit_app")
         shell.background_run(4, StreamlitBackgroundApp())
         Singleton(shell, Shell).bind(st.session_state)
 

@@ -92,7 +92,7 @@ class OpenAIWSConnection:
             if self._closed:
                 return
             self._ws.send(data)
-            self._logger.debug(f"[OpenAIWSConnection] send data to server: %s", data)
+            self._logger.debug(f"[OpenAIWSConnection] send data to server: %s", data[:300])
         except websockets.exceptions.ConnectionClosedOK:
             self.close()
 
@@ -101,15 +101,14 @@ class OpenAIWSConnection:
             return None
         try:
             data = self._ws.recv(timeout=timeout)
-            self._logger.debug(f"[OpenAIWSConnection] receive data")
             if not data:
                 self._logger.error(f"[OpenAIWSConnection] receive empty data: {data}")
                 return None
             if data:
+                self._logger.debug(f"[OpenAIWSConnection] receive data: %s", data[:300])
                 event = json.loads(data)
-                self._logger.debug(f"[OpenAIWSConnection] receive event %s", event["type"])
-                if not data:
-                    return event
+                return event
+            return None
         except websockets.exceptions.ConnectionClosed:
             self.close()
             return None
