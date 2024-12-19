@@ -1,13 +1,16 @@
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, List
+from types import ModuleType
 from ghostos.helpers import import_class_from_path
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
-from .concepts import Ghost, GhostDriver, Session, Operator
-from ghostos.core.runtime import Event, TaskState
+from ghostos.abcd.concepts import Ghost, GhostDriver, Session, Operator
+from ghostos.core.runtime import Event
+from ghostos.container import Provider
 
 __all__ = [
     'get_ghost_driver', 'get_ghost_driver_type', 'is_ghost',
     'run_session_event', 'fire_session_event',
+    'get_module_magic_ghost', 'get_module_magic_shell_providers',
 ]
 
 
@@ -86,3 +89,19 @@ def run_session_event(session: Session, event: Event, max_step: int) -> None:
         # session do save after each op
         session.save()
         op = next_op
+
+
+def get_module_magic_ghost(module: ModuleType) -> Optional[Ghost]:
+    if "__ghost__" in module.__dict__:
+        return module.__dict__["__ghost__"]
+    return None
+
+
+def __shell_providers__() -> List[Provider]:
+    return []
+
+
+def get_module_magic_shell_providers(module: ModuleType) -> List[Provider]:
+    if __shell_providers__.__name__ in module.__dict__:
+        return module.__dict__[__shell_providers__.__name__]()
+    return []

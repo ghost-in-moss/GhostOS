@@ -3,10 +3,10 @@ import asyncio
 from typing import Optional, List
 
 from ghostos.abcd import GhostOS, Ghost, Background
+from ghostos.container import Provider
 from ghostos.contracts.logger import get_console_logger
 from ghostos.core.messages import Message, Role, MessageType, Receiver
 from ghostos.framework.messages import TaskPayload
-from ghostos.helpers import uuid
 from ghostos.core.runtime import Event
 from queue import Queue, Empty
 from prompt_toolkit.key_binding import KeyBindings
@@ -35,6 +35,7 @@ class ConsoleApp(Background):
             worker_num: int = 4,
             welcome_user_message: Optional[str] = None,
             on_create_message: Optional[str] = None,
+            providers: Optional[List[Provider]] = None,
     ):
         self._os = ghostos
         self._ghost = ghost
@@ -59,8 +60,8 @@ class ConsoleApp(Background):
         self._prompt_session = session
         self._shell = self._os.create_shell(
             self._shell_name,
-            self._shell_id,
             process_id=self._process_id,
+            providers=providers,
         )
         self._conversation = self._shell.sync(self._ghost)
 

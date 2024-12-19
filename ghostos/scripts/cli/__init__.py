@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import os.path
-
 import click
 import sys
+from os import getcwd
 from os.path import join, abspath
 from rich.console import Console
 from rich.markdown import Markdown
@@ -16,6 +15,22 @@ def main():
     pass
 
 
+@main.command("web")
+@click.argument("python_file_or_module")
+def start_streamlit_web(python_file_or_module: str):
+    from ghostos.scripts.cli.run_streamlit_ghost import start_web_app
+    from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
+    ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
+    start_web_app(ghost_info, module.__name__, filename, is_temp)
+
+
+@main.command("console")
+@click.argument("python_file_or_module")
+def start_console_app(python_file_or_module: str):
+    from ghostos.scripts.cli.run_console import run_console_app
+    run_console_app(python_file_or_module)
+
+
 @main.command("clear-runtime")
 @click.option("--path", default="", show_default=True)
 def clear_runtime(path: str):
@@ -26,7 +41,7 @@ def clear_runtime(path: str):
     from ghostos.bootstrap import get_bootstrap_config
     conf = get_bootstrap_config()
     confirm = Prompt.ask(
-        f"Would you like to proceed?\n\nWill clear all workspace runtime files at {conf.abs_runtime_dir()} [y/N]",
+        f"Will clear all workspace runtime files at {conf.abs_runtime_dir()}\n\nWould you like to proceed? [y/N]",
         choices=["y", "n"],
         default="y",
     )
@@ -38,24 +53,57 @@ def clear_runtime(path: str):
 
 @main.command("init")
 @click.option("--path", default="", show_default=True)
-def init_workspace(path: str):
+def init_app(path: str):
     """
     init ghostos workspace
     """
     from ghostos.scripts.copy_workspace import copy_workspace
-    if path:
-        path = abspath(path)
-    else:
-        path = abspath("workspace")
-    if os.path.exists(path):
-        print(f"the path {path} already exists")
-        exit(0)
+    from ghostos.bootstrap import expect_workspace_dir, app_stub_dir, get_bootstrap_config
+    console = Console()
+    console.print(Panel(
+        Markdown("""
+`GhostOS` need an `app` directory as workspace. 
 
-    result = Prompt.ask(f"will create ghostos workspace at {path}. confirm?", default="yes", choices=["yes", "no"])
-    if result == "yes":
-        copy_workspace(path)
-    else:
-        print("closed")
+The Workspace meant to save local files such as configs, logs, cache files.
+"""),
+        title="Initialize GhostOS",
+    ))
+
+    conf = get_bootstrap_config(local=False)
+    workspace_dir, ok = expect_workspace_dir()
+    app_dir = workspace_dir.rstrip('/').split("/")[-1]
+    result = Prompt.ask(
+        f"\n>> will init ghostos workspace at `{getcwd()}`. input directory name:",
+        default=app_dir,
+    )
+    source_dir = join(conf.ghostos_dir, "ghostos/app")
+    real_workspace_dir = abspath(result)
+    console.print("start to init ghostos workspace")
+    copy_workspace(source_dir, real_workspace_dir)
+    console.print("ghostos workspace copied")
+
+    if conf.workspace_dir != real_workspace_dir:
+        conf.workspace_dir = real_workspace_dir
+        conf.save(getcwd())
+        console.print("save .ghostos.yml")
+    console.print(Panel(Markdown(f"""
+Done create workspace!
+
+`GhostOS` use OpenAI model service and `gpt-4o` model as default LLM model.
+It need environment variable `OPENAI_API_KEY` to call the service.
+
+You can provide your OpenAI API key by:
+
+```bash
+export OPENAI_API_KEY=<KEY>
+```
+
+Or:
+1. copy `{conf.env_example_file()}` to `{conf.env_file()}, and offer the necessary env configuration. (Optional)
+2. run `ghostos configs` to configure them manually. (Optional)
+
+Finally you can run `ghostos web ghostos.demo.agents.jojo` to test if everything is working. 
+""")))
 
 
 @main.command("docs")
@@ -63,13 +111,11 @@ def open_docs():
     """See GhostOS Docs"""
     from ghostos.bootstrap import get_bootstrap_config
     conf = get_bootstrap_config()
-    docs_dir = join(conf.ghostos_dir, "docs")
     console = Console()
     m = Markdown(f"""
 You can open ghostos documentation:
 
-1. https://github.com/ghost-in-moss/GhostOS/docs
-2. `docsify serve  {docs_dir}` (if you installed [docsify](https://docsifyjs.org/#/))
+https://github.com/ghost-in-moss/GhostOS/docs
 """
                  )
     console.print(Panel(

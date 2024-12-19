@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional, Dict
 
 from ghostos.abcd import Conversation
@@ -35,7 +36,7 @@ class ConfigsBasedRealtime(Realtime):
             config = realtime_conf.get_app_conf(app_name)
         if config is None:
             raise NotImplementedError(f"No config for {app_name}")
-        driver: RealtimeDriver = self._drivers.get(config.driver_name())
+        driver: RealtimeDriver | None = self._drivers.get(config.driver_name())
         if driver is None:
             raise NotImplementedError(f"No driver for {config.driver_name()}")
         return driver.create(config, conversation, listener, speaker)

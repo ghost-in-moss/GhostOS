@@ -1,12 +1,11 @@
-from typing import Optional, Dict, List
+from typing import Optional, List
 from ghostos.scripts.cli.utils import (
-    check_ghostos_workspace_exists,
-    get_ghost_by_cli_argv,
+    GhostInfo,
 )
-from streamlit.web.cli import main_run
+from streamlit.web.cli import main_run as run_streamlit_web
 from ghostos.prototypes.streamlitapp import cli
+from ghostos.bootstrap import get_bootstrap_config
 from ghostos.entity import EntityMeta
-from ghostos.core.moss.utils import escape_string_quotes
 from pydantic import BaseModel, Field
 import sys
 from os import path
@@ -36,10 +35,10 @@ def get_config_flag_options(workspace_dir: str) -> List[str]:
     return flags
 
 
-def main():
+def start_web_app(ghost_info: GhostInfo, modulename: str, filename: str, is_temp: bool):
     # path
-    workspace_dir = check_ghostos_workspace_exists()
-    ghost_info, modulename, filename, is_temp = get_ghost_by_cli_argv()
+    conf = get_bootstrap_config(local=True)
+    workspace_dir = conf.workspace_dir
     args = RunGhostChatApp(
         modulename=modulename,
         filename=filename,
@@ -53,4 +52,4 @@ def main():
 
     flags = get_config_flag_options(workspace_dir)
     args.extend(flags)
-    main_run(args)
+    run_streamlit_web(args)

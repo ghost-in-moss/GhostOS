@@ -27,7 +27,7 @@ def render_messages(messages: Iterable[Message], debug: bool, in_expander: bool,
         if msg.name != group.msg_name or msg.role != group.msg_role or msg.stage != group.stage:
             if group.messages:
                 groups.append(group)
-            group = MessageGroup(msg.name, msg.role, msg.stage, [])
+            group = MessageGroup(msg.name or "", msg.role, msg.stage, [])
         group.messages.append(msg)
 
     if group.messages:

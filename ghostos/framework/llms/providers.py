@@ -32,11 +32,10 @@ class ConfigBasedLLMsProvider(Provider[LLMs]):
         return LLMs
 
     def factory(self, con: Container) -> Optional[LLMs]:
-
         configs = con.force_fetch(Configs)
         storage = con.force_fetch(PromptStorage)
         parser = con.get(OpenAIMessageParser)
-        logger = con.force_fetch(LoggerItf)
+        logger: LoggerItf = con.force_fetch(LoggerItf)
 
         conf = configs.get(LLMsYamlConfig)
         openai_driver = OpenAIDriver(storage, logger, parser)

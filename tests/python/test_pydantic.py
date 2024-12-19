@@ -240,3 +240,14 @@ def test_enum_with_none():
 
     f = Foo()
     assert f.foo is None
+
+
+def test_foo_bar():
+    class Bar(BaseModel):
+        bar: int = 123
+
+    class Foo(BaseModel):
+        bar: Bar = Field(default_factory=Bar)
+
+    f = Foo()
+    assert f.bar.bar == 123

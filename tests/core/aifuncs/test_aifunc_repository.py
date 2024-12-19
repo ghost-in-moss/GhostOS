@@ -2,7 +2,7 @@ from ghostos.core.aifunc import AIFuncRepoByConfigsProvider, AIFuncRepository, A
 from ghostos.framework.configs import Configs, MemoryConfigs
 from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.container import Container
-from ghostos.app import aifuncs_demo
+from ghostos.demo import aifuncs_demo
 
 
 def test_aifunc_repository():

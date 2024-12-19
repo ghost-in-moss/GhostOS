@@ -1,5 +1,5 @@
 from typing import Optional
-from ghostos.core.messages import Message, Role, MessageType
+from ghostos.core.messages import Message, Role
 from ghostos.core.llms import PromptPipe, Prompt
 
 __all__ = ['AssistantNamePipe']

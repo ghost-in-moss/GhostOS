@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from abc import ABC, abstractmethod
 
 from typing import List, Iterable, Optional, Union, Callable, Self, Set
@@ -14,8 +13,8 @@ from pydantic import BaseModel, Field
 from ghostos import helpers
 from ghostos.core.messages import Message, Role, Payload
 from ghostos.helpers import timestamp
-from .configs import ModelConf
-from .tools import LLMFunc, FunctionalToken
+from ghostos.core.llms.configs import ModelConf
+from ghostos.core.llms.tools import LLMFunc, FunctionalToken
 
 __all__ = [
     'Prompt', 'PromptPipe',

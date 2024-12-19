@@ -71,7 +71,7 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_bound(self, abstract: Type[INSTANCE]) -> Union[INSTANCE, Provider]:
+    def get_bound(self, abstract: Type[INSTANCE]) -> Union[INSTANCE, Provider, None]:
         """
         get bound of an abstract
         useful to debug
@@ -263,7 +263,7 @@ class Container(IoCContainer):
             return self.parent.get(abstract)
         return None
 
-    def get_bound(self, abstract: ABSTRACT) -> Union[INSTANCE, Provider]:
+    def get_bound(self, abstract: ABSTRACT) -> Union[INSTANCE, Provider, None]:
         """
         get bound of an abstract
         :return: instance or provider
@@ -475,14 +475,16 @@ def get_contract_type(cls: Type[Provider]) -> ABSTRACT:
     """
     get generic INSTANCE type from the instance of the provider.
     """
-    for parent in cls.__orig_bases__:
-        if get_origin(parent) is not Provider:
-            continue
-        args = get_args(parent)
-        if not args:
-            break
-        return args[0]
-    raise AttributeError("can not get instance type")
+    if "__orig_bases__" in cls.__dict__:
+        orig_bases = getattr(cls, "__orig_bases__")
+        for parent in orig_bases:
+            if get_origin(parent) is not Provider:
+                continue
+            args = get_args(parent)
+            if not args:
+                break
+            return args[0]
+    raise AttributeError("can not get contract type")
 
 
 class Bootstrapper(metaclass=ABCMeta):
@@ -505,14 +507,14 @@ class BootstrapProvider(Generic[INSTANCE], Provider[INSTANCE], Bootstrapper, met
         pass
 
 
-class ProviderAdapter(Provider):
+class ProviderAdapter(Generic[INSTANCE], Provider[INSTANCE]):
     """
     create a provider without class.
     """
 
     def __init__(
             self,
-            contract_type: ABSTRACT,
+            contract_type: Type[INSTANCE],
             factory: Callable[[Container], Optional[INSTANCE]],
             singleton: bool = True,
             lineinfo: str = "",

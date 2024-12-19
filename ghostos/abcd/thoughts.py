@@ -1,7 +1,7 @@
 from typing import Optional, Generic, TypeVar, Tuple, List, Iterable
 from abc import ABC, abstractmethod
 from ghostos.abcd.concepts import Session, Operator, Action
-from ghostos.core.llms import Prompt, ModelConf, ServiceConf, PromptPipe, LLMs, LLMApi
+from ghostos.core.llms import Prompt, ModelConf, ServiceConf, LLMs, LLMApi
 from pydantic import BaseModel, Field
 
 __all__ = ['Thought', 'LLMThought', 'SummaryThought', 'ChainOfThoughts']
@@ -76,7 +76,7 @@ class LLMThought(Thought[Operator]):
         items = llm_api.deliver_chat_completion(prompt, streaming)
         messages, callers = session.respond(items, self.message_stage)
         prompt.added.extend(messages)
-        session.logger.debug("llm thinking on prompt % is done", prompt.id)
+        session.logger.debug("llm thinking on prompt %s is done", prompt.id)
 
         for caller in callers:
             if caller.name in self.actions:

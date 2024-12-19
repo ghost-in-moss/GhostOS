@@ -4,12 +4,14 @@ import base64
 
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List, Union
+from typing_extensions import Annotated
 from io import BytesIO
 from ghostos.core.messages import (
     MessageType, Message, AudioMessage, FunctionCallMessage, FunctionCallOutputMessage,
     Caller, Role,
 )
 from ghostos.helpers import md5
+from enum import Enum
 
 
 class RateLimit(BaseModel):
@@ -75,8 +77,8 @@ class MessageItem(BaseModel):
     id: Optional[str] = Field(None)
     type: Literal["message", "function_call", "function_call_output"] = Field("")
     status: Optional[str] = Field(None, enum={"completed", "incomplete"})
-    role: Optional[str] = Field(None, enum={"assistant", "user", "system"})
-    content: Optional[List[Content]] = Field(default_factory=None)
+    role: Optional[str] = Field(default=None, enum={"assistant", "user", "system"})
+    content: Optional[List[Content]] = Field(None)
     call_id: Optional[str] = Field(None)
     name: Optional[str] = Field(None, description="The name of the function being called (for function_call items).")
     arguments: Optional[str] = Field(None, description="The arguments of the function call (for function_call items).")
@@ -288,13 +290,24 @@ class InputAudioTranscription(BaseModel):
     model: str = Field("whisper-1")
 
 
+class Voice(str, Enum):
+    alloy = "alloy"
+    echo = "echo"
+    shimmer = "shimmer"
+    ash = "ash"
+    ballad = "ballad"
+    coral = "coral"
+    sage = "sage"
+    verse = "verse"
+
+
 class SessionObjectBase(BaseModel):
     """
     immutable configuration for the openai session object
     """
     model: str = Field("gpt-4o-realtime-preview-2024-10-01")
     modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
-    voice: str = Field(default="coral", enum={"alloy", "echo", "shimmer", "ash", "ballad", "coral", "sage", "verse"})
+    voice: Voice = Field(default="coral")
     input_audio_format: str = Field(default="pcm16", enum={"pcm16", "g711_ulaw", "g711_alaw"})
     output_audio_format: str = Field(default="pcm16", enum={"pcm16", "g711_ulaw", "g711_alaw"})
     turn_detection: Union[TurnDetection, None] = Field(
@@ -305,7 +318,6 @@ class SessionObjectBase(BaseModel):
                     "and respond at the end of user speech."
     )
     input_audio_transcription: Optional[InputAudioTranscription] = Field(
-        default_factory=InputAudioTranscription,
         description="Configuration for input audio transcription. "
     )
     instructions: str = Field(default="", description="instructions of the session")

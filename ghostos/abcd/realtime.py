@@ -7,7 +7,6 @@ from typing import (
 from ghostos.abcd import Conversation
 from ghostos.core.messages import Message, ReceiverBuffer
 from ghostos.entity import ModelEntityMeta, to_entity_model_meta, from_entity_model_meta
-from contextlib import contextmanager
 from pydantic import BaseModel, Field
 from enum import Enum
 

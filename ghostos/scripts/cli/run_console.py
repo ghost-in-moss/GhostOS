@@ -1,18 +1,17 @@
 from ghostos.abcd import Ghost
+from ghostos.abcd.utils import get_module_magic_shell_providers
 from ghostos.scripts.cli.utils import (
-    check_ghostos_workspace_exists,
-    get_ghost_by_cli_argv,
+    find_ghost_by_file_or_module,
 )
-from ghostos.bootstrap import make_app_container, get_ghostos
+from ghostos.bootstrap import get_ghostos
 from ghostos.prototypes.console import ConsoleApp
 from ghostos.entity import get_entity
 
 
-def main():
-    workspace_dir = check_ghostos_workspace_exists()
-    ghost_info, modulename, filename, is_temp = get_ghost_by_cli_argv()
-    container = make_app_container(workspace_dir)
-    ghostos = get_ghostos(container)
+def run_console_app(file_or_module: str):
+    ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(file_or_module)
+    providers = get_module_magic_shell_providers(module)
+    ghostos = get_ghostos()
     ghost = get_entity(ghost_info.ghost, Ghost)
-    app = ConsoleApp(ghostos=ghostos, ghost=ghost, username="")
+    app = ConsoleApp(ghostos=ghostos, ghost=ghost, username="", providers=providers)
     app.run()

@@ -193,6 +193,8 @@ class ShellImpl(Shell):
         task_id = uuid()
         task = self.create_root_task(task_id, ghost, context)
         conversation = self.sync_task(task, throw=True, is_background=False)
+        if conversation is None:
+            raise RuntimeError('create conversation failed')
         with conversation:
             e, r = conversation.respond(instructions)
             send_message(r)

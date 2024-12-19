@@ -1,6 +1,7 @@
 from __future__ import annotations
 import yaml
-from typing import List, Optional, Tuple, ClassVar
+from warnings import warn
+from typing import List, Optional, Tuple
 from os.path import dirname, join, exists, abspath, isdir
 from ghostos.abcd import GhostOS
 from ghostos.container import Container, Provider, Contracts
@@ -43,6 +44,7 @@ from pydantic import BaseModel, Field
 
 __all__ = [
     'expect_workspace_dir',
+    'app_stub_dir',
     'BootstrapConfig',
     'get_bootstrap_config',
 
@@ -88,18 +90,30 @@ __all__ = [
 
 
 def expect_workspace_dir() -> Tuple[str, bool]:
-    from os import getcwd
-    expect_dir = join(getcwd(), "workspace")
+    """
+    :return: (workspace dir: str, exists: bool)
+    """
+    expect_dir = abspath("app")
     return abspath(expect_dir), exists(expect_dir) and isdir(expect_dir)
 
 
-class BootstrapConfig(BaseModel):
-    GHOSTOS_VERSION: ClassVar[str] = "0.0.1-dev"
+def app_stub_dir() -> str:
+    return join(dirname(__file__), "app")
 
+
+def find_workspace_dir() -> str:
+    expected, ok = expect_workspace_dir()
+    if ok:
+        return expected
+    return app_stub_dir()
+
+
+class BootstrapConfig(BaseModel):
     workspace_dir: str = Field(
-        default=abspath("workspace"),
+        default_factory=find_workspace_dir,
         description="ghostos workspace directory",
     )
+    dotenv_file_path: str = Field(".env", description="ghostos workspace .env file")
     ghostos_dir: str = Field(
         default=dirname(dirname(__file__)),
         description="ghostos source code directory",
@@ -113,8 +127,26 @@ class BootstrapConfig(BaseModel):
         description="ghostos workspace relative path for runtime directory",
     )
 
+    __from_file__: str = ""
+
     def abs_runtime_dir(self) -> str:
         return join(self.workspace_dir, "runtime")
+
+    def env_file(self) -> str:
+        return join(self.workspace_dir, self.dotenv_file_path)
+
+    def env_example_file(self) -> str:
+        return join(self.workspace_dir, ".example.env")
+
+    def save(self, dir_path: str = None):
+        from ghostos.helpers import yaml_pretty_dump
+        if dir_path is None:
+            filename = join(abspath(".ghostos.yml"))
+        else:
+            filename = join(dir_path, ".ghostos.yml")
+        content = yaml_pretty_dump(self.model_dump())
+        with open(filename, "w") as f:
+            f.write(content)
 
 
 def get_bootstrap_config(local: bool = True) -> BootstrapConfig:
@@ -127,7 +159,9 @@ def get_bootstrap_config(local: bool = True) -> BootstrapConfig:
         with open(expect_file) as f:
             content = f.read()
             data = yaml.safe_load(content)
-            return BootstrapConfig(**data)
+            conf = BootstrapConfig(**data)
+            conf.__from_file__ = expect_file
+            return conf
     else:
         return BootstrapConfig()
 
@@ -280,7 +314,6 @@ def default_application_providers(
 def make_app_container(
         *,
         bootstrap_conf: Optional[BootstrapConfig] = None,
-        dotenv_file_path: str = ".env",
         app_providers: Optional[List[Provider]] = None,
         app_contracts: Optional[Contracts] = None,
 ) -> Container:
@@ -290,9 +323,15 @@ def make_app_container(
 
     if bootstrap_conf is None:
         bootstrap_conf = get_bootstrap_config(local=True)
+    workspace_dir = bootstrap_conf.workspace_dir
+    if workspace_dir.startswith(bootstrap_conf.ghostos_dir):
+        warn(
+            f"GhostOS workspace dir is not found, better run `ghostos init` at first."
+            f"Currently using `{workspace_dir}` as workspace."
+        )
 
     # load env from dotenv file
-    env_path = join(bootstrap_conf.workspace_dir, dotenv_file_path)
+    env_path = join(bootstrap_conf.workspace_dir, bootstrap_conf.dotenv_file_path)
     if exists(env_path):
         import dotenv
         dotenv.load_dotenv(dotenv_path=env_path)

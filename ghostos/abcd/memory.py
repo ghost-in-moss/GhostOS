@@ -3,7 +3,7 @@ from typing import Type, Iterable
 from ghostos.entity import EntityClass
 from ghostos.identifier import Identifier, Identical
 from ghostos.helpers import generate_import_path
-from .concepts import Session, Scope
+from ghostos.abcd.concepts import Session
 
 
 class Memory(EntityClass, Identical, ABC):

@@ -172,7 +172,7 @@ In [this case](ghostos/demo/src/examples/run_aifunc_test.py) we ask an agent-lik
 We expect the `AgentFn` will call `WeatherAIFunc` and `NewsAIFunc` to help with subtasks,
 and give a final result to us.
 
-The testing AIFuncs are defined at [aifuncs](ghostos/app/aifuncs_demo).
+The testing AIFuncs are defined at [aifuncs](ghostos/demo/aifuncs_demo).
 
 ### File Editor Agent Test
 

@@ -16,22 +16,26 @@ import json
 __all__ = [
     'get_ghost_by_cli_argv',
     'get_or_create_module_from_name',
+    'find_ghost_by_file_or_module',
     'check_ghostos_workspace_exists',
     'parse_args_modulename_or_filename',
     'GhostsConf', 'GhostInfo',
 ]
 
 
-def get_ghost_by_cli_argv() -> Tuple[GhostInfo, str, str, bool]:
+def get_ghost_by_cli_argv() -> Tuple[GhostInfo, ModuleType, str, bool]:
     filename_or_modulename, args = parse_args_modulename_or_filename()
-    found = get_or_create_module_from_name(filename_or_modulename, "ghostos.temp.ghost")
+    return find_ghost_by_file_or_module(filename_or_modulename)
 
+
+def find_ghost_by_file_or_module(filename_or_modulename: str) -> Tuple[GhostInfo, ModuleType, str, bool]:
+    found = get_or_create_module_from_name(filename_or_modulename, "ghostos.temp.ghost")
     # ghost info
     ghosts_conf = GhostsConf.load_from(filename_or_modulename)
     ghost_key = GhostsConf.file_ghost_key(filename_or_modulename)
     if ghost_key in ghosts_conf.ghosts:
         ghost_info = ghosts_conf.ghosts[ghost_key]
-        return ghost_info, found.module.__name__, found.filename, found.is_temp
+        return ghost_info, found.module, found.filename, found.is_temp
 
     if found.value is not None:
         if not isinstance(found.value, Ghost):
@@ -43,8 +47,11 @@ def get_ghost_by_cli_argv() -> Tuple[GhostInfo, str, str, bool]:
             raise SystemExit(f"{filename_or_modulename} __ghost__ is not a Ghost object")
     else:
         ghost = new_moss_agent(found.module.__name__)
-    ghost_info = GhostInfo(ghost=to_entity_meta(ghost))
-    return ghost_info, found.module.__name__, found.filename, found.is_temp
+
+    ghost_info = GhostInfo(
+        ghost=to_entity_meta(ghost),
+    )
+    return ghost_info, found.module, found.filename, found.is_temp
 
 
 def check_ghostos_workspace_exists() -> str:
