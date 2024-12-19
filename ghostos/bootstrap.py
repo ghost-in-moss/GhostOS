@@ -1,10 +1,11 @@
-from typing import List, Optional, Tuple
-from os.path import dirname, join
+from __future__ import annotations
+import yaml
+from typing import List, Optional, Tuple, ClassVar
+from os.path import dirname, join, exists, abspath, isdir
 from ghostos.abcd import GhostOS
 from ghostos.container import Container, Provider, Contracts
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
-
-import dotenv
+from pydantic import BaseModel, Field
 
 # Core Concepts
 #
@@ -42,6 +43,8 @@ import dotenv
 
 __all__ = [
     'expect_workspace_dir',
+    'BootstrapConfig',
+    'get_bootstrap_config',
 
     # >>> container
     # GhostOS use IoC Container to manage dependency injections at everywhere.
@@ -57,6 +60,18 @@ __all__ = [
     'application_container',
     'make_app_container',
 
+    # reset ghostos default application instances.
+    'reset',
+    'get_container',
+
+    # default configuration
+    # consider safety reason, ghostos is not ready for online business
+    # so many abilities shall be forbidden to web agent
+    'default_application_contracts',
+    'default_application_providers',
+
+    'get_ghostos',
+
     # >>> GhostFunc
     # is a test library, which is able to define dynamic code for an in-complete function.
     # We develop it for early experiments.
@@ -66,35 +81,55 @@ __all__ = [
     'GhostFunc',
     'init_ghost_func',
 
-    # reset ghostos default application instances.
-    'reset',
-    'reset_at',
-    'get_container',
-
-    # default configuration
-    'workspace_dir',
-    'default_application_contracts',
-    'default_application_providers',
-
-    'GHOSTOS_VERSION',
-    'get_ghostos',
 ]
 
-GHOSTOS_VERSION_KEY = "ghostos_version"
-GHOSTOS_VERSION = "0.1.0"
 
 # --- prepare application paths --- #
 
 
-workspace_dir = join(dirname(dirname(__file__)), 'workspace')
-"""application root directory path"""
-
-
 def expect_workspace_dir() -> Tuple[str, bool]:
-    from os.path import join, exists, abspath, isdir
     from os import getcwd
     expect_dir = join(getcwd(), "workspace")
     return abspath(expect_dir), exists(expect_dir) and isdir(expect_dir)
+
+
+class BootstrapConfig(BaseModel):
+    GHOSTOS_VERSION: ClassVar[str] = "0.0.1-dev"
+
+    workspace_dir: str = Field(
+        default=abspath("workspace"),
+        description="ghostos workspace directory",
+    )
+    ghostos_dir: str = Field(
+        default=dirname(dirname(__file__)),
+        description="ghostos source code directory",
+    )
+    workspace_configs_dir: str = Field(
+        "configs",
+        description="ghostos workspace relative path for configs directory",
+    )
+    workspace_runtime_dir: str = Field(
+        "runtime",
+        description="ghostos workspace relative path for runtime directory",
+    )
+
+    def abs_runtime_dir(self) -> str:
+        return join(self.workspace_dir, "runtime")
+
+
+def get_bootstrap_config(local: bool = True) -> BootstrapConfig:
+    """
+    get ghostos bootstrap config from current working directory
+    if not found, return default configs.
+    """
+    expect_file = abspath(".ghostos.yml")
+    if local and exists(expect_file):
+        with open(expect_file) as f:
+            content = f.read()
+            data = yaml.safe_load(content)
+            return BootstrapConfig(**data)
+    else:
+        return BootstrapConfig()
 
 
 # --- default providers --- #
@@ -166,12 +201,7 @@ def default_application_contracts() -> Contracts:
 
 
 def default_application_providers(
-        root_dir: str,
-        workspace_configs_dir: str = "configs",
-        workspace_runtime_dir: str = "runtime",
-        runtime_processes_dir: str = "processes",
-        runtime_tasks_dir: str = "tasks",
-        runtime_threads_dir: str = "threads",
+        config: Optional[BootstrapConfig] = None,
 ) -> List[Provider]:
     """
     application default providers
@@ -195,6 +225,10 @@ def default_application_providers(
     from ghostos.framework.documents import ConfiguredDocumentRegistryProvider
     from ghostos.framework.realtime import ConfigBasedRealtimeProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
+
+    if config is None:
+        config = get_bootstrap_config(local=True)
+
     return [
 
         # --- logger ---#
@@ -202,15 +236,14 @@ def default_application_providers(
         DefaultLoggerProvider(),
         # --- workspace --- #
         BasicWorkspaceProvider(
-            workspace_dir=root_dir,
-            configs_path=workspace_configs_dir,
-            runtime_path=workspace_runtime_dir,
+            workspace_dir=config.workspace_dir,
+            configs_path=config.workspace_configs_dir,
+            runtime_path=config.workspace_runtime_dir,
         ),
         WorkspaceConfigsProvider(),
-        WorkspaceProcessesProvider(runtime_processes_dir),
-        WorkspaceTasksProvider(runtime_tasks_dir),
-        ConfiguredDocumentRegistryProvider("documents_registry.yml"),
-
+        WorkspaceProcessesProvider(),
+        WorkspaceTasksProvider(),
+        ConfiguredDocumentRegistryProvider(),
         WorkspaceVariablesProvider(),
         WorkspaceImageAssetsProvider(),
         WorkspaceAudioAssetsProvider(),
@@ -219,7 +252,7 @@ def default_application_providers(
         DefaultOpenAIParserProvider(),
 
         # --- session ---#
-        MsgThreadsRepoByWorkSpaceProvider(runtime_threads_dir),
+        MsgThreadsRepoByWorkSpaceProvider(),
         MemEventBusImplProvider(),
 
         # --- moss --- #
@@ -236,7 +269,7 @@ def default_application_providers(
 
         # --- aifunc --- #
         DefaultAIFuncExecutorProvider(),
-        AIFuncRepoByConfigsProvider(runtime_frame_dir="aifunc_frames"),
+        AIFuncRepoByConfigsProvider(),
 
         GhostOSProvider(),
         ConfigBasedRealtimeProvider(),
@@ -245,7 +278,8 @@ def default_application_providers(
 
 # --- system bootstrap --- #
 def make_app_container(
-        workspace_path: str,
+        *,
+        bootstrap_conf: Optional[BootstrapConfig] = None,
         dotenv_file_path: str = ".env",
         app_providers: Optional[List[Provider]] = None,
         app_contracts: Optional[Contracts] = None,
@@ -253,26 +287,34 @@ def make_app_container(
     """
     make application global container
     """
+
+    if bootstrap_conf is None:
+        bootstrap_conf = get_bootstrap_config(local=True)
+
     # load env from dotenv file
-    dotenv.load_dotenv(dotenv_path=join(workspace_path, dotenv_file_path))
+    env_path = join(bootstrap_conf.workspace_dir, dotenv_file_path)
+    if exists(env_path):
+        import dotenv
+        dotenv.load_dotenv(dotenv_path=env_path)
+
     # default logger name for GhostOS application
     if app_providers is None:
-        app_providers = default_application_providers(root_dir=workspace_path)
+        app_providers = default_application_providers(bootstrap_conf)
     if app_contracts is None:
         app_contracts = default_application_contracts()
 
     # prepare application container
     _container = Container(name="ghostos_root")
+    _container.set(BootstrapConfig, bootstrap_conf)
     _container.register(*app_providers)
     # contracts validation
     app_contracts.validate(_container)
     # bootstrap.
-    _container.set(GHOSTOS_VERSION_KEY, GHOSTOS_VERSION)
     _container.bootstrap()
     return _container
 
 
-application_container = make_app_container(workspace_dir)
+application_container = make_app_container()
 """ the global static application container. reset it before application usage"""
 
 ghost_func = init_ghost_func(application_container)
@@ -301,19 +343,6 @@ def reset(con: Container) -> Container:
     # reset global ghost func
     ghost_func = init_ghost_func(application_container)
     return application_container
-
-
-def reset_at(app_dir: str) -> Container:
-    """
-    reset application with default configuration at specified app directory
-    only run once if app_dir is the same
-    """
-    global workspace_dir
-    if app_dir == workspace_dir:
-        return application_container
-    workspace_dir = app_dir
-    _container = make_app_container(app_dir)
-    return reset(_container)
 
 
 # --- test the module by python -i --- #

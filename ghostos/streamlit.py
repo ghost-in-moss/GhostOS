@@ -1,4 +1,4 @@
-from typing import Protocol, Tuple, Self, TypeVar, Optional, NamedTuple, Any, Generic
+from typing import Protocol, Self, TypeVar, Optional, NamedTuple, Generic
 from abc import ABC, abstractmethod
 
 __all__ = [

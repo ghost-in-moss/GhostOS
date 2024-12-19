@@ -126,7 +126,7 @@ class AIFuncRepoByConfigs(AIFuncRepository):
 
 class AIFuncRepoByConfigsProvider(Provider[AIFuncRepository]):
 
-    def __init__(self, runtime_frame_dir: Optional[str] = None):
+    def __init__(self, runtime_frame_dir: str = "aifunc_frames"):
         self._runtime_frame_dir = runtime_frame_dir
 
     def singleton(self) -> bool:
