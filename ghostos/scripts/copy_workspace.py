@@ -4,7 +4,7 @@ import os
 import shutil
 import sys
 
-demo_dir = join(dirname(dirname(__file__)), 'demo')
+workspace_dir = join(dirname(dirname(__file__)), 'workspace')
 
 
 def main():
@@ -24,8 +24,8 @@ def main():
     # Copy files from demo_dir to target_dir
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
-    for item in os.listdir(demo_dir):
-        s = os.path.join(demo_dir, item)
+    for item in os.listdir(workspace_dir):
+        s = os.path.join(workspace_dir, item)
         d = os.path.join(target_dir, item)
         if "__pycache__" in s:
             continue
@@ -35,16 +35,6 @@ def main():
             shutil.copy2(s, d)
     print(f"Copied skeleton files to {target_dir}")
 
-
-# if __name__ == '__main__':
-#     from ghostos.prototypes.console import new_console_app
-#     from ghostos.thoughts import new_file_editor_thought
-#
-#     app = new_console_app(demo_dir, 0)
-#     app.run_thought(
-#         new_file_editor_thought(filepath=__file__),
-#         instruction="help me to complete the main func."
-#     )
 
 if __name__ == '__main__':
     main()

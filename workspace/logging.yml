@@ -14,7 +14,7 @@ handlers:
   ghostos_log:
     class: logging.handlers.RotatingFileHandler
     formatter: default
-    filename: ".ghostos/runtime/logs/ghostos.log"
+    filename: "workspace/runtime/logs/ghostos.log"
   console:
     class: logging.StreamHandler
     level: DEBUG

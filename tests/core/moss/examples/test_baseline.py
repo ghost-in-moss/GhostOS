@@ -48,7 +48,7 @@ def test_baseline_exec():
 
     prompter = runtime.prompter()
     assert prompter is not None
-    prompt = prompter.dump_code_context()
+    prompt = prompter.dump_module_prompt()
 
     injection_prompt = prompter.moss_injections_prompt()
     print("++++", injection_prompt)

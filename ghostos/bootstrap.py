@@ -86,14 +86,14 @@ GHOSTOS_VERSION = "0.1.0"
 # --- prepare application paths --- #
 
 
-workspace_dir = join(dirname(dirname(__file__)), '.ghostos')
+workspace_dir = join(dirname(dirname(__file__)), 'workspace')
 """application root directory path"""
 
 
 def expect_workspace_dir() -> Tuple[str, bool]:
     from os.path import join, exists, abspath, isdir
     from os import getcwd
-    expect_dir = join(getcwd(), ".ghostos")
+    expect_dir = join(getcwd(), "workspace")
     return abspath(expect_dir), exists(expect_dir) and isdir(expect_dir)
 
 

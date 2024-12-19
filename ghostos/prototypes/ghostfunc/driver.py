@@ -166,7 +166,7 @@ class GhostFuncDriver:
     def _init_thread(self) -> GoThreadInfo:
         pycontext = self._init_pycontext()
         moss_runtime = self._moss_runtime(pycontext)
-        context_code = moss_runtime.prompter().dump_code_context()
+        context_code = moss_runtime.prompter().dump_module_prompt()
         instruction = self._init_prompt(context_code)
         system = Role.SYSTEM.new(content=instruction)
         e = EventTypes.ROTATE.new(task_id="", messages=[system], from_task_id="")

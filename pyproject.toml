@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ghostos"
-version = "0.0.1"
-description = "An agent framework offering agents and meta-agents a Python code interface to operate everything."
+version = "0.0.1-dev"
+description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 authors = ["zhuming <thirdgerb@gmail.com>", "Nile Zhou <nilezhou123@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -36,7 +36,7 @@ requests = { extras = ["socks"], version = "^2.32.3" }
 streamlit-paste-button = "^0.1.2"
 
 [tool.poetry.scripts]
-init = "ghostos.scripts.init:main"
+workspace = "ghostos.scripts.workspace:main"
 demo = "ghostos.demo.scripts.demo:main"
 llm_test = "ghostos.demo.scripts.llm_test:main"
 clear_runtime = "ghostos.scripts.clear_runtime:main"
@@ -44,7 +44,7 @@ clear_runtime = "ghostos.scripts.clear_runtime:main"
 hello = "ghostos.scripts.cli.run_helloworld:main"
 aifunc = "ghostos.scripts.cli.run_aifunc:main"
 console = "ghostos.scripts.cli.run_console:main"
-ghost = "ghostos.scripts.cli.run_streamlit_ghost:main"
+web = "ghostos.scripts.cli.run_streamlit_ghost:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"

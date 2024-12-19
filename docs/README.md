@@ -1,3 +1,3 @@
-# todo
+# GhostOS
 
-todo: generate docs by agent
+> An awesome project.

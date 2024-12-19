@@ -288,7 +288,7 @@ class MossPrompter(ABC):
         """
         pass
 
-    def reflect_module_attr_prompts(self) -> AttrPrompts:
+    def reflect_module_attr(self) -> AttrPrompts:
         """
         结合已编译的本地变量, 用系统自带的方法反射出上下文属性的 prompts.
         """
@@ -300,7 +300,7 @@ class MossPrompter(ABC):
             local_values,
         )
 
-    def imported_attrs_prompt(self, auto_generation: bool = True) -> str:
+    def dump_attrs_prompt(self, auto_generation: bool = True) -> str:
         """
         基于 pycontext code 生成的 Prompt. 用来描述当前上下文里的各种变量.
         主要是从其它库引入的变量.
@@ -323,7 +323,7 @@ class MossPrompter(ABC):
 
         # 合并系统自动生成的.
         if auto_generation:
-            attr_prompts = self.reflect_module_attr_prompts()
+            attr_prompts = self.reflect_module_attr()
             for name, prompt in attr_prompts:
                 if name not in done:
                     names.append(name)
@@ -333,7 +333,7 @@ class MossPrompter(ABC):
         prompts = [(name, done[name]) for name in names]
         return compile_attr_prompts(prompts)
 
-    def dump_code_context(self) -> str:
+    def dump_module_prompt(self) -> str:
         """
         获取 MOSS 运行时的完整 Python context 的 Prompt.
         这个 Prompt 包含以下几个部分:
@@ -341,13 +341,13 @@ class MossPrompter(ABC):
         2. pycontext_code_prompt: 对 predefined code 里各种引用类库的描述 prompt. 会包裹在 `\"""` 中展示.
         3. moss_prompt: moss 会注入到当前上下文里, 因此会生成 MOSS Prompt.
         """
-        from ghostos.core.moss.lifecycle import __moss_code_context__
+        from ghostos.core.moss.lifecycle import __moss_module_prompt__
         compiled = self.module()
         # 基于 moss prompter 来生成.
-        if hasattr(compiled, __moss_code_context__.__name__):
-            fn = getattr(compiled, __moss_code_context__.__name__)
+        if hasattr(compiled, __moss_module_prompt__.__name__):
+            fn = getattr(compiled, __moss_module_prompt__.__name__)
             return fn(self)
-        return __moss_code_context__(self)
+        return __moss_module_prompt__(self)
 
     @abstractmethod
     def moss_injections_prompt(self) -> str:

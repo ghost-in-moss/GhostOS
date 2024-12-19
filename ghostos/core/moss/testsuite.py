@@ -24,7 +24,7 @@ class MossTestSuite:
         compiler = self._container.force_fetch(MossCompiler)
         compiler.join_context(PyContext(module=modulename))
         runtime = compiler.compile(test_modulename)
-        return runtime.prompter().dump_code_context()
+        return runtime.prompter().dump_module_prompt()
 
     def run_module_tests(
             self, *,

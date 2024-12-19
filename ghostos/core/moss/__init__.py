@@ -5,7 +5,7 @@ from ghostos.core.moss.abcd import (
     MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
 from ghostos.core.moss.impl import DefaultMOSSProvider
-from ghostos.core.moss.test_suites import MossTestSuite
+from ghostos.core.moss.testsuite import MossTestSuite
 from ghostos.core.moss.pycontext import PyContext
 
 __all__ = [

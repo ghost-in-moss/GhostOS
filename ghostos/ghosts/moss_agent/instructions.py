@@ -66,7 +66,7 @@ useful to call MOSS system to execute the code. The code must include a `run` fu
 
 
 def get_moss_context_prompter(title: str, runtime: MossRuntime) -> Prompter:
-    code_context = runtime.prompter().dump_code_context()
+    code_context = runtime.prompter().dump_module_prompt()
 
     injections = runtime.moss_injections()
     children = []

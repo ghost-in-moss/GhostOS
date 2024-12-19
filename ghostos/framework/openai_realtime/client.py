@@ -5,7 +5,6 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.assets import AudioAssets
 from ghostos.core.messages import Message, MessageType
 from ghostos.core.runtime import Turn, Event as GhostOSEvent, EventTypes as GhostOSEventTypes
-from ghostos.helpers import uuid
 from io import BytesIO
 from .configs import OpenAIRealtimeAppConf
 from .ws import OpenAIWSConnection
@@ -416,7 +415,7 @@ class AppClient(Client):
 
     def _send_client_event(self, event: ClientEvent):
         data = event.to_event_dict()
-        self.logger.debug("send client event type %s, data is %r", type(event), data)
+        self.logger.debug("send client event type %s", type(event))
         self.connection.send(data)
 
     def respond_error_message(self, error: str) -> None:

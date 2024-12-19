@@ -12,11 +12,11 @@ if TYPE_CHECKING:
 """
 
 __all__ = [
-    '__moss_compile__',
-    '__moss_attr_prompts__',
-    '__moss_code_context__',
-    '__moss_exec__',
-    '__moss_compiled__',
+    '__moss_compile__',  # prepare moss compiler, handle dependencies register
+    '__moss_compiled__',  # when moss instance is compiled
+    '__moss_attr_prompts__',  # generate custom local attr prompt
+    '__moss_module_prompt__',  # define module prompt
+    '__moss_exec__',  # execute the generated code attach to the module
 ]
 
 
@@ -58,7 +58,7 @@ def __moss_attr_prompts__() -> "AttrPrompts":
     return []
 
 
-def __moss_code_context__(prompter: "MossPrompter") -> str:
+def __moss_module_prompt__(prompter: "MossPrompter") -> str:
     """
     使用 MOSS Runtime 生成 prompt 的方法.
     可选的魔术方法. 定义的话, runtime.moss_context_prompt 实际上会使用这个方法.
@@ -71,7 +71,7 @@ def __moss_code_context__(prompter: "MossPrompter") -> str:
     origin_code = prompter.pycontext_code(exclude_hide_code=True)
 
     # 基于 origin code 生成关于这些变量的 prompt.
-    attrs_prompt = prompter.imported_attrs_prompt()
+    attrs_prompt = prompter.dump_attrs_prompt()
     code_prompt_part = ""
     if attrs_prompt:
         # 这部分变量的描述, 放到一个 string 里表示不污染当前上下文.
