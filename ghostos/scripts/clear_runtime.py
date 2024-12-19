@@ -29,7 +29,7 @@ def clear_directory(directory: str, recursive=True, depth: int = 0) -> int:
             if name not in ignore_patterns:
                 file_path = os.path.join(root, name)
                 try:
-                    print(f"remove file: {file_path}")
+                    print(f"- remove file: {file_path}")
                     os.remove(file_path)
                     cleared_files_count += 1
                 except Exception as e:
