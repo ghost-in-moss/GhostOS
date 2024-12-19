@@ -355,7 +355,7 @@ def thread_to_prompt(
     """
     if stages is None:
         stages = [""]
-    history = list(thread.get_history_messages())
+    history = list(thread.get_history_messages(truncated=True))
     inputs = []
     appending = []
     current_turn = thread.current

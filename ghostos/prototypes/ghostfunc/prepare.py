@@ -20,21 +20,19 @@ ghost_func_contracts = Contracts([
 def init_ghost_func_container(
         workspace_dir: str,
         configs_dir: str = "configs",
-        llm_conf_path: str = "llms_conf.yml",
         container: Optional[Container] = None,
 ) -> Container:
     """
     init ghost_func's container
     :param workspace_dir:
     :param configs_dir: relative directory from workspace
-    :param llm_conf_path: llms conf path
     :param container: parent container.
     """
     if container is None:
         container = moss_container()
     container.register(FileStorageProvider(workspace_dir))
     container.register(ConfigsByStorageProvider(configs_dir))
-    container.register(ConfigBasedLLMsProvider(llm_conf_path))
+    container.register(ConfigBasedLLMsProvider())
     return container
 
 
@@ -47,5 +45,4 @@ def init_ghost_func(
     """
     ghost_func_contracts.validate(container)
     self_container = Container(parent=container)
-    self_container.bootstrap()
     return GhostFunc(self_container)

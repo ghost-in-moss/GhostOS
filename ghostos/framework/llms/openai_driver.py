@@ -152,7 +152,7 @@ class OpenAIAdapter(LLMApi):
     def chat_completion(self, prompt: Prompt) -> Message:
         try:
             message: ChatCompletion = self._chat_completion(prompt, stream=False)
-            prompt.output = [message]
+            prompt.added = [message]
             pack = self._parser.from_chat_completion(message.choices[0].message)
             # add completion usage
             self._model.set_payload(pack)

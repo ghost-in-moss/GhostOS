@@ -15,6 +15,7 @@ DECORATOR = Callable[[Callable], Callable]
 class GhostFunc:
     def __init__(self, container: Container):
         self._container = container
+        self._container.bootstrap()
         self._caches: Dict[str, GhostFuncCache] = {}
         self._compiled = set()
 
