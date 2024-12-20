@@ -8,7 +8,7 @@ from ghostos.core.runtime import Turn, Event as GhostOSEvent, EventTypes as Ghos
 from io import BytesIO
 from ghostos.framework.openai_realtime.configs import OpenAIRealtimeAppConf
 from ghostos.framework.openai_realtime.ws import OpenAIWSConnection
-from ghostos.framework.openai_realtime.event_data_objects import MessageItem, SessionObject
+from ghostos.framework.openai_realtime.event_data_objects import MessageItem, SessionObject, Tool
 from ghostos.framework.openai_realtime.event_from_server import ServerSessionCreated
 from ghostos.framework.openai_realtime.event_from_client import (
     SessionUpdate,
@@ -134,7 +134,7 @@ class Context(ServerContext):
             return False
         ok = self.output_buffer.add_response_chunk(response_id, chunk)
         if not ok:
-            self.logger.error(f"Failed to add response chunk: {response_id}")
+            self.logger.debug(f"Failed to add response chunk: {response_id}")
         if chunk and chunk.is_complete():
             self.update_history_message(chunk)
         return ok
@@ -209,8 +209,12 @@ class Context(ServerContext):
         self.response_id = None
         return self.output_buffer.end_output(response_id) and match
 
-    def stop_listening(self) -> None:
-        self.listening = False
+    def stop_listening(self) -> bool:
+        if self.listening:
+            self.listening = False
+            self.clear_client_audio_buffer()
+            return True
+        return False
 
     def respond_audio_chunk(self, response_id: str, item_id: str, data: bytes) -> bool:
         if response_id == self.response_id:
@@ -249,6 +253,9 @@ class Context(ServerContext):
         with self.client_audio_buffer_locker:
             self.client_audio_buffer.close()
             self.client_audio_buffer = BytesIO()
+            if self.listening:
+                ce = InputAudioBufferClear()
+                self.send_client_event(ce)
 
     def set_client_audio_buffer_start(self, cut_ms: int) -> None:
         pass
@@ -282,21 +289,28 @@ class AppClient(Client):
             conversation: Conversation,
     ):
         self._closed: bool = False
+        self._vad_mode = vad_mode
         self.conf: OpenAIRealtimeAppConf = conf
-        self.vad_mode = vad_mode
         self.conversation: Conversation = conversation
         self.logger = conversation.logger
         self.connection: OpenAIWSConnection = self.connect()
         self.server_ctx: Context = Context(
             conversation=conversation,
             connection=self.connection,
-            listening=self.vad_mode,
+            listening=self._vad_mode,
             logger=conversation.logger,
             output=output_buffer,
         )
         self.session_state: SessionState = self._create_session_state()
         self.synchronized: bool = False
         self._sync_history: Optional[List[str]] = None
+
+    def set_vad_mode(self, vad_mode: bool) -> None:
+        self._vad_mode = vad_mode
+        self.update_session()
+
+    def vad_mode(self) -> bool:
+        return self._vad_mode
 
     def connect(self) -> OpenAIWSConnection:
         self._validate_closed()
@@ -345,6 +359,9 @@ class AppClient(Client):
         self.synchronized = False
 
     def audio_buffer_append(self, buffer: bytes) -> None:
+        if not self.is_listening():
+            # listening change is quick then sending
+            return
         self.server_ctx.audio_buffer_append(buffer)
 
     def is_listening(self) -> bool:
@@ -369,8 +386,8 @@ class AppClient(Client):
         ce = SessionUpdate(
             session=session_obj.model_dump(),
         )
-        self.logger.debug("update session: %s", repr(ce))
-        self.server_ctx.send_client_event(ce)
+        self.logger.debug("client update session: %r", ce)
+        self.server_ctx.send_client_event(ce, exclude_none=False)
 
     def get_sync_history(self):
         if self._sync_history is not None:
@@ -385,7 +402,7 @@ class AppClient(Client):
         return self._sync_history
 
     def get_session_obj(self) -> SessionObject:
-        session_obj = self._get_session_obj(self.vad_mode)
+        session_obj = self._get_session_obj(self._vad_mode)
         history = self.get_sync_history()
         if history:
             history_content = "\n\n---\n\n".join(history)
@@ -406,6 +423,7 @@ class AppClient(Client):
         if self.server_ctx.is_server_responding():
             ce = ResponseCancel()
             self.server_ctx.send_client_event(ce)
+            self.clear_audio_input()
             return True
         return False
 
@@ -419,11 +437,7 @@ class AppClient(Client):
         return False
 
     def stop_listening(self) -> bool:
-        if self.server_ctx.listening:
-            # stop listening
-            self.server_ctx.stop_listening()
-            return True
-        return False
+        return self.server_ctx.stop_listening()
 
     def commit_audio_input(self) -> bool:
         if self.server_ctx.listening:
@@ -444,14 +458,15 @@ class AppClient(Client):
         session_obj.instructions = self.conversation.get_instructions()
         tools = []
         for fn in self.conversation.get_functions():
-            tools.append(fn.to_dict())
+            tool = Tool(**fn.to_dict())
+            tools.append(tool)
         session_obj.tools = tools
         return session_obj
 
     def create_response(self) -> bool:
         session_obj = self.get_session_obj()
         ce = ResponseCreate(
-            response=session_obj
+            response=session_obj.model_dump(),
         )
         self.server_ctx.send_client_event(ce)
         return True
@@ -463,7 +478,6 @@ class AppClient(Client):
         return self.server_ctx.output_buffer.is_speaking()
 
     def receive_server_event(self) -> bool:
-        self.logger.debug("start to receive server event")
         data = self.connection.recv(timeout=0.1)
         if data:
             self.logger.debug("got received server event")

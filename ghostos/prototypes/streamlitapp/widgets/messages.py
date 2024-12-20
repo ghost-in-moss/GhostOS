@@ -1,5 +1,4 @@
-import json
-
+import streamlit_antd_components as sac
 import streamlit as st
 from typing import Iterable, List, NamedTuple
 from ghostos.core.messages import (
@@ -57,7 +56,6 @@ def render_message_group(group: MessageGroup, debug: bool, in_expander: bool, pr
 
 
 def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
-    import streamlit_antd_components as sac
     from ghostos.prototypes.streamlitapp.widgets.dialogs import (
         open_task_info_dialog, open_completion_usage_dialog, open_prompt_info_dialog,
         open_message_dialog,
@@ -113,15 +111,17 @@ def render_message_in_content(message: Message, debug: bool, in_expander: bool, 
         render_audio_message(message)
     else:
         st.write(message.model_dump(exclude_defaults=True))
-        if message.callers:
-            render_message_caller(message.callers, debug, in_expander)
+    if message.callers:
+        render_message_caller(message.callers, debug, in_expander)
+
     render_message_payloads(message, debug, prefix)
     st.empty()
 
 
 def render_audio_message(message: Message):
     from ghostos.prototypes.streamlitapp.resources import get_audio_assets
-    st.markdown(message.content)
+    if message.content:
+        st.markdown(message.content)
 
     assets = get_audio_assets()
     file, data = assets.get_file_and_binary_by_id(message.msg_id)

@@ -50,7 +50,7 @@ def is_ghost(value) -> bool:
 def fire_session_event(session: Session, event: Event) -> Optional[Operator]:
     event, op = session.parse_event(event)
     if op is not None:
-        session.logger.debug("session event is intercepted and op %s is returned", op)
+        session.logger.info("session event is intercepted and op %s is returned", op)
         return op
     if event is None:
         # if event is intercepted, stop the run.

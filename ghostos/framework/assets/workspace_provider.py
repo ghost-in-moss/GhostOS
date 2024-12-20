@@ -25,5 +25,5 @@ class WorkspaceFileAssetsProvider(Provider, ABC):
 
     def factory(self, con: Container) -> Optional[INSTANCE]:
         ws = con.force_fetch(Workspace)
-        storage = ws.assets().sub_storage(self._dirname)
+        storage = ws.runtime().sub_storage(self._dirname)
         return StorageFileAssets(storage)

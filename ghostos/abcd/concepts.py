@@ -125,7 +125,7 @@ class GhostDriver(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def functions(self, session: Session) -> List[LLMFunc]:
+    def actions(self, session: Session) -> List[Action]:
         pass
 
     @abstractmethod
@@ -461,6 +461,9 @@ class Conversation(Protocol[G]):
 
     @abstractmethod
     def available(self) -> bool:
+        """
+        beside closed, conversation may be executing, that means it is not available.
+        """
         pass
 
     @abstractmethod

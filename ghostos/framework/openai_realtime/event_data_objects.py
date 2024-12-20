@@ -3,8 +3,7 @@ from __future__ import annotations
 import base64
 
 from pydantic import BaseModel, Field
-from typing import Optional, Literal, List, Union
-from typing_extensions import Annotated
+from typing import Optional, Literal, List, Union, Dict
 from io import BytesIO
 from ghostos.core.messages import (
     MessageType, Message, AudioMessage, FunctionCallMessage, FunctionCallOutputMessage,
@@ -103,10 +102,12 @@ class MessageItem(BaseModel):
             type_ = "function_call"
             call_id = message.call_id
             arguments = message.content
+            role = None
         elif message.type == MessageType.FUNCTION_OUTPUT.value:
             type_ = "function_call_output"
             call_id = message.call_id
             output = message.content
+            role = None
         else:
 
             type_ = "message"
@@ -145,7 +146,7 @@ class MessageItem(BaseModel):
         pass
 
     def has_audio(self) -> bool:
-        if len(self.content) > 0:
+        if self.content and len(self.content) > 0:
             for c in self.content:
                 if c.type == "input_audio":
                     return True
@@ -164,7 +165,7 @@ class MessageItem(BaseModel):
         if self.type == "function_call_output":
             return Message.new_head(
                 typ_=MessageType.FUNCTION_OUTPUT.value,
-                role=self.role,
+                role=self.role or Role.ASSISTANT.value,
                 content=self.output,
                 msg_id=self.id,
                 call_id=self.call_id,
@@ -173,7 +174,7 @@ class MessageItem(BaseModel):
             return Message.new_head(
                 typ_=MessageType.FUNCTION_CALL.value,
                 msg_id=self.id,
-                role=self.role,
+                role=self.role or Role.ASSISTANT.value,
                 name=self.name,
                 call_id=self.call_id,
                 content=self.arguments,
@@ -301,11 +302,24 @@ class Voice(str, Enum):
     verse = "verse"
 
 
+class OpenAIRealtimeModel(str, Enum):
+    gpt_4o_realtime_preview_2024_10_01 = "gpt-4o-realtime-preview-2024-10-01"
+    gpt_4o_mini_realtime_preview_2024_12_17 = "gpt-4o-mini-realtime-preview-2024-12-17"
+    gpt_4o_realtime_preview_2024_12_17 = "gpt-4o-realtime-preview-2024-12-17"
+
+
+class Tool(BaseModel):
+    type: Literal["function"] = "function"
+    name: str = Field()
+    description: str = Field()
+    parameters: Dict = Field(default_factory=dict)
+
+
 class SessionObjectBase(BaseModel):
     """
     immutable configuration for the openai session object
     """
-    model: str = Field("gpt-4o-realtime-preview-2024-10-01")
+    model: OpenAIRealtimeModel = Field(OpenAIRealtimeModel.gpt_4o_realtime_preview_2024_12_17)
     modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
     voice: Voice = Field(
         default="coral",
@@ -333,10 +347,33 @@ class SessionObjectBase(BaseModel):
         description="Configuration for input audio transcription."
     )
     instructions: str = Field(default="", description="instructions of the session")
-    tools: List[dict] = Field(default_factory=list)
+    tools: List[Tool] = Field(default_factory=list)
     tool_choice: str = Field(default="auto")
     temperature: float = Field(default=0.8)
     max_response_output_tokens: Union[int, Literal['inf']] = Field(default='inf')
+
+
+class ResponseSettings(BaseModel):
+    modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
+    voice: Voice = Field(
+        default="coral",
+        description="Voice to use",
+    )
+    output_audio_format: str = Field(
+        default="pcm16",
+        enum={"pcm16", "g711_ulaw", "g711_alaw"},
+        description="only support pcm16 yet",
+    )
+    instructions: str = Field(default="", description="instructions of the session")
+    tools: List[dict] = Field(default_factory=list)
+    tool_choice: str = Field(default="auto")
+    temperature: float = Field(default=0.8)
+
+    # max_response_output_tokens: Union[int, Literal['inf']] = Field(default='inf')
+
+    @classmethod
+    def from_session(cls, session: SessionObjectBase):
+        return cls(**session.model_dump())
 
 
 class SessionObject(SessionObjectBase):

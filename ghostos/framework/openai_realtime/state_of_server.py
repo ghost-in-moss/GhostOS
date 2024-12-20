@@ -104,14 +104,6 @@ class ServerContext(Protocol):
         pass
 
     @abstractmethod
-    def stop_listening(self) -> None:
-        """
-        stop listening inputs.
-        :return:
-        """
-        pass
-
-    @abstractmethod
     def clear_client_audio_buffer(self) -> None:
         pass
 
@@ -203,8 +195,7 @@ class SessionState(StateOfServer):
     def recv(self, event: dict):
         type_name = ServerEventType.get_type(event)
         if ServerEventType.error.value == type_name:
-            se = ServerError(**event)
-            raise RuntimeError(se.error)
+            return self.recv_invalid_event(event)
         elif ServerEventType.is_session_event(event, type_name):
             return self._recv_session_event(event, type_name)
 
@@ -466,7 +457,9 @@ class ConversationItemState(StateOfServer):
         self.message = self.item.to_message_head().as_tail(copy=True)
         # add new message item.
         self.ctx.add_message_item(server_event.item, server_event.previous_item_id)
-        if self.item.has_audio():
+        if self.item is None:
+            self.ctx.logger.info("receive conversation item created but is None: %r", server_event)
+        if self.item and self.item.has_audio():
             # save audio.
             self.ctx.save_audio_item(self.item)
         return self.ack_server_event(server_event)
@@ -507,7 +500,6 @@ class InputAudioState(StateOfServer):
 
     def _on_input_audio_buffer_cleared(self, event: dict):
         se = InputAudioBufferCleared(**event)
-        self.ctx.clear_client_audio_buffer()
         return self.ack_server_event(se)
 
     def _destroy(self):
@@ -682,6 +674,10 @@ class ResponseItemState(StateOfServer):
 
         elif ServerEventType.response_function_call_arguments_done.value == type_name:
             se = ResponseFunctionCallArgumentsDone(**event)
+            chunk = se.as_message()
+            self.ctx.respond_message_chunk(se.response_id, chunk)
+            self.ctx.logger.info("receive function call done: %s", repr(se))
+
             return self.ack_server_event(se)
 
         else:
@@ -689,7 +685,10 @@ class ResponseItemState(StateOfServer):
 
     def _on_response_output_item_done(self, event: ResponseOutputItemDone) -> None:
         self.item = event.item
-        self.ctx.respond_message_chunk(event.response_id, event.item.to_complete_message())
+        done = event.item.to_complete_message()
+        self.ctx.logger.info("response done with event: %s, message is %s", repr(event), repr(done))
+        self.ctx.respond_message_chunk(event.response_id, done)
+        self.ctx.update_history_message(done)
         return self.ack_server_event(event)
 
     def _on_response_content_part_added(self, event: ResponseContentPartAdded) -> None:

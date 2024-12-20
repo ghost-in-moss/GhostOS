@@ -106,7 +106,6 @@ class OpenAIWSConnection:
                 return None
             if timeout_error:
                 raise
-            self._logger.debug(f"[OpenAIWSConnection] receive data timeout, but expected")
             return None
 
     def close(self):

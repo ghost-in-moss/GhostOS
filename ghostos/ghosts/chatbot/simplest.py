@@ -43,7 +43,7 @@ class ChatbotDriver(GhostDriver[Chatbot]):
     def get_instructions(self, session: Session) -> str:
         return self.get_system_prompter().get_prompt(session.container)
 
-    def functions(self, session: Session) -> List[LLMFunc]:
+    def actions(self, session: Session) -> List[LLMFunc]:
         return []
 
     def providers(self) -> Iterable[Provider]:

@@ -112,16 +112,12 @@ class MossAgentDriver(GhostDriver[MossAgent]):
             with rtm:
                 return self._get_instructions(session, rtm)
 
-    def functions(self, session: Session) -> List[LLMFunc]:
+    def actions(self, session: Session) -> List[Action]:
         compiler = self._get_moss_compiler(session)
-        result = []
         with compiler:
             runtime = compiler.compile(self.ghost.moss_module)
             actions = self.get_actions(session, runtime)
-            for action in actions:
-                if fn := action.as_function():
-                    result.append(fn)
-        return result
+            return list(actions)
 
     def thought(self, session: Session, runtime: MossRuntime) -> Thought:
         from .for_meta_ai import __moss_agent_thought__ as fn
@@ -312,9 +308,7 @@ class MossAction(Action, PromptPipe):
     DEFAULT_NAME: ClassVar[str] = "moss"
 
     class Argument(BaseModel):
-        code: str = Field(
-            description="generated moss code",
-        )
+        code: str = Field(description="the python code you want to execute. never quote them with ```")
 
     def __init__(self, runtime: MossRuntime, name: str = DEFAULT_NAME):
         self.runtime: MossRuntime = runtime
@@ -341,12 +335,22 @@ class MossAction(Action, PromptPipe):
     @classmethod
     def unmarshal_arguments(cls, arguments: str) -> str:
         try:
-            data = json.loads(arguments)
-            args = cls.Argument(**data)
-        except json.JSONDecodeError:
-            content = arguments
-            args = cls.Argument(code=content)
+            if arguments.startswith("{"):
+                if not arguments.endswith("}"):
+                    arguments += "}"
+                data = json.loads(arguments)
+                args = cls.Argument(**data)
+            else:
+                args = cls.Argument(code=arguments)
+        except Exception:
+            args = cls.Argument(code=arguments)
         code = args.code.strip()
+        if code.startswith("```python"):
+            code.lstrip("```python")
+        if code.startswith("```"):
+            code.lstrip("```")
+        if code.endswith("```"):
+            code.rstrip("```")
         return code.strip()
 
     def run(self, session: Session, caller: Caller) -> Union[Operator, None]:

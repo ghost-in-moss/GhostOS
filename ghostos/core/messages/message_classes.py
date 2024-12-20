@@ -46,6 +46,8 @@ class FunctionCallMessage(MessageClass, BaseModel):
 
     @classmethod
     def from_message(cls, message: Message) -> Optional[Self]:
+        if message.type != cls.__message_type__:
+            return None
         return cls(
             msg_id=message.msg_id,
             payloads=message.payloads,
@@ -196,6 +198,8 @@ class ImageAssetMessage(MessageClass, BaseModel):
 
     @classmethod
     def from_message(cls, message: Message) -> Optional[Self]:
+        if message.type != cls.__message_type__:
+            return None
         return cls(
             msg_id=message.msg_id,
             role=message.role,
@@ -296,6 +300,8 @@ class AudioMessage(MessageClass, BaseModel):
 
     @classmethod
     def from_message(cls, message: Message) -> Optional[Self]:
+        if message.type != cls.__message_type__:
+            return None
         return cls(
             msg_id=message.msg_id,
             role=message.role,

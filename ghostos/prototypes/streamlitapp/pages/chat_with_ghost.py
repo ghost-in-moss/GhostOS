@@ -97,18 +97,21 @@ def main_chat():
                         created = True
                     Singleton(realtime_app, RealtimeApp).bind(st.session_state)
                     if created:
-                        realtime_app.start()
+                        realtime_app.start(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
                     else:
                         realtime_app.set_mode(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
 
                     canceled = get_response_button_count()
+                    st.write(canceled)
                     if not route.vad_mode:
                         if st.button("response", key=f"create_realtime_response_{canceled}"):
                             incr_response_button_count()
                             realtime_app.operate(OperatorName.respond.new(""))
+                            st.rerun()
                     if st.button("cancel response", key=f"cancel_realtime_response_{canceled}"):
                         incr_response_button_count()
                         realtime_app.operate(OperatorName.cancel_responding.new(""))
+                        st.rerun()
 
             else:
                 if realtime_app is not None:
@@ -205,10 +208,12 @@ def incr_response_button_count():
 def _run_realtime(route: GhostChatRoute, app: RealtimeApp):
     thread = app.conversation.get_thread()
     render_thread_messages(thread)
+    messages = app.history_messages()
+    render_messages(messages, debug=False, in_expander=False)
     while not app.is_closed():
         state = "waiting"
         buffer = None
-        with st.container(border=False):
+        with st.empty():
             with st.status(state) as status:
                 while buffer is None:
                     state, operators = app.state()

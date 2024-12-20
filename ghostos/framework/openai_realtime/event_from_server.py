@@ -1,12 +1,13 @@
 import base64
-from typing import Self, Literal, List, Optional, Union, Dict, Protocol, ClassVar, Set
-from abc import ABC, abstractmethod
+from typing import Self, List, Optional, Union, ClassVar
+from abc import ABC
 from enum import Enum
 from pydantic import BaseModel, Field
-from ghostos.core.messages import Message as GhostOSMessage
+from ghostos.core.messages import Message as GhostOSMessage, MessageType
 from ghostos.framework.openai_realtime.event_data_objects import (
     RateLimit, Response, MessageItem,
     DeltaIndex, ConversationObject, Error, SessionObject,
+    ResponseSettings,
     Content,
 )
 
@@ -437,6 +438,7 @@ class ResponseFunctionCallArgumentsDelta(DeltaIndex, ServerEvent):
     def as_message_chunk(self) -> Optional[GhostOSMessage]:
         if self.delta:
             return GhostOSMessage.new_chunk(
+                typ_=MessageType.FUNCTION_CALL.value,
                 msg_id=self.item_id,
                 content=self.delta,
             )
@@ -447,6 +449,15 @@ class ResponseFunctionCallArgumentsDone(DeltaIndex, ServerEvent):
     type: ClassVar[str] = ServerEventType.response_function_call_arguments_done.value
     call_id: str = Field("")
     arguments: str = Field("")
+    name: str = Field("")
+
+    def as_message(self) -> GhostOSMessage:
+        return GhostOSMessage.new_tail(
+            type_=MessageType.FUNCTION_CALL.value,
+            name=self.name,
+            content=self.arguments,
+            call_id=self.call_id,
+        )
 
 
 class RateLimitsUpdated(ServerEvent):

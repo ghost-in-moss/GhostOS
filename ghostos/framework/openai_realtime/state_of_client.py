@@ -45,7 +45,6 @@ cancel_response_op = OperatorName.cancel_responding.new("cancel current respondi
 class Client(Protocol):
     conf: OpenAIRealtimeAppConf
     logger: LoggerItf
-    vad_mode: bool
 
     @abstractmethod
     def reconnect(self) -> None:
@@ -53,6 +52,10 @@ class Client(Protocol):
         recreate the ws connection.
         :return:
         """
+        pass
+
+    @abstractmethod
+    def vad_mode(self) -> bool:
         pass
 
     @abstractmethod
@@ -98,7 +101,7 @@ class Client(Protocol):
         return self.is_server_responding() or self.is_speaking()
 
     @abstractmethod
-    def is_speaking(self)  -> bool:
+    def is_speaking(self) -> bool:
         pass
 
     @abstractmethod
@@ -262,7 +265,6 @@ class ListeningState(StateOfClient):
         name = operator.name
         if name == OperatorName.respond.value:
             # commit and create response.
-            self.client.commit_audio_input()
             return CreateResponseState(self.client)
 
         elif name == OperatorName.stop_listen:
@@ -351,11 +353,6 @@ class RespondingState(StateOfClient):
 
     def tick_frame(self) -> Optional[Self]:
         if self.client.is_responding():
-            self.client.logger.debug(
-                "responding state is speaking: %r, is server responding %r",
-                self.client.is_responding(),
-                self.client.is_server_responding(),
-            )
             return None
         else:
             self.client.logger.debug("responding state return default mode")

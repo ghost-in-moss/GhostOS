@@ -291,8 +291,6 @@ class DefaultOutputBuffer(OutputBuffer):
         if not output_item_id or output_item_id in self.sent_message_ids:
             return None
 
-        self.sent_message_ids.add(output_item_id)
-
         while not self.is_close_check():
             if response_id != self.response_id or self.response_chunks is None:
                 # stream canceled
@@ -312,3 +310,4 @@ class DefaultOutputBuffer(OutputBuffer):
 
         if output_item_id in self.outputted_messages:
             yield self.outputted_messages[output_item_id]
+            self.sent_message_ids.add(output_item_id)

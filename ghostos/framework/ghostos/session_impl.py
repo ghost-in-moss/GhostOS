@@ -8,6 +8,7 @@ from ghostos.abcd import get_ghost_driver
 from ghostos.core.messages import (
     MessageKind, Message, Caller, Stream, Role, MessageKindParser, MessageType
 )
+from ghostos.core.messages.message_classes import FunctionCallMessage
 from ghostos.core.runtime import (
     TaskBrief, GoTaskStruct, TaskLocker, TaskPayload, GoTasks, TaskState,
     EventBus, Event, EventTypes,
@@ -142,11 +143,24 @@ class SessionImpl(Session[Ghost]):
         if self.task.state == TaskState.NEW.value:
             driver.on_creating(self)
             self.task.state = TaskState.RUNNING.value
-            return event, None
 
         # always let ghost driver decide event handling logic first.
         event = driver.parse_event(self, event)
         if event is None:
+            return None, None
+
+        if EventTypes.ACTION_CALL.value == event.type:
+            actions = self.ghost_driver.actions(self)
+            actions_map = {action.name(): action for action in actions}
+            for message in event.messages:
+                fc = FunctionCallMessage.from_message(message)
+                if fc is None:
+                    continue
+                if fc.caller.name in actions_map:
+                    action = actions_map[fc.caller.name]
+                    op = action.run(self, fc.caller)
+                    if op is not None:
+                        return None, op
             return None, None
 
         # notification do not trigger the handling

@@ -2,7 +2,7 @@ from typing import Optional, ClassVar, Self
 from abc import ABC
 from enum import Enum
 from pydantic import BaseModel, Field
-from ghostos.framework.openai_realtime.event_data_objects import SessionObject, SessionObjectBase, MessageItem
+from ghostos.framework.openai_realtime.event_data_objects import ResponseSettings, SessionObjectBase, MessageItem
 
 __all__ = [
     'ClientEventType',
@@ -73,8 +73,8 @@ class ClientEvent(BaseModel, ABC):
         description="Optional client-generated ID used to identify this event.",
     )
 
-    def to_event_dict(self, exclude_none: bool=True) -> dict:
-        data = self.model_dump(exclude_none=True)
+    def to_event_dict(self, exclude_none: bool = True) -> dict:
+        data = self.model_dump(exclude_none=exclude_none)
         data["type"] = self.type
         return data
 
@@ -131,7 +131,7 @@ class ConversationItemDelete(ClientEvent):
 
 class ResponseCreate(ClientEvent):
     type: ClassVar[str] = ClientEventType.response_create.value
-    response: Optional[SessionObject] = Field(None)
+    response: Optional[ResponseSettings] = Field(None)
 
 
 class ResponseCancel(ClientEvent):

@@ -16,7 +16,7 @@ RATE = 44100
 
 class PyAudioPCM16Listener(Listener):
 
-    def __init__(self, rate: int = 24000, chunk_size: int = CHUNK):
+    def __init__(self, rate: int = 24000, chunk_size: int = CHUNK, interval: float = 0.5):
         self.rate = rate
         self.chunk_size = chunk_size
         self.stream = PyAudio().open(
@@ -25,9 +25,10 @@ class PyAudioPCM16Listener(Listener):
             rate=self.rate,
             input=True,
         )
+        self.interval = interval
 
     def listen(self, sender: Callable[[bytes], None]) -> Listening:
-        return PyAudioPCM16Listening(self.stream, sender, self.rate, self.chunk_size)
+        return PyAudioPCM16Listening(self.stream, sender, self.rate, self.chunk_size, self.interval)
 
     def __del__(self):
         self.stream.close()
@@ -35,9 +36,17 @@ class PyAudioPCM16Listener(Listener):
 
 class PyAudioPCM16Listening(Listening):
 
-    def __init__(self, stream, sender: Callable[[bytes], None], rate: int = 24000, chunk: int = CHUNK):
+    def __init__(
+            self,
+            stream,
+            sender: Callable[[bytes], None],
+            rate: int = 24000,
+            chunk: int = CHUNK,
+            interval: float = 0.5,
+    ):
         self.sender = sender
         self.stream = stream
+        self.interval = interval
         self.rate = rate
         self.chunk = chunk
         self.stopped = Event()
@@ -47,7 +56,7 @@ class PyAudioPCM16Listening(Listening):
         self.stream.start_stream()
         while not self.stopped.is_set():
             buffer = BytesIO()
-            for i in range(int(self.rate / self.chunk * 0.5)):
+            for i in range(int((self.rate / self.chunk) * self.interval)):
                 data = self.stream.read(self.chunk, exception_on_overflow=False)
                 buffer.write(data)
             self.sender(buffer.getvalue())

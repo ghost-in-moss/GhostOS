@@ -141,7 +141,13 @@ class ConversationImpl(Conversation[G]):
         self.refresh()
         self._validate_closed()
         session = self._create_session(self.get_task(), None)
-        return self.get_ghost_driver().functions(session)
+        actions = self.get_ghost_driver().actions(session)
+        functions = []
+        for action in actions:
+            function = action.as_function()
+            if function is not None:
+                functions.append(function)
+        return functions
 
     def get_instructions(self) -> str:
         self.refresh()
@@ -313,7 +319,7 @@ class ConversationImpl(Conversation[G]):
             self._task_locker.release()
 
     def is_closed(self) -> bool:
-        return self._closed
+        return self._closed or self._shell_closed()
 
     def is_alive(self) -> bool:
         return not self._closed
