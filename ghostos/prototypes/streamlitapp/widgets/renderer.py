@@ -65,7 +65,7 @@ def render_task(task: GoTaskStruct):
 
 def render_thread(thread: GoThreadInfo, max_turn: int = 20, prefix: str = "", debug: bool = False):
     st.subheader("Thread Info")
-    turns = list(thread.turns())
+    turns = list(thread.turns(truncate=True))
     turns = turns[-max_turn:]
     count = 0
     for turn in turns:

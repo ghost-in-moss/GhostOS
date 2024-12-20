@@ -166,7 +166,6 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
         api.register_event(SpheroEventType.on_not_charging, self._on_off_charging)
 
     def _on_collision(self, api: SpheroEduAPI, *args, **kwargs):
-        print("+++++++++++ on colo", SpheroEventType.on_collision.name, self._current_movement)
         self._on_event_handler(api, SpheroEventType.on_collision.name)
 
     def _on_event_handler(self, api: SpheroEduAPI, event_name: str):

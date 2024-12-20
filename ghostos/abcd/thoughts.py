@@ -102,11 +102,13 @@ class SummaryThought(BaseModel, Thought[str]):
 
     llm_api: str = Field("", description="the llm api to use")
     instruction: str = Field(
-        "summarize the history message in 500 words, keep the most important information.",
+        "the chat history is too long. "
+        "You MUST summarizing the history message in 500 words, keep the most important information."
+        "Your Summary:",
         description="the llm instruction to use",
     )
 
-    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[T]]:
+    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[str]]:
         from ghostos.core.messages import Role
         forked = prompt.fork(None)
         instruction = Role.SYSTEM.new(content=self.instruction)

@@ -214,7 +214,7 @@ class GoThreadInfo(BaseModel):
     def update_message(self, message: Message) -> bool:
         if not message.is_complete():
             return False
-        for turn in self.turns():
+        for turn in self.turns(truncate=False):
             if turn.update_message(message):
                 return True
         return False
@@ -243,14 +243,20 @@ class GoThreadInfo(BaseModel):
             copied.current = None
         return copied
 
-    def turns(self) -> Iterable[Turn]:
+    def turns(self, *, truncate: bool = False) -> Iterable[Turn]:
         """
         遍历所有的 turns.
+        :param truncate: if true, truncate from last summarized turn.
         """
         yield self.on_created
+        history = []
         if self.history:
             for turn in self.history:
-                yield turn
+                if truncate and turn.summary:
+                    history = [turn]
+                else:
+                    history.append(turn)
+        yield from history
         if self.current is not None:
             yield self.current
 

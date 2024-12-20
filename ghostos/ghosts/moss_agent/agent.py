@@ -43,7 +43,7 @@ class MossAgent(ModelEntity, Agent):
     code: Optional[str] = Field(default=None, description="code override the module")
     compile_module: Optional[str] = Field(None, description="Compile module name for the agent")
     llm_api: str = Field(default="", description="name of the llm api, if none, use default one")
-    truncate_at_turns: int = Field(default=30, description="when history turns reach the point, truncate")
+    truncate_at_turns: int = Field(default=40, description="when history turns reach the point, truncate")
     truncate_to_turns: int = Field(default=20, description="when truncate the history, left turns")
 
     def __identifier__(self) -> Identifier:
@@ -167,7 +167,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
 
                 # prepare prompt
                 instructions = self._get_instructions(session, rtm)
-                prompt = thread.to_prompt([Role.SYSTEM.new(content=instructions)])
+                prompt = thread.to_prompt([Role.SYSTEM.new(content=instructions)], truncate=True)
                 pipes = self._get_prompt_pipes(session, rtm)
                 prompt = run_prompt_pipeline(prompt, pipes)
 

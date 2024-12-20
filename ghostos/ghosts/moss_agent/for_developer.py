@@ -1,6 +1,6 @@
 from typing import Optional, TypeVar, Dict, Any, Iterable
 from .agent import MossAgent
-from ghostos.core.moss import Moss, MossRuntime
+from ghostos.core.moss import MossRuntime
 from ghostos.abcd.concepts import Session, Operator
 from ghostos.core.runtime import GoThreadInfo, Event
 from ghostos.container import Provider

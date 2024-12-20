@@ -376,7 +376,7 @@ def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):
 
 
 def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
-    turns = list(thread.turns())
+    turns = list(thread.turns(truncate=True))
     if max_turn > 0:
         turns = turns[-max_turn:]
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
