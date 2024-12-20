@@ -2,7 +2,7 @@ from __future__ import annotations
 import time
 
 import socks
-from typing import Union, Optional, Self
+from typing import Union
 
 import urllib3.util
 import websockets
@@ -10,35 +10,9 @@ import json
 import logging
 from websockets.sync.client import connect as ws_connect, ClientConnection
 from ghostos.contracts.logger import LoggerItf, get_console_logger
-from pydantic import BaseModel, Field
+from ghostos.framework.openai_realtime.configs import OpenAIWebsocketsConf
 
-__all__ = ['OpenAIWSConnection', 'OpenAIWebsocketsConf']
-
-
-# 拆一个 base model 方便未来做成表单.
-class OpenAIWebsocketsConf(BaseModel):
-    api_key: str = Field(
-        default="$OPENAI_API_KEY",
-        description="The OpenAI key used to authenticate with WebSockets.",
-    )
-    proxy: Optional[str] = Field(
-        default="$OPENAI_PROXY",
-        description="The proxy to connect to. only support socket v5 now",
-    )
-    uri: str = Field("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01")
-    close_check: float = Field(
-        default=0.5,
-        description="check if the connection is still going while sending event to server",
-    )
-
-    def load_from_env(self) -> Self:
-        from os import environ
-        copied = self.model_copy(deep=True)
-        if copied.api_key and copied.api_key.startswith("$"):
-            copied.api_key = environ[copied.api_key]
-        if copied.proxy and copied.proxy.startswith("$"):
-            copied.proxy = environ[copied.proxy]
-        return copied
+__all__ = ['OpenAIWSConnection']
 
 
 class OpenAIWSConnection:
@@ -62,11 +36,13 @@ class OpenAIWSConnection:
         self._running = False
         self._closed = False
         self._logger = logger if logger else logging.getLogger()
-        self._conf = conf.load_from_env()
+        conf = conf.load_from_env()
+        self._conf = conf
         sock = None
         if conf.proxy is not None:
             sock = self._create_socket(conf.proxy, conf.uri)
         # 同步创建 connection.
+        self._logger.info("connecting openai realtime api")
         self._ws = ws_connect(
             uri=self._conf.uri,
             additional_headers={
@@ -75,6 +51,7 @@ class OpenAIWSConnection:
             },
             sock=sock,
         )
+        self._logger.info("connected openai realtime api")
 
     def _create_socket(self, proxy: str, uri: str):
         parsed = urllib3.util.parse_url(proxy)

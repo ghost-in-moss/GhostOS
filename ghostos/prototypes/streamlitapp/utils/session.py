@@ -115,6 +115,11 @@ class Singleton:
         key = cls.gen_key(t)
         return key in session_state
 
+    @classmethod
+    def release(cls, t: Type, session_state: MutableMapping) -> None:
+        key = cls.gen_key(t)
+        del session_state[key]
+
 
 class SingletonContracts:
     def __init__(self, types: List[Type]):

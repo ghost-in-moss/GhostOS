@@ -119,6 +119,7 @@ class ConversationImpl(Conversation[G]):
         return session.get_truncated_thread()
 
     def update_thread(self, thread: GoThreadInfo) -> None:
+        self.refresh()
         self._validate_closed()
         task = self.get_task()
         thread.id = task.thread_id
@@ -137,11 +138,13 @@ class ConversationImpl(Conversation[G]):
         return get_entity(task.context, Context)
 
     def get_functions(self) -> List[LLMFunc]:
+        self.refresh()
         self._validate_closed()
         session = self._create_session(self.get_task(), None)
         return self.get_ghost_driver().functions(session)
 
     def get_instructions(self) -> str:
+        self.refresh()
         self._validate_closed()
         session = self._create_session(self.get_task(), None)
         try:
@@ -151,7 +154,11 @@ class ConversationImpl(Conversation[G]):
             session.destroy()
 
     def refresh(self) -> bool:
-        return self._task_locker.refresh()
+        self._validate_closed()
+        ok = self._task_locker.refresh()
+        if not ok:
+            self.close()
+        return ok
 
     def get_artifact(self) -> Tuple[Union[Ghost.ArtifactType, None], TaskState]:
         self._validate_closed()
@@ -174,6 +181,7 @@ class ConversationImpl(Conversation[G]):
             self,
             inputs: Iterable[MessageKind],
             context: Optional[Ghost.ContextType] = None,
+            streaming: bool = True,
     ) -> Tuple[Event, Receiver]:
         self._validate_closed()
         if self._submit_session_thread:
@@ -189,13 +197,15 @@ class ConversationImpl(Conversation[G]):
             messages=messages,
             context=context_meta,
         )
-        return event, self.respond_event(event)
+        return event, self.respond_event(event, streaming=streaming)
 
     def respond_event(
             self,
             event: Event,
             timeout: float = 0.0,
+            streaming: bool = True,
     ) -> Receiver:
+        self.refresh()
         self._validate_closed()
         if self._handling_event:
             raise RuntimeError("conversation is handling event")
@@ -207,7 +217,7 @@ class ConversationImpl(Conversation[G]):
         stream, retriever = new_basic_connection(
             timeout=timeout,
             idle=self._conf.message_receiver_idle,
-            complete_only=self._is_background,
+            complete_only=self._is_background or not streaming,
         )
         if self._submit_session_thread:
             self._submit_session_thread.join()

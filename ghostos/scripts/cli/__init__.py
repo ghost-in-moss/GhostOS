@@ -38,13 +38,33 @@ def start_web_config():
     start_streamlit_prototype_cli("run_configs.py", "", get_bootstrap_config().workspace_dir)
 
 
+@main.command("clear-assets")
+@click.option("--path", default="", show_default=True)
+def clear_runtime(path: str):
+    """
+    clear workspace runtime files
+    """
+    from ghostos.scripts.clear import clear_assets
+    from ghostos.bootstrap import get_bootstrap_config
+    conf = get_bootstrap_config()
+    confirm = Prompt.ask(
+        f"Will clear all workspace assets files at {conf.abs_asserts_dir()}\n\nWould you like to proceed? [y/N]",
+        choices=["y", "n"],
+        default="y",
+    )
+    if confirm == "y":
+        clear_assets(path)
+    else:
+        print("Aborted")
+
+
 @main.command("clear-runtime")
 @click.option("--path", default="", show_default=True)
 def clear_runtime(path: str):
     """
     clear workspace runtime files
     """
-    from ghostos.scripts.clear_runtime import clear_runtime
+    from ghostos.scripts.clear import clear_runtime
     from ghostos.bootstrap import get_bootstrap_config
     conf = get_bootstrap_config()
     confirm = Prompt.ask(

@@ -209,8 +209,20 @@ class RealtimeApp(ABC):
     but yield its privilege to server side session during runtime.
     """
 
+    conversation: Conversation
+
+    @property
     @abstractmethod
-    def start(self):
+    def vad_mode(self) -> bool:
+        pass
+
+    @property
+    @abstractmethod
+    def listen_mode(self) -> bool:
+        pass
+
+    @abstractmethod
+    def start(self, vad_mode: bool = True, listen_mode: bool = True) -> Operator:
         """
         start realtime session
         """
@@ -235,7 +247,7 @@ class RealtimeApp(ABC):
         pass
 
     @abstractmethod
-    def set_mode(self, *, vad_mode: bool):
+    def set_mode(self, *, vad_mode: Optional[bool] = None, listen_mode: Optional[bool] = None):
         pass
 
     @abstractmethod

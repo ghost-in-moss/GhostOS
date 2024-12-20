@@ -1,7 +1,5 @@
-from ghostos.framework.openai_realtime import (
-    RealtimeAppImpl,
-    OpenAIRealtimeAppConf,
-)
+from ghostos.framework.openai_realtime.app import RealtimeAppImpl
+from ghostos.framework.openai_realtime.configs import OpenAIRealtimeAppConf
 from ghostos.bootstrap import get_ghostos
 from ghostos.contracts.configs import Configs
 from ghostos.contracts.logger import LoggerItf, get_console_logger

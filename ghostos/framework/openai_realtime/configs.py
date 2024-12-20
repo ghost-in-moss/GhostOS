@@ -1,13 +1,38 @@
-from typing import ClassVar
-from pydantic import Field
+from typing import ClassVar, Optional, Self
 from ghostos.abcd.realtime import RealtimeAppConfig
 from ghostos.contracts.configs import YamlConfig
-from ghostos.framework.openai_realtime.ws import OpenAIWebsocketsConf
 from ghostos.framework.openai_realtime.event_data_objects import SessionObject
+from pydantic import BaseModel, Field
 
-__all__ = ['OPENAI_REALTIME_DRIVER_NAME', 'OpenAIRealtimeAppConf']
+__all__ = ['OPENAI_REALTIME_DRIVER_NAME', 'OpenAIRealtimeAppConf', 'OpenAIWebsocketsConf']
 
 OPENAI_REALTIME_DRIVER_NAME = "openai_realtime_driver"
+
+
+# 拆一个 base model 方便未来做成表单.
+class OpenAIWebsocketsConf(BaseModel):
+    api_key: str = Field(
+        default="$OPENAI_API_KEY",
+        description="The OpenAI key used to authenticate with WebSockets.",
+    )
+    proxy: Optional[str] = Field(
+        default="$OPENAI_PROXY",
+        description="The proxy to connect to. only support socket v5 now",
+    )
+    uri: str = Field("wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17")
+    close_check: float = Field(
+        default=0.5,
+        description="check if the connection is still going while sending event to server",
+    )
+
+    def load_from_env(self) -> Self:
+        from os import environ
+        copied = self.model_copy(deep=True)
+        if copied.api_key and copied.api_key.startswith("$"):
+            copied.api_key = environ[copied.api_key[1:]]
+        if copied.proxy and copied.proxy.startswith("$"):
+            copied.proxy = environ[copied.proxy[1:]]
+        return copied
 
 
 class OpenAIRealtimeAppConf(YamlConfig, RealtimeAppConfig):

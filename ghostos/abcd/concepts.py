@@ -403,6 +403,10 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def refresh(self) -> bool:
+        pass
+
+    @abstractmethod
     def talk(self, query: str, user_name: str = "") -> Tuple[Event, Receiver]:
         pass
 
@@ -415,6 +419,7 @@ class Conversation(Protocol[G]):
             self,
             inputs: Iterable[MessageKind],
             context: Optional[G.ContextType] = None,
+            streaming: bool = True,
     ) -> Tuple[Event, Receiver]:
         """
         create response immediately by inputs. the inputs will change to event.
@@ -422,11 +427,9 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def respond_event(self, event: Event) -> Receiver:
+    def respond_event(self, event: Event, streaming: bool = True) -> Receiver:
         """
         create response to the event immediately
-        :param event:
-        :return:
         """
         pass
 

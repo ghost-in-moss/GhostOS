@@ -72,7 +72,7 @@ class FileAssets(ABC):
     def has_binary(self, fileid: str) -> bool:
         pass
 
-    def get_binary_by_id(self, fileid: str) -> Optional[Tuple[FileInfo, Union[bytes, None]]]:
+    def get_file_and_binary_by_id(self, fileid: str) -> Tuple[Union[FileInfo, None], Union[bytes, None]]:
         """
         get binary data by file id
         :param fileid: the file info id.
@@ -80,7 +80,7 @@ class FileAssets(ABC):
         """
         file_info = self.get_fileinfo(fileid)
         if file_info is None:
-            return None
+            return None, None
         return file_info, self.get_binary(file_info.filename)
 
 

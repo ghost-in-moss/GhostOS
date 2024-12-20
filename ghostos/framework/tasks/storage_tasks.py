@@ -29,17 +29,20 @@ class SimpleStorageLocker(TaskLocker):
         filename = self.locker_file_name()
         if self.storage.exists(filename):
             content = self.storage.get(filename)
-            data = yaml.safe_load(content)
-            lock = self.LockData(**data)
-            now = time.time()
-            if lock['lock_id'] == self.lock_id or now - float(lock["overdue"]) > 0:
-                self.create_lock()
-                return True
-            if not self._acquired and self._force:
-                self.create_lock()
-                return True
-            return False
-
+            data = None
+            if content:
+                data = yaml.safe_load(content)
+            if data:
+                lock = self.LockData(**data)
+                now = time.time()
+                if lock['lock_id'] == self.lock_id or now - float(lock["overdue"]) > 0:
+                    self.create_lock()
+                    return True
+                elif not self._acquired and self._force:
+                    self.create_lock()
+                    return True
+                else:
+                    return False
         self.create_lock()
         return True
 

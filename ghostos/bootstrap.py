@@ -132,6 +132,9 @@ class BootstrapConfig(BaseModel):
     def abs_runtime_dir(self) -> str:
         return join(self.workspace_dir, "runtime")
 
+    def abs_asserts_dir(self) -> str:
+        return join(self.workspace_dir, "assets")
+
     def env_file(self) -> str:
         return join(self.workspace_dir, self.dotenv_file_path)
 

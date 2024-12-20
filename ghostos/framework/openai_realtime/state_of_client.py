@@ -35,11 +35,11 @@ class AppState(str, Enum):
     """local conversation function call"""
 
 
-listen = OperatorName.listen.new("start listening and sending audio buffer")
-respond = OperatorName.respond.new("create a response")
-clear_audio = OperatorName.clear_audio.new("clear input audio buffer")
-stop_listen = OperatorName.stop_listen.new("stop listening but do nothing.")
-cancel_response = OperatorName.cancel_responding.new("cancel current responding")
+listen_op = OperatorName.listen.new("start listening and sending audio buffer")
+respond_op = OperatorName.respond.new("create a response")
+clear_audio_op = OperatorName.clear_audio.new("clear input audio buffer")
+stop_listen_op = OperatorName.stop_listen.new("stop listening but do nothing.")
+cancel_response_op = OperatorName.cancel_responding.new("cancel current responding")
 
 
 class Client(Protocol):
@@ -84,6 +84,10 @@ class Client(Protocol):
 
     @abstractmethod
     def is_listening(self) -> bool:
+        pass
+
+    @abstractmethod
+    def listen_mode(self) -> bool:
         pass
 
     @abstractmethod
@@ -176,7 +180,7 @@ class StateOfClient(ABC):
         self.client = None
 
     def default_mode(self) -> Self:
-        if self.client.vad_mode:
+        if self.client.listen_mode():
             # start vad mode and listening to anything.
             return ListeningState(self.client)
         else:
@@ -249,9 +253,9 @@ class ListeningState(StateOfClient):
 
     def operators(self) -> List[str]:
         return [
-            respond,
-            stop_listen,
-            clear_audio,
+            respond_op,
+            stop_listen_op,
+            clear_audio_op,
         ]
 
     def operate(self, operator: Operator) -> Optional[Self]:
@@ -279,6 +283,8 @@ class ListeningState(StateOfClient):
         if self.client.is_server_responding():
             # responding not cancel listening
             return RespondingState(self.client)
+        if not self.client.listen_mode():
+            return self.default_mode()
         return None
 
 
@@ -296,8 +302,8 @@ class CreateResponseState(StateOfClient):
         self.client.create_response()
         return
 
-    def state_name(self) -> Tuple[str, List[str]]:
-        return AppState.waiting_response, self.operators()
+    def state_name(self) -> str:
+        return str(AppState.waiting_response.value)
 
     def operate(self, operator: Operator) -> Optional[Self]:
         return None
@@ -317,12 +323,10 @@ class RespondingState(StateOfClient):
     def on_init(self):
         if not self.client.is_server_responding():
             self.client.respond_error_message("enter responding state but server is not responding")
-        # stop listening while responding.
-        self.client.stop_listening()
         return
 
     def state_name(self) -> str:
-        return AppState.responding.value
+        return str(AppState.responding.value)
 
     def operate(self, operator: Operator) -> Optional[Self]:
         name = operator.name
@@ -341,8 +345,8 @@ class RespondingState(StateOfClient):
 
     def operators(self) -> List[Operator]:
         return [
-            cancel_response,
-            listen,
+            cancel_response_op,
+            listen_op,
         ]
 
     def tick_frame(self) -> Optional[Self]:
@@ -378,8 +382,8 @@ class IdleState(StateOfClient):
 
     def operators(self) -> List[Operator]:
         return [
-            listen,
-            respond,
+            listen_op,
+            respond_op,
         ]
 
     def tick_frame(self) -> Optional[Self]:

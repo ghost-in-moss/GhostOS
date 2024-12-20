@@ -9,7 +9,7 @@ from ghostos.prototypes.streamlitapp.pages.router import (
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.prototypes.streamlitapp.widgets.messages import (
-    render_message_in_content
+    render_message_in_content, render_messages,
 )
 from ghostos.prototypes.streamlitapp.widgets.renderer import (
     render_object, render_event, render_turn,
@@ -18,12 +18,15 @@ from ghostos.prototypes.streamlitapp.widgets.renderer import (
 from ghostos.prototypes.streamlitapp.resources import (
     get_app_conf, save_uploaded_image, save_pil_image,
 )
+
 from ghostos.core.runtime import GoThreadInfo, Event, GoTaskStruct
 from ghostos.core.messages import (
     Receiver, Role, ReceiverBuffer, MessageType, Message,
     ImageAssetMessage,
 )
 from streamlit.logger import get_logger
+from ghostos.framework.openai_realtime import RealtimeApp
+from ghostos.abcd.realtime import OperatorName
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
@@ -46,6 +49,10 @@ def main_chat():
 
     # get ghost and context
     conversation = get_conversation(route)
+    if not conversation.refresh():
+        st.error("Conversation is Closed")
+        return
+    realtime_app = Singleton.get(RealtimeApp, st.session_state, force=False)
     # run the pages
     with st.sidebar:
         # other pages
@@ -68,24 +75,65 @@ def main_chat():
                 route.auto_run = False
                 route.camera_input = False
                 route.image_input = False
+                created = False
+                with st.container():
+                    route.vad_mode = st.toggle(
+                        _("vad mod"),
+                        help=_("the realtime api auto detected your input"),
+                        value=route.vad_mode,
+                    )
+                    route.listen_mode = st.toggle(
+                        _("listening"),
+                        help=_("turn on or turn off listening"),
+                        value=route.listen_mode,
+                    )
+
+                    if realtime_app is None:
+                        realtime_app = get_realtime_app(conversation)
+                        created = True
+                    elif realtime_app.conversation is not conversation:
+                        realtime_app.close()
+                        realtime_app = get_realtime_app(conversation)
+                        created = True
+                    Singleton(realtime_app, RealtimeApp).bind(st.session_state)
+                    if created:
+                        realtime_app.start()
+                    else:
+                        realtime_app.set_mode(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
+
+                    canceled = get_response_button_count()
+                    if not route.vad_mode:
+                        if st.button("response", key=f"create_realtime_response_{canceled}"):
+                            incr_response_button_count()
+                            realtime_app.operate(OperatorName.respond.new(""))
+                    if st.button("cancel response", key=f"cancel_realtime_response_{canceled}"):
+                        incr_response_button_count()
+                        realtime_app.operate(OperatorName.cancel_responding.new(""))
+
             else:
-                route.auto_run = st.toggle(
-                    _("auto run event"),
-                    help=_("automatic run background event"),
-                    value=route.auto_run,
-                )
-                route.camera_input = st.toggle(
-                    _("camera_input"),
-                    help=_("take picture from camera, the model shall support image type"),
-                    value=route.camera_input,
-                    key=route.generate_key(st.session_state, "camera_input"),
-                )
-                route.image_input = st.toggle(
-                    "upload image",
-                    help=_("upload picture, the model shall support image type"),
-                    value=route.image_input,
-                    key=route.generate_key(st.session_state, "image input"),
-                )
+                if realtime_app is not None:
+                    # if bind realtime app, release it.
+                    realtime_app.close()
+                    Singleton.release(RealtimeApp, st.session_state)
+
+                with st.container():
+                    route.auto_run = st.toggle(
+                        _("auto run event"),
+                        help=_("automatic run background event"),
+                        value=route.auto_run,
+                    )
+                    route.camera_input = st.toggle(
+                        _("camera"),
+                        help=_("take picture from camera, the model shall support image type"),
+                        value=route.camera_input,
+                        key=route.generate_key(st.session_state, "camera_input"),
+                    )
+                    route.image_input = st.toggle(
+                        "upload image",
+                        help=_("upload picture, the model shall support image type"),
+                        value=route.image_input,
+                        key=route.generate_key(st.session_state, "image input"),
+                    )
             route.bind(st.session_state)
 
     # header
@@ -109,13 +157,13 @@ def main_chat():
 """)
         col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
         with col1:
-            show_chatting = st.toggle("chat", value=True)
-        with col2:
             show_ghost_settings = st.toggle("settings")
-        with col3:
+        with col2:
             show_instruction = st.toggle("instructions")
-        with col4:
+        with col3:
             show_context = st.toggle("context")
+        with col4:
+            pass
 
     # render ghost settings
     if show_ghost_settings:
@@ -126,18 +174,72 @@ def main_chat():
         render_context_settings(conversation)
 
     # inputs
-    if show_chatting:
+    if not route.realtime:
         st.subheader("Chat")
-        if not route.realtime:
-            chatting(route, conversation)
-        else:
-            realtime(route, conversation)
+        chatting(route, conversation)
+    else:
+        st.subheader("Realtime Chat")
+        run_realtime(route, realtime_app)
 
 
-def realtime(route: GhostChatRoute, conversation: Conversation):
-    thread = conversation.get_thread()
-    render_thread_messages(thread, max_turn=20)
-    debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
+def run_realtime(route: GhostChatRoute, app: RealtimeApp):
+    try:
+        _run_realtime(route, app)
+    except Exception as e:
+        app.close()
+        raise e
+
+
+def get_response_button_count() -> int:
+    if "real_time_canceled" not in st.session_state:
+        st.session_state["real_time_canceled"] = 0
+    return st.session_state["real_time_canceled"]
+
+
+def incr_response_button_count():
+    if "real_time_canceled" not in st.session_state:
+        st.session_state["real_time_canceled"] = 0
+    st.session_state["real_time_canceled"] += 1
+
+
+def _run_realtime(route: GhostChatRoute, app: RealtimeApp):
+    thread = app.conversation.get_thread()
+    render_thread_messages(thread)
+    while not app.is_closed():
+        state = "waiting"
+        buffer = None
+        with st.container(border=False):
+            with st.status(state) as status:
+                while buffer is None:
+                    state, operators = app.state()
+                    status.update(label=state)
+                    buffer = app.output()
+                    if buffer is None:
+                        time.sleep(0.5)
+                        continue
+
+            while buffer is not None:
+                head = buffer.head()
+                role = head.role
+                role = "user" if role == Role.USER.value else "assistant"
+                with st.chat_message(role):
+                    with st.empty():
+                        with st.container():
+                            chunks = chunks_to_st_stream(buffer.chunks())
+                            st.write_stream(chunks)
+                        with st.container():
+                            render_message_in_content(buffer.tail(), False, False)
+                    buffer = buffer.next()
+    st.write("app is close")
+
+
+def get_realtime_app(conversation: Conversation) -> RealtimeApp:
+    from ghostos.framework.audio import get_pyaudio_pcm16_speaker, get_pyaudio_pcm16_listener
+    from ghostos.framework.openai_realtime import get_openai_realtime_app
+    speaker = get_pyaudio_pcm16_speaker()
+    listener = get_pyaudio_pcm16_listener()
+    vad_mode = True
+    return get_openai_realtime_app(conversation, vad_mode=vad_mode, listener=listener, speaker=speaker)
 
 
 def get_conversation(route: GhostChatRoute) -> Conversation:
@@ -181,7 +283,7 @@ def chatting(route: GhostChatRoute, conversation: Conversation):
 def _chatting(route: GhostChatRoute, conversation: Conversation):
     chat_input = st.chat_input("message")
     thread = conversation.get_thread()
-    render_thread_messages(thread, max_turn=20)
+    render_thread_messages(thread, max_turn=20, truncate=True)
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()
 
     pics: List[UploadedFile] = []
@@ -264,28 +366,33 @@ def render_receiver(receiver: Receiver, debug: bool):
                     if buffer is None:
                         return
                 with st.chat_message("assistant"):
-                    while buffer is not None:
-                        st.logger.get_logger("ghostos").info("receive buffer head: %s", buffer.head())
-                        if MessageType.is_text(buffer.head()):
-                            with st.empty():
-                                contents = chunks_to_st_stream(buffer.chunks())
-                                st.write_stream(contents)
-                                with st.container():
-                                    render_message_in_content(buffer.tail(), debug, in_expander=False)
+                    render_receive_buffer(buffer, debug)
 
-                        elif MessageType.FUNCTION_CALL.match(buffer.head()):
-                            contents = chunks_to_st_stream(buffer.chunks())
-                            with st.empty():
-                                st.write_stream(contents)
-                                with st.container():
-                                    render_message_in_content(buffer.tail(), debug, in_expander=False)
-                        else:
-                            render_message_in_content(buffer.tail(), debug, in_expander=False)
-                        # render next item
-                        buffer = buffer.next()
     except Exception as e:
         st.error(str(e))
         st.exception(e)
+
+
+def render_receive_buffer(buffer: ReceiverBuffer, debug: bool):
+    while buffer is not None:
+        st.logger.get_logger("ghostos").info("receive buffer head: %s", buffer.head())
+        if MessageType.is_text(buffer.head()):
+            with st.empty():
+                contents = chunks_to_st_stream(buffer.chunks())
+                st.write_stream(contents)
+                with st.container():
+                    render_message_in_content(buffer.tail(), debug, in_expander=False)
+
+        elif MessageType.FUNCTION_CALL.match(buffer.head()):
+            contents = chunks_to_st_stream(buffer.chunks())
+            with st.empty():
+                st.write_stream(contents)
+                with st.container():
+                    render_message_in_content(buffer.tail(), debug, in_expander=False)
+        else:
+            render_message_in_content(buffer.tail(), debug, in_expander=False)
+        # render next item
+        buffer = buffer.next()
 
 
 def chunks_to_st_stream(chunks: Iterable[Message]) -> Iterable[str]:
@@ -372,11 +479,11 @@ def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):
         st.write(task.model_dump(exclude_defaults=True))
 
     st.subheader("Thread Info")
-    render_thread_messages(thread, max_turn=0)
+    render_thread_messages(thread, max_turn=0, truncate=False)
 
 
-def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20):
-    turns = list(thread.turns(truncate=True))
+def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20, truncate: bool = True):
+    turns = list(thread.turns(truncate=truncate))
     if max_turn > 0:
         turns = turns[-max_turn:]
     debug = get_app_conf().BoolOpts.DEBUG_MODE.get()

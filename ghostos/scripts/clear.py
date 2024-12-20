@@ -7,7 +7,7 @@ import os
 this script is used to clear the local file cache in runtime directory
 """
 
-__all__ = ['clear_directory', 'clear_runtime']
+__all__ = ['clear_directory', 'clear_runtime', 'clear_assets']
 
 ignore_patterns = ['.gitignore']
 
@@ -43,6 +43,19 @@ def clear_directory(directory: str, recursive=True, depth: int = 0) -> int:
             # os.rmdir(real_dir_path)
 
     return cleared_files_count
+
+
+def clear_assets(sub_path: str) -> int:
+    from ghostos.bootstrap import get_bootstrap_config
+    bootstrap_config = get_bootstrap_config()
+    asserts_dir = bootstrap_config.abs_asserts_dir()
+
+    target_dir = asserts_dir
+    if sub_path:
+        target_dir = join(target_dir, sub_path)
+
+    cleared = clear_directory(target_dir, recursive=True)
+    return cleared
 
 
 def clear_runtime(sub_path: str) -> int:

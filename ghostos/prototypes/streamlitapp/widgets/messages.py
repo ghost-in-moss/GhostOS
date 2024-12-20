@@ -109,6 +109,8 @@ def render_message_in_content(message: Message, debug: bool, in_expander: bool, 
     elif MessageType.IMAGE.match(message):
         # render image type message
         render_image_message(message)
+    elif MessageType.AUDIO.match(message):
+        render_audio_message(message)
     else:
         st.write(message.model_dump(exclude_defaults=True))
         if message.callers:
@@ -117,8 +119,19 @@ def render_message_in_content(message: Message, debug: bool, in_expander: bool, 
     st.empty()
 
 
+def render_audio_message(message: Message):
+    from ghostos.prototypes.streamlitapp.resources import get_audio_assets
+    st.markdown(message.content)
+
+    assets = get_audio_assets()
+    file, data = assets.get_file_and_binary_by_id(message.msg_id)
+    if data is not None:
+        # st.write(data)
+        st.audio(data)
+
+
 def render_image_message(message: Message):
-    from ghostos.prototypes.streamlitapp.resources import get_asset_images
+    from ghostos.prototypes.streamlitapp.resources import get_images_from_image_asset
     if message.type != MessageType.IMAGE.value:
         return
     image_msg = ImageAssetMessage.from_message(message)
@@ -126,7 +139,7 @@ def render_image_message(message: Message):
     # render content first
     st.markdown(content)
     image_ids = [image_id.image_id for image_id in image_msg.attrs.images]
-    got = get_asset_images(image_ids)
+    got = get_images_from_image_asset(image_ids)
     for image_info, binary in got.values():
         if binary:
             st.image(binary)

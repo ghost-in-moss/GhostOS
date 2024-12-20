@@ -8,7 +8,7 @@ from ghostos.helpers import generate_import_path
 from enum import Enum
 from pydantic import Field
 from ghostos.framework.llms import LLMsYamlConfig
-from ghostos.framework.openai_realtime import OpenAIRealtimeAppConf
+from ghostos.framework.openai_realtime.configs import OpenAIRealtimeAppConf
 
 __all__ = [
     "Route",
@@ -61,6 +61,8 @@ class GhostChatRoute(Route):
     image_input: bool = Field(default=False, description="image input")
     auto_run: bool = Field(default=True, description="auto run")
     realtime: bool = Field(default=False, description="realtime")
+    vad_mode: bool = Field(default=True, description="vad mode")
+    listen_mode: bool = Field(default=True, description="listening")
 
     __ghost__ = None
 

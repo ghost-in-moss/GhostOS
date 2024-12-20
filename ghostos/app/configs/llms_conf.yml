@@ -1,5 +1,5 @@
 # from class: ghostos.framework.llms.providers:LLMsYamlConfig
-default: gpt-4
+default: gpt-4o
 models:
   claude-3-5-sonnet:
     kwargs: {}

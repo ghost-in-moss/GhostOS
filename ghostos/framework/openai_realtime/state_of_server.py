@@ -111,6 +111,18 @@ class ServerContext(Protocol):
         """
         pass
 
+    @abstractmethod
+    def clear_client_audio_buffer(self) -> None:
+        pass
+
+    @abstractmethod
+    def set_client_audio_buffer_start(self, cut_ms: int) -> None:
+        pass
+
+    @abstractmethod
+    def set_client_audio_buffer_stop(self, item_id: str, end_ms: int) -> None:
+        pass
+
 
 class StateOfServer(ABC):
 
@@ -137,7 +149,7 @@ class StateOfServer(ABC):
         pass
 
     def __del__(self):
-        self._destroy()
+        self.destroy()
 
     def destroy(self) -> None:
         if self._destroyed:
@@ -232,6 +244,7 @@ class SessionState(StateOfServer):
             if self.session_id and obj.session.id != self.session_id:
                 # recv other session event, which is not possible.
                 return self.recv_invalid_event(event)
+            self.ctx.logger.info("realtime session updated: %r", obj.session)
             self.session_obj = obj.session
         else:
             return self.recv_invalid_event(event)
@@ -474,8 +487,7 @@ class InputAudioState(StateOfServer):
 
     def _on_input_audio_buffer_stopped(self, event: dict):
         se = InputAudioBufferSpeechStopped(**event)
-        self.ctx.stop_listening()
-        # todo: truncate audio
+        self.ctx.set_client_audio_buffer_stop(se.item_id, se.audio_end_ms)
         return self.ack_server_event(se)
 
     def _on_input_audio_buffer_started(self, event: dict):
@@ -485,7 +497,7 @@ class InputAudioState(StateOfServer):
         :return:
         """
         se = InputAudioBufferSpeechStarted(**event)
-        # todo: start to truncate input audio.
+        self.ctx.set_client_audio_buffer_start(se.audio_start_ms)
         return self.ack_server_event(se)
 
     def _on_input_audio_buffer_committed(self, event: dict):
@@ -495,6 +507,7 @@ class InputAudioState(StateOfServer):
 
     def _on_input_audio_buffer_cleared(self, event: dict):
         se = InputAudioBufferCleared(**event)
+        self.ctx.clear_client_audio_buffer()
         return self.ack_server_event(se)
 
     def _destroy(self):

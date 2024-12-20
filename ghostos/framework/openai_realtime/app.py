@@ -1,12 +1,18 @@
 from typing import Optional, Tuple, List, Iterable
-from .configs import OpenAIRealtimeAppConf
-from .client import AppClient
-from .state_of_client import SynchronizingState, StateOfClient, AppState
-from .output import OutputBuffer, DefaultOutputBuffer
+from ghostos.framework.openai_realtime.configs import OpenAIRealtimeAppConf
+from ghostos.framework.openai_realtime.client import (
+    AppClient
+)
+from ghostos.framework.openai_realtime.state_of_client import (
+    SynchronizingState, StateOfClient, AppState,
+    listen_op, respond_op, cancel_response_op, stop_listen_op,
+)
+from ghostos.framework.openai_realtime.output import OutputBuffer, DefaultOutputBuffer
 from collections import deque
 from ghostos.abcd import Conversation
 from ghostos.core.messages import ReceiverBuffer, Message
 from ghostos.abcd.realtime import RealtimeApp, Listener, Speaker, Operator, OperatorName
+from ghostos.helpers import Timeleft
 from threading import Thread
 from queue import Empty
 import time
@@ -25,7 +31,7 @@ class RealtimeAppImpl(RealtimeApp):
             listener: Listener,
             speaker: Speaker,
     ):
-        self._conversation = conversation
+        self.conversation = conversation
         self._config = conf
         self._vad_mode = vad_mode
         self._listener = listener
@@ -37,19 +43,28 @@ class RealtimeAppImpl(RealtimeApp):
         self._output: OutputBuffer = self._create_output_buffer()
         self._operators: deque = deque()
         self._threads: List[Thread] = []
+        self._client = AppClient(self._config, self._vad_mode, self._output, self.conversation)
 
     def _create_output_buffer(self) -> OutputBuffer:
-        return DefaultOutputBuffer(self.is_closed, logger=self._conversation.logger)
+        return DefaultOutputBuffer(self.is_closed, logger=self.conversation.logger)
 
-    def start(self):
+    @property
+    def vad_mode(self) -> bool:
+        return self._vad_mode
+
+    @property
+    def listen_mode(self) -> bool:
+        return self._client.listen_mode()
+
+    def start(self, vad_mode: bool = True, listen_mode: bool = True):
         if self.is_closed():
             # todo
             return
         if self._started:
             return
         self._started = True
-        if self._client is None:
-            self._client = AppClient(self._config, self._vad_mode, self._output, self._conversation)
+        self.set_mode(vad_mode=vad_mode, listen_mode=listen_mode)
+
         self._threads.append(Thread(target=self._main_state_thread))
         self._threads.append(Thread(target=self._speaking_thread))
         self._threads.append(Thread(target=self._listening_thread))
@@ -57,11 +72,20 @@ class RealtimeAppImpl(RealtimeApp):
             t.start()
 
     def add_message(self, message: Message, previous_message_id: Optional[str] = None):
-        self._client.add_message_to_server(message, previous_message_id)
+        self._client.server_ctx.add_message_to_server(message, previous_message_id)
 
     def _main_state_thread(self):
         try:
+            interval = 0.1
+            timeleft = Timeleft(5)
             while not self.is_closed():
+                # check conversation, refresh it.
+                if not timeleft.alive():
+                    if not self.conversation.refresh():
+                        self.close()
+                        return
+                    timeleft = Timeleft(5)
+
                 self._client.logger.debug("start a state frame")
                 state = self._state
                 if state is None:
@@ -69,6 +93,7 @@ class RealtimeAppImpl(RealtimeApp):
                     state = SynchronizingState(self._client)
                     state.on_init()
                     self._state = state
+                    interval = 0.1
                     continue
                 state: StateOfClient = state
 
@@ -88,18 +113,22 @@ class RealtimeAppImpl(RealtimeApp):
                     next_state.on_init()
                     self._state = next_state
                     state.destroy()
+                    interval = 0.1
                     continue
 
                 if state.recv_server_event():
                     self._client.logger.debug("handled server event")
+                    interval = 0.1
                     continue
                 elif event := self._client.conversation.pop_event():
                     # handle ghostos event if server event is missing.
                     self._client.logger.debug("handle ghostos event")
                     self._client.handle_ghostos_event(event)
+                    interval = 0.1
                     continue
 
-                time.sleep(0.2)
+                time.sleep(interval)
+                interval += 0.5
         except Exception as e:
             self._client.logger.exception(e)
             self.close()
@@ -165,6 +194,7 @@ class RealtimeAppImpl(RealtimeApp):
         with self._listener.listen(client.audio_buffer_append):
             while not self.is_closed():
                 if not client.is_listening():
+                    client.logger.debug("stop listening loop")
                     break
                 time.sleep(0.1)
         client.logger.debug("end listening loop")
@@ -177,26 +207,43 @@ class RealtimeAppImpl(RealtimeApp):
             t.join()
         self._client.server_ctx.update_local_conversation()
         self._client.close()
+        del self.conversation
 
     def is_closed(self) -> bool:
-        return self._closed or self._conversation.is_closed()
+        return self._closed or self.conversation.is_closed()
 
     def history_messages(self) -> Iterable[Message]:
         return self._output.get_outputted_messages()
 
-    def set_mode(self, *, vad_mode: bool):
-        self._client.vad_mode = vad_mode
-        self._client.update_session()
+    def set_mode(
+            self,
+            *,
+            vad_mode: Optional[bool] = None,
+            listen_mode: Optional[bool] = None,
+    ):
+
+        if listen_mode is not None:
+            if listen_mode:
+                self._client.start_listening()
+            else:
+                self._client.stop_listening()
+
+        if vad_mode is not None:
+            self._vad_mode = vad_mode
+            self._client.vad_mode = vad_mode
+            self._client.update_session()
 
     def state(self) -> Tuple[str, List[Operator]]:
         if self.is_closed():
-            return AppState.closed, []
+            return str(AppState.closed.value), []
         elif self._state is None:
-            return AppState.created, []
+            return str(AppState.created.value), []
 
         state_name = self._state.state_name()
+        if isinstance(state_name, AppState):
+            state_name = state_name.value
         operators = self._state.operators()
-        return state_name, operators
+        return str(state_name), operators
 
     def operate(self, operator: Operator) -> bool:
         if self.is_closed():

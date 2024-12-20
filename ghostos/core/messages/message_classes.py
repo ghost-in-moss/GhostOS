@@ -223,7 +223,7 @@ class ImageAssetMessage(MessageClass, BaseModel):
         if not compatible and self.attrs is not None and self.attrs.images and container:
             images = container.force_fetch(ImageAssets)
             for image_id_info in self.attrs.images:
-                got = images.get_binary_by_id(image_id_info.image_id)
+                got = images.get_file_and_binary_by_id(image_id_info.image_id)
                 if got is None:
                     continue
                 image_info, binary = got

@@ -6,7 +6,7 @@ import streamlit as st
 from ghostos.container import Container
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.contracts.configs import YamlConfig, Configs
-from ghostos.contracts.assets import ImageAssets, FileInfo
+from ghostos.contracts.assets import ImageAssets, FileInfo, AudioAssets
 from ghostos.contracts.documents import DocumentRegistry, Documents
 from PIL.Image import Image as ImageType
 from ghostos.core.messages.message_classes import ImageAssetMessage
@@ -82,9 +82,15 @@ def get_app_docs() -> Documents:
 
 
 @st.cache_resource
-def get_images_asset() -> ImageAssets:
+def get_images_assets() -> ImageAssets:
     container = get_container()
     return container.force_fetch(ImageAssets)
+
+
+@st.cache_resource
+def get_audio_assets() -> AudioAssets:
+    container = get_container()
+    return container.force_fetch(AudioAssets)
 
 
 def save_uploaded_image(file: UploadedFile) -> FileInfo:
@@ -100,7 +106,7 @@ def save_uploaded_image(file: UploadedFile) -> FileInfo:
 
 
 def save_image_info(image_info: FileInfo, binary: bytes) -> None:
-    assets = get_images_asset()
+    assets = get_images_assets()
     assets.save(image_info, binary)
 
 
@@ -120,11 +126,11 @@ def save_pil_image(image: ImageType, desc: str) -> FileInfo:
     return image_info
 
 
-def get_asset_images(image_ids: List[str]) -> Dict[str, Tuple[FileInfo, Optional[bytes]]]:
+def get_images_from_image_asset(image_ids: List[str]) -> Dict[str, Tuple[FileInfo, Optional[bytes]]]:
     result = {}
-    assets = get_images_asset()
+    assets = get_images_assets()
     for image_id in image_ids:
-        data = assets.get_binary_by_id(image_id)
+        data = assets.get_file_and_binary_by_id(image_id)
         if data is None:
             continue
         result[image_id] = data

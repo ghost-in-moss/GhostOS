@@ -73,7 +73,7 @@ class ClientEvent(BaseModel, ABC):
         description="Optional client-generated ID used to identify this event.",
     )
 
-    def to_event_dict(self) -> dict:
+    def to_event_dict(self, exclude_none: bool=True) -> dict:
         data = self.model_dump(exclude_none=True)
         data["type"] = self.type
         return data
