@@ -8,13 +8,25 @@ from ghostos.helpers import generate_import_path
 from enum import Enum
 from pydantic import Field
 from ghostos.framework.llms import LLMsYamlConfig
-from ghostos.framework.documents import StorageDocumentsConfig
+from ghostos.framework.openai_realtime import OpenAIRealtimeAppConf
+
+__all__ = [
+    "Route",
+    "Router",
+    "default_router",
+    "PagePath",
+    "GhostTaskRoute",
+    "ConfigsRoute",
+    "GhostChatRoute",
+    "AIFuncListRoute",
+    "AIFuncDetailRoute",
+]
 
 
 class PagePath(str, Enum):
     HOMEPAGE = "ghostos.prototypes.streamlitapp.pages.homepage"
     AIFUNCS = "ghostos.prototypes.streamlitapp.pages.aifuncs"
-    GHOSTS = "ghostos.prototypes.streamlitapp.pages.ghosts"
+    GHOSTS = "ghostos.prototypes.streamlitapp.pages.chat_with_ghost"
     CONFIGS = "ghostos.prototypes.streamlitapp.pages.configs"
 
     def suffix(self, attr_name: str):
@@ -100,7 +112,7 @@ class ConfigsRoute(Route):
     config_classes: List[str] = Field(
         default_factory=lambda: [
             generate_import_path(LLMsYamlConfig),
-            generate_import_path(StorageDocumentsConfig),
+            generate_import_path(OpenAIRealtimeAppConf),
         ],
         description="config classes"
     )

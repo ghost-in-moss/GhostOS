@@ -15,7 +15,7 @@ __all__ = ['StorageGoTasksImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProv
 class SimpleStorageLocker(TaskLocker):
     class LockData(TypedDict):
         lock_id: str
-        created: float
+        overdue: float
 
     def __init__(self, storage: Storage, task_id: str, overdue: float, force: bool = False):
         self.task_id = task_id
@@ -32,7 +32,7 @@ class SimpleStorageLocker(TaskLocker):
             data = yaml.safe_load(content)
             lock = self.LockData(**data)
             now = time.time()
-            if lock['lock_id'] == self.lock_id or now - float(lock["created"]) > self._overdue:
+            if lock['lock_id'] == self.lock_id or now - float(lock["overdue"]) > 0:
                 self.create_lock()
                 return True
             if not self._acquired and self._force:
@@ -48,7 +48,8 @@ class SimpleStorageLocker(TaskLocker):
 
     def create_lock(self) -> None:
         filename = self.locker_file_name()
-        lock = self.LockData(lock_id=self.lock_id, created=time.time())
+        overdue_at = time.time() + self._overdue
+        lock = self.LockData(lock_id=self.lock_id, overdue=overdue_at)
         content = yaml.safe_dump(lock)
         self.storage.put(filename, content.encode())
         self._acquired = True

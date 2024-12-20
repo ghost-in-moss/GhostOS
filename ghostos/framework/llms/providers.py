@@ -14,8 +14,7 @@ __all__ = ['ConfigBasedLLMsProvider', 'PromptStorageInWorkspaceProvider', 'LLMsY
 
 class LLMsYamlConfig(YamlConfig, LLMsConfig):
     """
-    配置项存储位置.
-    详细配置项见 LLMsConfig
+    LLMs Service and Models configurations.
     """
     relative_path = "llms_conf.yml"
 

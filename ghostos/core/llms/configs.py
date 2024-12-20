@@ -5,6 +5,7 @@ import os
 from typing import List, Dict, Optional, Any, ClassVar
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Payload
+from ghostos.helpers import gettext as _
 
 __all__ = [
     'ModelConf', 'ServiceConf', 'LLMsConfig',
@@ -38,17 +39,21 @@ class ModelConf(Payload):
 
 class ServiceConf(BaseModel):
     """
-    The service configuration of a llm.
+    The model api service configuration
     """
+
     name: str = Field(description="Service name")
-    driver: str = Field(
-        default=OPENAI_DRIVER_NAME,
-        description="the adapter driver name of this service. ",
+    base_url: str = Field(description="LLM service url")
+    token: str = Field(default="", description="access token. if start with `$`, will read environment variable of it")
+    proxy: Optional[str] = Field(
+        default=None,
+        description="service proxy. if start with `$`, will read environment variable of it",
     )
 
-    base_url: str = Field(description="llm service provider")
-    token: str = Field(default="", description="token")
-    proxy: Optional[str] = Field(default=None, description="proxy")
+    driver: str = Field(
+        default=OPENAI_DRIVER_NAME,
+        description="the adapter driver name of this service. change it only if you know what you are doing",
+    )
 
     def load(self, environ: Optional[Dict] = None) -> None:
         self.token = self._load_env(self.token, environ=environ)
@@ -72,10 +77,13 @@ class LLMsConfig(BaseModel):
 
     services: List[ServiceConf] = Field(
         default_factory=list,
-        description="define llm services, such as openai or moonshot",
+        description="The Model Services (like OpenAI, Anthropic, Moonshot) configuration.",
     )
-    default: str = Field(description="one of the models key")
+
+    default: str = Field(
+        description="GhostOS default model name, corporate with models config",
+    )
     models: Dict[str, ModelConf] = Field(
         default_factory=dict,
-        description="define llm apis, the key is llm_api_name and value is model config of it.",
+        description="define LLM APIs, from model name to model configuration.",
     )

@@ -1,6 +1,6 @@
 from ghostos.helpers import create_and_bind_module
 from ghostos.scripts.cli.run_aifunc import RunAIFuncApp
-from ghostos.bootstrap import make_app_container
+from ghostos.bootstrap import get_container
 from ghostos.prototypes.streamlitapp.main import main_run
 from ghostos.prototypes.streamlitapp.pages.router import default_router, AIFuncDetailRoute
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
@@ -27,7 +27,7 @@ def bootstrap():
 
     # bootstrap container
     logger.debug(f"generate ghostos app container at workspace {app_arg.workspace_dir}")
-    container = make_app_container(app_arg.workspace_dir)
+    container = get_container()
 
     # bound route.
     page_route = AIFuncDetailRoute(aifunc_id=app_arg.import_path)

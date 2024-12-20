@@ -18,10 +18,10 @@ def main():
 @main.command("web")
 @click.argument("python_file_or_module")
 def start_streamlit_web(python_file_or_module: str):
-    from ghostos.scripts.cli.run_streamlit_ghost import start_web_app
+    from ghostos.scripts.cli.run_streamlit_app import start_ghost_app
     from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
     ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
-    start_web_app(ghost_info, module.__name__, filename, is_temp)
+    start_ghost_app(ghost_info, module.__name__, filename, is_temp)
 
 
 @main.command("console")
@@ -29,6 +29,13 @@ def start_streamlit_web(python_file_or_module: str):
 def start_console_app(python_file_or_module: str):
     from ghostos.scripts.cli.run_console import run_console_app
     run_console_app(python_file_or_module)
+
+
+@main.command("config")
+def start_web_config():
+    from ghostos.scripts.cli.run_streamlit_app import start_streamlit_prototype_cli
+    from ghostos.bootstrap import get_bootstrap_config
+    start_streamlit_prototype_cli("run_configs.py", "", get_bootstrap_config().workspace_dir)
 
 
 @main.command("clear-runtime")

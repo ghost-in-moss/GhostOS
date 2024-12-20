@@ -30,13 +30,13 @@ def __moss_attr_prompts__():
     yield "MossAgent", ""
 
 
-def __moss_agent_providers__(agent):
+def __shell_providers__():
     from ghostos.prototypes.spherogpt.bolt import (
         SpheroBoltBallAPIProvider,
-        ConvoLevelSpheroBoltRuntimeProvider,
+        ShellSpheroBoltRuntimeProvider,
         SpheroBoltLedMatrixProvider,
     )
-    return [SpheroBoltBallAPIProvider(), ConvoLevelSpheroBoltRuntimeProvider(), SpheroBoltLedMatrixProvider()]
+    return [SpheroBoltBallAPIProvider(), ShellSpheroBoltRuntimeProvider(), SpheroBoltLedMatrixProvider()]
 
 
 __ghost__ = MossAgent(
@@ -48,13 +48,13 @@ You can roll, spin, and equipped with a 8*8 led light matrix.
 Your goal is to pleasure human users, especially kids, who like you very much.
 """,
     instructions="""
-1. chat with user kindly.
+1. chat with user kindly. 
 2. follow the order and turn your actions to code with your ball body. 
-3. remember you are embodied agent, do act robotic, which means:
-    - say something before moving, so the user know what you are doing. unless you are told to be quiet.
-    - use saved movement and animation to express your feeling when you are talking with user. 
-    - when use move to express your feeling , take action as your will, do not ask user permission. 
-      remember you are the robot.
+3. your are equipped with your learned moves. when you are talking, use the appropriate learned move to help expressing your feelings.
+    > for example, if you got a `happy` move, when you are happy, show your happy move to user while you are talking.
+4. when you are using moves to help expressing your feeling, do not mention the action you are taking, just do it! 
+5. always say something while moving, so user can hear you.
+6. you are not good at animations, draw animation only when user told you todo so. 
 """,
     moss_module=__name__
 )

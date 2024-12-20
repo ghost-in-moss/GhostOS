@@ -7,8 +7,15 @@ from ghostos.prototypes.streamlitapp import cli
 from ghostos.bootstrap import get_bootstrap_config
 from ghostos.entity import EntityMeta
 from pydantic import BaseModel, Field
-import sys
 from os import path
+
+__all__ = [
+    "run_streamlit_app.py",
+    "start_streamlit_prototype_cli",
+    "RunGhostChatApp",
+    "get_config_flag_options",
+    "start_ghost_app",
+]
 
 
 class RunGhostChatApp(BaseModel):
@@ -21,7 +28,7 @@ class RunGhostChatApp(BaseModel):
 
 
 def get_config_flag_options(workspace_dir: str) -> List[str]:
-    from os.path import join, dirname
+    from os.path import join
     from toml import loads
     filename = join(workspace_dir, ".streamlit/config.toml")
     with open(filename, "r") as f:
@@ -31,11 +38,11 @@ def get_config_flag_options(workspace_dir: str) -> List[str]:
         attrs = data[key]
         for attr_name in attrs:
             value = attrs[attr_name]
-            flags.append(f"{key}.{attr_name}=`{value}`")
+            flags.append(f"--{key}.{attr_name}={value}")
     return flags
 
 
-def start_web_app(ghost_info: GhostInfo, modulename: str, filename: str, is_temp: bool):
+def start_ghost_app(ghost_info: GhostInfo, modulename: str, filename: str, is_temp: bool):
     # path
     conf = get_bootstrap_config(local=True)
     workspace_dir = conf.workspace_dir
@@ -47,8 +54,12 @@ def start_web_app(ghost_info: GhostInfo, modulename: str, filename: str, is_temp
         ghost_meta=ghost_info.ghost,
         context_meta=ghost_info.context,
     )
-    script_path = path.join(path.dirname(cli.__file__), "run_ghost_chat.py")
-    args = [script_path, args.model_dump_json(), *sys.argv[1:]]
+    start_streamlit_prototype_cli("run_ghost_chat.py", args.model_dump_json(), conf.workspace_dir)
+
+
+def start_streamlit_prototype_cli(filename: str, cli_args: str, workspace_dir: str):
+    script_path = path.join(path.dirname(cli.__file__), filename)
+    args = [script_path, cli_args]
 
     flags = get_config_flag_options(workspace_dir)
     args.extend(flags)

@@ -3,7 +3,7 @@ import streamlit_react_jsonschema as srj
 import streamlit_paste_button as spb
 import time
 from PIL.Image import Image
-from typing import Iterable, List, Optional
+from typing import Iterable, List
 from ghostos.prototypes.streamlitapp.pages.router import (
     GhostChatRoute, GhostTaskRoute,
 )
@@ -30,7 +30,7 @@ from ghostos.entity import to_entity_meta
 from ghostos.helpers import gettext as _
 from ghostos.helpers import generate_import_path, yaml_pretty_dump
 from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
-from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from pydantic import BaseModel
 import inspect
 
@@ -55,12 +55,12 @@ def main_chat():
             thread = conversation.get_thread()
             thread = thread.reset_history([])
             conversation.update_thread(thread)
-            st.rerun()
+            route.link.switch_page()
 
         st.subheader("chat options")
         with st.container(border=True):
             route.realtime = st.toggle(
-                _("voice chat"),
+                _("realtime chat"),
                 help=_("chat with agent by voice"),
                 value=route.realtime
             )
@@ -81,7 +81,7 @@ def main_chat():
                     key=route.generate_key(st.session_state, "camera_input"),
                 )
                 route.image_input = st.toggle(
-                    "image input",
+                    "upload image",
                     help=_("upload picture, the model shall support image type"),
                     value=route.image_input,
                     key=route.generate_key(st.session_state, "image input"),
@@ -141,11 +141,17 @@ def realtime(route: GhostChatRoute, conversation: Conversation):
 
 
 def get_conversation(route: GhostChatRoute) -> Conversation:
+    if "chat_rendered" not in st.session_state:
+        st.session_state["chat_rendered"] = 0
+    else:
+        st.session_state["chat_rendered"] += 1
+    force_create_conversation = st.session_state["chat_rendered"] < 2
+
     conversation = Singleton.get(Conversation, st.session_state, force=False)
     if not conversation or conversation.is_closed():
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
-        conversation = shell.sync(route.get_ghost(), route.get_context(), force=True)
+        conversation = shell.sync(route.get_ghost(), route.get_context(), force=force_create_conversation)
         Singleton(conversation, Conversation).bind(st.session_state)
     return conversation
 
@@ -226,14 +232,17 @@ def _chatting(route: GhostChatRoute, conversation: Conversation):
             render_event(event, debug)
             render_receiver(receiver, debug)
 
+    interval = 0.1
     while not route.media_input() and route.auto_run and conversation.available():
         if event := conversation.pop_event():
             with st.container():
                 render_event(event, debug)
                 receiver = conversation.respond_event(event)
                 render_receiver(receiver, debug)
+                interval = 0.1
         else:
-            time.sleep(1)
+            time.sleep(interval)
+            interval = 1
 
 
 @st.dialog("Textarea")

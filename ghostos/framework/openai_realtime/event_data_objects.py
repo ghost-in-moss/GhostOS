@@ -307,9 +307,20 @@ class SessionObjectBase(BaseModel):
     """
     model: str = Field("gpt-4o-realtime-preview-2024-10-01")
     modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
-    voice: Voice = Field(default="coral")
-    input_audio_format: str = Field(default="pcm16", enum={"pcm16", "g711_ulaw", "g711_alaw"})
-    output_audio_format: str = Field(default="pcm16", enum={"pcm16", "g711_ulaw", "g711_alaw"})
+    voice: Voice = Field(
+        default="coral",
+        description="Voice to use",
+    )
+    input_audio_format: str = Field(
+        default="pcm16",
+        enum={"pcm16", "g711_ulaw", "g711_alaw"},
+        description="only support pcm16 yet",
+    )
+    output_audio_format: str = Field(
+        default="pcm16",
+        enum={"pcm16", "g711_ulaw", "g711_alaw"},
+        description="only support pcm16 yet",
+    )
     turn_detection: Union[TurnDetection, None] = Field(
         default_factory=TurnDetection,
         description="Configuration for turn detection. "
@@ -318,7 +329,8 @@ class SessionObjectBase(BaseModel):
                     "and respond at the end of user speech."
     )
     input_audio_transcription: Optional[InputAudioTranscription] = Field(
-        description="Configuration for input audio transcription. "
+        default_factory=InputAudioTranscription,
+        description="Configuration for input audio transcription."
     )
     instructions: str = Field(default="", description="instructions of the session")
     tools: List[dict] = Field(default_factory=list)

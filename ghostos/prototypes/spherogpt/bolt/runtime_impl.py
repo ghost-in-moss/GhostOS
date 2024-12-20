@@ -15,7 +15,7 @@ from .sphero_edu_api_patch import SpheroEduAPI, Color, SpheroEventType, scanner
 from .runtime import SpheroBoltRuntime, BoltLedMatrixCommand, BoltBallMovement
 from .led_matrix_impl import PlayAnimation
 
-__all__ = ['SpheroBoltRuntimeImpl', 'ConvoLevelSpheroBoltRuntimeProvider']
+__all__ = ['SpheroBoltRuntimeImpl', 'ShellSpheroBoltRuntimeProvider']
 
 
 class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
@@ -24,13 +24,11 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
     def __init__(
             self,
             *,
-            task_id: str,
             eventbus: EventBus,
             logger: LoggerItf,
-            shall_notify: bool = False,
     ):
-        self._task_id = task_id
-        self._shall_notify = shall_notify
+        self._task_id = ""
+        self._shall_notify = False
         self._eventbus = eventbus
         self._logger = logger
         self._stopped = Event()
@@ -86,6 +84,8 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
                 # run the loop until errors.
                 try:
                     if not self._bootstrapped.is_set():
+                        # make sure no errors
+                        self._bootstrapped.wait(2)
                         self._bootstrapped.set()
                     self._run_bolt_loop(_bolt)
                 except Exception as exc:
@@ -109,8 +109,8 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
             return
         if int(passed) % 6 < 3:
             if not self._breathing:
-                api.set_front_led(Color(0, 25, 0))
-                api.set_back_led(Color(0, 25, 0))
+                api.set_front_led(Color(0, 5, 0))
+                api.set_back_led(Color(0, 5, 0))
                 self._breathing = True
         elif self._breathing:
             api.set_front_led(Color(0, 0, 0))
@@ -221,7 +221,7 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
                 pa = PlayAnimation(animation=movement.animation)
                 self._set_current_animation(pa, api)
 
-            api.set_front_led(Color(0, 200, 0))
+            api.set_front_led(Color(0, 10, 0))
             self._logger.debug("start new movement %r", movement)
             movement.start(api)
 
@@ -256,6 +256,8 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
         return movement
 
     def _send_event(self, event_type: GhostOSEventTypes, content: str):
+        if not self._task_id:
+            return
         event = event_type.new(
             task_id=self._task_id,
             messages=[MessageType.TEXT.new_system(content=content)],
@@ -286,6 +288,12 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
     def get_task_id(self) -> str:
         return self._task_id
 
+    def connect(self, task_id: str, shall_notify: bool):
+        if self._task_id and task_id != self._task_id:
+            raise RuntimeError(f"Sphero already connected to task {task_id}, one conversation at a time!")
+        self._task_id = task_id
+        self._shall_notify = shall_notify
+
     def set_charging_callback(self, event: str):
         self._charging_callback = event
 
@@ -293,7 +301,7 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
         self._off_charging_callback = event
 
 
-class ConvoLevelSpheroBoltRuntimeProvider(BootstrapProvider):
+class ShellSpheroBoltRuntimeProvider(BootstrapProvider):
 
     def contract(self) -> Type[INSTANCE]:
         return SpheroBoltRuntime
@@ -314,12 +322,8 @@ class ConvoLevelSpheroBoltRuntimeProvider(BootstrapProvider):
             return singleton
         logger = con.force_fetch(LoggerItf)
         logger.error("runtime bootstrap at container %s", con.bloodline)
-        conversation = con.force_fetch(Conversation)
-        task = conversation.get_task()
         eventbus = con.force_fetch(EventBus)
         return SpheroBoltRuntimeImpl(
-            task_id=task.task_id,
             eventbus=eventbus,
             logger=logger,
-            shall_notify=task.shall_notify(),
         )

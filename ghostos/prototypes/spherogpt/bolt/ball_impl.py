@@ -4,6 +4,7 @@ from spherov2.commands.io import FrameRotationOptions
 
 from ghostos.contracts.storage import FileStorage
 from ghostos.contracts.workspace import Workspace
+from ghostos.abcd import Conversation
 from ghostos.entity import ModelEntityMeta, from_entity_model_meta, to_entity_model_meta
 from ghostos.helpers import yaml_pretty_dump
 from ghostos.prompter import Prompter
@@ -324,4 +325,6 @@ class SpheroBoltBallAPIProvider(Provider[Ball]):
     def factory(self, con: Container) -> Optional[Ball]:
         runtime = con.force_fetch(SpheroBoltRuntime)
         workspace = con.force_fetch(Workspace)
+        conversation = con.force_fetch(Conversation)
+        runtime.connect(conversation.task_id, False)
         return BallImpl(runtime, workspace.runtime_cache())

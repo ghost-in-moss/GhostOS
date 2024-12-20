@@ -4,7 +4,7 @@ from ghostos.core.messages import Message
 from ghostos.core.runtime import Event
 from ghostos.contracts.logger import get_ghostos_logger
 from ghostos.helpers import create_and_bind_module
-from ghostos.scripts.cli.run_streamlit_ghost import RunGhostChatApp
+from ghostos.scripts.cli.run_streamlit_app import RunGhostChatApp
 from ghostos.bootstrap import get_ghostos, get_container
 from ghostos.prototypes.streamlitapp.main import main_run
 from ghostos.prototypes.streamlitapp.pages.router import default_router, GhostChatRoute
@@ -87,4 +87,7 @@ def bootstrap():
     ]
 
 
-main_run(bootstrap)
+try:
+    main_run(bootstrap)
+except RuntimeError as e:
+    SystemExit(e)

@@ -53,6 +53,10 @@ class SpheroBoltRuntime(ABC):
         pass
 
     @abstractmethod
+    def connect(self, task_id: str, shall_notify: bool):
+        pass
+
+    @abstractmethod
     def add_movement(self, command: BoltBallMovement):
         pass
 

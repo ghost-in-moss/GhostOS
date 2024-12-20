@@ -27,7 +27,7 @@ def __moss_attr_prompts__():
     yield from exports.items()
 
 
-def __moss_agent_providers__(agent):
+def __shell_providers__(agent):
     from ghostos.prototypes.spherogpt.bolt_command_control import SpheroBoltProvider
     return [SpheroBoltProvider()]
 
