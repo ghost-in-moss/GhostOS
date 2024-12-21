@@ -1,7 +1,7 @@
 from typing import Iterable, List, NamedTuple
 from abc import ABC, abstractmethod
 
-from ghostos.core.messages.message import Message, Caller
+from ghostos.core.messages.message import Message, FunctionCaller
 
 __all__ = [
     "Flushed", "Buffer",
@@ -15,7 +15,7 @@ class Flushed(NamedTuple):
     messages: List[Message]
     """all the patched complete messages"""
 
-    callers: List[Caller]
+    callers: List[FunctionCaller]
     """all the callers that delivered"""
 
 

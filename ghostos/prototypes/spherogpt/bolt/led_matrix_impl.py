@@ -107,6 +107,10 @@ class LedMatrixImpl(LedMatrix):
     def scroll_matrix_text(self, text: str, color: str = 'ffffff', fps: int = 1, wait: bool = True) -> Self:
         if len(text) > 25:
             raise AttributeError("Text length must be less than 25 characters")
+        for char in text:
+            if ord(char) > 255:
+                raise AttributeError("Character must be in range(0, 256)")
+
         s = ScrollMatrixText(text=text, color_name=color, fps=fps, wait=wait)
         self._add_command(s)
         return self

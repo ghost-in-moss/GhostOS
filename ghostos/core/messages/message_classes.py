@@ -6,7 +6,7 @@ from ghostos.contracts.variables import Variables
 from ghostos.contracts.assets import FileInfo
 from ghostos.container import Container
 from ghostos.prompter import get_defined_prompt
-from .message import Message, MessageClass, MessageType, CallerOutput, MessageKind, Role, Caller
+from .message import Message, MessageClass, MessageType, FunctionOutput, MessageKind, Role, FunctionCaller
 from ghostos.helpers import uuid
 from pydantic import BaseModel, Field
 
@@ -14,13 +14,13 @@ __all__ = [
     "VariableMessage",
     "FunctionCallMessage",
     "FunctionCallOutputMessage",
-    "CallerOutput",
+    "FunctionOutput",
     "ImageAssetMessage",
     "AudioMessage",
     "MessageKindParser",
 ]
 
-FunctionCallOutputMessage = CallerOutput
+FunctionCallOutputMessage = FunctionOutput
 
 
 class FunctionCallMessage(MessageClass, BaseModel):
@@ -32,7 +32,7 @@ class FunctionCallMessage(MessageClass, BaseModel):
         description="payload type key to payload item. payload shall be a strong-typed dict"
     )
     role: str = Field(default="", description="who send the message")
-    caller: Caller
+    caller: FunctionCaller
 
     def to_message(self) -> Message:
         return Message.new_tail(
@@ -52,7 +52,7 @@ class FunctionCallMessage(MessageClass, BaseModel):
             msg_id=message.msg_id,
             payloads=message.payloads,
             role=message.role,
-            caller=Caller(
+            caller=FunctionCaller(
                 id=message.call_id,
                 name=message.name,
                 arguments=message.content,

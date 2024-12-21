@@ -15,7 +15,7 @@ __all__ = [
     "Message", "Role", "MessageType",
     "MessageClass", "MessageClassesParser",
     "MessageKind",
-    "Caller", "CallerOutput",
+    "FunctionCaller", "FunctionOutput",
 ]
 
 SeqType = Literal["head", "chunk", "complete"]
@@ -218,7 +218,7 @@ class Message(BaseModel):
         description="payload type key to payload item. payload shall be a strong-typed dict"
     )
 
-    callers: List[Caller] = Field(
+    callers: List[FunctionCaller] = Field(
         default_factory=list,
         description="the callers parsed in a complete message."
     )
@@ -495,7 +495,7 @@ class MessageClass(ABC):
         pass
 
 
-class Caller(BaseModel):
+class FunctionCaller(BaseModel):
     """
     消息协议中用来描述一个工具或者function 的调用请求.
     """
@@ -509,17 +509,17 @@ class Caller(BaseModel):
     def add(self, message: "Message") -> None:
         message.callers.append(self)
 
-    def new_output(self, output: str) -> CallerOutput:
-        return CallerOutput(
+    def new_output(self, output: str) -> FunctionOutput:
+        return FunctionOutput(
             call_id=self.id,
             name=self.name,
             content=output,
         )
 
     @classmethod
-    def from_message(cls, message: Message) -> Iterable[Caller]:
+    def from_message(cls, message: Message) -> Iterable[FunctionCaller]:
         if message.type == MessageType.FUNCTION_CALL.value:
-            yield Caller(
+            yield FunctionCaller(
                 id=message.call_id,
                 name=message.name,
                 arguments=message.content,
@@ -529,7 +529,7 @@ class Caller(BaseModel):
 
 
 # todo: history code, optimize later
-class CallerOutput(BaseModel, MessageClass):
+class FunctionOutput(BaseModel, MessageClass):
     __message_type__ = MessageType.FUNCTION_OUTPUT.value
 
     call_id: Optional[str] = Field(None, description="caller id")
@@ -539,7 +539,7 @@ class CallerOutput(BaseModel, MessageClass):
     )
     content: Optional[str] = Field(description="caller output")
 
-    msg_id: str = Field("")
+    msg_id: str = Field(default_factory=uuid)
     payloads: Dict[str, Dict] = Field(default_factory=dict)
 
     def to_message(self) -> Message:

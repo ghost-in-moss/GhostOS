@@ -2,7 +2,7 @@ from typing import Optional, Iterable, List, Tuple
 from ghostos.abcd.concepts import Messenger
 from ghostos.core.messages import (
     Message, Payload, Role, MessageType,
-    Stream, Caller,
+    Stream, FunctionCaller,
 )
 from ghostos.core.messages.pipeline import SequencePipe
 
@@ -32,7 +32,7 @@ class DefaultMessenger(Messenger):
         self._stage = stage
         self._destroyed = False
 
-    def flush(self) -> Tuple[List[Message], List[Caller]]:
+    def flush(self) -> Tuple[List[Message], List[FunctionCaller]]:
         messages = []
         callers = []
         done = set()
@@ -45,7 +45,7 @@ class DefaultMessenger(Messenger):
             message = self._sent_messages[msg_id]
             messages.append(message)
             if message.type == MessageType.FUNCTION_CALL:
-                callers.append(Caller(
+                callers.append(FunctionCaller(
                     id=message.call_id,
                     name=message.name,
                     arguments=message.content,

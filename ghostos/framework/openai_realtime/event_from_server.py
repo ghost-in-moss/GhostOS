@@ -453,6 +453,7 @@ class ResponseFunctionCallArgumentsDone(DeltaIndex, ServerEvent):
 
     def as_message(self) -> GhostOSMessage:
         return GhostOSMessage.new_tail(
+            msg_id=self.item_id,
             type_=MessageType.FUNCTION_CALL.value,
             name=self.name,
             content=self.arguments,

@@ -34,7 +34,8 @@ if TYPE_CHECKING:
 # --- private methods --- #
 def __uuid() -> str:
     from uuid import uuid4
-    return str(uuid4())
+    # keep uuid in 32 chars
+    return md5(str(uuid4()))
 
 
 # --- facade --- #

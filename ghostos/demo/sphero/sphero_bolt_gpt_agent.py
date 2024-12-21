@@ -18,19 +18,27 @@ class Moss(Parent):
 
 def example_spin_the_bolt(moss: Moss):
     # body spin 360 degree in 1 second.
-    moss.body.new_move(True).spin(360, 1)
+    moss.body.new_move(run_immediately=True).spin(360, 1)
 
 
 # <moss-hide>
 from ghostos.ghosts.moss_agent import MossAgent
-from typing import TYPE_CHECKING
 
 
 def __moss_attr_prompts__():
+    """
+    this function provide custom prompt reflection of imported attrs of this module.
+    yield (attr_name, attr_prompt)
+    if attr_prompt is empty, then it will not present to the llm
+    """
     yield "MossAgent", ""
 
 
 def __shell_providers__():
+    """
+    shell providers will register to shell container
+    when this script is started by ghostos
+    """
     from ghostos.prototypes.spherogpt.bolt import (
         SpheroBoltBallAPIProvider,
         ShellSpheroBoltRuntimeProvider,

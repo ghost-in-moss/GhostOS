@@ -2,7 +2,7 @@ import streamlit_antd_components as sac
 import streamlit as st
 from typing import Iterable, List, NamedTuple
 from ghostos.core.messages import (
-    Message, Role, MessageType, Caller,
+    Message, Role, MessageType, FunctionCaller,
     ImageAssetMessage,
 )
 from ghostos.framework.messages import CompletionUsagePayload, TaskPayload, PromptPayload
@@ -98,7 +98,7 @@ def render_message_in_content(message: Message, debug: bool, in_expander: bool, 
         st.markdown(message.content)
 
     elif MessageType.FUNCTION_CALL.match(message):
-        callers = Caller.from_message(message)
+        callers = FunctionCaller.from_message(message)
         render_message_caller(callers, debug, in_expander)
 
     elif MessageType.FUNCTION_OUTPUT.match(message):
@@ -150,14 +150,14 @@ def render_image_message(message: Message):
 def render_message_caller_output(message: Message, debug: bool, in_expander: bool):
     if not in_expander:
         with st.expander("Caller Output", expanded=debug):
-            st.caption(f"function {message.name} output:")
+            st.caption(f"function {message.name or message.call_id} output:")
             st.write(message.content)
     else:
-        st.caption(f"function {message.name} output:")
+        st.caption(f"function {message.name or message.call_id} output:")
         st.write(message.content)
 
 
-def render_message_caller(callers: Iterable[Caller], debug: bool, in_expander: bool):
+def render_message_caller(callers: Iterable[FunctionCaller], debug: bool, in_expander: bool):
     if not in_expander:
         with st.expander("Callers", expanded=debug):
             _render_message_caller(callers)
@@ -165,7 +165,7 @@ def render_message_caller(callers: Iterable[Caller], debug: bool, in_expander: b
         _render_message_caller(callers)
 
 
-def _render_message_caller(callers: Iterable[Caller]):
+def _render_message_caller(callers: Iterable[FunctionCaller]):
     from ghostos.ghosts.moss_agent import MossAction
     for caller in callers:
         if caller.name == MossAction.DEFAULT_NAME:

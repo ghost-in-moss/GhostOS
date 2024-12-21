@@ -15,7 +15,7 @@ from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
-from ghostos.core.messages import MessageKind, Message, Stream, Caller, Payload, Receiver, Role
+from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
 from ghostos.identifier import get_identifier
@@ -224,7 +224,7 @@ class Action(PromptPipe, ABC):
         pass
 
     @abstractmethod
-    def run(self, session: Session, caller: Caller) -> Union[Operator, None]:
+    def run(self, session: Session, caller: FunctionCaller) -> Union[Operator, None]:
         pass
 
 
@@ -499,7 +499,7 @@ class Messenger(Stream, ABC):
     """
 
     @abstractmethod
-    def flush(self) -> Tuple[List[Message], List[Caller]]:
+    def flush(self) -> Tuple[List[Message], List[FunctionCaller]]:
         """
         flush the buffed messages, finish the streaming of this messenger.
         the message buffer shall join all the chunks to message item.
@@ -661,7 +661,7 @@ class Session(Generic[G], ABC):
             self,
             messages: Iterable[MessageKind],
             stage: str = "",
-    ) -> Tuple[List[Message], List[Caller]]:
+    ) -> Tuple[List[Message], List[FunctionCaller]]:
         """
         发送消息, 但不影响运行状态.
         """

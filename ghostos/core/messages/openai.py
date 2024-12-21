@@ -11,10 +11,10 @@ from openai.types.chat.chat_completion_system_message_param import ChatCompletio
 from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 from ghostos.core.messages import (
-    Message, MessageType, Role, Caller, Payload, MessageClass, MessageClassesParser
+    Message, MessageType, Role, FunctionCaller, Payload, MessageClass, MessageClassesParser
 )
 from ghostos.core.messages.message_classes import (
-    CallerOutput, VariableMessage, ImageAssetMessage,
+    FunctionOutput, VariableMessage, ImageAssetMessage,
 )
 from ghostos.contracts.logger import LoggerItf, FakeLogger
 from ghostos.container import Provider, Container
@@ -108,7 +108,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     ):
         if message_classes is None:
             message_classes = [
-                CallerOutput,
+                FunctionOutput,
                 VariableMessage,
                 ImageAssetMessage,
             ]
@@ -246,7 +246,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     def from_chat_completion(self, message: ChatCompletionMessage) -> Message:
         pack = Message.new_tail(type_=MessageType.DEFAULT, role=message.role, content=message.content)
         if message.function_call:
-            caller = Caller(
+            caller = FunctionCaller(
                 name=message.function_call.name,
                 arguments=message.function_call.arguments,
                 protocol=True
@@ -254,7 +254,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             caller.add(pack)
         if message.tool_calls:
             for tool_call in message.tool_calls:
-                caller = Caller(
+                caller = FunctionCaller(
                     id=tool_call.id,
                     name=tool_call.function.name,
                     arguments=tool_call.function.arguments,

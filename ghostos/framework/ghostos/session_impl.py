@@ -6,7 +6,7 @@ from ghostos.abcd import (
 )
 from ghostos.abcd import get_ghost_driver
 from ghostos.core.messages import (
-    MessageKind, Message, Caller, Stream, Role, MessageKindParser, MessageType
+    MessageKind, Message, FunctionCaller, Stream, Role, MessageKindParser, MessageType
 )
 from ghostos.core.messages.message_classes import FunctionCallMessage
 from ghostos.core.runtime import (
@@ -150,6 +150,7 @@ class SessionImpl(Session[Ghost]):
             return None, None
 
         if EventTypes.ACTION_CALL.value == event.type:
+            self.thread.new_turn(event)
             actions = self.ghost_driver.actions(self)
             actions_map = {action.name(): action for action in actions}
             for message in event.messages:
@@ -275,7 +276,7 @@ class SessionImpl(Session[Ghost]):
             stage=stage,
         )
 
-    def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[Caller]]:
+    def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[FunctionCaller]]:
         self._validate_alive()
         messages = self._message_parser.parse(messages)
         with self._respond_lock:

@@ -8,7 +8,7 @@ from ghostos.core.messages import Message, ReceiverBuffer, SequencePipe
 
 class OutputBuffer(ABC):
     @abstractmethod
-    def stop_output(self):
+    def stop_output(self, response_id: Optional[str]):
         """
         stop the current response.
         """
@@ -138,24 +138,27 @@ class DefaultOutputBuffer(OutputBuffer):
         self.unsent_message_ids: List[str] = []
         self.sent_message_ids: Set[str] = set()
 
-    def stop_output(self):
-        self.response_id = None
-        self.response_chunks = None
-        self.response_item_ids = None
-        self.responding_item_id = None
-        self.stop_speaking()
+    def stop_output(self, response_id: Optional[str]):
+        self.logger.debug("start output")
+        if response_id is None or response_id == self.response_id:
+            self.response_id = None
+            self.response_chunks = None
+            self.response_item_ids = None
+            self.responding_item_id = None
+            self.stop_speaking()
 
     def end_output(self, response_id: str):
-        self.response_id = None
+        # self.response_id = None
         # self.response_chunks = None
         # self.response_item_ids = None
         # self.responding_item_id = None
-        if self.speak_queue is not None:
+        if response_id == self.response_id and self.speak_queue is not None:
             self.logger.debug("send none to speaking queue but not stop speaking")
             self.speak_queue.put(None, block=False)
 
     def start_output(self, response_id: str):
-        self.stop_output()
+        self.stop_output(None)
+        self.logger.debug("start output")
         self.response_id = response_id
         self.response_chunks = {}
         self.response_item_ids = []

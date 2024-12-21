@@ -279,8 +279,9 @@ class ConversationImpl(Conversation[G]):
         )
 
     def pop_event(self) -> Optional[Event]:
-        self._validate_closed()
-        return self._eventbus.pop_task_event(self.scope.task_id)
+        if self.available():
+            return self._eventbus.pop_task_event(self.scope.task_id)
+        return None
 
     def send_event(self, event: Event) -> None:
         self._validate_closed()

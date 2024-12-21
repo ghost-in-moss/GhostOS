@@ -10,7 +10,7 @@ from ghostos.abcd import GhostDriver, Operator, Agent, Session, StateValue, Acti
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, PyContext, MossRuntime
 from ghostos.entity import ModelEntity
-from ghostos.core.messages import Caller, Role
+from ghostos.core.messages import FunctionCaller, Role
 from ghostos.core.llms import (
     Prompt, PromptPipe, AssistantNamePipe, run_prompt_pipeline,
     LLMFunc,
@@ -353,7 +353,8 @@ class MossAction(Action, PromptPipe):
             code.rstrip("```")
         return code.strip()
 
-    def run(self, session: Session, caller: Caller) -> Union[Operator, None]:
+    def run(self, session: Session, caller: FunctionCaller) -> Union[Operator, None]:
+        session.logger.debug("MossAction receive caller: %s", caller)
         # prepare arguments.
         arguments = caller.arguments
         code = self.unmarshal_arguments(arguments)
@@ -401,7 +402,7 @@ class MossAction(Action, PromptPipe):
             return self.fire_error(session, caller, f"error during executing moss code: {e}")
 
     @staticmethod
-    def fire_error(session: Session, caller: Caller, error: str) -> Operator:
+    def fire_error(session: Session, caller: FunctionCaller, error: str) -> Operator:
         message = caller.new_output(error)
         session.respond([message])
         return session.taskflow().error()

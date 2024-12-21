@@ -1,7 +1,7 @@
 import time
 from typing import Iterable, Optional, List, Dict, Set
 
-from ghostos.core.messages import Message, Caller, MessageType, Role, Payload, Buffer, Flushed
+from ghostos.core.messages import Message, FunctionCaller, MessageType, Role, Payload, Buffer, Flushed
 from ghostos.core.llms import FunctionalToken
 from ghostos.helpers import uuid
 
@@ -319,7 +319,7 @@ class DefaultBuffer(Buffer):
         self._current_functional_token = ""
         self._current_functional_token_content = ""
 
-    def _generate_current_caller(self) -> Optional[Caller]:
+    def _generate_current_caller(self) -> Optional[FunctionCaller]:
         if not self._current_functional_token:
             return None
         functional_token = self._functional_token_starts[self._current_functional_token]

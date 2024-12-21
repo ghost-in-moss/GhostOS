@@ -90,6 +90,7 @@ class RealtimeAppImpl(RealtimeApp):
                     if not self.conversation.refresh():
                         break
                     timeleft = Timeleft(5)
+                    self._client.logger.debug("realtime main thread refresh conversation")
 
                 state = self._state
                 if state is None:
@@ -140,14 +141,8 @@ class RealtimeAppImpl(RealtimeApp):
                     continue
                 self._client.logger.debug("start speaking. respond id is %s", response_id)
                 self._run_speaking_loop(response_id)
-                self._client.logger.debug(
-                    "try to stop speaking. responding is %r",
-                )
-                self._output.stop_speaking()
-                self._client.logger.debug(
-                    "stop speaking. responding is %r",
-                    self._client.is_responding(),
-                )
+                self._output.stop_output(response_id)
+                self._client.logger.debug("stop speaking. responding is %r", self._client.is_responding())
         except Exception as e:
             self._client.logger.exception(e)
             self._stopped.set()
@@ -169,7 +164,11 @@ class RealtimeAppImpl(RealtimeApp):
                 time.sleep(0.2)
 
         with self._speaker.speak(receive) as speaking:
-            while not self.is_closed() and not speaking.done() and self._output.is_speaking():
+            while not speaking.done():
+                if self.is_closed() or not self._output.is_speaking():
+                    break
+                if self._output.get_response_id() != response_id:
+                    break
                 time.sleep(0.1)
         client.logger.debug("end speaking loop")
 

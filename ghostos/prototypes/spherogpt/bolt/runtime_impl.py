@@ -156,7 +156,7 @@ class SpheroBoltRuntimeImpl(SpheroBoltRuntime):
                     passed = self._current_movement_timeleft.passed()
                     stopped = self._current_movement.run_frame(api, passed)
                     if stopped:
-                        self._clear_current_movement(api)
+                        self._clear_current_movement(api, notify=False)
 
     def _init_sphero_edu_api(self, api):
         api.register_event(SpheroEventType.on_landing, self._on_landing)

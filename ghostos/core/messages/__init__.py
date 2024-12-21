@@ -1,6 +1,6 @@
 from ghostos.core.messages.message import (
     Message, Role, MessageType,
-    Caller, CallerOutput,
+    FunctionCaller, FunctionOutput,
     MessageClass, MessageKind,
     MessageClassesParser,
 )

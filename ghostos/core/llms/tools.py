@@ -6,7 +6,7 @@ from typing import Dict, Optional, Type
 
 from pydantic import BaseModel, Field
 from ghostos.identifier import Identical, Identifier
-from ghostos.core.messages import Caller
+from ghostos.core.messages import FunctionCaller
 
 
 # ---- tool and function ---- #
@@ -78,11 +78,11 @@ class FunctionalToken(Identical, BaseModel):
     visible: bool = Field(default=False, description="if the functional token and the parameters are visible to user")
     parameters: Optional[Dict] = Field(default=None, description="functional token parameters")
 
-    def new_caller(self, arguments: str) -> "Caller":
+    def new_caller(self, arguments: str) -> "FunctionCaller":
         """
         generate new caller by functional token, usually used in tests.
         """
-        return Caller(
+        return FunctionCaller(
             name=self.name,
             arguments=arguments,
             functional_token=True,

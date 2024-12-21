@@ -1,4 +1,4 @@
-from ghostos.core.messages import MessageKindParser, VariableMessage, Caller
+from ghostos.core.messages import MessageKindParser, VariableMessage, FunctionCaller
 from ghostos.framework.variables import test_variables
 from pydantic import BaseModel
 
@@ -12,7 +12,7 @@ def test_message_parser():
 
 def test_message_parser_with_message_class():
     parser = MessageKindParser(test_variables)
-    caller = Caller(name="hello", arguments="world")
+    caller = FunctionCaller(name="hello", arguments="world")
     item = caller.new_output("output")
     messages = list(parser.parse([item]))
     assert messages[0].content == "output"

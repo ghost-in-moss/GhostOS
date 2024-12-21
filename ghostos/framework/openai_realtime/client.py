@@ -61,6 +61,7 @@ class Context(ServerContext):
 
         self.client_audio_buffer: BytesIO = BytesIO()
         self.client_audio_buffer_locker: Lock = Lock()
+        self.update_history_locker: Lock = Lock()
         self._destroyed = False
 
     def destroy(self):
@@ -74,6 +75,11 @@ class Context(ServerContext):
 
     def get_server_response_id(self) -> Optional[str]:
         return self.response_id
+
+    def _add_history_message(self, message: Message):
+        if message.msg_id not in self.history_messages:
+            self.history_message_order.append(message.msg_id)
+            self.history_messages[message.msg_id] = message
 
     def _reset_history_messages(self):
         self.history_messages: Dict[str, Message] = {}
@@ -112,14 +118,15 @@ class Context(ServerContext):
             self.thread.new_turn(event)
             self.conversation.update_thread(self.thread)
             self.thread = self.conversation.get_thread(True)
-            self._reset_history_messages()
         else:
             receiver = self.conversation.respond_event(event, streaming=False)
             with receiver:
                 for item in receiver.recv():
                     if item.is_complete():
+                        self.logger.info("receive conversation message: %s, %s", item.type, item.msg_id)
                         self.add_message_to_server(item)
 
+        self._reset_history_messages()
         # update audio buffer
         for item_id in self.response_audio_buffer:
             buffer = self.response_audio_buffer[item_id]
@@ -135,8 +142,6 @@ class Context(ServerContext):
         ok = self.output_buffer.add_response_chunk(response_id, chunk)
         if not ok:
             self.logger.debug(f"Failed to add response chunk: {response_id}")
-        if chunk and chunk.is_complete():
-            self.update_history_message(chunk)
         return ok
 
     def respond_error_message(self, error: str) -> None:
@@ -244,18 +249,18 @@ class Context(ServerContext):
         with self.client_audio_buffer_locker:
             content = base64.b64encode(buffer)
             self.client_audio_buffer.write(buffer)
-            ce = InputAudioBufferAppend(
-                audio=content
-            )
-            self.send_client_event(ce)
+        ce = InputAudioBufferAppend(
+            audio=content
+        )
+        self.send_client_event(ce)
 
     def clear_client_audio_buffer(self) -> None:
         with self.client_audio_buffer_locker:
             self.client_audio_buffer.close()
             self.client_audio_buffer = BytesIO()
-            if self.listening:
-                ce = InputAudioBufferClear()
-                self.send_client_event(ce)
+        if self.listening:
+            ce = InputAudioBufferClear()
+            self.send_client_event(ce)
 
     def set_client_audio_buffer_start(self, cut_ms: int) -> None:
         pass
@@ -275,8 +280,8 @@ class Context(ServerContext):
             #     left_data = data[cut:]
             #     self.client_audio_buffer = BytesIO(left_data)
             self.save_audio_data(item_id, data)
-            self.client_audio_buffer.close()
-            self.client_audio_buffer = BytesIO()
+        self.client_audio_buffer.close()
+        self.client_audio_buffer = BytesIO()
 
 
 class AppClient(Client):
@@ -306,6 +311,8 @@ class AppClient(Client):
         self._sync_history: Optional[List[str]] = None
 
     def set_vad_mode(self, vad_mode: bool) -> None:
+        if vad_mode == self._vad_mode:
+            return
         self._vad_mode = vad_mode
         self.update_session()
 
@@ -419,7 +426,7 @@ class AppClient(Client):
 
     def cancel_responding(self) -> bool:
         # cancel local response first.
-        self.server_ctx.output_buffer.stop_output()
+        self.server_ctx.output_buffer.stop_output(None)
         if self.server_ctx.is_server_responding():
             ce = ResponseCancel()
             self.server_ctx.send_client_event(ce)
@@ -430,7 +437,7 @@ class AppClient(Client):
     def start_listening(self) -> bool:
         if not self.server_ctx.listening:
             self.server_ctx.listening = True
-            self.server_ctx.output_buffer.stop_output()
+            self.server_ctx.output_buffer.stop_output(None)
             if self.server_ctx.is_server_responding():
                 self.cancel_responding()
             return True

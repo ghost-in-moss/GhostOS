@@ -7,7 +7,7 @@ from typing import Optional, Literal, List, Union, Dict
 from io import BytesIO
 from ghostos.core.messages import (
     MessageType, Message, AudioMessage, FunctionCallMessage, FunctionCallOutputMessage,
-    Caller, Role,
+    FunctionCaller, Role,
 )
 from ghostos.helpers import md5
 from enum import Enum
@@ -88,8 +88,6 @@ class MessageItem(BaseModel):
         if message is None or not message.content:
             return None
         id_ = message.msg_id
-        if len(id_) > 32:
-            id_ = md5(id_)
         call_id = None
         output = None
         arguments = None
@@ -218,7 +216,7 @@ class MessageItem(BaseModel):
             return FunctionCallMessage(
                 msg_id=self.id,
                 role=self.role or "",
-                caller=Caller(
+                caller=FunctionCaller(
                     id=self.call_id,
                     name=self.name,
                     arguments=self.arguments,

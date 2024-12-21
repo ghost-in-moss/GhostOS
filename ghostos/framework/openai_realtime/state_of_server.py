@@ -687,7 +687,6 @@ class ResponseItemState(StateOfServer):
         self.item = event.item
         done = event.item.to_complete_message()
         self.ctx.logger.info("response done with event: %s, message is %s", repr(event), repr(done))
-        self.ctx.respond_message_chunk(event.response_id, done)
         self.ctx.update_history_message(done)
         return self.ack_server_event(event)
 
