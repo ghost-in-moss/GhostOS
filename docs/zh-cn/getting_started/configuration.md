@@ -2,9 +2,9 @@
 
 `GhostOS` 依赖的配置文件都会存在 workspace 中.
 运行 `ghostos init` 可以在当前目录创建 workspace.
-系统默认的 workspace 在: [ghostos/app](https://github.com/ghost-in-moss/GhostOS/ghostos/app).
+系统默认的 workspace 在: [ghostos/app](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app).
 
-而配置文件默认地址在 [ghostos/app/configs](https://github.com/ghost-in-moss/GhostOS/ghostos/app/configs).
+而配置文件默认地址在 [ghostos/app/configs](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/configs).
 
 ## Edit in UI
 
@@ -18,10 +18,10 @@
 
 ## LLM Config
 
-`GhostOS` 封装了自己的 [LLMs](https://github.com/ghost-in-moss/GhostOS/ghostos/core/llms/abcd.py).
-相关配置项详见 [LLMsConfig](https://github.com/ghost-in-moss/GhostOS/ghostos/core/llms/configs.py).
+`GhostOS` 封装了自己的 [LLMs](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/llms/abcd.py).
+相关配置项详见 [LLMsConfig](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/llms/configs.py).
 
-配置文件在 [\[workspace\]/configs/llms_conf.yml](https://github.com/ghost-in-moss/GhostOS/ghostos/app/configs/llms_conf.yml).
+配置文件在 [\[workspace\]/configs/llms_conf.yml](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/configs/llms_conf.yml).
 
 目前经过反复测试的模型服务有: 
 
@@ -33,13 +33,13 @@
 ## Realtime Beta Config
 
 `GhostOS` 支持了 [OpenAI Realtime Beta](https://platform.openai.com/docs/api-reference/realtime).
-相关配置项详见 [LLMsConfig](https://github.com/ghost-in-moss/GhostOS/ghostos/frameworks/openai_realtime/configs.py).
+相关配置项详见 [LLMsConfig](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/frameworks/openai_realtime/configs.py).
 
-配置文件在 [\[workspace\]/configs/openai_realtime_config.yml](https://github.com/ghost-in-moss/GhostOS/ghostos/app/configs/openai_realtime_config.yml).
+配置文件在 [\[workspace\]/configs/openai_realtime_config.yml](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/configs/openai_realtime_config.yml).
 
 ## Streamlit Config
 
-文件 [ghostos/app/.streamlit/config.toml](https://github.com/ghost-in-moss/GhostOS/ghostos/.streamlit/config.toml)
+文件 [ghostos/app/.streamlit/config.toml](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/.streamlit/config.toml)
 是运行 `ghostos web` 时读取的 streamlit 配置项.
 
 修改它们的方式详见 [streamlit configuration](https://docs.streamlit.io/develop/concepts/configuration).

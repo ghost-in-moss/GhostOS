@@ -60,7 +60,8 @@ def main_chat():
             GhostTaskRoute().render_page_link(use_container_width=True)
         if st.button("Clear Messages", use_container_width=True):
             thread = conversation.get_thread()
-            thread = thread.reset_history([])
+            fork = thread.fork()
+            thread = fork.reset_history([])
             conversation.update_thread(thread)
             route.link.switch_page()
 

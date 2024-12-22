@@ -1,7 +1,7 @@
 # ChatBot
 
 基于 LLM 实现的对话机器人, 由于非常简单, 是 `GhostOS` 开发时的基线测试对象. 
-它是 [Ghost](docs/zh-cn/usages/ghost.md) 一个最简单的实现. 
+它是 [Ghost](/zh-cn/usages/ghost.md) 一个最简单的实现. 
 
 要创建属于自己的对话机器人, 可以参考文件 
 [ghostos/demo/agents/jojo.py](https://github.com/ghost-in-moss/GhostOS/ghostos/demo/agents/jojo.py):
@@ -27,4 +27,4 @@ __ghost__ = Chatbot(
 
 通过对话生成 chatbot 的 meta-agent 正在测试中, 未来几个版本会放出. 
 
-`GhostOS` 核心的 Agent 设计是全代码交互的 [MossAgent](./moss_agent.md), 详见文档. 
+`GhostOS` 核心的 Agent 设计是全代码交互的 [MossAgent](/zh-cn/usages/moss_agent.md), 详见文档. 

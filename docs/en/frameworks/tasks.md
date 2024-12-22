@@ -1,8 +1,9 @@
 # Tasks
 
-`GhostOS` 核心 feature 之一是全异步的 Multi-Agent 架构.
+One of the core features of `GhostOS` is its fully asynchronous Multi-Agent architecture.
 
-每个运行中的 Agent (Ghost) 被视作一个 `最小有状态单元`, 它可以调度一个任务的运行状态: 
+Each running Agent (Ghost) is considered a `minimal stateful unit`, capable of scheduling the execution status of a
+task:
 
 ```python
 
@@ -31,7 +32,7 @@ class TaskState(str, Enum):
     """the task is finished"""
 ```
 
-Agent 可以直接使用 [MOSS](/zh-cn/concepts/moss_protocol.md) 提供的类库来操作自身的状态: 
+Agent 可以直接使用 [MOSS](/en/concepts/moss_protocol.md) 提供的类库来操作自身的状态:
 
 ```python
 
@@ -147,6 +148,7 @@ class Subtasks(Prompter, ABC):
         pass
 ```
 
-从而让多个 Agent 之间以 `Task` 为单位进行交流和互动. 
+This allows multiple Agents to communicate and interact with each other on a `Task` basis.
 
-相关实现详见 [ghostos.core.runtime.tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/tasks.py)
+For more details on the implementation,
+see [ghostos.core.runtime.tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/tasks.py).

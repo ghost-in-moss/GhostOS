@@ -1,19 +1,20 @@
 # Libraries
 
-对于传统基于 `JSON Schema Function Call` 实现的 Agent 而言, 它的交互对象是 `Tool`.
-而 `GhostOS` 以图灵完备的代码提供给 Agent, 所以 Agent 的交互对象是 `Library`. 
+For traditional agents based on `JSON Schema Function Call`, their interaction object is `Tool`. In contrast, `GhostOS`
+provides Turing-complete code to the Agent, making the interaction object `Library`.
 
-这里的 `libraries` 不是给开发者用的, 而是给大模型用的. 
+The `libraries` here are not for developers but for Large Language Models (LLMs).
 
-让 LLM 使用 Library 有三个步骤: 
+There are three steps for LLMs to use Libraries:
 
-1. 定义和实现一个 Library. 
-2. 将 Library 抽象和实现注册到 IoC Container. 
-3. 将 Library 绑定到 Moss 类上.
+1. Define and implement a Library.
+2. Register the abstract and implementation of the Library to the IoC (Inversion of Control) Container.
+3. Bind the Library to the Moss class.
 
 ## Code As Prompt
 
-这其中一个核心的概念是 `Code As Prompt`, 写代码的同时就在定义 Prompt. 我们以多任务调度为例: 
+The core concept here is `Code As Prompt`, which means that while writing code, you are also defining the prompt. Taking
+multi-task scheduling as an example:
 
 ```python
 class Subtasks(Prompter, ABC):
@@ -69,27 +70,33 @@ class Subtasks(Prompter, ABC):
         pass
 ```
 
-将它绑定到 Agent 可以看到的 moss 文件上: 
+Bind it to the moss class that the Agent can see:
 
 ```python
 from ghostos.abcd import Subtasks
 from ghostos.core.moss import Moss as Parent
 
+
 class Moss(Parent):
-    
     subtasks: Subtasks
     """manager your multi-agent tasks"""
 ```
 
-* 类的源码会自动反射到 Prompt, 让大模型看到. 
-* 这个库的实现会自动注入到 `Moss` 实例上, 大模型可以用生成的代码调用它.
+* The source code of the class will be automatically reflected to the Prompt, allowing the Large Language Model to see
+  it.
+* The implementation of this library will be automatically injected into the `Moss` instance, and the Large Language
+  Model can use the generated code to call it.
 
-更具体的用法, 请看 [MossAgent](/zh-cn/usages/moss_agent.md).
+For more specific usage, please refer to [MossAgent](/en/usages/moss_agent.md).
 
-我们预期基于 [MOSS Protocol](/zh-cn/concepts/moss_protocol.md) 类似的行业标准化协议, 未来大模型使用的工具, 会单纯以代码仓库的形式开发和分享. 
-
+We hope that tools provide to the Large Language Models in the future, should be based on industry-standard protocols
+similar
+to
+the [MOSS Protocol](/en/concepts/moss_protocol.md), and be developed and shared in the form of code
+repositories.
 
 ## Developing Libraries
 
-`GhostOS` 开箱自带的 libraries 还在开发和测试中. 
-这些工具预期都会放入 [ghostos/libraries]((https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libraries))
+The libraries that come with GhostOS out of the box are still under development and testing.
+These tools are expected to be placed
+in [ghostos/libraries](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libraries).

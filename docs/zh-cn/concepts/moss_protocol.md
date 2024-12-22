@@ -15,7 +15,7 @@
 
 ## MOSS
 
-MOSS 的实现 [ghostos.core.moss](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss) 
+MOSS 的实现 [ghostos.core.moss](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss) 
 是一个可以脱离 `GhostOS` 项目使用的 python 模块.
 
 ### Purpose
@@ -62,15 +62,15 @@ def run(moss: Moss):
 
 `MOSS` 实现的核心是三个类:
 
-* [MossCompiler](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/abcd.py): 编译任何 python module, 生成一个可供解析的临时模块.
-* [MossPrompter](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/abcd.py): 反射 python module, 用来生成大模型看到的 Prompt.
-* [MossRuntime](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/abcd.py): 在编译的临时 module 中, 执行大模型生成的代码.
+* [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 编译任何 python module, 生成一个可供解析的临时模块.
+* [MossPrompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 反射 python module, 用来生成大模型看到的 Prompt.
+* [MossRuntime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 在编译的临时 module 中, 执行大模型生成的代码.
 
 ![moss architecture](../../assets/moss_achitecture.png)
 
 ### Get MossCompiler
 
-`MossCompiler` 注册到了 [IoC Container](../concepts/ioc_container.md) 中. 要获取它的实例可以:
+`MossCompiler` 注册到了 [IoC Container](/zh-cn/concepts/ioc_container.md) 中. 要获取它的实例可以:
 
 ```python
 from ghostos.bootstrap import get_container
@@ -81,7 +81,7 @@ compiler = get_container().force_fetch(MossCompiler)
 
 ### PyContext
 
-`MossCompiler` 使用 [PyContext](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/pycontext.py) 数据结构来管理一个可持久化的上下文.
+`MossCompiler` 使用 [PyContext](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/pycontext.py) 数据结构来管理一个可持久化的上下文.
 它可以用来存储运行时定义, 修改过的变量; 也可以管理对 python 代码的直接修改, 用于下一次运行.
 
 每个 `MossCompiler` 都会继承一个独立的 IoC Container, 因此可以使用它进行依赖注入的注册:
@@ -263,7 +263,7 @@ with runtime:
 ### Custom Lifecycle functions
 
 `MossRuntime` 在运行的生命周期中, 会尝试寻找编译模块里的魔术方法并执行.
-所有的魔术方法都定义在 [ghostos.core.moss.lifecycle](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/lifecycle.py) 中. 详情请查看文件.
+所有的魔术方法都定义在 [ghostos.core.moss.lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/lifecycle.py) 中. 详情请查看文件.
 主要有以下几个方法:
 
 ```python
@@ -340,7 +340,7 @@ injections = runtime.moss_injections()
 
 ## Examples
 
-关于 `MOSS` 的基线测试用例在 [ghostos.core.moss.examples](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/examples)
+关于 `MOSS` 的基线测试用例在 [ghostos.core.moss.examples](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/examples)
 可以参考其中的测试代码理解它的原理. 
 
 ## MOSS TestSuite

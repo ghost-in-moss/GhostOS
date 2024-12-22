@@ -64,30 +64,27 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
     if not debug:
         st.empty()
         return
-    items = [sac.ButtonsItem(label="Detail")]
-    task_payload = TaskPayload.read_payload(message)
-    if task_payload:
-        items.append(sac.ButtonsItem(label="Task Info"))
-    completion_usage = CompletionUsagePayload.read_payload(message)
-    if completion_usage:
-        items.append(sac.ButtonsItem(label="Completion Usage"))
-    prompt_payload = PromptPayload.read_payload(message)
-    if prompt_payload:
-        items.append(sac.ButtonsItem(label="Prompt Info"))
-    if items:
-        selected = sac.buttons(
-            items,
-            index=None,
-            key=prefix + ":payloads:" + message.msg_id,
-        )
-        if selected == "Detail":
-            open_message_dialog(message)
-        elif selected == "Task Info" and task_payload:
-            open_task_info_dialog(task_payload.task_id)
-        elif selected == "Completion Usage" and completion_usage:
-            open_completion_usage_dialog(completion_usage)
-        elif selected == "Prompt Info" and prompt_payload:
-            open_prompt_info_dialog(prompt_payload.prompt_id)
+    msg_id = message.msg_id
+    with st.container():
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            if st.button(label="Detail", key="Detail" + msg_id):
+                open_message_dialog(message)
+
+        with col2:
+            task_payload = TaskPayload.read_payload(message)
+            if task_payload and st.button(label="Task Info", key="Task Info" + msg_id):
+                open_task_info_dialog(task_payload.task_id)
+
+        with col3:
+            completion_usage = CompletionUsagePayload.read_payload(message)
+            if completion_usage and st.button(label="Token usage", key="token usage" + msg_id):
+                open_completion_usage_dialog(completion_usage)
+
+        with col4:
+            prompt_payload = PromptPayload.read_payload(message)
+            if prompt_payload and st.button(label="Prompt Info", key="Prompt Info" + msg_id):
+                open_prompt_info_dialog(prompt_payload.prompt_id)
 
 
 def render_message_in_content(message: Message, debug: bool, in_expander: bool, *, prefix: str = ""):

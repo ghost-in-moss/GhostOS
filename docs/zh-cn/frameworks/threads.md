@@ -7,4 +7,4 @@
 Agent 生成的历史消息, 会用 `GoThreadInfo` 结构存储和使用.
 
 由于个人开发精力有限,
-详细实现请看[ghostos.core.runtime.threads](https://github.com/ghost-in-moss/GhostOS/ghostos/core/runtime/threads.py) 
+详细实现请看[ghostos.core.runtime.threads](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/threads.py) 

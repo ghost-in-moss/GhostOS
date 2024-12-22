@@ -48,7 +48,7 @@ pip install ghostos[realtime]
 * images and audio: 过程中的图片和音频.
 * logs: 运行时日志.
 
-所有这类运行时文件, 都保存在 [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/ghostos/app/runtime) 目录.
+所有这类运行时文件, 都保存在 [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/runtime) 目录.
 
 如果需要清空它们, 请运行:
 
@@ -58,4 +58,4 @@ ghostos clear-runtime
 
 ## Create Your Agent
 
-想要创建自己的 agent, 详见 [Usage](docs/zh-cn/usages/moss_agent)
+想要创建自己的 agent, 详见 [Usage](/zh-cn/usages/moss_agent)

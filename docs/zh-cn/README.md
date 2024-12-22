@@ -2,13 +2,13 @@
 
 > The AI `Ghosts` wonder in the `Shells`.
 
-* [中文文档](docs/zh-cn/README.md)
-* [Documents](docs/en/README.md)
+* [中文文档](/zh-cn/README.md)
+* [Documents](/en/README.md)
 * [Discord Server](https://discord.gg/NG6VKwd5jV)
 
 ## Example
 
-使用 Python 代码 [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/ghostos/demo/sphero/bolt_gpt.py),
+使用 Python 代码 [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/demo/sphero/bolt_gpt.py),
 定义了一个以 [SpheroBolt](https://sphero.com/products/sphero-bolt) 玩具为躯体的智能机器人.
 
 如果你有 SpheroBolt, 运行 `ghostos web ghostos.demo.sphero.bolt_gpt` 可以启动这个机器人:
@@ -24,7 +24,7 @@ Demo 中初步实现的功能:
 
 ## Introduce
 
-`GhostOS` 是一个 AI Agent 框架, 旨在用图灵完备的代码交互界面 ([Moss Protocol](docs/zh-cn/concepts/moss_protocol.md)) 取代
+`GhostOS` 是一个 AI Agent 框架, 旨在用图灵完备的代码交互界面 ([Moss Protocol](/zh-cn/concepts/moss_protocol.md)) 取代
 JSON Schema,
 成为 LLM 和 Agent 系统能力交互的核心方式.
 详见: [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
@@ -42,10 +42,9 @@ JSON Schema,
 - [x] 支持 OpenAI 的视觉能力 ([OpenAI vision](https://platform.openai.com/docs/guides/vision))
 - [x] 支持 OpenAI 实时语音对话 ([OpenAI Realtime Beta](https://platform.openai.com/docs/guides/realtime))
 
-
 ## Quick Start
 
-> `GhostOS` 仍然是一个验证中的 AI 项目, 强烈建议安装到 docker 之类的容器中, 而不在本地执行. 
+> `GhostOS` 仍然是一个验证中的 AI 项目, 强烈建议安装到 docker 之类的容器中, 而不在本地执行.
 
 安装 `GhostOS`:
 
@@ -79,15 +78,17 @@ ghostos web ghostos.demo.agents.jojo
 ghostos web [my_path_file_path]
 ```
 
-安装更多关联依赖: 
+安装更多关联依赖:
+
 ```bash
 pip install ghostos[sphero] # 安装 sphero 类库
 pip install ghostos[realtime] # 安装 realtime 相关类库. pyaudio 和 websockets
 ```
 
-可以通过创建本地 python 文件, 定义出自己的 Agents. 详情请见: 
-* [Chatbot](docs/zh-cn/usages/chatbot.md): 极简的对话机器人
-* [MossAgent](docs/zh-cn/usages/moss_agent.md): 能使用 python 的 agent
+可以通过创建本地 python 文件, 定义出自己的 Agents. 详情请见:
+
+* [Chatbot](/zh-cn/usages/chatbot.md): 极简的对话机器人
+* [MossAgent](/zh-cn/usages/moss_agent.md): 能使用 python 的 agent
 
 ## Use In Python
 
@@ -122,32 +123,6 @@ with receiver:
         print(chunk.content)
 ```
 
-## Documents
-
-* Getting Started
-    * [Installation](docs/zh-cn/getting_started/installation.md)
-    * [Configuration](docs/zh-cn/getting_started/configuration.md)
-    * [Chat](docs/zh-cn/getting_started/chat_with_ghost.md)
-    * [Scripts](docs/zh-cn/getting_started/scripts.md)
-* Concepts
-    * [Abstract Classes Design](docs/zh-cn/concepts/abcd.md)
-    * [Moss Protocol](docs/zh-cn/concepts/moss_protocol.md)
-    * [IoC Container](docs/zh-cn/concepts/ioc_container.md)
-    * [EntityMeta](docs/zh-cn/concepts/entity_meta.md)
-    * [Prompter](docs/zh-cn/concepts/prompter.md)
-* Usages
-    * [Ghost](docs/zh-cn/usages/ghost.md)
-    * [Chatbot](docs/zh-cn/usages/chatbot.md)
-    * [MossAgent](docs/zh-cn/usages/moss_agent.md)
-* [Libraries](docs/zh-cn/libraries/libraries.md)
-* Frameworks
-    * [Messages](docs/zh-cn/frameworks/messages.md)
-    * [LLMs](docs/zh-cn/frameworks/llms.md)
-    * [EventBus](docs/zh-cn/frameworks/eventbus.md)
-    * [Tasks](docs/zh-cn/frameworks/tasks.md)
-    * [Threads](docs/zh-cn/frameworks/threads.md)
-
-
 ## Developing Features
 
 * [ ] 开箱即用的 Agent 能力类库.
@@ -164,7 +139,7 @@ with receiver:
 > 项目的迭代将长时间聚焦于验证 `代码驱动的具身智能体`, `代码驱动的思维能力`, `代码驱动的学习与成长` 三个方向.
 > 并完善开箱即用的 agent 相关能力.
 
-# So What is GhostOS purpose?
+# So What is GhostOS?
 
 `GhostOS` 这个项目是作者用来做 AI 应用探索而开发的. 基本思路如下:
 

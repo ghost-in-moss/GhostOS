@@ -79,6 +79,11 @@ class ChatbotDriver(GhostDriver[Chatbot]):
 
     def truncate(self, session: Session) -> GoThreadInfo:
         thread = session.thread
+        if 0 < self.ghost.history_turns < len(thread.history):
+            thread.history[-self.ghost.history_turns].summary = ""
+        elif self.ghost.history_turns == 0:
+            thread.history[-1].summary = ""
+
         thread.history = thread.history[-self.ghost.history_turns:]
         return thread
 

@@ -1,11 +1,12 @@
-# 抽象设计
+# Abstract Class Design
 
-`GhostOS` 的抽象设计遵循了 `面向接口编程` 这一原则. 
-所有模块使用了抽象类来设计, 通过 [IoC Container](/zh-cn/concepts/ioc_container.md) 来组装实现. 
+The abstract design of GhostOS adheres to the principle of interface-oriented programming.
+All modules are designed using abstract classes, and implementations are assembled through
+the [IoC Container](/en/concepts/ioc_container.md)
 
 ![architecture](../../assets/architecture.png)
 
-这些抽象基本的相互关系, 和使用逻辑如下: 
+The basic interrelationships of these abstractions and their usage logic are as follows:
 
 ```python
 from ghostos.abcd import GhostOS, Shell, Conversation, Ghost
@@ -40,7 +41,7 @@ with receiver:
 
 ```
 
+For detailed content, please check the source code. [ghostos.abcd.concepts](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
 
-详细内容请直接看代码 [ghostos.abcd.concepts](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-
-> 抽象设计的相关介绍非常繁杂, 有精力再完成文档. 
+> Abstract design-related introductions can be quite complex; 
+> only complete the documentation when I have the energy (T_T).

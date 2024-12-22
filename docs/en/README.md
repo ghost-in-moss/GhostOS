@@ -2,7 +2,8 @@
 
 > The AI `Ghosts` wonder in the `Shells`.
 
-* [Documents](https://ghost-in-moss.github.io/GhostOS/#/)
+* [中文文档](/en/README.md)
+* [Documents](/en/README.md)
 * [Discord Server](https://discord.gg/NG6VKwd5jV)
 
 (This document is translated from zh-cn to english by [Moonshot](https://moonshot.cn/))
@@ -13,7 +14,7 @@ Using Python code [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/
 an intelligent robot with a [SpheroBolt](https://sphero.com/products/sphero-bolt) as its body is defined.
 If you have a SpheroBolt, running `ghostos web ghostos.demo.sphero.bolt_gpt` can start this robot.
 
-![SpheroBoltGPT](docs/assets/ask_sphero_spin_gif.gif)
+![SpheroBoltGPT](../assets/ask_sphero_spin_gif.gif)
 
 The demo initially implements the following features:
 
@@ -25,7 +26,7 @@ The demo initially implements the following features:
 ## Introduce
 
 `GhostOS` is an AI Agent framework designed to replace `JSON Schema `
-with a Turing-complete code interaction interface ([Moss Protocol](docs/zh-cn/concepts/moss_protocol.md)),
+with a Turing-complete code interaction interface ([Moss Protocol](/en/concepts/moss_protocol.md)),
 becoming the core method for interaction between LLM and Agent system capabilities. For more details:
 [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
 
@@ -40,7 +41,7 @@ repository.
 `GhostOS` Still in the early experimental developing, the current version mainly implements out-of-the-box capabilities,
 including:
 
-- [x] Turn a python file into a web agent
+- [x] Turn a python file into an web agent
 - [x] Agent web UI built by [Streamlit Web](https://streamlit.io/)
 - [x] Support llms like `OpenAI`, `Moonshot`
 - [x] Support [OpenAI vision](https://platform.openai.com/docs/guides/vision)
@@ -97,8 +98,8 @@ pip install ghostos[sphero]
 
 ou can create a local Python file and define your own Agents. For more details
 
-* [Chatbot](docs/zh-cn/usages/chatbot.md): simplest chatbot
-* [MossAgent](docs/zh-cn/usages/moss_agent.md): an agent that can interact with the python module
+* [Chatbot](/en/usages/chatbot.md): simplest chatbot
+* [MossAgent](/en/usages/moss_agent.md): an agent that can interact with the python module
 
 ## Use In Python
 
@@ -151,7 +152,7 @@ with receiver:
 > code-driven embodied intelligence, code-based thinking capabilities, and code-based learning.
 > I will also aim to optimize out-of-the-box agent abilities.
 
-# So What is GhostOS purpose?
+# So What is GhostOS?
 
 The GhostOS project is developed by the author for exploring AI applications. The basic idea is as follows:
 
@@ -177,7 +178,7 @@ Therefore, a Meta-Agent can develop other Agents just like a normal programming 
 Ideally, the Meta-Agent can write code, write its own tools, define memories and chain of thoughts with data structures,
 and develop other Agents for itself.
 
-![meta-agent-cycle](docs/assets/meta-agent-cycle.png)
+![meta-agent-cycle](../assets/meta-agent-cycle.png)
 
 Furthermore, most complex tasks with rigorous steps can be described using tree or graph data structures.
 Constructing a nested graph or tree using methods like JSON is very difficult,

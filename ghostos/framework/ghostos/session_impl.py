@@ -1,5 +1,5 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any, Callable
-from ghostos.errors import StreamingError, SessionError
+from ghostos.errors import StreamingError
 from ghostos.abcd import (
     Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks,
     Messenger,
@@ -10,13 +10,13 @@ from ghostos.core.messages import (
 )
 from ghostos.core.messages.message_classes import FunctionCallMessage
 from ghostos.core.runtime import (
-    TaskBrief, GoTaskStruct, TaskLocker, TaskPayload, GoTasks, TaskState,
+    TaskBrief, GoTaskStruct, TaskPayload, GoTasks, TaskState,
     EventBus, Event, EventTypes,
     GoThreads,
     GoThreadInfo,
 )
 from ghostos.prompter import Prompter
-from ghostos.contracts.logger import get_ghostos_logger, LoggerItf
+from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.variables import Variables
 from ghostos.container import Container, provide, Contracts
 from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
@@ -288,7 +288,7 @@ class SessionImpl(Session[Ghost]):
                 raise SessionError(f"session failed during streaming: {e}")
 
             buffer, callers = messenger.flush()
-            self.logger.info("append messages to thread: %s", buffer)
+            self.logger.debug("append messages to thread: %s", buffer)
             self.thread.append(*buffer)
             return buffer, callers
 

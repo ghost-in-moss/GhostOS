@@ -1,52 +1,54 @@
 # Ghost
 
-`Ghost` 是 `GhostOS` 的名字来源, 是智能体的 `最小有状态单元`.
-这个词来自于 [Ghost In the Shell](https://en.wikipedia.org/wiki/Ghost_in_the_Shell).
+"Ghost" is the  "minimum stateful unit" of an LLM-driven unit.
+The term comes from [Ghost In the Shell](https://en.wikipedia.org/wiki/Ghost_in_the_Shell).
 
-在 `GhostOS` 的架构设计中, 一个智能体集群由许多个 `Ghost` 单元构成, 每个 `Ghost` 拥有自身的状态, 记忆和上下文 (Session),
-它们之间可以通过 `EventBus` 进行全异步的通讯.
+In the architectural design of "GhostOS", an intelligent agent swarm is composed of many "Ghost" units, each with its
+own state, memory, and context (Session);
+and they can communicate fully asynchronously through the "EventBus".
 
 ![architecture](../../assets/architecture.png)
 
 ## Why the word `Ghost` instead of `Agent`
 
-在作者的架构设想中, `Agent` 是对于用户而言的单一实体或交互界面.
-它是拥有躯体 (也就是 Shell) 的.
+In the author's architectural vision, an `Agent` is a robot or interaction interface (like IM) for users, possessing a
+physical form (also known as Shell).
 
-但在一个躯体内运行的, 可能是一个 Multi-Agent (或 Multi-Ghost) 集群, 用于:
+However, within a single shell, there may be a Multi-Agent (or Multi-Ghost) swarm running, which serves the following
+purposes:
 
-* 并行执行多个任务.
-* 模拟不同的角色进行思维推演.
-* 异步地解决长耗时任务.
+* Parallel execution of multiple tasks.
+* Simulation of different roles for thought experimentation.
+* Asynchronous executions of long-duration tasks.
 
-我们举一个简单的例子:
+Let's take a simple example:
 
-1. 用户对话的 `Agent`, 默认运行快速的 `gpt-4o` 模型来控制对话.
-2. 当用户问到复杂问题时, 主 ghost 调用 `gpt-o3` 运行了一个长达 30秒的思考过程.
-3. 在这 30 秒内, 主 agent 并未阻塞, 而是继续和用户对话.
-4. 30 秒后, 主 agent 拿到异步回调的结果, 并告知用户.
+1. The `Agent` for user conversation, by default, runs the fast `gpt-4o` model to control the dialogue.
+2. When the user asks a complex question, the main ghost calls `gpt-o3` to run a 30-second thought process.
+3. During these 30 seconds, the main agent does not block but continues to converse with the user.
+4. After 30 seconds, the main agent receives the asynchronous callback result and informs the user.
 
-在这个例子中, 并行执行和事件总线是最关键的功能. 所以 Ghost 可以是:
+In this example, parallel execution and the event bus are the most critical features. Therefore, a Ghost can be:
 
-* 用户对话的一个 Agent
-* 主 Agent 开启的一个分身, 使用不同的模型, 专注于某个任务或思考
-* 后台运行的一个 workflow
-* 后台运行的自动机器人
-* 一个独立的脚本
-* 具身智能体的某一个可以执行自然语言命令的组件
-* 对自身运行效果进行反思的后台程序
+* An Agent for user conversation.
+* A clone opened by the main Agent, using different models, focused on a specific task or thought.
+* A workflow running in the background.
+* An automated robot running in the background.
+* An independent script.
+* A component of an embodied intelligent agent that can execute natural language commands.
+* A background program that reflects on its own operational effectiveness.
 
-它们共同的特点是:
+Their common characteristics are:
 
-* 大模型驱动
-* 拥有多轮运行能力
-* 类似操作系统的 thread, 是最小的同步运行单元, 拥有独立的上下文
+* Driven by large language models.
+* Possessing the ability to run in multiple rounds.
+* Similar to operating system threads, they are the smallest synchronous running units with independent contexts.
 
 ## Ghost Driver
 
-在 `GhostOS` 中, `Ghost` 需要通过至少两个类来定义其原型.
+In `GhostOS`, the prototype of a `Ghost` needs to be defined through at least two classes.
 
-[Ghost](https://github.com/ghost-in-moss/GhostOS/ghostos/abcd/concepts.py) 类:
+[Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py):
 
 ```python
 
@@ -71,7 +73,7 @@ class Ghost(Identical, EntityClass, ABC):
 
 ```
 
-[GhostDriver](https://github.com/ghost-in-moss/GhostOS/ghostos/abcd/concepts.py) 类:
+[GhostDriver](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py) :
 
 ```python
 
@@ -165,25 +167,30 @@ class GhostDriver(Generic[G], ABC):
 
 ```
 
-这么做的动机是, `GhostOS` 使用 `Code As Prompt` 的思路直接将代码反射成大模型看到的 Prompt.
-在 Mutli-Agent 架构中, `GhostDriver` 的细节代码对于使用它的 Agent 而言是不必要的.
-将数据结构为主的 `Ghost` 和运行逻辑为主的 `GhostDriver` 进行拆分, 有利于其它 Agent 更简洁地理解如何构建一个 Agent.
+The motivation for this approach is that `GhostOS` employs the `Code As Prompt` concept to directly reflect code into
+prompts that the Large Language Model perceives. Within the Multi-Agent architecture, the detailed code of `GhostDriver`
+is unnecessary for the Agents that utilize it. By separating the data structure-focused `Ghost` from the
+logic-focused `GhostDriver`, it facilitates a more straightforward understanding for other Agents on how to construct an
+Agent.
 
 ## Ghost Context
 
-[Context](https://github.com/ghost-in-moss/GhostOS/ghostos/abcd/concepts.py) 可以理解为 `Ghost` 运行时的入参.
-它可以接受强类型的数据结构, 同时生成 system prompt 提供给大模型, 用来理解上下文. 同时大模型可以将 context 作为一个变量来操作.
+The [Context](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py) can be understood as the
+input parameters for the `Ghost` runtime. It accepts strongly-typed data structures and generates system prompts for the
+Large Language Model to understand the context. At the same time, the Large Language Model can manipulate the context as
+a variable.
 
-Context 实现了 [Prompter](../concepts/prompter.md), 它本质上是类似 `DOM` 的 `Prompt Object Model` 数据结构,
-需要用强类型的参数反射出 system instruction, 作为 prompt 的一部分提交给 LLM.
+The Context implements [Prompter](/en/concepts/prompter.md), which is essentially a `Prompt Object Model` similar
+to `DOM`. It requires strongly-typed parameters to reflect system instructions as part of the prompt submitted to the
+LLM.
 
-Context 通常用来实现:
+The Context is typically used to implement:
 
-* 具身智能体自己身体的状态, 对周围环境的识别
-* AI 应用在端侧 (比如 IDE) 的状态, 和用户同步认知.
-* 某些动态变更的入参数据, 比如一个 AI 运维看到的监控面板.
+* The state of an embodied agent's own body and recognition of the surrounding environment.
+* The state of AI applications on the edge side (such as IDEs) and synchronize cognition with users.
+* Dynamically changing input data parameters, such as what an AI operator sees on a monitoring panel.
 
-作为入参传递给对话:
+Passed as input to the conversation:
 
 ```python
 from pydantic import Field
@@ -201,7 +208,7 @@ conversation: Conversation = ...
 conversation.talk("your query to edit the project", project_context)
 ```
 
-有必要的话, 可以让 MossAgent 通过 `Moss` 去操作一个 Context:
+If necessary, MossAgent can manipulate a Context through `Moss`:
 
 ```python
 from ghostos.abcd import Context
@@ -220,10 +227,10 @@ class Moss(Parent):
 
 ## Ghost Artifact
 
-[Artifact](https://github.com/ghost-in-moss/GhostOS/ghostos/abcd/concepts.py) 可以理解为 `Ghost` 运行时的出参.
-只不过这个出参是可以一直变动的.
+The [Artifact](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py) can be understood as the
+output parameter of `Ghost` at runtime. However, this output parameter is subject to continuous changes.
 
-通过 `Conversation` 可以拿到 `Ghost` 运行时的 `Artifact` 对象, 用于端侧的渲染:
+Through `Conversation`, you can obtain the `Artifact` object of `Ghost` at runtime for rendering on the client side.
 
 ```python
 from ghostos.abcd import Conversation, Ghost, Shell
@@ -238,12 +245,9 @@ conversation.talk(...)
 artifact = conversation.get_artifact()
 ```
 
-在 `MossAgent` 中, 可以将 `Artifact` 挂载在 `Moss` 对象上让大模型操作.
-
 ## ChatBot and MossAgent
 
-[Chatbot](/zh-cn/usages/chatbot.md) 和 [MossAgent](/zh-cn/usages/moss_agent.md) 是 `GhostOS` 项目中对 Ghost
-的基础实现. 详见相关文档.
+[Chatbot](chatbot.md) and [MossAgent](moss_agent.md) are the basic implementations of Ghost in the `GhostOS` project.
 
 ## More Ghosts
 
