@@ -22,7 +22,7 @@ ghostos web ghostos.demo.agents.jojo
 You can launch a standalone Python file as an Agent to interpret file content and call the file's relevant
 methods. `GhostOS` will automatically reflect the code to generate the context visible to the Agent.
 
-![streamlit_chat](../../assets/streamlit_chat.png)
+![streamlit_chat](assets/streamlit_chat.png)
 
 ## Realtime Chat
 

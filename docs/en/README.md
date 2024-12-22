@@ -14,7 +14,7 @@ Using Python code [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/
 an intelligent robot with a [SpheroBolt](https://sphero.com/products/sphero-bolt) as its body is defined.
 If you have a SpheroBolt, running `ghostos web ghostos.demo.sphero.bolt_gpt` can start this robot.
 
-![SpheroBoltGPT](../assets/ask_sphero_spin_gif.gif)
+![SpheroBoltGPT](assets/ask_sphero_spin_gif.gif)
 
 The demo initially implements the following features:
 
@@ -178,7 +178,7 @@ Therefore, a Meta-Agent can develop other Agents just like a normal programming 
 Ideally, the Meta-Agent can write code, write its own tools, define memories and chain of thoughts with data structures,
 and develop other Agents for itself.
 
-![meta-agent-cycle](../assets/meta-agent-cycle.png)
+![meta-agent-cycle](assets/meta-agent-cycle.png)
 
 Furthermore, most complex tasks with rigorous steps can be described using tree or graph data structures.
 Constructing a nested graph or tree using methods like JSON is very difficult,

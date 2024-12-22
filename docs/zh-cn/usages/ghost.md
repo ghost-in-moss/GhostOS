@@ -6,7 +6,7 @@
 在 `GhostOS` 的架构设计中, 一个智能体集群由许多个 `Ghost` 单元构成, 每个 `Ghost` 拥有自身的状态, 记忆和上下文 (Session),
 它们之间可以通过 `EventBus` 进行全异步的通讯.
 
-![architecture](../../assets/architecture.png)
+![architecture](assets/architecture.png)
 
 ## Why the word `Ghost` instead of `Agent`
 

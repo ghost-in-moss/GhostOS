@@ -66,7 +66,7 @@ def run(moss: Moss):
 * [MossPrompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 反射 python module, 用来生成大模型看到的 Prompt.
 * [MossRuntime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 在编译的临时 module 中, 执行大模型生成的代码.
 
-![moss architecture](../../assets/moss_achitecture.png)
+![moss architecture](assets/moss_achitecture.png)
 
 ### Get MossCompiler
 

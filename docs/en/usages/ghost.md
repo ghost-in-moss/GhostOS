@@ -7,7 +7,7 @@ In the architectural design of "GhostOS", an intelligent agent swarm is composed
 own state, memory, and context (Session);
 and they can communicate fully asynchronously through the "EventBus".
 
-![architecture](../../assets/architecture.png)
+![architecture](assets/architecture.png)
 
 ## Why the word `Ghost` instead of `Agent`
 
