@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostOS Document</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+    <meta name="description" content="Description">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/themes/buble.css"/>
+    <style>
+        img {
+            max-width: 900px
+        }
+    </style>
+
+
+</head>
+<body>
+<div id="app"></div>
+<script>
+    window.$docsify = {
+        name: 'GhostOS',
+        loadSidebar: true,
+        loadNavbar: true,
+        repo: 'https://github.com/ghost-in-moss/GhostOS',
+        alias: {
+            '/': "/en/README.md",
+            '/_navbar.md': '/en/_navbar.md',
+            '/_sidebar.md': '/en/_sidebar.md',
+        },
+    }
+</script>
+<script src="//unpkg.com/docsify/lib/docsify.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-markdown.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-python.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-yaml.min.js"></script>
+</body>
+</html>

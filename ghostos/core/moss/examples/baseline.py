@@ -1,8 +1,11 @@
-import logging
 from abc import ABC, abstractmethod
-from typing import Optional, List
-from ghostos.core.moss.abc import Moss as Parent, attr
-from inspect import getsource, getmembers
+from typing import List
+
+from ghostos.container import Container
+from ghostos.core.moss.abcd import Moss as Parent
+from ghostos.prompter import ModelPrompter
+from inspect import getmembers, getsource
+from pydantic import BaseModel
 
 
 class Foo(ABC):
@@ -18,25 +21,37 @@ def plus(a: int, b: int) -> int:
     return a + b
 
 
-class Moss(Parent):
+class TestPrompter(ModelPrompter):
+    line: str = "TestPrompter"
+
+    def self_prompt(self, container: Container) -> str:
+        return self.line
+
+    def get_title(self) -> str:
+        return ""
+
+
+class Moss(Parent, ABC):
     """
     本地定义的 Moss 类. 每个 MOSS 文件里都应该有一个 Moss 类, 可以是 import 的也可以是本地定义的.
     记得它要继承自 Moss.
     """
-    life: List[str] = attr(default_factory=list, desc="用来记录发生过的生命周期.")
+    life: List[str] = []
     """测试 attr 方法用来定义可持久化的属性. """
 
     foo: Foo
     """依赖注入 Foo 的测试用例. """
 
+    tester: TestPrompter
 
-# <moss>
-# !!! 使用 `# <moss>` 和 `# </moss>` 包裹的代码不会对大模型呈现.
+
+# <moss-hide>
+# !!! 使用 `# <moss-hide>` 和 `# </moss-hide>` 包裹的代码不会对大模型呈现.
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ghostos.core.moss.abc import MossCompiler, MossRuntime, AttrPrompts, MossPrompter, MossResult
+    from ghostos.core.moss.abcd import MossCompiler, AttrPrompts, MossPrompter, Execution
 
 
 def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
@@ -47,7 +62,7 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
     主要解决各种注入方面的需求:
     """
     # 单测里应该有这个. moss.bar == 123
-    compiler.injects(bar=123)
+    compiler.injects(bar=123, tester=TestPrompter())
     # 插入生命周期事件, 直接赋值到 moss 上.
     Moss.life.append("__moss_compile__")
 
@@ -65,7 +80,6 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
 
 
 def __moss_attr_prompts__() -> "AttrPrompts":
-    Moss.life.append("__moss_attr_prompts__")
     return [
         # 重写了 getsource 的 prompt, 它就应该不存在了.
         ("getsource", ""),
@@ -76,14 +90,12 @@ def __moss_attr_prompts__() -> "AttrPrompts":
 
 def __moss_prompt__(prompter: "MossPrompter") -> str:
     # 测试生命周期生效.
-    Moss.life.append("__moss_prompt__")
-    from ghostos.core.moss.lifecycle import __moss_prompt__
-    return __moss_prompt__(prompter)
+    from ghostos.core.moss.lifecycle import __moss_module_prompt__
+    return __moss_module_prompt__(prompter)
 
 
-def __moss_exec__(*args, **kwargs) -> "MossResult":
+def __moss_exec__(*args, **kwargs) -> "Execution":
     # 测试生命周期生效.
-    Moss.life.append("__moss_exec__")
     from ghostos.core.moss.lifecycle import __moss_exec__
     return __moss_exec__(*args, **kwargs)
 
@@ -105,4 +117,4 @@ if __name__ == "__test__":
         """
         return plus(2, 2)
 
-# </moss>
+# </moss-hide>

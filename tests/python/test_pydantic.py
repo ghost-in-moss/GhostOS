@@ -1,7 +1,10 @@
+import time
+
 from pydantic import BaseModel, Field
 from pydantic.errors import PydanticSchemaGenerationError
-from typing import TypedDict, Required, Iterable, List, Optional
+from typing import TypedDict, Required, Iterable, List, Optional, ClassVar, Type
 from typing_extensions import Literal
+from datetime import datetime
 
 
 def test_pydantic_new_typed_dict() -> None:
@@ -138,3 +141,113 @@ def test_init_model_with_more_values():
     bar_data = bar.model_dump(exclude_defaults=True)
     assert len(bar_data) == 0
     assert not hasattr(bar, 'c')
+
+
+def test_bytes_in_model():
+    class Foo(BaseModel):
+        foo: bytes
+
+    f = Foo(foo="test".encode())
+    assert f.foo.decode() == "test"
+
+
+def test_multi_type_attr():
+    class Foo(BaseModel):
+        foo: int = 0
+
+    class Bar(BaseModel):
+        bar: str = ""
+
+    class Baz(BaseModel):
+        baz: List[BaseModel]
+
+    b = Baz(baz=[Foo(), Bar()])
+    data = b.model_dump(serialize_as_any=True)
+    assert data == {"baz": [{"foo": 0}, {"bar": ""}]}
+
+    unmarshalled = Baz(**data)
+    assert not isinstance(unmarshalled.baz[0], Foo)
+
+
+def test_model_with_subclass():
+    class Foo(BaseModel):
+        class Bar(BaseModel):
+            bar: str = "hello"
+
+        bar: Bar = Field(default_factory=Bar)
+
+    f = Foo()
+    assert f.bar.bar == "hello"
+
+
+def test_model_with_none_model_object():
+    class Foo:
+        foo = 123
+
+    err = None
+    try:
+
+        class Bar(BaseModel):
+            foo: Foo
+    except PydanticSchemaGenerationError as e:
+        err = e
+    assert err is not None
+
+
+def test_datetime_model():
+    class Foo(BaseModel):
+        time: datetime = Field(default_factory=datetime.now)
+
+    f = Foo()
+    assert f.time.timestamp() > 0
+
+
+def test_model_with_subclass_define():
+    class Foo(BaseModel):
+        foo: int = 123
+        BarType: ClassVar[Optional[Type]] = None
+
+    class Foo2(Foo):
+        class BarType(BaseModel):
+            bar: int = 123
+
+        bar: BarType = Field(default_factory=BarType)
+
+    foo2 = Foo2()
+    assert foo2.bar.bar == 123
+
+
+def test_model_with_datetime():
+    class Foo(BaseModel):
+        now: datetime = Field(default_factory=datetime.now)
+
+    foo = Foo(now=int(time.time()))
+    assert foo.now.timestamp() > 0
+
+
+def test_print_model():
+    class Foo(BaseModel):
+        foo: str = "hello"
+
+    f = Foo()
+    assert "(" not in str(f)
+    assert "(" in repr(f)
+
+
+def test_enum_with_none():
+    class Foo(BaseModel):
+        foo: Optional[str] = Field(None, enum={"hello", "world"})
+
+    f = Foo()
+    assert f.foo is None
+
+
+def test_foo_bar():
+    class Bar(BaseModel):
+        bar: int = 123
+
+    class Foo(BaseModel):
+        bar: Bar = Field(default_factory=Bar)
+
+    f = Foo()
+    assert f.bar.bar == 123

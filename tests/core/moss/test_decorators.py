@@ -28,9 +28,11 @@ def test_source_code():
         Case(cls_source_code()(Foo), strip_source_indent(inspect.getsource(Foo))),
         Case(Foo, strip_source_indent(inspect.getsource(Foo))),
     ]
+    idx = 0
     for case in cases:
         prompt = get_prompt(case.value)
-        assert prompt == case.expect
+        assert prompt == case.expect, f"{idx} and case is {case}"
+        idx += 1
 
 
 @definition(doc="test")
@@ -68,6 +70,6 @@ def test_cls_source_code_extends():
         bar: int = 234
 
     bar_prompt = get_prompt(Bar)
-    bar_impl_prompt = get_prompt(BarImpl)
     assert "Bar:" in bar_prompt
+    bar_impl_prompt = get_prompt(BarImpl)
     assert "BarImpl(Bar):" in bar_impl_prompt

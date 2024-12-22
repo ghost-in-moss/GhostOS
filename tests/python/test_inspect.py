@@ -149,3 +149,21 @@ def test_getsource():
 
     source = inspect.getsource(Child)
     assert "foo" not in source
+
+
+class SomeClass:
+    foo: int = 123
+
+    __add_info: str = ""
+
+
+class SubClass(SomeClass):
+    bar: int = 456
+
+
+SubClass.__add_info = "test"
+
+
+def test_getsource_without_added_code():
+    code = inspect.getsource(SubClass)
+    assert "__add_info" not in code

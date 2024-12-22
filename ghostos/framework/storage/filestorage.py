@@ -1,19 +1,32 @@
 import os
 import re
-from typing import Optional, AnyStr, Type, Iterable
-from ghostos.container import Provider, Container
-from ghostos.contracts.storage import Storage
+from typing import Optional, Iterable
+from ghostos.container import Provider, Container, ABSTRACT
+from ghostos.contracts.storage import Storage, FileStorage
+
+__all__ = ["FileStorageProvider", "FileStorageImpl"]
 
 
-class FileStorage(Storage):
+class FileStorageImpl(FileStorage):
+    """
+    FileStorage implementation based on python filesystem.
+    Simplest implementation.
+    """
 
     def __init__(self, dir_: str):
         self._dir: str = os.path.abspath(dir_)
+
+    def abspath(self) -> str:
+        return self._dir
 
     def get(self, file_path: str) -> bytes:
         file_path = self._join_file_path(file_path)
         with open(file_path, 'rb') as f:
             return f.read()
+
+    def remove(self, file_path: str) -> None:
+        file_path = self._join_file_path(file_path)
+        os.remove(file_path)
 
     def exists(self, file_path: str) -> bool:
         file_path = self._join_file_path(file_path)
@@ -36,11 +49,11 @@ class FileStorage(Storage):
         with open(file_path, 'wb') as f:
             f.write(content)
 
-    def sub_storage(self, relative_path: str) -> "Storage":
+    def sub_storage(self, relative_path: str) -> "FileStorage":
         if not relative_path:
             return self
         dir_path = self._join_file_path(relative_path)
-        return FileStorage(dir_path)
+        return FileStorageImpl(dir_path)
 
     def dir(self, prefix_dir: str, recursive: bool, patten: Optional[str] = None) -> Iterable[str]:
         dir_path = self._join_file_path(prefix_dir)
@@ -66,7 +79,7 @@ class FileStorage(Storage):
         return r is not None
 
 
-class FileStorageProvider(Provider[Storage]):
+class FileStorageProvider(Provider[FileStorage]):
 
     def __init__(self, dir_: str):
         self._dir: str = dir_
@@ -74,8 +87,8 @@ class FileStorageProvider(Provider[Storage]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Storage]:
-        return Storage
+    def aliases(self) -> Iterable[ABSTRACT]:
+        yield Storage
 
     def factory(self, con: Container) -> Optional[Storage]:
-        return FileStorage(self._dir)
+        return FileStorageImpl(self._dir)

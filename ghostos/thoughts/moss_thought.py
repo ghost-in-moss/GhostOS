@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from ghostos.core.ghosts import Ghost, Action, ModelThought, Operator
 from ghostos.core.llms import LLMApi
-from ghostos.core.session import Event, MsgThread
+from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, MossRuntime, PyContext
 from ghostos.thoughts.basic import LLMThoughtDriver
 from ghostos.framework.actions import MossAction
@@ -47,13 +47,13 @@ class BasicMossThoughtDriver(ABC):
         if self.moss_runtime is not None:
             return self.moss_runtime
 
-        thread = g.session().thread()
+        thread = g.session().get_thread()
         compiler = g.moss()
         # init default pycontext
         default_pycontext = self.init_pycontext()
         compiler = compiler.join_context(default_pycontext)
         # bind msg thread
-        compiler.bind(MsgThread, thread)
+        compiler.bind(GoThreadInfo, thread)
         # join thread
         pycontext = thread.get_pycontext()
         compiler = compiler.join_context(pycontext)
@@ -89,11 +89,11 @@ class BasicMossThoughtDriver(ABC):
 class MossThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[MossThought]):
 
     def instruction(self, g: Ghost, e: Event) -> str:
-        return self.thought.instruction
+        return self.thought.show_instruction
 
     def on_created(self, g: Ghost, e: Event) -> Optional[Operator]:
         session = g.session()
-        thread = session.thread()
+        thread = session.get_thread()
         pycontext = self.init_pycontext()
         thread.update_pycontext(pycontext)
         return super().on_created(g, e)

@@ -1,6 +1,6 @@
 from ghostos.core.messages import (
     Role,
-    Message,
+    Message, MessageType,
 )
 
 
@@ -23,7 +23,7 @@ def test_message_basic_merge():
 
     msg = Message.new_head(role="assistant")
     for c in string:
-        msg = msg.patch(msg.new_pack(content=c, role="assistant"))
+        msg = msg.patch(msg.new_chunk(content=c, role="assistant"))
     assert msg.content == "hello world"
 
 
@@ -31,10 +31,10 @@ def test_message_with_full_type():
     msg = Message.new_head()
     content = "hello world"
     for c in content:
-        msg = msg.patch(msg.new_pack(content=c))
+        msg = msg.patch(msg.new_chunk(content=c))
 
     last = msg.model_copy(update=dict(content="good"))
-    last.pack = False
+    last.seq = "complete"
     buffed = msg.patch(last)
     assert buffed is not None and buffed.content == "good"
 
@@ -46,7 +46,7 @@ def test_head_is_not_empty():
 
 def test_head_pack_patch():
     msg = Message.new_head(content="a")
-    patch = msg.patch(Message.new_pack(content="b"))
+    patch = msg.patch(Message.new_chunk(content="b"))
     assert patch is not None
     assert patch.content == "ab"
 
@@ -54,7 +54,7 @@ def test_head_pack_patch():
 def test_tail_patch():
     msg = Message.new_head(content="")
     for c in "hello":
-        pack = Message.new_pack(content=c)
+        pack = Message.new_chunk(content=c)
         patch = msg.patch(pack)
         assert patch is not None
     tail = Message.new_tail(content=" world")
@@ -69,16 +69,44 @@ def test_tail_patch():
 
 def test_patch_default_type_message():
     msg = Message.new_head(typ_="kind")
-    patch = msg.patch(Message.new_pack(content="c", typ_=""))
+    patch = msg.patch(Message.new_chunk(content="c", typ_=""))
     assert patch is not None
 
-    patch = msg.patch(Message.new_pack(content="c", typ_="kind"))
+    patch = msg.patch(Message.new_chunk(content="c", typ_="kind"))
     assert patch is not None
-    pack = Message.new_pack(content="c", typ_="foo")
+    pack = Message.new_chunk(content="c", typ_="foo")
     assert pack.type == "foo"
     patch = msg.patch(pack)
     assert patch is None
 
 
+def test_function_call_message():
+    head = Message.new_head(
+        typ_=MessageType.FUNCTION_CALL,
+        call_id="abc",
+        name="abc",
+    )
+    patched = head.patch(
+        Message.new_chunk(
+            typ_=MessageType.FUNCTION_CALL,
+            content="hello world"
+        )
+    )
+    assert patched is not None
+    assert patched.call_id == "abc"
+    assert patched.name == "abc"
+    assert patched.content == "hello world"
 
 
+def test_message_path_bad_case():
+    item1 = Message(msg_id='d5ff6a6a-2b05-4819-864d-82afdf9ac5fc', call_id=None,
+                    from_id='chatcmpl-AXs0YM2VxVZbo50C1lIOC0qlWumtN', index=None, type='function_call', stage='',
+                    role='assistant', name=None, content='{"', memory=None, attrs=None, payloads={}, callers=[],
+                    seq='chunk',
+                    created=0.0)
+    item2 = Message(msg_id='d5ff6a6a-2b05-4819-864d-82afdf9ac5fc', call_id='call_DCaC3PJy336sZ9ryhxijgFlq',
+                    from_id='chatcmpl-AXs0YM2VxVZbo50C1lIOC0qlWumtN', index=None, type='function_call', stage='',
+                    role='assistant', name='moss', content='{"', memory=None, attrs=None, payloads={}, callers=[],
+                    seq='chunk', created=1732636557.282)
+    patched = item1.patch(item2)
+    assert patched is not None

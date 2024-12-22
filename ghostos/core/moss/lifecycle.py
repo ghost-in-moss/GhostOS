@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 
 if TYPE_CHECKING:
     from ghostos.core.moss.prompts import AttrPrompts
-    from ghostos.core.moss.abc import MossPrompter, MossResult, MossRuntime, MossCompiler
+    from ghostos.core.moss.abcd import MossPrompter, Execution, MossRuntime, MossCompiler, Moss
 
 """
 这个文件提供了 MOSS 生命周期的关键方法, 每一个都是可选的.
@@ -12,24 +12,12 @@ if TYPE_CHECKING:
 """
 
 __all__ = [
-    '__moss_compile__',
-    '__moss_attr_prompts__',
-    '__moss_prompt__',
-    '__moss_exec__',
+    '__moss_compile__',  # prepare moss compiler, handle dependencies register
+    '__moss_compiled__',  # when moss instance is compiled
+    '__moss_attr_prompts__',  # generate custom local attr prompt
+    '__moss_module_prompt__',  # define module prompt
+    '__moss_exec__',  # execute the generated code attach to the module
 ]
-
-
-class MOSS(ABC):
-    """
-    可以在代码里自定一个名为 MOSS 的类.
-    如果定义了, 或者引用了, 会自动生成它的实例.
-    会对类上定义的属性进行依赖注入.
-    对类上定义的方法名也按名称进行依赖注入. 没有注入对象时保留原方法.
-    这个类不要有 init 方法.
-    它的源码就是 MOSS 的 Prompt.
-    如果给 MOSS 注入了它未定义的属性或方法, 也会追加到它生成的 Prompt 里.
-    """
-    pass
 
 
 def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
@@ -44,13 +32,13 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
     return compiler
 
 
-def __prompt__() -> str:
+def __moss_compiled__(moss: "Moss") -> None:
     """
-    可选的魔术方法.
-    使用这个方法, 可以完全自定义当前文件生成的 prompt.
-    系统不做任何干预.
+
+    :param moss:
+    :return:
     """
-    pass
+    return
 
 
 def __moss_attr_prompts__() -> "AttrPrompts":
@@ -62,7 +50,7 @@ def __moss_attr_prompts__() -> "AttrPrompts":
     默认的反射方法见 ghostos.moss.prompts.prompts.py 文件.
 
     而这个方法则可以替代或追加必要的 prompt, 优先于系统生成的反射.
-    还有一些在 <moss></moss> 标记内定义的代码, 想要在 prompt 里呈现, 也可以在这个方法里定义.
+    还有一些在 <moss-hide></moss-hide> 标记内定义的代码, 想要在 prompt 里呈现, 也可以在这个方法里定义.
 
     推荐使用 ghostos.moss.prompts 模块下提供的各种反射方法.
     :returns: Iterable[Tuple[name, prompt]] . 其中 name 只是为了去重.
@@ -70,36 +58,36 @@ def __moss_attr_prompts__() -> "AttrPrompts":
     return []
 
 
-def __moss_prompt__(prompter: "MossPrompter") -> str:
+def __moss_module_prompt__(prompter: "MossPrompter") -> str:
     """
     使用 MOSS Runtime 生成 prompt 的方法.
     可选的魔术方法. 定义的话, runtime.moss_context_prompt 实际上会使用这个方法.
 
     这个方法生成的 Prompt, 会用来描述当前文件, 其中包含了注入的 MOSS 类和 moss 实例.
     """
-    from ghostos.core.moss.prompts import escape_string_quotes
+    from ghostos.core.moss.utils import escape_string_quotes
+
     # 获取原始的代码.
-    origin_code = prompter.pycontext_code(exclude_moss_mark_code=True)
+    origin_code = prompter.pycontext_code(exclude_hide_code=True)
+
     # 基于 origin code 生成关于这些变量的 prompt.
-    escaped_code_prompt = prompter.pycontext_code_prompt()
-    # 这部分变量的描述, 放到一个 string 里表示不污染当前上下文.
-    escaped_code_prompt = escape_string_quotes(escaped_code_prompt, '"""')
+    attrs_prompt = prompter.dump_attrs_prompt()
     code_prompt_part = ""
-    if escaped_code_prompt:
+    if attrs_prompt:
+        # 这部分变量的描述, 放到一个 string 里表示不污染当前上下文.
+        attrs_prompt = escape_string_quotes(attrs_prompt, '"""')
         code_prompt_part = f'''
-# information about values above:
-{escaped_code_prompt}
+
+# more details about some module attrs above, are list below (quoted by <attr></attr>):
+"""
+{attrs_prompt}
+"""
 '''
 
     # 生成完整的 prompt. 预计 MOSS 的描述已经在上下文里了.
     prompt = f"""
 {origin_code}
-\"""
 {code_prompt_part}
-\"""
-
-# Notice: type, method and values defined in the code above are immutable in multi-turns chat or thought.
-# You are equipped with a MOSS interface below, which can inject module or define attributes in multi-turns.
 """
 
     return prompt
@@ -114,7 +102,7 @@ def __moss_exec__(
         local_kwargs: "Optional[Dict[str, Any]]" = None,
         args: Optional[List[Any]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
-) -> "MossResult":
+) -> "Execution":
     """
     基于 MOSS Runtime 执行一段代码, 并且调用目标方法或返回目标值.
     :param runtime: moss runtime
@@ -126,13 +114,17 @@ def __moss_exec__(
     :param kwargs: 从外部注入的参数变量.
     """
     from typing import Callable
-    from ghostos.core.moss.abc import MossResult
+    from ghostos.core.moss.abcd import Execution
+    pycontext = runtime.dump_pycontext()
+    pycontext.execute_code = code
+    pycontext.executed = False
+
     local_values = runtime.locals()
     # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
-    with runtime.runtime_ctx():
-        if code:
-            compiled = compile(code, filename='<MOSS>', mode='exec')
-            exec(compiled, local_values)
+    if code:
+        filename = pycontext.module if pycontext.module is not None else "<MOSS>"
+        compiled = compile(code, filename=filename, mode='exec')
+        exec(compiled, local_values)
 
     if target not in local_values:
         raise NotImplementedError(f"target `{target}` not implemented")
@@ -160,7 +152,7 @@ def __moss_exec__(
         if kwargs:
             real_kwargs.update(kwargs)
         # 注意使用 runtime.exec_ctx 包裹有副作用的调用.
-        with runtime.runtime_ctx():
+        with runtime.redirect_stdout():
             returns = target_module_attr(*real_args, **real_kwargs)
     elif has_args:
         raise TypeError(f"target '{target}' value '{target_module_attr}' is not callable")
@@ -168,4 +160,5 @@ def __moss_exec__(
         returns = target_module_attr
     std_output = runtime.dump_std_output()
     pycontext = runtime.dump_pycontext()
-    return MossResult(returns, std_output, pycontext)
+    pycontext.executed = True
+    return Execution(returns, std_output, pycontext)

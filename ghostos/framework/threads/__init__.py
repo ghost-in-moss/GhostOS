@@ -1,1 +1,2 @@
-from ghostos.framework.threads.storage_threads import StorageThreadsProvider, WorkspaceThreadsProvider
+from ghostos.core.runtime import GoThreads, GoThreadInfo
+from ghostos.framework.threads.storage_threads import MsgThreadRepoByStorageProvider, MsgThreadsRepoByWorkSpaceProvider

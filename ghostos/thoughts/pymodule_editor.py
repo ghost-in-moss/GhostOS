@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from ghostos.core.ghosts import ModelThought, Ghost
 from ghostos.core.llms import LLMApi
 from ghostos.core.moss import PyContext, MossCompiler
-from ghostos.core.session import Event, Session, MsgThread
+from ghostos.core.runtime import Event, Session, GoThreadInfo
 from ghostos.thoughts.basic import LLMThoughtDriver
 from ghostos.thoughts.moss_thought import BasicMossThoughtDriver
 from ghostos.thoughts import pymodule_editor_moss
@@ -71,12 +71,12 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         return g.llms().get_api(self.thought.llm_api_name)
 
     def new_task_id(self, g: Ghost) -> str:
-        process_id = g.session().process().process_id
+        process_id = g.session().update_prompt().process_id
         task_id = f"process_{process_id}_task_{self.thought.target_module}"
         # task_id in a same process will always be the same
         return md5(task_id)
 
-    def prepare_thread(self, session: Session, thread: MsgThread) -> MsgThread:
+    def prepare_thread(self, session: Session, thread: GoThreadInfo) -> GoThreadInfo:
         """
         save the thread where I'm convenient to see it
         :param session:
@@ -103,7 +103,7 @@ class PyModuleEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[PyMod
         )
         if self.thought.referencing:
             referencing = "\n\n# referencing\n\nThere are some references for you:"
-            for import_path, prompt in self.thought.referencing.items():
+            for import_path, prompt in self.thought.referencing.conversation_item_states():
                 target = import_from_path(import_path)
                 source = inspect.getsource(target)
                 referencing += f"""

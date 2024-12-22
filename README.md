@@ -1,246 +1,205 @@
-# GhostOS framework
+# GhostOS
 
-<div align="center">
-  <img src="./assets/logo.png" alt="Logo" width="200">
-  <h1 align="center">GhostOS framework</h1>
-</div>
+> The AI `Ghosts` wonder in the `Shells`.
 
+* [Documents](https://ghost-in-moss.github.io/GhostOS/#/)
+* [Discord Server](https://discord.gg/NG6VKwd5jV)
 
-<div align="center">
-  <a href="https://discord.gg/NG6VKwd5jV">Join our Discord community</a>
-  <a href="https://discord.gg/NG6VKwd5jV"><img src="https://img.shields.io/badge/Discord-Join%20Us-purple?logo=discord&logoColor=white&style=for-the-badge" alt="Join our Discord community"></a>
-</div>
-
-
-## Introduce
-
-`GhostOS` is an LLM-driven Agent framework.
-It offers a MOSS (LLM-oriented Operating System Simulation) interface to LLM, which does:
-
-1. Coding is Prompt Engineering: reflects python module's codes to prompt, let the LLM knows its python context.
-2. Injects agent runtime libraries (such as multiple task scheduler) to the python context by IoC Container.
-3. Maintain persist python processing context during multiple turns of LLM thinking
-4. Execute the LLM generated codes to use tools, call domain agents, operate mindflow and almost everything.
-
-`GhostOS` provides the LLM Agents a Turing-complete python interface.
-And Agents are able to write python code to produce tools (as libraries) and integrate them (import modules or
-dependency injections) itself;
-Furthermore, the Agent is built from code, and can be called as function by other Agents.
-
-So the meta-agents are enabled to define or optimize other domain agents, and integrate them during processing (
-theoretically).
-By these methods we are aiming to develop the Self-Evolving Meta-Agent.
-
-Paper list: 
-- [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
+(This document is translated from zh-cn to english by [Moonshot](https://moonshot.cn/))
 
 ## Example
 
-An agent named `DirectoryEditThought` is equipped with python context like this:
+Using Python code [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/demo/sphero/bolt_gpt.py),
+an intelligent robot with a [SpheroBolt](https://sphero.com/products/sphero-bolt) as its body is defined.
+If you have a SpheroBolt, running `ghostos web ghostos.demo.sphero.bolt_gpt` can start this robot.
 
-```python
+![SpheroBoltGPT](docs/assets/ask_sphero_spin_gif.gif)
 
-from typing import TYPE_CHECKING
-from ghostos.thoughts.magic_moss_thought import MagicMossThought
-from ghostos.core.ghosts import Replier, MultiTask, NewTask
-from ghostos.core.moss import Moss as Parent
-from ghostos.libraries.file_editor import DirectoryEditor, FileEditor
-from ghostos.thoughts.file_editor_thought import FileEditorThought
-from pydantic import Field
+The demo initially implements the following features:
 
+1. Real-time voice conversation.
+2. Control of body movements and drawing graphics on an 8x8 LED matrix.
+3. Learning skills that include actions and animations through natural language dialogue.
+4. Expressing emotions through movements during conversation.
 
-class Moss(Parent):
-    """
-    you are equipped with some tools helping you to manage the current directory.
-    and the FileEditorThought are helpful to manage a single file.
-    """
+## Introduce
 
-    replier: Replier
+`GhostOS` is an AI Agent framework designed to replace `JSON Schema `
+with a Turing-complete code interaction interface ([Moss Protocol](docs/zh-cn/concepts/moss_protocol.md)),
+becoming the core method for interaction between LLM and Agent system capabilities. For more details:
+[MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
 
-    multitask: MultiTask
-    """useful to handle multiple tasks, such as manage several files by FileEditorThought."""
+The expected objects called through code
+include `tools`, `personality`, `agent swarm`, `workflows`, `thinking`, `planning`, `knowledge`, and `memory`.
+This allows a Meta-Agent to become an intelligent entity capable of continuous learning and growth through code
+generation and project management.
 
-    dir_editor: DirectoryEditor
-    """ 
-    the editor of the current directory.
-    you can read or edit the files by FileEditorThought.
-    so don't make up anything, based on what you informed.
-    """
-```
+And such an intelligent agent implemented with a code repository can also be shared and installed in the form of a
+repository.
 
-What we see is what `DirectoryEditThought` get,
-MOSS reflect this module into prompt to the LLM,
-with details of imported values such as `FileEditThought`, `DirectoryEditor` and `MultiTask`.
-`DirectoryEditThought` shall code its plan With these tools:
+`GhostOS` Still in the early experimental developing, the current version mainly implements out-of-the-box capabilities,
+including:
 
-User Query: `please checkout content of the '.py' files in code_edits directory,
-and translate the comments in  chinese into english if you found them in the code.`
-
-The LLM generation:
-
-```python
-def main(moss: Moss) -> Operator:
-    # List all .py files in the code_edits directory
-    code_edits_files = moss.dir_editor.edit_dir("code_edits").list(pattern="*.py", absolute=True, formated=False,
-                                                                   summary=False)
-
-    # Create tasks for checking out the content of each file
-    tasks = []
-    for file in code_edits_files:
-        task = (
-            f"translate_comments_{file.split('/')[-1]}",
-            f"Translate comments in {file} from Chinese to English",
-            FileEditorThought(filepath=file),
-            "Please read the file content and translate any comments in Chinese to English."
-        )
-        tasks.append(task)
-
-    # Run the tasks
-    return moss.multitask.wait_on_tasks(*tasks)
-```
-
-In this code generation, `DirectoryEditThought` does:
-
-1. know the directories through its prompt.
-2. iterate files in `/code_edits` by `moss.dir_editor`.
-3. create a task for each file by sub-agent `FileEditorThought`.
-4. dispatch the tasks through `MultiTask` scheduler, and operate its thought to wait for the results.
+- [x] Turn a python file into a web agent
+- [x] Agent web UI built by [Streamlit Web](https://streamlit.io/)
+- [x] Support llms like `OpenAI`, `Moonshot`
+- [x] Support [OpenAI vision](https://platform.openai.com/docs/guides/vision)
+- [x] Support [OpenAI Realtime Beta](https://platform.openai.com/docs/guides/realtime)
 
 ## Quick Start
 
-So far the `GhostOS` is still in the early stages of experimentation and exploration.
-We are planning to release the first version at October.
-You are welcome to play with the demo testcases:
+> `GhostOS` remains a beta AI project, strongly recommending installation in containers such as Docker rather than
+> running locally.
 
-### Prepare
-
-First make sure you've installed `python > 3.12`, then:
-
-clone repository:
+Install `GhostOS` package:
 
 ```bash
-# clone the repository
-git clone https://github.com/ghost-in-moss/GhostOS.git ghostos_test
-# go to the directory
-cd ghostos_test
-# create python venv
-python -m venv venv
-# activate venv
-source venv/bin/activate
+pip install ghostos
 ```
 
-after activate the python venv, then install dependencies by poetry:
+Initialize `workspace` (directory `app` as default), The runtime files of the current version will be stored in the
+directory.
 
 ```bash
-# install poetry in the venv
-python -m pip install poetry
-# install requirements by poetry
-poetry install
+ghostos init
 ```
 
-config the llms api-key:
+Configure the model. Default to use OpenAI `gpt-4o`, requiring the environment variable `OPENAI_API_KEY`.
+Or you can use configuration ui by streamlit:
 
 ```bash
-export OPENAI_API_KEY="sk-YOUR-KEY"  # openai api-key
-# optional:
-export MOONSHOT_API_KEY="sk-YOUR-Key"  # moonshot api-key
-export OPENAI_PROXY="xxxx" # OPENAI proxy if you need
+ghostos config
 ```
 
-### Config LLMs API
-
-`GhostOS` use yaml file to configure the [LLMs](ghostos/core/llms/llm.py) library.
-You can edit [ghostos/demo/configs/llms_conf.yml](ghostos/demo/configs/llms_conf.yml) as you want,
-the yaml structure follows [LLMConfig](ghostos/core/llms/configs.py)
-
-### AIFunc Test
-
-`AIFunc` is a light-weighted agent that act like a function.
-The `AIFunc` is able to call other `AIFunc` during processing to accomplish complex requests.
-
-run test case:
+Then test the default agent:
 
 ```bash
-venv/bin/python ghostos/demo/src/examples/run_aifunc_test.py
+# run an agent with python filename or modulename
+ghostos web ghostos.demo.agents.jojo
 ```
 
-In [this case](ghostos/demo/src/examples/run_aifunc_test.py) we ask an agent-like AIFunc to do two things:
-
-1. tell about the weather.
-2. search news about something.
-
-We expect the `AgentFn` will call `WeatherAIFunc` and `NewsAIFunc` to help with subtasks,
-and give a final result to us.
-
-The testing AIFuncs are defined at [aifuncs](ghostos/demo/src/aifuncs).
-
-### File Editor Agent Test
-
-run test case:
+Or turn a local Python file into an Agent,
+that can be instructed to call functions or methods within the file through natural language conversations.
 
 ```bash
-venv/bin/python ghostos/demo/src/examples/code_edits/file_editor_test.py
+ghostos web [my_path_file_path]
 ```
 
-In [this case](ghostos/demo/src/examples/code_edits/file_editor_test.py) an agent will follow the instruction,
-to replace all the chinese characters in the
-file: [file_editor_test.py](ghostos/demo/src/examples/code_edits/file_editor_test.py).
-
-The Agent's Thought is defined at [file_editor_thought.py](ghostos/thoughts/file_editor_thought.py),
-and the python context of it is [file_editor_moss.py](ghostos/thoughts/file_editor_moss.py).
-What the llm get in the runtime is what you see in this file.
-
-### Tool Generation Agent Test
-
-run test case:
+Install the extra dependencies for realtime:
 
 ```bash
-venv/bin/python ghostos/demo/src/examples/code_edits/tool_generation_test.py
+# install realtime dependencies: pyaudio and websockets
+pip install ghostos[realtime] 
+
+# install spherov2 if you have sphero bolt
+pip install ghostos[sphero] 
 ```
 
-In [this case](ghostos/demo/src/examples/code_edits/tool_generation_test.py),
-the agent is told to implements a `MockCache` class from `Cache` abstract class.
-After running the case, the file [tool_generation_test.py](ghostos/demo/src/examples/code_edits/tool_generation_test.py)
-shall be changed.
+ou can create a local Python file and define your own Agents. For more details
 
-The Agent's Thought is defined at [pymodule_editor.py](ghostos/thoughts/pymodule_editor.py),
-and the python context of it is [pymodule_editor_moss.py](ghostos/thoughts/pymodule_editor_moss.py).
+* [Chatbot](docs/zh-cn/usages/chatbot.md): simplest chatbot
+* [MossAgent](docs/zh-cn/usages/moss_agent.md): an agent that can interact with the python module
 
-### Planner Agent with Async Multi-Task scheduler Test
+## Use In Python
 
-run test case:
+```python
+from ghostos.bootstrap import make_app_container, get_ghostos
+from ghostos.ghosts.chatbot import Chatbot
 
-```bash
-venv/bin/python ghostos/demo/src/examples/code_edits/modify_directory_test.py
+# create your own root ioc container.
+# register or replace the dependencies by IoC service providers.
+container = make_app_container(...)
+
+# fetch the GhostOS instance.
+ghostos = get_ghostos(container)
+
+# Create a shell instance, which managing sessions that keep AI Ghost inside it.
+# and initialize the shell level dependency providers.
+shell = ghostos.create_shell("your robot shell")
+# Shell can handle parallel ghosts running, and communicate them through an EventBus.
+# So the Multi-Agent swarm in GhostOS is asynchronous.
+shell.background_run()  # Optional
+
+# need an instance implements `ghostos.abcd.Ghost` interface.
+my_chatbot: Chatbot = ...
+
+# use Shell to create a synchronous conversation channel with the Ghost.
+conversation = shell.sync(my_chatbot)
+
+# use the conversation channel to talk
+event, receiver = conversation.talk("hello?")
+with receiver:
+    for chunk in receiver.recv():
+        print(chunk.content)
 ```
 
-In [this case](ghostos/demo/src/examples/code_edits/modify_directory_test.py), an agent equipped with [DirectoryEdit](ghostos/libraries/file_editor.py)
-and another agent [FileEditThought](ghostos/thoughts/file_editor_thought.py),
-is told to modify all files in the `code_edits` directory.
-It is supposed to call `MultiTask` library to dispatch several tasks
-to [FileEditThought](ghostos/thoughts/file_editor_thought.py),
-and the tasks will run parallely. After all tasks are finished, the agent will reply the result proactively.
+## Developing Features
 
-The Agent's Thought and python context are both defined
-at [directory_editor_thought.py](ghostos/thoughts/directory_editor_thought.py).
-We are expecting the meta-agent can define an domain agent with its python context just like this.
+* [ ] Out-of-the-box Agent capability libraries.
+* [ ] Variable type messaging and Streamlit rendering.
+* [ ] Asynchronous Multi-Agent.
+* [ ] Long-term task planning and execution.
+* [ ] Atomic thinking capabilities.
+* [ ] Automated execution and management of tree-based projects.
+* [ ] Configurable components of the framework.
+* [ ] Experiments with toy-level embodied intelligence.
 
-### Ghost Func Test
+> GhostOS, as a personal project, currently lacks the energy to focus on improving documentation, storage modules,
+> stability, or security issues.
+>
+> The project's iteration will be centered on validating three directions for a long time:
+> code-driven embodied intelligence, code-based thinking capabilities, and code-based learning.
+> I will also aim to optimize out-of-the-box agent abilities.
 
-`GhostFunc` is a toy we used to test MOSS in the early development.
-It provides decorators, can wrap a signature only function to a LLM-driven function that produce code during calling.
+# So What is GhostOS purpose?
 
-run test case:
+The GhostOS project is developed by the author for exploring AI applications. The basic idea is as follows:
 
-```bash
-venv/bin/python ghostos/demo/src/examples/ghostfunc/get_weather.py
-```
+AI Agent technology has two parallel evolutionary paths:
+one is the perfection of the model's own capabilities, and the other is the evolution of the Agent engineering
+framework.
+The productivity level of the Agent framework determines the feasibility of AI models in practical application
+scenarios.
 
-See more details in [get_weather.py](ghostos/demo/src/examples/ghostfunc/get_weather.py)
+GhostOS reflects the capabilities of an Agent from code into prompts, providing them to AI models,
+and the code generated by the models runs directly in the environment.
+Expecting the large language model do everything through a Turing-complete programming language interface,
+including computation, tool invocation, body control, personality switching, thinking paradigms, state scheduling,
+Multi-Agent, memory and recall, and other actions.
 
-# Release plan
+This will have stronger interaction capabilities and lower overhead than methods based on JSON schema.
+The conversation data generated in this process can be used for post-training or reinforcement learning of the model,
+thereby continuously optimizing the code generation.
 
-We are planning to release first version of this project at October,
-The project supposed to be an agent framework with app prototypes rather than an application.
-Right now we focus on developing some `GhostOS`'s components by itself.
-Still a lot of works to do...
+The AI Agent itself is also defined by code.
+Therefore, a Meta-Agent can develop other Agents just like a normal programming task.
+
+Ideally, the Meta-Agent can write code, write its own tools, define memories and chain of thoughts with data structures,
+and develop other Agents for itself.
+
+![meta-agent-cycle](docs/assets/meta-agent-cycle.png)
+
+Furthermore, most complex tasks with rigorous steps can be described using tree or graph data structures.
+Constructing a nested graph or tree using methods like JSON is very difficult,
+while using programming languages is the most efficient.
+
+models can consolidate the results learned from conversations into nodes in the code,
+and then plan them into trees or graphs, thereby executing sufficiently complex tasks.
+
+In this way, an AI Agent can store the knowledge and capabilities learned from natural language in the form of files and
+code,
+thereby evolving itself. This is a path of evolution beyond model iteration.
+
+Based on this idea,
+GhostOS aims to turn an Agent swarm into a project constructed through code.
+The Agents continuously precipitate new knowledge and capabilities in the form of code, enriching the project.
+The Agent project can be copied, shared, or deployed in the form of repositories,
+
+In this new form of productivity, interacting purely through code is the most critical step.
+
+The author's ultimate goal is not `GhostOS` itself,
+but to verify and promote the code interaction design and applications.
+The hope is that one day, agents, paradigms, bodies, and tools for AI Agents can all be designed based on the same
+programming language protocols,
+achieving cross-project universality.
+

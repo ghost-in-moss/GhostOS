@@ -3,16 +3,19 @@ from __future__ import annotations
 import os
 
 from typing import List, Dict, Optional, Any, ClassVar
-
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Payload
+from ghostos.helpers import gettext as _
 
 __all__ = [
-    'ModelConf', 'ServiceConf', 'LLMsConfig', 'OPENAI_DRIVER_NAME',
+    'ModelConf', 'ServiceConf', 'LLMsConfig',
+    'OPENAI_DRIVER_NAME', 'LITELLM_DRIVER_NAME',
 ]
 
-OPENAI_DRIVER_NAME = "ghostos.llms.openai_driver"
+OPENAI_DRIVER_NAME = "openai_driver"
 """default llm driver name for OpenAI llm message protocol """
+
+LITELLM_DRIVER_NAME = "lite_llm_Driver"
 
 
 class ModelConf(Payload):
@@ -30,22 +33,27 @@ class ModelConf(Payload):
     timeout: float = Field(default=30, description="timeout")
     request_timeout: float = Field(default=40, description="request timeout")
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="kwargs")
-
-
-class EmbedConf(BaseModel):
-    service: str = Field(description="service name, share with llm model conf")
-    model: str = Field(description="the model name that provide embeddings")
+    use_tools: bool = Field(default=True, description="use tools")
+    message_types: Optional[List[str]] = Field(None, description="model allow message types")
 
 
 class ServiceConf(BaseModel):
     """
-    The service configuration of a llm.
+    The model api service configuration
     """
+
     name: str = Field(description="Service name")
-    driver: str = Field(default=OPENAI_DRIVER_NAME, description="the adapter driver name of this service. ")
-    base_url: str = Field(description="llm service provider")
-    token: str = Field(default="", description="token")
-    proxy: Optional[str] = Field(default=None, description="proxy")
+    base_url: str = Field(description="LLM service url")
+    token: str = Field(default="", description="access token. if start with `$`, will read environment variable of it")
+    proxy: Optional[str] = Field(
+        default=None,
+        description="service proxy. if start with `$`, will read environment variable of it",
+    )
+
+    driver: str = Field(
+        default=OPENAI_DRIVER_NAME,
+        description="the adapter driver name of this service. change it only if you know what you are doing",
+    )
 
     def load(self, environ: Optional[Dict] = None) -> None:
         self.token = self._load_env(self.token, environ=environ)
@@ -66,14 +74,16 @@ class LLMsConfig(BaseModel):
     """
     llms configurations for ghostos.core.llms.llm:LLMs default implementation.
     """
+
     services: List[ServiceConf] = Field(
         default_factory=list,
-        description="define llm services, such as openai or moonshot",
+        description="The Model Services (like OpenAI, Anthropic, Moonshot) configuration.",
     )
-    default: ModelConf = Field(
-        description="define default LLMApi 's model config.",
+
+    default: str = Field(
+        description="GhostOS default model name, corporate with models config",
     )
     models: Dict[str, ModelConf] = Field(
         default_factory=dict,
-        description="define llm apis, the key is llm_api_name and value is model config of it.",
+        description="define LLM APIs, from model name to model configuration.",
     )

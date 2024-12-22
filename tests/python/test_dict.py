@@ -47,3 +47,19 @@ def test_typed_dict_with_undefined():
 
     bar2 = Bar(a="world")
     assert "a" in bar2
+
+
+def test_dict_sort():
+    a = {3: 3, 4: 4, 1: 1, 2: 2, }
+    values = sorted(a.keys())
+    assert values == [1, 2, 3, 4]
+
+
+def test_get_dict_by_str_type():
+    class Key(str):
+
+        def get(self, data_: dict):
+            return data_.get(str(self), None)
+
+    data = {"a": 1, "b": 2}
+    assert Key("a").get(data) == 1

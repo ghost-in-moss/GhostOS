@@ -23,7 +23,7 @@ class LLMsImpl(LLMs):
         self._llm_models: Dict[str, ModelConf] = {}
         self._default_driver = default_driver
         self._apis: Dict[str, LLMApi] = {}
-        self._default_llm_model: ModelConf = conf.default
+        self._default_llm_model: ModelConf = conf.models[conf.default]
         if self._default_llm_model is None:
             raise AttributeError("llms conf must contains default model conf")
 

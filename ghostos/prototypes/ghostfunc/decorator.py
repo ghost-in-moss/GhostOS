@@ -1,6 +1,5 @@
 import inspect
 from typing import Callable, Optional, Dict
-from abc import ABC, abstractmethod
 from ghostos.container import Container
 from ghostos.prototypes.ghostfunc.driver import (
     GhostFuncDriver, GhostFuncCache, get_ghost_func_cache, save_ghost_func_cache,
@@ -16,6 +15,7 @@ DECORATOR = Callable[[Callable], Callable]
 class GhostFunc:
     def __init__(self, container: Container):
         self._container = container
+        self._container.bootstrap()
         self._caches: Dict[str, GhostFuncCache] = {}
         self._compiled = set()
 

@@ -1,9 +1,10 @@
 from typing import Optional, Dict, Type
+from typing_extensions import Self
 
-from ghostos.core.session import Event
-from ghostos.core.session.events import EventBus
+from ghostos.core.runtime import Event
+from ghostos.core.runtime.events import EventBus
 from queue import Queue, Empty
-from ghostos.container import Provider, Container, BootstrappingProvider
+from ghostos.container import Provider, Container, BootstrapProvider
 from ghostos.contracts.shutdown import Shutdown
 
 
@@ -14,20 +15,25 @@ class MemEventBusImpl(EventBus):
         self._task_notification_queue = Queue()
         self._task_queues: Dict[str, Queue] = {}
 
+    def with_process_id(self, process_id: str) -> Self:
+        return self
+
+    def clear_all(self):
+        pass
+
     def send_event(self, e: Event, notify: bool) -> None:
         self._send_task_event(e)
         if notify:
             self.notify_task(e.task_id)
 
     def _send_task_event(self, e: Event) -> None:
-        event_id = e.id
+        event_id = e.event_id
         task_id = e.task_id
         self._events[event_id] = e
         if task_id not in self._task_queues:
             self._task_queues[task_id] = Queue()
         queue = self._task_queues[task_id]
         queue.put(event_id)
-        queue.task_done()
 
     def pop_task_event(self, task_id: str) -> Optional[Event]:
         if task_id not in self._task_queues:
@@ -66,7 +72,7 @@ class MemEventBusImpl(EventBus):
         del self._task_queues
 
 
-class MemEventBusImplProvider(BootstrappingProvider[EventBus]):
+class MemEventBusImplProvider(BootstrapProvider[EventBus]):
     """
     mem event bus provider
     """

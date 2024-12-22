@@ -2,7 +2,6 @@ import inspect
 import re
 from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, is_typeddict
 from pydantic import BaseModel
-from ghostos.abc import Identifiable, Descriptive
 
 __all__ = [
 
@@ -10,7 +9,7 @@ __all__ = [
     'get_modulename',
 
     'is_typing', 'is_builtin', 'is_classmethod',
-    'is_model_class', 'get_model_object_meta',
+    'is_model_class',
     'parse_comments',
     'parse_doc_string', 'escape_string_quotes',
     'strip_source_indent', 'add_source_indent', 'make_class_prompt',
@@ -312,19 +311,6 @@ def is_model_class(typ: type) -> bool:
     return issubclass(typ, BaseModel) or is_typeddict(typ)
 
 
-def get_model_object_meta(obj: Any) -> Optional[Dict]:
-    if isinstance(obj, BaseModel):
-        return obj.model_dump()
-    elif isinstance(obj, TypedDict):
-        result = {}
-        for k, v in obj.items():
-            result[k] = v
-        return result
-    elif isinstance(obj, EntityClass):
-        return obj.to_entity_meta()
-    return None
-
-
 def is_callable(obj: Any) -> bool:
     return isinstance(obj, Callable)
 
@@ -352,22 +338,6 @@ def get_calling_modulename(skip: int = 0) -> Optional[str]:
     return None
 
 
-def get_obj_desc(obj: Any) -> Optional[str]:
-    if isinstance(obj, Descriptive):
-        return obj.get_description()
-    if isinstance(obj, Identifiable):
-        return obj.identifier().description
-    if hasattr(obj, 'desc'):
-        return getattr(obj, 'desc', None)
-    if hasattr(obj, "description"):
-        return getattr(obj, 'description', None)
-    if hasattr(obj, "__desc__"):
-        attr = getattr(obj, "__desc__", None)
-        if attr:
-            return unwrap_str(attr)
-    return None
-
-
 def is_code_same_as_print(value: Any) -> bool:
     return isinstance(value, bool) \
         or isinstance(value, int) \
@@ -385,6 +355,7 @@ def get_modulename(val: Any) -> Optional[str]:
     if module and hasattr(module, '__name__'):
         return getattr(module, '__name__', None)
     return None
+
 
 def add_comment_mark(text: str, comment: str = "# ") -> str:
     lines = text.split('\n')

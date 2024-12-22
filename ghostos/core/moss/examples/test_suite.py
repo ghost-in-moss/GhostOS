@@ -1,11 +1,11 @@
-from ghostos.core.moss.abc import Moss
+from ghostos.core.moss.abcd import Moss
 
 
 def plus(a: int, b: int) -> int:
     return a + b
 
 
-# <moss>
+# <moss-hide>
 if __name__ == '__test__':
     """
     可以这样定义只在当前文件编译成 modulename=__test__ 才运行的方法. 
@@ -27,4 +27,4 @@ if __name__ == '__test__':
     __moss_test_cases__ = ['test_1', 'test_2', 'test_3']
     """用这个魔术变量, 可以让 MossTestSuit 批量调用三个方法测试. """
 
-# </moss>
+# </moss-hide>

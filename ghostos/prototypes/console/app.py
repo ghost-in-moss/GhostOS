@@ -1,119 +1,164 @@
 from __future__ import annotations
-from ghostos.core.ghostos import GhostOS
-import time
 import asyncio
 from typing import Optional, List
 
-from ghostos.core.messages import Message, Role, DefaultMessageTypes
-from ghostos.core.ghosts import Inputs
-from ghostos.framework.streams import QueueStream
+from ghostos.abcd import GhostOS, Ghost, Background
+from ghostos.container import Provider
+from ghostos.contracts.logger import get_console_logger
+from ghostos.core.messages import Message, Role, MessageType, Receiver
 from ghostos.framework.messages import TaskPayload
-from ghostos.helpers import uuid
-from threading import Thread
+from ghostos.core.runtime import Event
 from queue import Queue, Empty
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession
+from threading import Lock
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.status import Status
 
-__all__ = ['ConsolePrototype']
+__all__ = ['ConsoleApp']
 
 
-class ConsolePrototype:
+class ConsoleApp(Background):
 
     def __init__(
             self, *,
             ghostos: GhostOS,
-            ghost_id: str,
+            ghost: Ghost,
             username: str,
             debug: bool = False,
-            on_create_message: Optional[str] = None,
-            session_id: Optional[str] = None,
+            shell_name: str = "console",
+            shell_id: Optional[str] = None,
             process_id: Optional[str] = None,
-            task_id: Optional[str] = None,
-            background_num: int = 4,
+            worker_num: int = 4,
             welcome_user_message: Optional[str] = None,
+            on_create_message: Optional[str] = None,
+            providers: Optional[List[Provider]] = None,
     ):
         self._os = ghostos
-        self._ghost_id = ghost_id
-        self._on_create_message = on_create_message
+        self._ghost = ghost
         self._username = username
+        self._shell_name = shell_name
+        self._shell_id = shell_id if shell_id else shell_name
         self._process_id = process_id
-        self._task_id = task_id
-        self._session_id = session_id if session_id else uuid()
-        session = PromptSession("\n\n<<< ", )
-        self._prompt_session = session
         self._console = Console()
+        self._logger = get_console_logger()
+        self._closed = False
         self._stopped = False
         self._main_queue = Queue()
+        self._thread_locker = Lock()
         self._debug = debug
-        self._threads: List[Thread] = []
-        self._background_num = background_num
+        self._worker_num = worker_num
         if not welcome_user_message:
-            welcome_user_message = "the conversation is going to begin, please welcome user and introduce your self"
+            welcome_user_message = "the conversation is going to begin, please welcome user"
         self._welcome_user_message = welcome_user_message
+        self._on_create_message = on_create_message
         self._main_task_id = ""
+        session = PromptSession("\n\n<<< ", )
+        self._prompt_session = session
+        self._shell = self._os.create_shell(
+            self._shell_name,
+            process_id=self._process_id,
+            providers=providers,
+        )
+        self._conversation = self._shell.sync(self._ghost)
+
+    def __del__(self):
+        self.close()
+        self._conversation.close()
+        self._shell.close()
 
     def run(self):
-        for i in range(self._background_num):
-            background_run_task = Thread(target=self._start_background)
-            background_run_task.start()
-            self._threads.append(background_run_task)
-        print_output_task = Thread(target=self._print_output)
-        print_output_task.start()
-        self._threads.append(print_output_task)
+        # self._shell.background_run(self._worker_num)
+        self._shell.submit(self._print_output)
+        self._shell.background_run(self._worker_num, self)
         asyncio.run(self._main())
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        self._stopped = True
+        self._main_queue.put(None)
+        self._console.print("start exiting")
+        self._conversation.close()
+        self._console.print("conversation closed")
+        self._shell.close()
+        self._console.print("ghostos shell shutdown")
+        self._console.print("Exit, Bye!")
+        exit(0)
+
+    async def _main(self):
+        self._welcome()
+        self._console.print("waiting for agent say hi...")
+        message = Role.new_system(
+            self._welcome_user_message,
+        )
+        event, receiver = self._conversation.respond([message])
+        self.output_receiver(receiver)
+
+        with patch_stdout(raw=True):
+            await self._loop()
+            self._console.print("Quitting event loop. Bye.")
 
     def _print_output(self):
         while not self._stopped:
             try:
-                message = self._main_queue.get(block=True, timeout=1)
+                message = self._main_queue.get(block=True)
+                if message is None:
+                    self.close()
+                    return
                 if not isinstance(message, Message):
                     raise ValueError(f"Expected Message, got {message}")
                 self._print_message(message)
             except Empty:
                 continue
 
-    def _start_background(self):
-        while not self._stopped:
-            stream = self._stream()
-            handled = self._os.background_run(stream)
-            if not handled:
-                time.sleep(1)
-            elif not self._debug:
-                self._console.print(f"handled event {handled.type}: task_id {handled.task_id}; event_id {handled.id};")
-            else:
-                self._console.print(Panel(
-                    Markdown(f"```json\n{handled.model_dump_json(indent=2)}\n```"),
-                    title="handle event",
-                    border_style="yellow",
-                ))
+    def output_receiver(self, receiver: Receiver):
+        with self._thread_locker:
+            status = Status("receiving", console=self._console)
+            with status:
+                with receiver:
+                    buffer = None
+                    for message in receiver.recv():
+                        if self._stopped:
+                            return
 
-    def _stream(self) -> QueueStream:
-        return QueueStream(self._main_queue, streaming=False)
+                        if message.is_complete():
+                            buffer = None
+                            self._main_queue.put(message)
+                        elif buffer is None:
+                            buffer = message.as_head()
+                        else:
+                            patched = buffer.patch(message)
+                            if patched:
+                                buffer = patched
+                            else:
+                                buffer = message.as_head()
+                        if buffer:
+                            status.update(buffer.content[-30:])
+                        else:
+                            status.update("")
 
-    async def _main(self):
-        self._welcome()
-        if self._on_create_message:
-            self._console.print(
-                Panel(
-                    Markdown(self._on_create_message),
-                    title="on_created instruction",
-                    border_style="green",
-                )
-            )
-            self._main_task_id = self._on_input(self._on_create_message)
-        else:
-            self._console.print("waiting for agent say hi...")
-            message = Role.new_assistant_system(
-                self._welcome_user_message,
-            )
-            self._main_task_id = self._on_message_input(message)
-        with patch_stdout(raw=True):
-            await self._loop()
-            self._console.print("Quitting event loop. Bye.")
+    def output_event(self, event: Event):
+        self._json_output(event.model_dump_json(indent=2, exclude_defaults=True))
+
+    def on_error(self, error: Exception) -> bool:
+        self._logger.exception(error)
+        self.close()
+        return False
+
+    def on_event(self, event: Event, messages: List[Message]) -> None:
+        self._logger.debug(f"Received event {event.event_id} for task {event.task_id}")
+        # self.output_receiver(retriever)
+
+    def alive(self) -> bool:
+        return not self._stopped
+
+    def halt(self) -> int:
+        return 0
 
     async def _loop(self):
         session = self._prompt_session
@@ -126,12 +171,12 @@ class ConsolePrototype:
                 self._console.print(Markdown("\n----\n"))
                 self._on_input(text)
             except (EOFError, KeyboardInterrupt):
-                self._exit()
+                self.close()
             except Exception:
                 self._console.print_exception()
-                self._exit()
+                self.close()
 
-    def _on_input(self, text: str) -> str:
+    def _on_input(self, text: str) -> None:
         """
         :return: task_id
         """
@@ -139,34 +184,18 @@ class ConsolePrototype:
             content=text,
             name=self._username,
         )
-        return self._on_message_input(message)
+        self._on_message_input(message)
 
-    def _on_message_input(self, message: Message) -> str:
+    def _on_message_input(self, message: Message) -> None:
         """
         :return: task_id
         """
-        inputs_ = Inputs(
-            trace_id=uuid(),
-            session_id=self._session_id,
-            ghost_id=self._ghost_id,
-            messages=[message],
-            process_id=self._process_id,
-            task_id=self._task_id,
-        )
-        stream = self._stream()
-        if not self._debug:
-            self._console.print(f"push input event id: {inputs_.trace_id}")
-        else:
-            self._console.print(Panel(
-                Markdown(f"```json\n{inputs_.model_dump_json(indent=2)}\n```"),
-                title="push input event",
-                border_style="yellow",
-            ))
-        return self._os.on_inputs(inputs_, stream, is_async=True)
+        event, receiver = self._conversation.respond([message])
+        self.output_receiver(receiver)
 
     def _intercept_text(self, text: str) -> bool:
         if text == "/exit":
-            self._exit()
+            self.close()
         return False
 
     @staticmethod
@@ -185,27 +214,14 @@ This demo provide a console interface to communicate with an agent.
 ----
 """))
 
-    def _exit(self):
-        self._stopped = True
-        _continue = True
-        self._console.print("start exiting")
-        while _continue:
-            try:
-                self._main_queue.get_nowait()
-            except Empty:
-                break
-        self._console.print("stop queue")
-        self._console.print("queue closed")
-        for t in self._threads:
-            t.join()
-        self._console.print("threads joined")
-        self._os.shutdown()
-        self._console.print("ghostos shutdown")
-        self._console.print("Exit, Bye!")
-        exit(0)
-
     def _print_message(self, message: Message):
-        if self._debug:
+        if not message.is_complete():
+            return
+
+        if message.is_empty():
+            return
+
+        if not MessageType.is_text(message):
             self._console.print(
                 Panel(
                     self._json_output(message.model_dump_json(exclude_defaults=True, indent=2)),
@@ -213,13 +229,13 @@ This demo provide a console interface to communicate with an agent.
                     border_style="green",
                 )
             )
-        if message.is_empty():
             return
+
         content = message.content
         # some message is not visible to user
         if not content:
             return
-        payload = TaskPayload.read(message)
+        payload = TaskPayload.read_payload(message)
         title = "receive message"
         # markdown content
         prefix = ""
@@ -229,13 +245,10 @@ This demo provide a console interface to communicate with an agent.
                 f"> thread_id: {payload.thread_id}",
                 f"> task_name: {payload.task_name}\n\n",
             ])
-        if "<moss>" in content:
-            content = content.replace("<moss>", "\n```python\n# <moss>\n", )
-        if "</moss>" in content:
-            content = content.replace("</moss>", "\n# </moss>\n```\n", )
+
         markdown = self._markdown_output(prefix + content)
         # border style
-        if DefaultMessageTypes.ERROR.match(message):
+        if MessageType.ERROR.match(message):
             border_style = "red"
         elif payload is not None and payload.task_id == self._main_task_id:
             border_style = "blue"

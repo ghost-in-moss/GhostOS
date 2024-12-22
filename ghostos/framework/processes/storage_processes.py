@@ -1,23 +1,22 @@
 from typing import Optional, Dict, Type
 import yaml
-from ghostos.core.session import Process
-from ghostos.core.session.processes import Processes
+from ghostos.core.runtime import GoProcess
+from ghostos.core.runtime.processes import GoProcesses
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
-from ghostos.core.ghosts.workspace import Workspace
-from threading import Lock
+from ghostos.contracts.workspace import Workspace
 from ghostos.container import Provider, Container
+from ghostos.helpers import yaml_pretty_dump
 
-__all__ = ['StorageProcessesImpl', 'StorageProcessImplProvider', 'WorkspaceProcessesProvider']
+__all__ = ['StorageGoProcessesImpl', 'StorageProcessImplProvider', 'WorkspaceProcessesProvider']
 
 
-class StorageProcessesImpl(Processes):
+class StorageGoProcessesImpl(GoProcesses):
     session_map_name = "sessions.yml"
 
     def __init__(self, storage: Storage, logger: LoggerItf):
         self._storage = storage
         self._logger = logger
-        self._lock = Lock()
 
     def _get_session_process_map(self) -> Dict[str, str]:
         filename = self.session_map_name
@@ -28,71 +27,54 @@ class StorageProcessesImpl(Processes):
         return {}
 
     @staticmethod
-    def _get_process_filename(process_id: str) -> str:
-        return f"{process_id}.process.yml"
+    def _get_process_filename(shell_id: str) -> str:
+        return f"{shell_id}.process.yml"
 
-    def get_process(self, process_id: str) -> Optional[Process]:
-        filename = self._get_process_filename(process_id)
-        if self._storage.exists(filename):
-            content = self._storage.get(filename)
-            data = yaml.safe_load(content)
-            process = Process(**data)
-            return process
-        return None
-
-    def _save_session_process_map(self, session_map: Dict[str, str]) -> None:
-        content = yaml.safe_dump(session_map)
-        filename = self.session_map_name
-        self._storage.put(filename, content.encode("utf-8"))
-
-    def get_session_process(self, session_id: str) -> Optional[Process]:
-        m = self._get_session_process_map()
-        process_id = m.get(session_id, None)
-        if process_id is None:
+    def get_process(self, shell_id: str) -> Optional[GoProcess]:
+        filename = self._get_process_filename(shell_id)
+        if not self._storage.exists(filename):
             return None
-        return self.get_process(process_id)
+        content = self._storage.get(filename)
+        data = yaml.safe_load(content)
+        process = GoProcess(**data)
+        return process
 
-    def save_process(self, process: Process) -> None:
-        session_id = process.session_id
-        process_id = process.process_id
-        with self._lock:
-            m = self._get_session_process_map()
-            m[session_id] = process_id
-            self._save_session_process_map(m)
-        content = yaml.safe_dump(process.model_dump(exclude_defaults=True))
-        filename = self._get_process_filename(process_id)
-        self._storage.put(filename, content.encode("utf-8"))
+    def save_process(self, process: GoProcess) -> None:
+        filename = self._get_process_filename(process.shell_id)
+        data = process.model_dump(exclude_defaults=True)
+        content = yaml_pretty_dump(data)
+        self._storage.put(filename, content.encode())
 
 
-class StorageProcessImplProvider(Provider[Processes]):
+class StorageProcessImplProvider(Provider[GoProcesses]):
     def __init__(self, process_dir: str = "runtime/processes"):
         self.process_dir = process_dir
 
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Processes]:
-        return Processes
+    def contract(self) -> Type[GoProcesses]:
+        return GoProcesses
 
-    def factory(self, con: Container) -> Optional[Processes]:
+    def factory(self, con: Container) -> Optional[GoProcesses]:
         storage = con.force_fetch(Storage)
         logger = con.force_fetch(LoggerItf)
         processes_storage = storage.sub_storage(self.process_dir)
-        return StorageProcessesImpl(processes_storage, logger)
+        return StorageGoProcessesImpl(processes_storage, logger)
 
 
-class WorkspaceProcessesProvider(Provider[Processes]):
+class WorkspaceProcessesProvider(Provider[GoProcesses]):
     def __init__(self, process_dir: str = "processes"):
         self.process_dir = process_dir
 
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Processes]:
-        return Processes
+    def contract(self) -> Type[GoProcesses]:
+        return GoProcesses
 
-    def factory(self, con: Container) -> Optional[Processes]:
+    def factory(self, con: Container) -> Optional[GoProcesses]:
         workspace = con.force_fetch(Workspace)
         logger = con.force_fetch(LoggerItf)
         processes_storage = workspace.runtime().sub_storage(self.process_dir)
-        return StorageProcessesImpl(processes_storage, logger)
+        return StorageGoProcessesImpl(processes_storage, logger)

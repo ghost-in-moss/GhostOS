@@ -1,7 +1,7 @@
 from ghostos.core.ghosts import ModelThought, Ghost
 from ghostos.core.llms import LLMApi
 from ghostos.core.moss import PyContext, MossCompiler
-from ghostos.core.session import Event, Session, MsgThread
+from ghostos.core.runtime import Event, Session, GoThreadInfo
 from ghostos.thoughts.moss_thought import BasicMossThoughtDriver, LLMThoughtDriver
 from ghostos.thoughts import file_editor_moss
 from ghostos.libraries.file_editor import FileEditorImpl, FileEditor
@@ -68,7 +68,7 @@ class FileEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[FileEdito
         return self.thought.debug
 
     def new_task_id(self, g: Ghost) -> str:
-        process_id = g.session().process().process_id
+        process_id = g.session().update_prompt().process_id
         task_id = f"process_{process_id}_task_{self.thought.filepath}"
         # task_id in a same process will always be the same
         return md5(task_id)
@@ -81,7 +81,7 @@ class FileEditorThoughtDriver(BasicMossThoughtDriver, LLMThoughtDriver[FileEdito
         compiler.register(provide(FileEditor)(lambda c: self.file_editor()))
         return compiler
 
-    def prepare_thread(self, session: Session, thread: MsgThread) -> MsgThread:
+    def prepare_thread(self, session: Session, thread: GoThreadInfo) -> GoThreadInfo:
         if self.thought.debug:
             filepath = self.thought.filepath
             saving_path = filepath + ".thread.yml"

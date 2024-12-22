@@ -1,7 +1,7 @@
 from typing import Iterable, List, NamedTuple
 from abc import ABC, abstractmethod
 
-from ghostos.core.messages.message import Message, Caller
+from ghostos.core.messages.message import Message, FunctionCaller
 
 __all__ = [
     "Flushed", "Buffer",
@@ -10,39 +10,36 @@ __all__ = [
 
 class Flushed(NamedTuple):
     unsent: Iterable[Message]
-    """ buffer 尚未发送, 需要继续发送出去的包"""
+    """ the unsent messages or chunks, which were buffed"""
 
     messages: List[Message]
-    """经过 buff, 生成的包"""
+    """all the patched complete messages"""
 
-    callers: List[Caller]
-    """消息体产生的回调方法."""
+    callers: List[FunctionCaller]
+    """all the callers that delivered"""
 
 
 class Buffer(ABC):
     """
-    在流式传输中拦截 message 的拦截器. 同时要能完成粘包, 返回粘包后的结果.
+    a container to buff streaming Message chunks,
+    and patched all the chunks,
+    return complete patched messages after flushed.
+    在流式传输中拦截 message 的拦截器. 同时要能完成粘包, 最终返回粘包后的结果.
     """
 
     @abstractmethod
-    def match(self, message: Message) -> bool:
+    def add(self, pack: "Message") -> Iterable[Message]:
         """
-        匹配一个消息体.
+        try to buff a message pack
+        :return: the sending messages after the buffing. may be:
+        1. the input pack, which need not be buffered
+        2. the unsent packs, which are replaced by new buffing pack.
         """
-        pass
-
-    @abstractmethod
-    def buff(self, pack: "Message") -> List[Message]:
-        """
-        buff 一个消息体, 然后决定是否对外发送.
-        不能用 Iterable 返回, 如果上层不处理, 就会导致没有 buff.
-        """
-        pass
-
-    @abstractmethod
-    def new(self) -> "Buffer":
         pass
 
     @abstractmethod
     def flush(self) -> Flushed:
+        """
+        flush the buffered messages, and reset itself.
+        """
         pass

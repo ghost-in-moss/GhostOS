@@ -1,0 +1,23 @@
+- [Home](/zh-cn/)
+- Getting Started
+    - [Install](/zh-cn/getting_started/installation.md)
+    - [Configuration](/zh-cn/getting_started/configuration.md)
+    - [Chat](/zh-cn/getting_started/chat_with_ghost.md)
+    - [Scripts](/zh-cn/getting_started/scripts.md)
+- Concepts
+    - [Architecture](/zh-cn/concepts/abcd.md)
+    - [MOSS Protocol](/zh-cn/concepts/moss_protocol.md)
+    - [IoC Container](/zh-cn/concepts/ioc_container.md)
+    - [EntityMeta](/zh-cn/concepts/entity_meta.md)
+    - [Prompter](/zh-cn/concepts/prompter.md)
+- Usages
+    - [Ghost](/zh-cn/usages/ghost.md)
+    - [Chatbot](/zh-cn/usages/chatbot.md)
+    - [MossAgent](/zh-cn/usages/moss_agent.md)
+- [Libraries](/zh-cn/libraries/libraries.md)
+- Frameworks
+    - [Messages](/zh-cn/frameworks/messages.md)
+    - [LLMs](/zh-cn/frameworks/llms.md)
+    - [EventBus](/zh-cn/frameworks/eventbus.md)
+    - [Tasks](/zh-cn/frameworks/tasks.md)
+    - [Threads](/zh-cn/frameworks/threads.md)

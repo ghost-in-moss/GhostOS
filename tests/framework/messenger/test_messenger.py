@@ -1,66 +1,57 @@
 from ghostos.framework.messengers import DefaultMessenger
-from ghostos.core.session.threads import MsgThread
-from ghostos.core.messages import Message
-from ghostos.core.llms import FunctionalToken
+from ghostos.core.messages import Message, new_basic_connection, MessageType, ReceiverBuffer
 
 
 def test_default_messenger_baseline():
-    thread = MsgThread()
-    messenger = DefaultMessenger(thread=thread)
+    messenger = DefaultMessenger(None)
+    content = "hello world"
+    items = []
+    for c in content:
+        msg = Message.new_chunk(content=c)
+        items.append(msg)
+    messenger.send(items)
+    messages, callers = messenger.flush()
+    assert len(messages) == 1
+    assert len(callers) == 0
+
+
+def test_messenger_with_upstream():
+    stream, receiver = new_basic_connection()
+    messenger = DefaultMessenger(stream)
+    items = []
     content = "hello world"
     for c in content:
-        msg = Message.new_pack(content=c)
-        success = messenger.deliver(msg)
-        assert success
-    messenger.flush()
-    assert len(thread.current.generates) == 1
-    assert thread.current.generates[0].content == content
+        msg = Message.new_chunk(content=c)
+        items.append(msg)
+    with stream:
+        messenger.send(items)
+        flushed, _ = messenger.flush()
+    messages = receiver.wait()
+    assert len(flushed) == 1
+    assert len(messages) == 1
 
 
-def test_messenger_with_moss_xml_token():
-    functional_tokens = [FunctionalToken(
-        token=">moss:",
-        name="moss",
-        description="desc",
-        deliver=False,
-    )]
-
-    thread = MsgThread()
-    messenger = DefaultMessenger(thread=thread, functional_tokens=functional_tokens)
-
-    contents = ["he", "llo >mo", "ss: w", "orld"]
-    content = "".join(contents)
-    for c in contents:
-        msg = Message.new_pack(content=c)
-        messenger.deliver(msg)
-    flushed = messenger.flush()
-    assert len(list(flushed.callers)) > 0
-    message = flushed.messages[0]
-    assert message.content != content
-    assert message.memory == content
-    caller = flushed.callers[0]
-    assert caller.name == "moss"
-    assert caller.arguments == " world"
-
-    assert len(thread.current.generates) == 1
-    assert len(thread.current.generates[0].callers) == 1
-
-
-def test_messenger_with_single_message():
-    functional_tokens = [FunctionalToken(
-        token="<moss>",
-        end_token="</moss>",
-        name="moss",
-        description="desc",
-        deliver=False,
-    )]
-
-    thread = MsgThread()
-    messenger = DefaultMessenger(thread=thread, functional_tokens=functional_tokens)
-
-    content = "<moss>def main():\n    pass</moss>"
-    messenger.say(content)
-    flushed = messenger.flush()
-    assert flushed.messages[0].content == ""
-    assert flushed.messages[0].memory == content
-    assert len(flushed.callers) == 1
+def test_messenger_with_function_call():
+    stream, receiver = new_basic_connection()
+    messenger = DefaultMessenger(stream)
+    items = []
+    content = "hello world"
+    for c in content:
+        msg = Message.new_chunk(content=c)
+        items.append(msg)
+    for c in content:
+        msg = Message.new_chunk(content=c, typ_=MessageType.FUNCTION_CALL, call_id="123", name="good")
+        items.append(msg)
+    with stream:
+        messenger.send(items)
+        flushed, callers = messenger.flush()
+        assert len(flushed) == 2
+    assert len(callers) == 1
+    with receiver:
+        buffer = ReceiverBuffer.new(receiver.recv())
+        assert MessageType.is_text(buffer.head())
+        assert len(list(buffer.chunks())) == len(content)
+        buffer = buffer.next()
+        assert MessageType.FUNCTION_CALL.match(buffer.head())
+        assert len(list(buffer.chunks())) == len(content)
+        assert buffer.next() is None

@@ -13,6 +13,13 @@ def test_slice_negative_index():
     assert arr[:-1] == [0]
 
 
+def test_slice_pop_0():
+    arr = [0, 1]
+    arr.pop(0)
+    arr.pop(0)
+    assert arr == []
+
+
 def test_thread_safe_append():
     from threading import Thread
 
@@ -42,3 +49,29 @@ def test_array_insert_more_than_pointed():
     a = [1, 2, 3, 4]
     a[1:3] = [5, 6, 7, 8]
     assert a == [1, 5, 6, 7, 8, 4]
+
+
+def test_sort_dicts():
+    cases = [
+        {'a': 1, 'b': 2, 'c': 3, 'd': 4},
+        {'a': 2, 'b': 2, 'c': 3, 'd': 4},
+        {'a': 3, 'b': 2, 'c': 3, 'd': 4},
+        {'a': 4, 'b': 2, 'c': 3, 'd': 4},
+    ]
+    values = sorted(cases, key=lambda x: x['a'], reverse=True)
+    actual = [c['a'] for c in values]
+    assert actual == [4, 3, 2, 1]
+
+
+def test_arr_tail():
+    arr = [1, 2, 3, 4]
+    assert arr[-2:] == [3, 4]
+    assert arr[-20:] == [1, 2, 3, 4]
+
+
+def test_negative_slice_index():
+    arr = [1, 2, 3, 4]
+    first = arr[:2]
+    end = arr[2:]
+    assert first == [1, 2]
+    assert end == [3, 4]

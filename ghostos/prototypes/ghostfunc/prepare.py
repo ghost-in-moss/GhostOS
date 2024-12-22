@@ -1,19 +1,48 @@
+from typing import Optional
 from ghostos.container import Container
-from ghostos.core.moss import test_container
+from ghostos.core.moss import moss_container, MossCompiler
+
+from ghostos.core.llms import LLMs
 from ghostos.framework.configs import ConfigsByStorageProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
+from ghostos.prototypes.ghostfunc.decorator import GhostFunc
+from ghostos.container import Contracts
 
-__all__ = ["init_ghost_func_container"]
+__all__ = ["init_ghost_func_container", "init_ghost_func", 'ghost_func_contracts']
+
+ghost_func_contracts = Contracts([
+    LLMs,
+    MossCompiler,
+])
 
 
 def init_ghost_func_container(
-        root_path: str,
-        configs_path: str = "configs",
-        llm_conf_path: str = "llms_conf.yml",
+        workspace_dir: str,
+        configs_dir: str = "configs",
+        container: Optional[Container] = None,
 ) -> Container:
-    container = test_container()
-    container.register(FileStorageProvider(root_path))
-    container.register(ConfigsByStorageProvider(configs_path))
-    container.register(ConfigBasedLLMsProvider(llm_conf_path))
+    """
+    init ghost_func's container
+    :param workspace_dir:
+    :param configs_dir: relative directory from workspace
+    :param container: parent container.
+    """
+    if container is None:
+        container = moss_container()
+    container.register(FileStorageProvider(workspace_dir))
+    container.register(ConfigsByStorageProvider(configs_dir))
+    container.register(ConfigBasedLLMsProvider())
     return container
+
+
+def init_ghost_func(
+        container: Container,
+) -> GhostFunc:
+    """
+    return ghost func instance
+    :param container: application container.
+    """
+    ghost_func_contracts.validate(container)
+    self_container = Container(parent=container)
+    return GhostFunc(self_container)

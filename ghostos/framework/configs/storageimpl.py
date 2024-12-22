@@ -1,23 +1,24 @@
-from typing import Type, Optional
-from ghostos.contracts.configs import Configs, C
+from typing import Optional, Dict
+from ghostos.contracts.configs import Configs
 from ghostos.contracts.storage import Storage
-from ghostos.container import Provider, Container, ABSTRACT
-from ghostos.core.ghosts import Workspace
+from ghostos.container import Provider, Container
+from ghostos.contracts.workspace import Workspace
+from .basic import BasicConfigs
 
 
-class StorageConfigs(Configs):
-    """
-    基于 storage 实现的 configs.
-    """
+class StorageConfigs(BasicConfigs):
 
     def __init__(self, storage: Storage, conf_dir: str):
         self._storage = storage.sub_storage(conf_dir)
 
-    def get(self, conf_type: Type[C], file_name: Optional[str] = None) -> C:
-        path = conf_type.conf_path()
-        file_name = file_name if file_name else path
-        content = self._storage.get(file_name)
-        return conf_type.load(content)
+    def _get(self, relative_path: str) -> bytes:
+        return self._storage.get(relative_path)
+
+    def _put(self, relative_path: str, content: bytes) -> None:
+        self._storage.put(relative_path, content)
+
+    def _exists(self, relative_path: str) -> bool:
+        return self._storage.exists(relative_path)
 
 
 class ConfigsByStorageProvider(Provider[Configs]):
@@ -28,22 +29,19 @@ class ConfigsByStorageProvider(Provider[Configs]):
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[Configs]:
-        return Configs
-
     def factory(self, con: Container) -> Optional[Configs]:
         storage = con.force_fetch(Storage)
         return StorageConfigs(storage, self._conf_dir)
 
 
 class WorkspaceConfigsProvider(Provider[Configs]):
+    """
+    the Configs repository located at storage - workspace.configs()
+    """
 
     def singleton(self) -> bool:
         return True
 
-    def contract(self) -> Type[ABSTRACT]:
-        return Configs
-
-    def factory(self, con: Container) -> Optional[ABSTRACT]:
+    def factory(self, con: Container) -> Optional[Configs]:
         workspace = con.force_fetch(Workspace)
         return StorageConfigs(workspace.configs(), "")

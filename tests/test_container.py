@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict
+from typing import Type, Dict, get_args, get_origin, ClassVar
 
-from ghostos.container import Container, Provider
+from ghostos.container import Container, Provider, provide
 
 
 def test_container_baseline():
@@ -96,3 +96,95 @@ def test_boostrap():
     container.set(Foo, Foo())
     container.bootstrap()
     assert container.force_fetch(Foo).foo == 1
+
+
+def test_provider_generic_types():
+    class SomeProvider(Provider[int]):
+
+        def singleton(self) -> bool:
+            return True
+
+        def factory(self, con: Container) -> int:
+            return 3
+
+    # baseline
+    args = get_args(Provider[int])
+    assert args[0] is int
+    assert get_origin(Provider[int]) is Provider
+
+    p = SomeProvider()
+    con = Container()
+    assert p.singleton()
+    assert p.factory(con) == 3
+    assert p.contract() is int
+
+
+def test_provide_with_lambda():
+    container = Container()
+    container.register(provide(int)(lambda c: 10))
+    container.register(provide(str)(lambda c: "hello"))
+
+    assert container.force_fetch(int) == 10
+    assert container.force_fetch(str) == "hello"
+
+
+def test_provide_in_loop():
+    container = Container()
+    for a, fn in {int: lambda c: 10, str: lambda c: "hello"}.items():
+        container.register(provide(a)(fn))
+
+    assert container.force_fetch(int) == 10
+    assert container.force_fetch(str) == "hello"
+
+
+def test_container_set_str():
+    container = Container()
+    container.set("foo", "bar")
+    assert container.get("foo") == "bar"
+
+
+def test_container_inherit():
+    class Foo:
+        def __init__(self, foo: int):
+            self.foo = foo
+
+    class Bar:
+        def __init__(self, foo: Foo):
+            self.foo = foo
+
+        bar: str = "hello"
+
+    container = Container()
+    container.register(provide(Bar, singleton=False)(lambda c: Bar(c.force_fetch(Foo))))
+    sub_container = Container(container)
+    # sub container register Foo that Bar needed
+    sub_container.register(provide(Foo, singleton=False)(lambda c: Foo(2)))
+    bar = sub_container.force_fetch(Bar)
+    assert bar.bar == "hello"
+    assert bar.foo.foo == 2
+
+
+def test_bloodline():
+    container = Container()
+    assert container.bloodline is not None
+    sub = Container(parent=container, name="hello")
+    assert len(sub.bloodline) == 2
+
+
+def test_container_shutdown():
+    class Foo:
+        instance_count: ClassVar[int] = 0
+
+        def __init__(self):
+            Foo.instance_count += 1
+
+        def shutdown(self):
+            Foo.instance_count -= 1
+
+    container = Container()
+    f = Foo()
+    container.set(Foo, f)
+    container.add_shutdown(f.shutdown)
+    assert Foo.instance_count == 1
+    container.shutdown()
+    assert Foo.instance_count == 0
