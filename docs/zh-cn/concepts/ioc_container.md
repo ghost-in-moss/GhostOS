@@ -73,7 +73,7 @@ class Ball(ABC):
 
 而真正的实例, 只在项目运行时才通过 container 注入:
 
-![ioc container](assets/ioc_container.png)
+![ioc container](../../assets/ioc_container.png)
 
 ## Basic Usage
 

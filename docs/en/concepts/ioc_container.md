@@ -82,7 +82,7 @@ class Ball(ABC):
 
 The actual instances are only injected through the container during runtime:
 
-![ioc container](assets/ioc_container.png)
+![ioc container](../../assets/ioc_container.png)
 
 ## Basic Usage
 

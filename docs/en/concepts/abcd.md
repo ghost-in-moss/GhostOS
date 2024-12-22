@@ -4,7 +4,7 @@ The abstract design of GhostOS adheres to the principle of interface-oriented pr
 All modules are designed using abstract classes, and implementations are assembled through
 the [IoC Container](/en/concepts/ioc_container.md)
 
-![architecture](assets/architecture.png)
+![architecture](../../assets/architecture.png)
 
 The basic interrelationships of these abstractions and their usage logic are as follows:
 

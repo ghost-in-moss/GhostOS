@@ -22,7 +22,7 @@ ghostos web ghostos.demo.agents.jojo
 你可以启动一个可独立运行的 python 文件作为 Agent, 让它解释文件内容, 调用文件的相关方法.
 `GhostOS` 会自动反射代码, 生成 Agent 可以看到的上下文.
 
-![streamlit_chat](assets/streamlit_chat.png)
+![streamlit_chat](../../assets/streamlit_chat.png)
 
 ## Realtime Chat
 
