@@ -86,17 +86,7 @@ that can be instructed to call functions or methods within the file through natu
 ghostos web [my_path_file_path]
 ```
 
-Install the extra dependencies for realtime:
-
-```bash
-# install realtime dependencies: pyaudio and websockets
-pip install ghostos[realtime] 
-
-# install spherov2 if you have sphero bolt
-pip install ghostos[sphero] 
-```
-
-ou can create a local Python file and define your own Agents. For more details
+you can create a local Python file and define your own Agents. For more details
 
 * [Chatbot](/en/usages/chatbot.md): simplest chatbot
 * [MossAgent](/en/usages/moss_agent.md): an agent that can interact with the python module

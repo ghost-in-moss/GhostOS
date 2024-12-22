@@ -37,15 +37,6 @@ natural language dialogue.
 ghostos web [my_path_file_path]
 ```
 
-## Extra
-
-Install extra dependencies:
-
-```bash
-pip install ghostos[sphero] # 安装 sphero 类库
-pip install ghostos[realtime] # 安装 realtime 相关类库. pyaudio 和 websockets
-```
-
 ## Workspace
 
 `GhostOS` is currently using local files to store runtime data, so it's necessary to initialize a workspace.
