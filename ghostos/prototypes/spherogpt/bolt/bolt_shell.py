@@ -196,12 +196,12 @@ class Ball(ABC):
     def new_move(
             self,
             *,
+            run: bool = False,
             animation: Optional[Animation] = None,
-            run_immediately: bool = False
     ) -> Move:
         """
         create a new Move instance, to define a sequence of movements.
-        :param run_immediately: run immediately if True, otherwise the move will not execute until run it.
+        :param run: run immediately if True, otherwise the move will not execute until run it.
         :param animation: if animation is not none, it will be played while run the move.
         """
         pass

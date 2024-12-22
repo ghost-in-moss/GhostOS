@@ -37,7 +37,7 @@ class OpenAIWebsocketsConf(BaseModel):
 
 class OpenAIRealtimeAppConf(YamlConfig, RealtimeAppConfig):
     """
-    configuration
+    OpenAI Realtime Beta API configuration
     """
     relative_path: ClassVar[str] = "openai_realtime_config.yml"
 

@@ -1,15 +1,191 @@
 # GhostOS
 
-`GhostOS` 是一个开发中的 AI Agent 框架. 它的目标是除了自然语言之外, 用 `代码` 作为大模型与外部系统交互的核心方式. 它的基本思路如下:
+> The AI `Ghosts` wonder in the `Shells`.
 
-把 Agent 的能力用代码 API 的方式提供给大模型, 大模型生成的代码直接在环境中运行.
-通过一个图灵完备的编程语言界面, 大模型可以解决包括计算, 调用工具, 身体控制, 人格切换, 思维范式, 状态调度, Multi-Agent, 记忆与召回等一切动作.
+* [中文文档](../zh-cn/README.md)
+* [Documents](docs/en/README.md)
+- [Discord Server](https://discord.gg/NG6VKwd5jV)
 
-这会比基于 json schema 等方式的交互能力更强, 开销更小. 
+## Example
+
+使用 Python 代码 [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/ghostos/demo/sphero/bolt_gpt.py),
+定义了一个以 [SpheroBolt](https://sphero.com/products/sphero-bolt) 玩具为躯体的智能机器人.
+
+运行 `ghostos web ghostos.demo.sphero.bolt_gpt` 可以启动这个机器人:
+
+![SpheroBoltGPT](../assets/ask_sphero_spin_gif.gif)
+
+Demo 中初步实现的功能:
+
+1. 实时语音对话.
+2. 控制身体运动, 控制 8*8 led matrix 绘画图形.
+3. 通过自然语言对话学习记忆包含动作和动画的技能.
+4. 在对话中通过动作表达情绪.
+
+## Introduce
+
+`GhostOS` 是一个 AI Agent 框架, 旨在用图灵完备的代码交互界面 ([Moss Protocol](../zh-cn/concepts/moss_protocol.md)) 取代
+JSON Schema,
+成为 LLM 和 Agent 系统能力交互的核心方式.
+详见: [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
+
+预期通过代码调用的对象包括`工具`, `人格`, `智能体集群`, `工作流`, `思维`, `规划`, `知识` 和 `记忆`.
+从而使一个 Meta-Agent 能用代码生成和项目管理的方式, 变成一个可以持续学习成长的智能体.
+
+而这样用代码仓库实现的智能体, 又能以仓库的形式分享和安装.
+
+`GhostOS` 还在早期验证的阶段, 当前版本主要实现开箱即用的能力, 包括:
+
+- [x] 将各种 python 脚本直接变成对话 Agent
+- [x] Agent 拥有基于 [Streamlit Web](https://streamlit.io/) 实现的界面.
+- [x] 支持 `OpenAI`, `Moonshot` 等模型
+- [x] 支持基于图片的视觉能力 (OpenAI vision)
+- [x] 支持实时语音对话能力 (OpenAI Realtime Beta)
+
+项目自我定位:
+
+- 全栈的 Agent 框架
+- 开箱即用的 Agent 能力
+- 基于代码的交互范式
+- 异步的智能体集群
+- 复杂任务的规划与执行能力
+
+## Quick Start
+
+> `GhostOS` 仍然是一个验证中的 AI 项目, 强烈建议安装到 docker 之类的容器中, 而不在本地执行. 
+
+安装 `GhostOS`:
+
+```bash
+pip install ghostos
+```
+
+初始化 `workspace` (默认 `app`), 当前版本的运行时文件都会存入目录.
+
+```bash
+ghostos init
+```
+
+配置大模型. 默认使用 OpenAI `gpt-4o`, 要求环境变量存在 `OPENAI_API_KEY`.
+或者运行 `streamlit` 编辑界面:
+
+```bash
+ghostos config
+```
+
+测试运行自带的 agent:
+
+```bash
+# run an agent with python filename or modulename
+ghostos web ghostos.demo.agents.jojo
+```
+
+或者将本地的 Python 文件变成一个 Agent, 可以通过自然语言对话要求它调用文件中的函数或方法:
+
+```bash
+ghostos web [my_path_file_path]
+```
+
+安装关联依赖: 
+```bash
+pip install ghostos[sphero] # 安装 sphero 类库
+pip install ghostos[realtime] # 安装 realtime 相关类库. pyaudio 和 websockets
+```
+
+## Use In Python
+
+```python
+from ghostos.bootstrap import make_app_container, get_ghostos
+from ghostos.ghosts.chatbot import Chatbot
+
+# create your own root ioc container.
+# register or replace the dependencies by IoC service providers.
+container = make_app_container(...)
+
+# fetch the GhostOS instance.
+ghostos = get_ghostos(container)
+
+# Create a shell instance, which managing sessions that keep AI Ghost inside it.
+# and initialize the shell level dependency providers.
+shell = ghostos.create_shell("your robot shell")
+# Shell can handle parallel ghosts running, and communicate them through an EventBus.
+# So the Multi-Agent swarm in GhostOS is asynchronous.
+shell.background_run()  # Optional
+
+# need an instance implements `ghostos.abcd.Ghost` interface.
+my_chatbot: Chatbot = ...
+
+# use Shell to create a synchronous conversation channel with the Ghost.
+conversation = shell.sync(my_chatbot)
+
+# use the conversation channel to talk
+event, receiver = conversation.talk("hello?")
+with receiver:
+    for chunk in receiver.recv():
+        print(chunk.content)
+```
+
+## Documents
+
+* Getting Started
+    * [Installation](../zh-cn/getting_started/installation.md)
+    * [Configuration](../zh-cn/getting_started/configuration.md)
+    * [Chat](../zh-cn/getting_started/chat_with_ghost.md)
+    * [Scripts](../zh-cn/getting_started/scripts.md)
+* Concepts
+    * [Abstract Classes Design](../zh-cn/concepts/abcd.md)
+    * [Moss Protocol](../zh-cn/concepts/moss_protocol.md)
+    * [IoC Container](../zh-cn/concepts/ioc_container.md)
+    * [EntityMeta](../zh-cn/concepts/entity_meta.md)
+    * [Prompter](../zh-cn/concepts/prompter.md)
+* Usages
+    * [Ghost](../zh-cn/usages/ghost.md)
+    * [Chatbot](../zh-cn/usages/chatbot.md)
+    * [MossAgent](../zh-cn/usages/moss_agent.md)
+    * [AIFuncs](../zh-cn/usages/ai_funcs.md)
+    * [GhostFunc](../zh-cn/usages/ghost_func.md)
+* [Libraries](../zh-cn/libraries/libraries.md)
+* Frameworks
+    * [Messages](../zh-cn/frameworks/messages.md)
+    * [LLMs](../zh-cn/frameworks/llms.md)
+    * [EventBus](../zh-cn/frameworks/events.md)
+    * [Tasks](../zh-cn/frameworks/tasks.md)
+    * [Threads](../zh-cn/frameworks/threads.md)
+
+
+## Developing Features
+
+* [ ] 开箱即用的 Agent 能力类库.
+* [ ] 变量类型消息与 Streamlit 渲染.
+* [ ] 异步的 Multi-Agent.
+* [ ] 长程任务规划与执行.
+* [ ] 原子化的思维能力.
+* [ ] 树形项目的自动执行与管理.
+* [ ] 框架可配置化的组件.
+* [ ] 玩具级具身智能的实验.
+
+> `GhostOS` 作为一个个人项目, 目前没有精力用于完善文档, 存储模块, 稳定性或安全性等问题.
+>
+> 项目的迭代将长时间聚焦于验证 `代码驱动的具身智能体`, `代码驱动的思维能力`, `代码驱动的学习与成长` 三个方向.
+> 并完善开箱即用的 agent 相关能力.
+
+# So What is GhostOS purpose?
+
+`GhostOS` 这个项目是作者用来做 AI 应用探索而开发的. 基本思路如下:
+
+AI Agent 技术有两条并行的演进路径, 一种是模型自身能力的完善, 一种则是 Agent 工程框架的进化.
+Agent 框架的生产力水平, 决定了 AI 模型在应用场景落地的可行性.
+
+`GhostOS` 把 Agent 的能力从代码反射成 Prompt, 提供给大模型, 大模型生成的代码直接在环境中运行.
+通过一个图灵完备的编程语言界面, 大模型可以解决包括计算, 调用工具, 身体控制, 人格切换, 思维范式, 状态调度, Multi-Agent,
+记忆与召回等一切动作.
+
+这会比基于 json schema 等方式的交互能力更强, 开销更小.
 在这过程中生成的交互数据, 又可以用于模型的 post-training 或强化学习, 从而不断优化效果.
 
-AI Agent 本身也是使用代码实现的. 所以大模型驱动的 Meta-Agent 实现其它的 Agent, 可以还原为一个编程问题. 
-理想情况下, 大模型驱动的 Meta-Agent 可以通过编写代码, 编写自己的工具, 用数据结构定义的记忆和思维链, 乃至于生成其它的 Agent.
+AI Agent 本身也是使用代码实现的. 所以大模型驱动的 Meta-Agent 实现其它的 Agent, 可以还原为一个编程问题.
+理想情况下, 大模型驱动的 Meta-Agent 可以通过编写代码, 编写自己的工具, 用数据结构定义的记忆和思维链, 乃至于生成其它的
+Agent.
 
 ![meta-agent-cycle](../assets/meta-agent-cycle.png)
 
@@ -17,36 +193,13 @@ AI Agent 本身也是使用代码实现的. 所以大模型驱动的 Meta-Agent 
 用 json 之类的方式构建一个结构嵌套的图或者树非常困难, 而用编程语言是最高效的.
 大模型可以把对话学习到的成果沉淀成代码中的节点, 再将它们规划成树或者图, 从而执行足够复杂的任务.
 
-基于以上思路, `GhostOS` 希望把 Agent 集群变成一个通过代码构建出来的项目. Agent 又不断把新的知识和能力用代码形式沉淀, 丰富这个项目.
+这样, AI Agent 可以把自然语言教学习得的知识和能力, 以文件和代码的形式存储, 从而自我进化. 这是模型迭代之外的进化之路.
+
+基于以上思路, `GhostOS` 希望把 Agent 集群变成一个通过代码构建出来的项目. Agent 又不断把新的知识和能力用代码形式沉淀,
+丰富这个项目.
 最终 Agent 项目可以用仓库的形式复制, 分享或部署. 形成一种可基于代码自我进化, 持续学习的智能体集群.
 在这种新生产力形态中, 用纯代码交互是最关键的一步.
 
-作者最大的目标不是 `GhostOS` 本身, 而是验证和推动这种代码交互的设计与应用. 希望有一天行业里的 Agent, 思维范式, 躯体和工具, 
-都可以基于相同的编程语言协议设计, 实现跨项目通用. 
+作者最大的目标不是 `GhostOS` 本身, 而是验证和推动这种代码交互的设计与应用. 希望有一天行业里的 Agent, 思维范式, 躯体和工具,
+都可以基于相同的编程语言协议设计, 实现跨项目通用.
 
-相关论文: 
-- [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
-
-
-> 由于 `GhostOS` 仍是一个个人项目, 最大的目的是验证上述技术思路的可行性.
-> 精力有限的情况下, 无法完善所有的技术细节和文档.
-> 所以相当长一段时间内, GhostOS 会专注于开发开箱即用的能力, 而无法完善框架的文档和社区建设.
-
-
-# Examples
-
-## SpheroBoltGPT
-
-[SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/examples/sphero/sphero_bolt_gpt_agent.py) 使用 60 行代码,
-将一个 SpheroBolt 玩具变成一个可以自然语言交互的机器人. 
-
-![SpheroBoltGPT](../assets/sphero_bolt_gpt.gif)
-
-独立项目地址 (todo)
-
-## Talk to Python
-
-将一个 python 脚本直接变成 Agent, 让大模型控制脚本调用任何函数. 
-
-
-# QuickStart

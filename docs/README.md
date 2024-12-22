@@ -1,3 +1,0 @@
-# GhostOS
-
-> An awesome project.

@@ -231,9 +231,9 @@ class BallImpl(Ball, Injection, Prompter):
             self,
             *,
             animation: Optional[Animation] = None,
-            run_immediately: bool = False,
+            run: bool = False,
     ) -> Move:
-        return MoveAdapter(self._runtime, run_immediately, animation=animation)
+        return MoveAdapter(self._runtime, run, animation=animation)
 
     def run(self, move: Move, stop_at_first: bool = True) -> None:
         if not isinstance(move, MoveAdapter):

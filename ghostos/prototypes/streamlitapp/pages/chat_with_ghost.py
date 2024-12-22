@@ -102,7 +102,6 @@ def main_chat():
                         realtime_app.set_mode(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
 
                     canceled = get_response_button_count()
-                    st.write(canceled)
                     if not route.vad_mode:
                         if st.button("response", key=f"create_realtime_response_{canceled}"):
                             incr_response_button_count()

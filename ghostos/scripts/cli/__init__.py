@@ -18,6 +18,9 @@ def main():
 @main.command("web")
 @click.argument("python_file_or_module")
 def start_streamlit_web(python_file_or_module: str):
+    """
+    turn a python file or module into a streamlit web agent
+    """
     from ghostos.scripts.cli.run_streamlit_app import start_ghost_app
     from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
     ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
@@ -27,35 +30,21 @@ def start_streamlit_web(python_file_or_module: str):
 @main.command("console")
 @click.argument("python_file_or_module")
 def start_console_app(python_file_or_module: str):
+    """
+    turn a python file or module into a console agent
+    """
     from ghostos.scripts.cli.run_console import run_console_app
     run_console_app(python_file_or_module)
 
 
 @main.command("config")
 def start_web_config():
+    """
+    config the ghostos in streamlit web app
+    """
     from ghostos.scripts.cli.run_streamlit_app import start_streamlit_prototype_cli
     from ghostos.bootstrap import get_bootstrap_config
     start_streamlit_prototype_cli("run_configs.py", "", get_bootstrap_config().workspace_dir)
-
-
-@main.command("clear-assets")
-@click.option("--path", default="", show_default=True)
-def clear_runtime(path: str):
-    """
-    clear workspace runtime files
-    """
-    from ghostos.scripts.clear import clear_assets
-    from ghostos.bootstrap import get_bootstrap_config
-    conf = get_bootstrap_config()
-    confirm = Prompt.ask(
-        f"Will clear all workspace assets files at {conf.abs_asserts_dir()}\n\nWould you like to proceed? [y/N]",
-        choices=["y", "n"],
-        default="y",
-    )
-    if confirm == "y":
-        clear_assets(path)
-    else:
-        print("Aborted")
 
 
 @main.command("clear-runtime")
