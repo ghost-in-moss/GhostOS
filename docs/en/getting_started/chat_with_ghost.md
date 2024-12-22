@@ -28,12 +28,6 @@ methods. `GhostOS` will automatically reflect the code to generate the context v
 
 `GhostOS` Implements [OpenAI Realtime Beta](https://platform.openai.com/docs/api-reference/realtime).
 
-To use it, you need to install the relevant libraries first:
-
-```bash
-pip install ghostos[realtime]
-```
-
 For configuration details of the real-time model, see [configuration](./configuration.md).
 
 > There are still many bugs and experience issues with the current real-time model.

@@ -78,13 +78,6 @@ ghostos web ghostos.demo.agents.jojo
 ghostos web [my_path_file_path]
 ```
 
-安装更多关联依赖:
-
-```bash
-pip install ghostos[sphero] # 安装 sphero 类库
-pip install ghostos[realtime] # 安装 realtime 相关类库. pyaudio 和 websockets
-```
-
 可以通过创建本地 python 文件, 定义出自己的 Agents. 详情请见:
 
 * [Chatbot](/zh-cn/usages/chatbot.md): 极简的对话机器人

@@ -28,12 +28,6 @@ ghostos web ghostos.demo.agents.jojo
 
 `GhostOS` 实现了 [OpenAI Realtime Beta](https://platform.openai.com/docs/api-reference/realtime).
 
-想要使用它, 需要先安装相关库:
-
-```bash
-pip install ghostos[realtime]
-```
-
 对 realtime 模型的配置详见 [configuration](./configuration.md).
 
 > 目前的 realtime 还有很多 bug 和体验问题.
@@ -48,7 +42,8 @@ pip install ghostos[realtime]
 * images and audio: 过程中的图片和音频.
 * logs: 运行时日志.
 
-所有这类运行时文件, 都保存在 [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/runtime) 目录.
+所有这类运行时文件,
+都保存在 [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/runtime) 目录.
 
 如果需要清空它们, 请运行:
 
