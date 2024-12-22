@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ghostos"
-version = "0.1.0-beta"
+version = "0.1.0-beta2"
 description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 authors = ["zhuming <thirdgerb@gmail.com>", "Nile Zhou <nilezhou123@gmail.com>"]
 license = "MIT"
@@ -9,7 +9,7 @@ readme = "README.md"
 [tool.poetry.urls]
 homepage = "https://github.com/ghost-in-moss/GhostOS"
 repository = "https://github.com/ghost-in-moss/GhostOS"
-documentation = "https://github.com/ghost-in-moss/GhostOS/docs"
+documentation = "https://ghost-in-moss.github.io/GhostOS/#/en/"
 issues = "https://github.com/ghost-in-moss/GhostOS/issues"
 
 [tool.poetry.dependencies]
@@ -39,10 +39,10 @@ websockets = "^13.1"
 pysocks = "^1.7.1"
 requests = { extras = ["socks"], version = "^2.32.3" }
 streamlit-paste-button = "^0.1.2"
-pyaudio = { version = "^0.2.14", optional = true }
-spherov2 = { version = "^0.12.1", optional = true }
+pyaudio = { version = "^0.2.14" }
+spherov2 = { version = "^0.12.1" }
 bleak = [
-    { version = "^0.22.3", python = ">=3.10,<3.14", optional = true }
+    { version = "^0.22.3", python = ">=3.10,<3.14" }
 ]
 
 [tool.poetry.scripts]
@@ -52,10 +52,6 @@ ghostos = "ghostos.scripts.cli:main"
 pytest = "^8.1.1"
 mypy = "^1.13.0"
 
-
-[tool.poetry.extras]
-realtime = ['pyaudio', 'websockets']
-sphero = ["spherov2", "bleak", "pyaudio"]
 
 
 [build-system]
