@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ghostos"
-version = "0.1.0-beta2"
+version = "0.1.0-beta3"
 description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 authors = ["zhuming <thirdgerb@gmail.com>", "Nile Zhou <nilezhou123@gmail.com>"]
 license = "MIT"
