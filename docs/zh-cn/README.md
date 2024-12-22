@@ -13,7 +13,7 @@
 
 如果你有 SpheroBolt, 运行 `ghostos web ghostos.demo.sphero.bolt_gpt` 可以启动这个机器人:
 
-![SpheroBoltGPT](assets/ask_sphero_spin_gif.gif)
+![SpheroBoltGPT](../assets/ask_sphero_spin_gif.gif)
 
 Demo 中初步实现的功能:
 
@@ -157,7 +157,7 @@ AI Agent 本身也是使用代码实现的. 所以大模型驱动的 Meta-Agent 
 理想情况下, 大模型驱动的 Meta-Agent 可以通过编写代码, 编写自己的工具, 用数据结构定义的记忆和思维链, 乃至于生成其它的
 Agent.
 
-![meta-agent-cycle](assets/meta-agent-cycle.png)
+![meta-agent-cycle](../assets/meta-agent-cycle.png)
 
 进一步, 大多数有严谨步骤的复杂任务, 都可以用树或者图的数据结构描述.
 用 json 之类的方式构建一个结构嵌套的图或者树非常困难, 而用编程语言是最高效的.

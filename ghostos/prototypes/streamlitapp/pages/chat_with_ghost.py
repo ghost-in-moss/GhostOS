@@ -380,7 +380,7 @@ def render_receiver(receiver: Receiver, debug: bool):
 
 def render_receive_buffer(buffer: ReceiverBuffer, debug: bool):
     while buffer is not None:
-        st.logger.get_logger("ghostos").info("receive buffer head: %s", buffer.head())
+        st.logger.get_logger("ghostos").debug("receive buffer head: %s", buffer.head())
         if MessageType.is_text(buffer.head()):
             with st.empty():
                 contents = chunks_to_st_stream(buffer.chunks())
