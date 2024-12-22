@@ -15,20 +15,39 @@ A = TypeVar("A")
 
 def __moss_agent_providers__(agent: A) -> Iterable[Provider]:
     """
-    return session level providers that special required to the Agent.
+    return conversation level providers that specially required by the Agent.
+    the conversation container will automatically register the providers and run them.
+
     :param agent: the moss agent instance.
     :return: providers that register to the session container.
     """
     return []
 
 
+def __shell_providers__() -> Iterable[Provider]:
+    """
+    return shell level providers that specially required by the Agent.
+    if the shell is running by `ghostos web` or `ghostos console`,
+    the script will detect the __shell_providers__ attribute and register them into shell level container.
+
+    You can consider the Shell is the body of an agent.
+    So shell level providers usually register the body parts singletons, bootstrap them and register shutdown functions.
+    """
+    return []
+
+
 def __moss_agent_creating__(agent: A, session: Session) -> None:
+    """
+    once a moss agent is creating,
+    this function will be called.
+    you can do something here to initialize Thread, Pycontext or Other things.
+    """
     pass
 
 
 def __moss_agent_truncate__(agent: MossAgent, session: Session) -> GoThreadInfo:
     """
-    default truncate logic of the agent
+    default history messages truncate logic of the agent
     :param agent:
     :param session:
     :return:
@@ -60,6 +79,11 @@ def __moss_agent_truncate__(agent: MossAgent, session: Session) -> GoThreadInfo:
 
 
 def __moss_agent_parse_event__(agent: MossAgent, session: Session, event: Event) -> Optional[Event]:
+    """
+    when moss agent receive an event, will check it first before handle it.
+    for example, if the user input is way too big, agent can ignore or reject the event here.
+    :return: if None, the event will be ignored.
+    """
     return event
 
 
@@ -67,8 +91,6 @@ def __moss_agent_injections__(agent: A, session: Session[A]) -> Dict[str, Any]:
     """
     manually define some of the injections to the Moss Class.
     if a property of Moss is not injected here, the session container will inject it by typehint.
-    :param agent:
-    :param session:
     """
     return {
     }
@@ -81,12 +103,9 @@ def __moss_agent_on_event_type__(
         event: Event,
 ) -> Optional[Operator]:
     """
-    define customized event handler
-    :param agent:
-    :param session:
-    :param runtime:
-    :param event:
-    :return:
+    define customized event handler for each event type.
+    the method name is the pattern `__moss_agent_on_[event_type]__`
+    you may create any event type handler, instead of default logic in MossAgentDriver.
     """
     pass
 

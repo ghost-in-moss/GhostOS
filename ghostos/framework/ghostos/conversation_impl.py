@@ -173,11 +173,11 @@ class ConversationImpl(Conversation[G]):
         with session:
             return session.get_artifact(), TaskState(session.task.state)
 
-    def talk(self, query: str, user_name: str = "") -> Tuple[Event, Receiver]:
+    def talk(self, query: str, user_name: str = "", context: Optional[G.ContextType] = None) -> Tuple[Event, Receiver]:
         self._validate_closed()
         self.logger.debug("talk to user %s", user_name)
         message = Role.USER.new(content=query, name=user_name)
-        return self.respond([message])
+        return self.respond([message], context)
 
     def update_context(self, context: Context) -> None:
         self._validate_closed()

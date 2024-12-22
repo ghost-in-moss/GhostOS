@@ -2,16 +2,16 @@
 
 > The AI `Ghosts` wonder in the `Shells`.
 
-* [中文文档](../zh-cn/README.md)
+* [中文文档](docs/zh-cn/README.md)
 * [Documents](docs/en/README.md)
-- [Discord Server](https://discord.gg/NG6VKwd5jV)
+* [Discord Server](https://discord.gg/NG6VKwd5jV)
 
 ## Example
 
 使用 Python 代码 [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/ghostos/demo/sphero/bolt_gpt.py),
 定义了一个以 [SpheroBolt](https://sphero.com/products/sphero-bolt) 玩具为躯体的智能机器人.
 
-运行 `ghostos web ghostos.demo.sphero.bolt_gpt` 可以启动这个机器人:
+如果你有 SpheroBolt, 运行 `ghostos web ghostos.demo.sphero.bolt_gpt` 可以启动这个机器人:
 
 ![SpheroBoltGPT](../assets/ask_sphero_spin_gif.gif)
 
@@ -19,12 +19,12 @@ Demo 中初步实现的功能:
 
 1. 实时语音对话.
 2. 控制身体运动, 控制 8*8 led matrix 绘画图形.
-3. 通过自然语言对话学习记忆包含动作和动画的技能.
+3. 通过自然语言对话, 学习包含动作和动画的技能.
 4. 在对话中通过动作表达情绪.
 
 ## Introduce
 
-`GhostOS` 是一个 AI Agent 框架, 旨在用图灵完备的代码交互界面 ([Moss Protocol](../zh-cn/concepts/moss_protocol.md)) 取代
+`GhostOS` 是一个 AI Agent 框架, 旨在用图灵完备的代码交互界面 ([Moss Protocol](docs/zh-cn/concepts/moss_protocol.md)) 取代
 JSON Schema,
 成为 LLM 和 Agent 系统能力交互的核心方式.
 详见: [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
@@ -39,16 +39,9 @@ JSON Schema,
 - [x] 将各种 python 脚本直接变成对话 Agent
 - [x] Agent 拥有基于 [Streamlit Web](https://streamlit.io/) 实现的界面.
 - [x] 支持 `OpenAI`, `Moonshot` 等模型
-- [x] 支持基于图片的视觉能力 (OpenAI vision)
-- [x] 支持实时语音对话能力 (OpenAI Realtime Beta)
+- [x] 支持 OpenAI 的视觉能力 ([OpenAI vision](https://platform.openai.com/docs/guides/vision))
+- [x] 支持 OpenAI 实时语音对话 ([OpenAI Realtime Beta](https://platform.openai.com/docs/guides/realtime))
 
-项目自我定位:
-
-- 全栈的 Agent 框架
-- 开箱即用的 Agent 能力
-- 基于代码的交互范式
-- 异步的智能体集群
-- 复杂任务的规划与执行能力
 
 ## Quick Start
 
@@ -86,11 +79,15 @@ ghostos web ghostos.demo.agents.jojo
 ghostos web [my_path_file_path]
 ```
 
-安装关联依赖: 
+安装更多关联依赖: 
 ```bash
 pip install ghostos[sphero] # 安装 sphero 类库
 pip install ghostos[realtime] # 安装 realtime 相关类库. pyaudio 和 websockets
 ```
+
+可以通过创建本地 python 文件, 定义出自己的 Agents. 详情请见: 
+* [Chatbot](docs/zh-cn/usages/chatbot.md): 极简的对话机器人
+* [MossAgent](docs/zh-cn/usages/moss_agent.md): 能使用 python 的 agent
 
 ## Use In Python
 
@@ -128,29 +125,27 @@ with receiver:
 ## Documents
 
 * Getting Started
-    * [Installation](../zh-cn/getting_started/installation.md)
-    * [Configuration](../zh-cn/getting_started/configuration.md)
-    * [Chat](../zh-cn/getting_started/chat_with_ghost.md)
-    * [Scripts](../zh-cn/getting_started/scripts.md)
+    * [Installation](docs/zh-cn/getting_started/installation.md)
+    * [Configuration](docs/zh-cn/getting_started/configuration.md)
+    * [Chat](docs/zh-cn/getting_started/chat_with_ghost.md)
+    * [Scripts](docs/zh-cn/getting_started/scripts.md)
 * Concepts
-    * [Abstract Classes Design](../zh-cn/concepts/abcd.md)
-    * [Moss Protocol](../zh-cn/concepts/moss_protocol.md)
-    * [IoC Container](../zh-cn/concepts/ioc_container.md)
-    * [EntityMeta](../zh-cn/concepts/entity_meta.md)
-    * [Prompter](../zh-cn/concepts/prompter.md)
+    * [Abstract Classes Design](docs/zh-cn/concepts/abcd.md)
+    * [Moss Protocol](docs/zh-cn/concepts/moss_protocol.md)
+    * [IoC Container](docs/zh-cn/concepts/ioc_container.md)
+    * [EntityMeta](docs/zh-cn/concepts/entity_meta.md)
+    * [Prompter](docs/zh-cn/concepts/prompter.md)
 * Usages
-    * [Ghost](../zh-cn/usages/ghost.md)
-    * [Chatbot](../zh-cn/usages/chatbot.md)
-    * [MossAgent](../zh-cn/usages/moss_agent.md)
-    * [AIFuncs](../zh-cn/usages/ai_funcs.md)
-    * [GhostFunc](../zh-cn/usages/ghost_func.md)
-* [Libraries](../zh-cn/libraries/libraries.md)
+    * [Ghost](docs/zh-cn/usages/ghost.md)
+    * [Chatbot](docs/zh-cn/usages/chatbot.md)
+    * [MossAgent](docs/zh-cn/usages/moss_agent.md)
+* [Libraries](docs/zh-cn/libraries/libraries.md)
 * Frameworks
-    * [Messages](../zh-cn/frameworks/messages.md)
-    * [LLMs](../zh-cn/frameworks/llms.md)
-    * [EventBus](../zh-cn/frameworks/events.md)
-    * [Tasks](../zh-cn/frameworks/tasks.md)
-    * [Threads](../zh-cn/frameworks/threads.md)
+    * [Messages](docs/zh-cn/frameworks/messages.md)
+    * [LLMs](docs/zh-cn/frameworks/llms.md)
+    * [EventBus](docs/zh-cn/frameworks/eventbus.md)
+    * [Tasks](docs/zh-cn/frameworks/tasks.md)
+    * [Threads](docs/zh-cn/frameworks/threads.md)
 
 
 ## Developing Features

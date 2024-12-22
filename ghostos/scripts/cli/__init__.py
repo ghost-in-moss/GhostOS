@@ -131,7 +131,10 @@ def open_docs():
     m = Markdown(f"""
 You can open ghostos documentation:
 
-https://github.com/ghost-in-moss/GhostOS/docs
+* zh-cn: https://github.com/ghost-in-moss/GhostOS/docs/zh-cn/README.md
+* en: https://github.com/ghost-in-moss/GhostOS/docs/en/README.md
+
+or `git clone https://github.com/ghost-in-moss/GhostOS` then `docsify serve`
 """
                  )
     console.print(Panel(

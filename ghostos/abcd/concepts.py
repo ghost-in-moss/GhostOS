@@ -98,6 +98,9 @@ class GhostDriver(Generic[G], ABC):
         self.ghost = ghost
 
     def make_task_id(self, parent_scope: Scope) -> str:
+        """
+        generate unique instance id (task id) of the ghost instance.
+        """
         from ghostos.helpers import md5
         id_ = get_identifier(self.ghost)
         if id_.id:
@@ -122,10 +125,17 @@ class GhostDriver(Generic[G], ABC):
 
     @abstractmethod
     def get_instructions(self, session: Session) -> str:
+        """
+        get system instructions of the ghost.
+        usually used in client side.
+        """
         pass
 
     @abstractmethod
     def actions(self, session: Session) -> List[Action]:
+        """
+        return actions that react to the streaming output of llm
+        """
         pass
 
     @abstractmethod
@@ -142,10 +152,18 @@ class GhostDriver(Generic[G], ABC):
             session: Session,
             event: Event,
     ) -> Union[Event, None]:
+        """
+        intercept the ghost event
+        :returns: if None, the event will be ignored
+        """
         pass
 
     @abstractmethod
     def on_creating(self, session: Session) -> None:
+        """
+        when the ghost task is created first time.
+        this method can initialize the thread, pycontext etc.
+        """
         pass
 
     @abstractmethod
@@ -157,6 +175,9 @@ class GhostDriver(Generic[G], ABC):
 
     @abstractmethod
     def truncate(self, session: Session) -> GoThreadInfo:
+        """
+        truncate the history messages in the thread
+        """
         pass
 
 
@@ -407,7 +428,7 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def talk(self, query: str, user_name: str = "") -> Tuple[Event, Receiver]:
+    def talk(self, query: str, user_name: str = "", context: Optional[G.ContextType] = None) -> Tuple[Event, Receiver]:
         pass
 
     @abstractmethod

@@ -18,3 +18,41 @@
 这个技术实现不是 `GhostOS` 自身的目标, 但由于开源社区还没提供成熟的 `Prompt Object Model` 实现, 因此作者先实现了一个简单版.
 
 详见: [ghostos.prompter](https://github.com/ghost-in-moss/GhostOS/ghostos/prompter.py)
+
+
+以 [MossAgent](../usages/moss_agent.md) 为例, 它默认的 Prompter 是如下结构: 
+
+```python
+    def _get_instruction_prompter(self, session: Session, runtime: MossRuntime) -> Prompter:
+        agent = self.ghost
+        return TextPrmt().with_children(
+            # system meta prompt
+            TextPrmt(
+                title="Meta Instruction",
+                content=AGENT_META_INTRODUCTION,
+            ).with_children(
+                TextPrmt(title="GhostOS", content=GHOSTOS_INTRODUCTION),
+                TextPrmt(title="MOSS", content=MOSS_INTRODUCTION),
+                # code context
+                get_moss_context_prompter("Code Context", runtime),
+            ),
+            
+            # agent prompt
+            TextPrmt(
+                title="Agent Info",
+                content="The Agent info about who you are and what you are doing: ",
+            ).with_children(
+                get_agent_identity("Identity", agent.__identifier__()),
+                TextPrmt(title="Persona", content=self._get_agent_persona(session, runtime)),
+                TextPrmt(title="Instruction", content=self._get_agent_instruction(session, runtime)),
+            ),
+            
+            # context prompt
+            TextPrmt(
+                title="Context",
+                content="",
+            ).with_children(
+                self._get_context_prompter(session),
+            )
+        )
+```

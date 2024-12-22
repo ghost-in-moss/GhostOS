@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from ghostos.helpers import import_from_path
 from ghostos.prompter import TextPrmt, Prompter
-from ghostos.abcd import GhostDriver, Operator, Agent, Session, StateValue, Action, Thought
+from ghostos.abcd import GhostDriver, Operator, Agent, Session, StateValue, Action, Thought, Ghost
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, PyContext, MossRuntime
 from ghostos.entity import ModelEntity
@@ -256,8 +256,13 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         pycontext = self.get_pycontext(session)
 
         compiler = session.container.force_fetch(MossCompiler)
+        container = compiler.container()
+
         compiler = compiler.join_context(pycontext)
         compiler = compiler.with_locals(Optional=Optional)
+
+        # register self
+        container.set(Ghost, self.ghost)
 
         # bind moss agent itself
         compiler.bind(type(self.ghost), self.ghost)

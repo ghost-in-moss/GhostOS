@@ -60,6 +60,7 @@ class SessionImpl(Session[Ghost]):
     ):
         # session level container
         self.container = Container(parent=container, name="session")
+
         self.upstream = stream
         self.task = task
         self.logger = logger

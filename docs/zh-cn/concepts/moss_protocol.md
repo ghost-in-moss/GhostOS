@@ -3,12 +3,12 @@
 当前主流 AI Agent 的框架使用 `JSON Schema Function Call` 为代表的手段来操作系统提供的能力.
 也有越来越多的框架开始直接用模型生成的代码来驱动, 代表性的是 OpenInterpreter.
 
-`GhostOS` 项目设想未来的 AI Agent 与外部系统主要的交互手段是基于代码化的协议, 这包含四个方面:
+`GhostOS` 项目设想, 未来的 AI Agent 与外部系统主要的交互手段是基于代码化的协议, 这包含四个方面:
 
 * `Code As Prompt`: 系统通过一系列的规则, 将代码直接反射成 Prompt 提供给大模型, 让大模型直接调用.
 * `Code Interpreter`: 系统将大模型生成的代码直接在环境里执行, 用来驱动系统行为.
-* `Runtime Injection`: 系统将运行时生成的各种实例, 注入到上下文中, 让大模型可以使用动态的上下文.
-* `Context Manager`: 系统管理多轮对话中执行的代码上下文, 管理各种变量的存储, 使用和回收.
+* `Runtime Injection`: 系统将运行时生成的各种实例, 注入到上下文中.
+* `Context Manager`: 系统管理多轮对话中各种变量的存储, 使用和回收.
 
 这整套方案在 `GhostOS` 里定义为 `MOSS` 协议, 全称是 `Model-oriented Operating System Simulator` (
 面向模型的操作系统模拟器).
@@ -48,7 +48,7 @@ class Moss(Parent):
 大模型和人类工程师阅读这份代码, 看到可以通过 `moss.body` 或 `moss.face` 驱动 SpheroBolt 的行为. 
 代码中被引用的 `RollFunc`, `Ball`, `Move` 等类库, 会自动反射成 Prompt, 和源码一起提交给 LLM, 用来生成控制代码. 
 
-这样 LLM 可以生成一个函数: 
+这样可以要求 LLM 生成一个函数: 
 
 ```python
 def run(moss: Moss):
@@ -56,21 +56,21 @@ def run(moss: Moss):
     moss.body.new_move(True).spin(360, 1)
 ```
 
-系统会将这个函数编译到当前模块, 然后运行其中的 `run` 函数. 当这个代码执行时, 就真实调用了 SpheroBoltGPT 的 `body` 对象.
+`MossRuntime` 会将这个函数编译到当前模块, 然后运行其中的 `run` 函数. 当这个代码执行时, 就真实调用了 SpheroBoltGPT 的 `body` 对象.
 
 ### Abstract Classes
 
 `MOSS` 实现的核心是三个类:
 
-* [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/dev/ghostos/core/moss/abcd.py): 编译任何 python module, 生成一个可供解析的临时模块.
-* [MossPrompter](https://github.com/ghost-in-moss/GhostOS/tree/dev/ghostos/core/moss/abcd.py): 反射 python module, 用来生成大模型看到的 Prompt.
-* [MossRuntime](https://github.com/ghost-in-moss/GhostOS/tree/dev/ghostos/core/moss/abcd.py): 在编译的临时 module 中, 执行大模型生成的代码.
+* [MossCompiler](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/abcd.py): 编译任何 python module, 生成一个可供解析的临时模块.
+* [MossPrompter](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/abcd.py): 反射 python module, 用来生成大模型看到的 Prompt.
+* [MossRuntime](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/abcd.py): 在编译的临时 module 中, 执行大模型生成的代码.
 
 ![moss architecture](../../assets/moss_achitecture.png)
 
 ### Get MossCompiler
 
-`MossCompiler` 注册到了 IoC Container 中. 要获取它的实例可以:
+`MossCompiler` 注册到了 [IoC Container](../concepts/ioc_container.md) 中. 要获取它的实例可以:
 
 ```python
 from ghostos.bootstrap import get_container
@@ -81,7 +81,7 @@ compiler = get_container().force_fetch(MossCompiler)
 
 ### PyContext
 
-`MossCompiler` 使用 [PyContext](https://github.com/ghost-in-moss/GhostOS/tree/dev/ghostos/core/moss/pycontext.py) 数据结构来管理一个可持久化的上下文.
+`MossCompiler` 使用 [PyContext](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/pycontext.py) 数据结构来管理一个可持久化的上下文.
 它可以用来存储运行时定义, 修改过的变量; 也可以管理对 python 代码的直接修改, 用于下一次运行.
 
 每个 `MossCompiler` 都会继承一个独立的 IoC Container, 因此可以使用它进行依赖注入的注册:
@@ -263,7 +263,7 @@ with runtime:
 ### Custom Lifecycle functions
 
 `MossRuntime` 在运行的生命周期中, 会尝试寻找编译模块里的魔术方法并执行.
-所有的魔术方法都定义在 [ghostos.core.moss.lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/dev/ghostos/core/moss/lifecycle.py) 中. 详情请查看文件.
+所有的魔术方法都定义在 [ghostos.core.moss.lifecycle](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/lifecycle.py) 中. 详情请查看文件.
 主要有以下几个方法:
 
 ```python
@@ -281,16 +281,25 @@ __all__ = [
 在使用 `MossCompiler` 编译的目标模块中, 可以定义一个名为 `Moss` 的类, 它需要继承自 `ghostos.core.moss.Moss`,
 这样它就可以在生命周期中得到关键的依赖注入, 达到所见即所得的效果.
 
+`Moss` 类的作用有两个:
+- 自动化依赖注入: 挂载到 Moss 上的抽象类都会获得 IoC 容器的依赖注入. 
+- 管理持久上下文: Moss 类上的数据对象会自动存储到 `PyContext`
+
 这个类的存在是默认的, 即便没有定义它, 也会生成一个名为 `moss` 的实例到编译的临时模块中. `moss` 实例可以传递给大模型生成代码里的函数.
 
 比如上下文:
 
 ```python
+from abc import ABC
 from ghostos.core.moss import Moss as Parent
 
+class Foo(ABC):
+   ...
 
 class Moss(Parent):
     int_val: int = 0
+
+    foo: Foo  #  the abstract class bound to Moss will automatically get injection from MossRuntime.container()
 ```
 
 大模型生成的代码:
@@ -331,7 +340,7 @@ injections = runtime.moss_injections()
 
 ## Examples
 
-关于 `MOSS` 的基线测试用例在 [ghostos.core.moss.examples](https://github.com/ghost-in-moss/GhostOS/tree/dev/ghostos/core/moss/examples)
+关于 `MOSS` 的基线测试用例在 [ghostos.core.moss.examples](https://github.com/ghost-in-moss/GhostOS/ghostos/core/moss/examples)
 可以参考其中的测试代码理解它的原理. 
 
 ## MOSS TestSuite
