@@ -116,7 +116,7 @@ export OPENAI_API_KEY=<KEY>
 
 Or:
 1. copy `{conf.env_example_file()}` to `{conf.env_file()}, and offer the necessary env configuration. (Optional)
-2. run `ghostos configs` to configure them manually. (Optional)
+2. run `ghostos config` to configure them manually. (Optional)
 
 Finally you can run `ghostos web ghostos.demo.agents.jojo` to test if everything is working. 
 """)))
