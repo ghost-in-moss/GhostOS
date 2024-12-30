@@ -86,22 +86,18 @@ The Workspace meant to save local files such as configs, logs, cache files.
     ))
 
     conf = get_bootstrap_config(local=False)
-    workspace_dir, ok = expect_workspace_dir()
-    app_dir = workspace_dir.rstrip('/').split("/")[-1]
     result = Prompt.ask(
         f"\n>> will init ghostos workspace at `{getcwd()}`. input directory name:",
-        default=app_dir,
+        default="app",
     )
     source_dir = join(conf.ghostos_dir, "ghostos/app")
     real_workspace_dir = abspath(result)
     console.print("start to init ghostos workspace")
     copy_workspace(source_dir, real_workspace_dir)
     console.print("ghostos workspace copied")
-
-    if conf.workspace_dir != real_workspace_dir:
-        conf.workspace_dir = real_workspace_dir
-        conf.save(getcwd())
-        console.print("save .ghostos.yml")
+    conf.workspace_dir = real_workspace_dir
+    conf.save(real_workspace_dir)
+    console.print("save .ghostos.yml")
     console.print(Panel(Markdown(f"""
 Done create workspace!
 
