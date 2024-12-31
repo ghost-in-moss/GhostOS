@@ -94,7 +94,7 @@ def expect_workspace_dir() -> Tuple[str, bool]:
     :return: (workspace dir: str, exists: bool)
     """
     expect_dir = abspath("app")
-    return abspath(expect_dir), exists(expect_dir) and isdir(expect_dir)
+    return expect_dir, exists(expect_dir) and isdir(expect_dir)
 
 
 def app_stub_dir() -> str:
