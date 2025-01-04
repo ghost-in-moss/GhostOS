@@ -56,7 +56,9 @@ class OpenAIWSConnection:
     def _create_socket(self, proxy: str, uri: str):
         parsed = urllib3.util.parse_url(proxy)
         if parsed.scheme != "socks5":
-            raise NotImplementedError(f"Only socks5 is supported, got {parsed.scheme}")
+            error_msg = f"OPENAI_PROXY Only socks5 is supported, got \"{proxy}\""
+            self._logger.error(error_msg)
+            raise NotImplementedError(error_msg)
         host = parsed.hostname
         port = parsed.port
         s = socks.socksocket()
