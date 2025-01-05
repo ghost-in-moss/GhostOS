@@ -59,7 +59,16 @@ ghostos init
 ```
 
 配置大模型. 默认使用 OpenAI `gpt-4o`, 要求环境变量存在 `OPENAI_API_KEY`.
-或者运行 `streamlit` 编辑界面:
+
+```bash
+export OPENAI_API_KEY="your openai api key"
+# Optionals: 
+export OPENAI_PROXY="sock5://localhost:[your-port]" # setup openai proxy
+export DEEPSEEK_API_KEY="your deepseek api key"
+epoxrt MOONSHOT_API_KEY="your moonshot api key"
+```
+
+或者运行 `streamlit` 打开配置界面:
 
 ```bash
 ghostos config
@@ -78,10 +87,31 @@ ghostos web ghostos.demo.agents.jojo
 ghostos web [my_path_file_path]
 ```
 
+当前的测试用例:
+
+```bash
+ghostos web ghostos.demo.agents.jojo
+ghostos web ghostos.demo.test_agents.moonshot         # moonshot-v1-32k model
+ghostos web ghostos.demo.test_agents.deepseek_chat    # deepseek chat model
+ghostos web ghostos.demo.test_agents.openai_o1_mini   # openai o1 mini model
+```
+
 可以通过创建本地 python 文件, 定义出自己的 Agents. 详情请见:
 
 * [Chatbot](/zh-cn/usages/chatbot.md): 极简的对话机器人
 * [MossAgent](/zh-cn/usages/moss_agent.md): 能使用 python 的 agent
+
+## Install Realtime
+
+`GhostOS` 当前支持 [OpenAI Realtime](https://platform.openai.com/docs/guides/realtime),
+使用 [pyaudio](https://pypi.org/project/PyAudio/) 来处理实时语音的输入输出.
+需要安装相关依赖: 
+
+```bash
+pip install 'ghostos[realtime]'
+```
+
+> 在安装 pyaudio 的时候可能会遇到一些问题, 我相信 gpt-4o, google 和 stackoverflow 能够很好地帮助你解决它们. 
 
 ## Use In Python
 

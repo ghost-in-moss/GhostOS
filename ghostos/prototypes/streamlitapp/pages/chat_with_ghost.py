@@ -97,7 +97,10 @@ def main_chat():
                         created = True
                     # error about realtime.
                     if realtime_app is None:
-                        st.error("Realtime mode need pyaudio installed successfully. Not ready yet")
+                        st.error(
+                            "Realtime mode need pyaudio installed successfully. "
+                            "run `pip install 'ghostos[realtime]'` first"
+                        )
                         route.realtime = False
                     else:
                         Singleton(realtime_app, RealtimeApp).bind(st.session_state)

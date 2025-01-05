@@ -37,6 +37,14 @@ natural language dialogue.
 ghostos web [my_path_file_path]
 ```
 
+## Install Realtime
+
+install realtime dependencies (mainly `pyaudio`):
+
+```bash
+pip install 'ghostos[realtime]'
+```
+
 ## Workspace
 
 `GhostOS` is currently using local files to store runtime data, so it's necessary to initialize a workspace.
@@ -56,7 +64,8 @@ ghostos clear-runtime
 
 There are two ways to define these environment variables:
 
-Using a `.env` file (automatically read through `dotenv`)
+* Export the environment variables to your shell.
+* Using a `.env` file (automatically read through `dotenv`)
 
 ```bash
 

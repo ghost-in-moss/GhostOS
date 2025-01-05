@@ -65,8 +65,16 @@ ghostos init
 ```
 
 Configure the model. Default to use OpenAI `gpt-4o`, requiring the environment variable `OPENAI_API_KEY`.
-Or you can use configuration ui by streamlit:
 
+```bash
+export OPENAI_API_KEY="your openai api key"
+# Optionals: 
+export OPENAI_PROXY="sock5://localhost:[your-port]" # setup openai proxy
+export DEEPSEEK_API_KEY="your deepseek api key"
+epoxrt MOONSHOT_API_KEY="your moonshot api key"
+```
+
+Or you can use configuration ui by streamlit:
 ```bash
 ghostos config
 ```
@@ -85,10 +93,31 @@ that can be instructed to call functions or methods within the file through natu
 ghostos web [my_path_file_path]
 ```
 
-ou can create a local Python file and define your own Agents. For more details
+some demo agents
+```bash
+ghostos web ghostos.demo.agents.jojo
+ghostos web ghostos.demo.test_agents.moonshot         # moonshot-v1-32k model
+ghostos web ghostos.demo.test_agents.deepseek_chat    # deepseek chat model
+ghostos web ghostos.demo.test_agents.openai_o1_mini   # openai o1 mini model
+```
+
+You can create a local Python file and define your own Agents. For more details
 
 * [Chatbot](docs/zh-cn/usages/chatbot.md): simplest chatbot
 * [MossAgent](docs/zh-cn/usages/moss_agent.md): an agent that can interact with the python module
+
+## Install Realtime 
+
+`GhostOS` support [OpenAI Realtime](https://platform.openai.com/docs/guides/realtime),
+using [pyaudio](https://pypi.org/project/PyAudio/) to handle realtime audio i/o. 
+Need to install the dependencies first:
+
+```bash
+pip install 'ghostos[realtime]'
+```
+
+> You may face some difficulties while install pyaudio on your device,
+> I'm sure gpt-4o, google or stackoverflow will offer you solutions.
 
 ## Use In Python
 
