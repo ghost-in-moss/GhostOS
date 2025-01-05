@@ -34,6 +34,14 @@ ghostos web ghostos.demo.agents.jojo
 ghostos web [my_path_file_path]
 ```
 
+## Install Realtime
+
+安装 realtime 所需的依赖: 
+
+```bash
+pip install 'ghostos[realtime]'
+```
+
 ## Workspace
 
 `GhostOS` 当前版本使用本地文件来存运行时数据. 所以需要初始化一个 workspace.
@@ -51,6 +59,7 @@ ghostos clear-runtime
 `GhostOS` 依赖各种模型的 `access token`, 默认是从环境变量中读取.
 定义这些环境变量有两种方法:
 
+- export 环境变量到命令行中. 
 - 使用 `.env` 文件 (自动通过 `dotenv` 读取)
 
 ```bash

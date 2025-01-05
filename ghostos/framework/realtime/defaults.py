@@ -6,9 +6,9 @@ from ghostos.abcd.realtime import (
     Realtime, RealtimeConfig, RealtimeDriver, Listener, Speaker, RealtimeAppConfig,
     RealtimeApp,
 )
+from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.container import Container, Provider, INSTANCE
-from ghostos.framework.openai_realtime import OpenAIRealtimeDriver
 
 
 class BasicRealtimeConfig(RealtimeConfig, YamlConfig):
@@ -55,6 +55,13 @@ class ConfigBasedRealtimeProvider(Provider[Realtime]):
 
     def factory(self, con: Container) -> Optional[INSTANCE]:
         configs = con.get(Configs)
+        logger = con.force_fetch(LoggerItf)
         realtime = ConfigsBasedRealtime(configs)
-        realtime.register(OpenAIRealtimeDriver())
-        return realtime
+        try:
+            from ghostos.framework.openai_realtime.driver import OpenAIRealtimeDriver
+            realtime.register(OpenAIRealtimeDriver())
+        except ImportError:
+            OpenAIRealtimeDriver = None
+            logger.info(f"failed to import OpenAIRealtimeDriver")
+        finally:
+            return realtime

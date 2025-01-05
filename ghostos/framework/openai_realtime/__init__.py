@@ -1,7 +1,6 @@
 from ghostos.abcd import Conversation
 from ghostos.abcd.realtime import RealtimeApp
 from ghostos.abcd.realtime import Speaker, Listener
-from ghostos.framework.openai_realtime.driver import OpenAIRealtimeDriver
 
 
 def get_openai_realtime_app(
@@ -11,7 +10,7 @@ def get_openai_realtime_app(
         speaker: Speaker,
         listener: Listener,
 ) -> RealtimeApp:
-
+    from ghostos.framework.openai_realtime.driver import OpenAIRealtimeDriver
     from ghostos.framework.openai_realtime.app import RealtimeAppImpl
     from ghostos.framework.openai_realtime.configs import OpenAIRealtimeAppConf
     from ghostos.framework.openai_realtime.ws import OpenAIWSConnection

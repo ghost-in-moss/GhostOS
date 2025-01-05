@@ -3,7 +3,7 @@ from openai import OpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
 from openai import NOT_GIVEN
-from openai.types.chat import ChatCompletion
+from openai.types.chat import ChatCompletion, ChatCompletionReasoningEffort
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
@@ -78,9 +78,11 @@ class OpenAIAdapter(LLMApi):
             logger: LoggerItf,
             # deprecated:
             functional_token_prompt: Optional[str] = None,
+            api_name: str = "",
     ):
-        self._service = service_conf
-        self._model = model_conf
+        self._api_name = api_name
+        self.service = service_conf.model_copy(deep=True)
+        self.model = model_conf.model_copy(deep=True)
         self._storage: PromptStorage = storage
         self._logger = logger
         http_client = None
@@ -99,17 +101,51 @@ class OpenAIAdapter(LLMApi):
             functional_token_prompt = DEFAULT_FUNCTIONAL_TOKEN_PROMPT
         self._functional_token_prompt = functional_token_prompt
 
+    @property
+    def name(self) -> str:
+        return self._api_name
+
     def get_service(self) -> ServiceConf:
-        return self._service
+        return self.service
 
     def get_model(self) -> ModelConf:
-        return self._model
+        return self.model
 
     def text_completion(self, prompt: str) -> str:
         raise NotImplemented("text_completion is deprecated, implement it later")
 
     def parse_message_params(self, messages: List[Message]) -> List[ChatCompletionMessageParam]:
-        return list(self._parser.parse_message_list(messages, self._model.message_types))
+        messages = self.parse_by_compatible_settings(messages)
+        return list(self._parser.parse_message_list(messages, self.model.message_types))
+
+    def parse_by_compatible_settings(self, messages: List[Message]) -> List[Message]:
+        # developer role test
+        if self.service.compatible.use_developer_role:
+            changed = []
+            for message in messages:
+                if message.role == Role.SYSTEM:
+                    message = message.model_copy(update={"role": Role.DEVELOPER}, deep=True)
+                changed.append(message)
+            messages = changed
+        else:
+            changed = []
+            for message in messages:
+                if message.role == Role.DEVELOPER:
+                    message = message.model_copy(update={"role": Role.SYSTEM}, deep=True)
+                changed.append(message)
+            messages = changed
+
+        # allow system messages
+        if not self.service.compatible.allow_system_in_messages:
+            changed = []
+            for message in messages:
+                if message.role == Role.SYSTEM or message.role == Role.DEVELOPER:
+                    name = f"__{message.role}__"
+                    message = message.model_copy(update={"role": Role.USER, "name": name}, deep=True)
+                changed.append(message)
+            messages = changed
+
+        return messages
 
     def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
         prompt = self.parse_prompt(prompt)
@@ -124,23 +160,23 @@ class OpenAIAdapter(LLMApi):
             self._logger.debug(f"start chat completion messages %s", messages)
             functions = prompt.get_openai_functions()
             tools = prompt.get_openai_tools()
-            if self._model.use_tools:
+            if self.model.use_tools:
                 functions = NOT_GIVEN
             else:
                 tools = NOT_GIVEN
             return self._client.chat.completions.create(
                 messages=messages,
-                model=self._model.model,
+                model=self.model.model,
                 function_call=prompt.get_openai_function_call(),
                 functions=functions,
                 tools=tools,
-                max_tokens=self._model.max_tokens,
-                temperature=self._model.temperature,
-                n=self._model.n,
-                timeout=self._model.timeout,
+                max_tokens=self.model.max_tokens,
+                temperature=self.model.temperature,
+                n=self.model.n,
+                timeout=self.model.timeout,
                 stream=stream,
                 stream_options=include_usage,
-                **self._model.kwargs,
+                **self.model.kwargs,
             )
         except Exception as e:
             self._logger.error(f"error chat completion for prompt {prompt.id}: {e}")
@@ -155,7 +191,7 @@ class OpenAIAdapter(LLMApi):
             prompt.added = [message]
             pack = self._parser.from_chat_completion(message.choices[0].message)
             # add completion usage
-            self._model.set_payload(pack)
+            self.model.set_payload(pack)
             if message.usage:
                 usage = CompletionUsagePayload.from_usage(message.usage)
                 usage.set_payload(pack)
@@ -169,6 +205,77 @@ class OpenAIAdapter(LLMApi):
         finally:
             self._storage.save(prompt)
 
+    def reasoning_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+        try:
+            message: ChatCompletion = self._reasoning_completion(prompt)
+            prompt.added = [message]
+            pack = self._parser.from_chat_completion(message.choices[0].message)
+            # add completion usage
+            self.model.set_payload(pack)
+            if message.usage:
+                usage = CompletionUsagePayload.from_usage(message.usage)
+                usage.set_payload(pack)
+
+            if not pack.is_complete():
+                pack.chunk = False
+            return [pack]
+        except Exception as e:
+            prompt.error = str(e)
+            raise
+        finally:
+            self._storage.save(prompt)
+
+    def _reasoning_completion(self, prompt: Prompt) -> ChatCompletion:
+        if self.model.reasoning is None:
+            raise NotImplementedError(f"current model {self.model} does not support reasoning completion ")
+
+        prompt = self.parse_prompt(prompt)
+        self._logger.info(
+            "start reasoning completion for prompt %s, model %s, reasoning conf %s",
+            prompt.id,
+            self.model.model_dump(exclude_defaults=True),
+            self.model.reasoning,
+        )
+        # include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
+        messages = prompt.get_messages()
+        messages = self.parse_message_params(messages)
+        if not messages:
+            raise AttributeError("empty chat!!")
+        try:
+            prompt.run_start = timestamp()
+            self._logger.debug(f"start reasoning completion messages %s", messages)
+            functions = prompt.get_openai_functions()
+            tools = prompt.get_openai_tools()
+            if self.model.use_tools:
+                functions = NOT_GIVEN
+            else:
+                tools = NOT_GIVEN
+            if self.model.reasoning.effort is None:
+                reasoning_effort = NOT_GIVEN
+            else:
+                reasoning_effort = self.model.reasoning.effort
+
+            return self._client.chat.completions.create(
+                messages=messages,
+                model=self.model.model,
+                # add this parameters then failed:
+                # Error code: 400 - {'error': {'message': "Unknown parameter: 'reasoning_effort'.",
+                # 'type': 'invalid_request_error', 'param': 'reasoning_effort', 'code': 'unknown_parameter'}
+                # reasoning_effort=reasoning_effort,
+                function_call=prompt.get_openai_function_call(),
+                functions=functions,
+                tools=tools,
+                n=self.model.n,
+                timeout=self.model.timeout,
+                **self.model.kwargs,
+            )
+        except Exception as e:
+            self._logger.error(f"error reasoning completion for prompt {prompt.id}: {e}")
+            raise
+        finally:
+            self._logger.debug(f"end reasoning completion for prompt {prompt.id}")
+            prompt.run_end = timestamp()
+
     def chat_completion_chunks(self, prompt: Prompt) -> Iterable[Message]:
         try:
             chunks: Iterable[ChatCompletionChunk] = self._chat_completion(prompt, stream=True)
@@ -178,7 +285,7 @@ class OpenAIAdapter(LLMApi):
             for chunk in messages:
                 yield chunk
                 if chunk.is_complete():
-                    self._model.set_payload(chunk)
+                    self.model.set_payload(chunk)
                     prompt_payload.set_payload(chunk)
                     output.append(chunk)
             prompt.added = output
@@ -189,7 +296,7 @@ class OpenAIAdapter(LLMApi):
             self._storage.save(prompt)
 
     def parse_prompt(self, prompt: Prompt) -> Prompt:
-        prompt.model = self._model
+        prompt.model = self.model
         return prompt
 
 
@@ -208,9 +315,9 @@ class OpenAIDriver(LLMDriver):
     def driver_name(self) -> str:
         return OPENAI_DRIVER_NAME
 
-    def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
+    def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
         get_ghostos_logger().debug(f"new llm api %s at service %s", model.model, service.name)
-        return OpenAIAdapter(service, model, self._parser, self._storage, self._logger)
+        return OpenAIAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
 
 
 class LitellmAdapter(OpenAIAdapter):
@@ -223,14 +330,14 @@ class LitellmAdapter(OpenAIAdapter):
         messages = chat.get_messages()
         messages = self.parse_message_params(messages)
         response = litellm.completion(
-            model=self._model.model,
+            model=self.model.model,
             messages=list(messages),
-            timeout=self._model.timeout,
-            temperature=self._model.temperature,
-            n=self._model.n,
+            timeout=self.model.timeout,
+            temperature=self.model.temperature,
+            n=self.model.n,
             # not support stream yet
             stream=False,
-            api_key=self._service.token,
+            api_key=self.service.token,
         )
         return response.choices[0].message
 
@@ -253,5 +360,5 @@ class LiteLLMDriver(OpenAIDriver):
     def driver_name(self) -> str:
         return LITELLM_DRIVER_NAME
 
-    def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
-        return LitellmAdapter(service, model, self._parser, self._storage, self._logger)
+    def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
+        return LitellmAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)

@@ -2,5 +2,3 @@
 bool_options:
   DEBUG_MODE: false
   HELP_MODE: false
-domain: ghostos
-lang: zh

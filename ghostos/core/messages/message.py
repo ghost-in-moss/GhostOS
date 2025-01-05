@@ -30,6 +30,7 @@ class Role(str, enum.Enum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+    DEVELOPER = "developer"
 
     @classmethod
     def all(cls) -> Set[str]:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from typing import List, Dict, Optional, Any, ClassVar
+from typing import List, Dict, Optional, Any, ClassVar, Literal
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Payload
 from ghostos.helpers import gettext as _
@@ -15,7 +15,17 @@ __all__ = [
 OPENAI_DRIVER_NAME = "openai_driver"
 """default llm driver name for OpenAI llm message protocol """
 
-LITELLM_DRIVER_NAME = "lite_llm_Driver"
+LITELLM_DRIVER_NAME = "lite_llm_driver"
+
+
+class Reasonable(BaseModel):
+    """
+    the OpenAI reasoning configs adapter
+    """
+    effort: Literal["low", "medium", "high"] = Field(
+        "medium",
+        description="reasoning effort level",
+    )
 
 
 class ModelConf(Payload):
@@ -34,7 +44,27 @@ class ModelConf(Payload):
     request_timeout: float = Field(default=40, description="request timeout")
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="kwargs")
     use_tools: bool = Field(default=True, description="use tools")
+    max_completion_tokens: Optional[int] = Field(
+        None,
+        description="max completion tokens",
+    )
     message_types: Optional[List[str]] = Field(None, description="model allow message types")
+    allow_streaming: bool = Field(True, description="if the current model allow streaming")
+    reasoning: Optional[Reasonable] = Field(
+        default=None,
+        description="reasoning configuration",
+    )
+
+    payloads: Dict[str, Dict] = Field(
+        default_factory=dict,
+        description="custom payload objects. save strong typed but optional dict."
+                    "see ghostos.core.messages.Payload class."
+    )
+
+
+class Compatible(BaseModel):
+    use_developer_role: bool = Field(default=False, description="use developer role instead of system")
+    allow_system_in_messages: bool = Field(default=True, description="allow system messages in history")
 
 
 class ServiceConf(BaseModel):
@@ -53,6 +83,11 @@ class ServiceConf(BaseModel):
     driver: str = Field(
         default=OPENAI_DRIVER_NAME,
         description="the adapter driver name of this service. change it only if you know what you are doing",
+    )
+
+    compatible: Compatible = Field(
+        default_factory=Compatible,
+        description="the model api compatible configuration",
     )
 
     def load(self, environ: Optional[Dict] = None) -> None:

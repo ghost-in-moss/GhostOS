@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 from os import path
 
 __all__ = [
-    "run_streamlit_app.py",
     "start_streamlit_prototype_cli",
     "RunGhostChatApp",
     "get_config_flag_options",

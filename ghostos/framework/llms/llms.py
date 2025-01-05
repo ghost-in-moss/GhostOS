@@ -67,9 +67,9 @@ class LLMsImpl(LLMs):
                 continue
             yield service, model_conf
 
-    def new_api(self, service_conf: ServiceConf, api_conf: ModelConf) -> LLMApi:
+    def new_api(self, service_conf: ServiceConf, api_conf: ModelConf, api_name: str = "") -> LLMApi:
         driver = self._llm_drivers.get(service_conf.driver, self._default_driver)
-        return driver.new(service_conf, api_conf)
+        return driver.new(service_conf, api_conf, api_name=api_name)
 
     def get_api(self, api_name: str) -> Optional[LLMApi]:
         api = self._apis.get(api_name, None)
@@ -85,7 +85,7 @@ class LLMsImpl(LLMs):
         service_conf = self._llm_services.get(model_conf.service, None)
         if service_conf is None:
             return None
-        api = self.new_api(service_conf, model_conf)
+        api = self.new_api(service_conf, model_conf, api_name=api_name)
         # 解决缓存问题. 工业场景中, 或许不该缓存, 因为配置随时可能变化.
         if api is not None:
             self._apis[api_name] = api

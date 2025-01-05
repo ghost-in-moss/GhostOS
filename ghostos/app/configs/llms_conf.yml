@@ -2,7 +2,7 @@
 default: gpt-4o
 models:
   claude-3-5-sonnet:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: claude-3-5-sonnet-20240620
@@ -13,7 +13,7 @@ models:
     timeout: 30
     use_tools: true
   claude-3-haiku:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: claude-3-haiku-20240307
@@ -24,10 +24,10 @@ models:
     timeout: 30
     use_tools: true
   deepseek-chat:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
-    model: deepseek/deepseek-chat
+    model: deepseek-chat
     n: 1
     request_timeout: 40
     service: deepseek
@@ -35,7 +35,7 @@ models:
     timeout: 30
     use_tools: true
   deepseek-coder:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: deepseek/deepseek-coder
@@ -46,7 +46,7 @@ models:
     timeout: 30
     use_tools: true
   gpt-3.5-turbo:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: gpt-3.5-turbo
@@ -57,7 +57,7 @@ models:
     timeout: 30
     use_tools: true
   gpt-4:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: gpt-4
@@ -68,7 +68,7 @@ models:
     timeout: 30
     use_tools: true
   gpt-4-turbo:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: gpt-4-turbo
@@ -78,8 +78,16 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
+  gpt-o1-mini:
+    model: o1-mini
+    service: openai
+    reasoning: { }
+  gpt-o1:
+    model: o1
+    service: openai
+    reasoning: { }
   gpt-4o:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: gpt-4o
@@ -90,7 +98,7 @@ models:
     timeout: 30
     use_tools: true
   moonshot-v1-128k:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: moonshot-v1-128k
@@ -101,7 +109,7 @@ models:
     timeout: 30
     use_tools: true
   moonshot-v1-32k:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: moonshot-v1-32k
@@ -112,7 +120,7 @@ models:
     timeout: 30
     use_tools: true
   moonshot-v1-8k:
-    kwargs: {}
+    kwargs: { }
     max_tokens: 2000
     message_types: null
     model: moonshot-v1-8k
@@ -123,23 +131,23 @@ models:
     timeout: 30
     use_tools: true
 services:
-- base_url: https://api.moonshot.cn/v1
-  driver: openai_driver
-  name: moonshot
-  proxy: null
-  token: $MOONSHOT_API_KEY
-- base_url: https://api.openai.com/v1
-  driver: openai_driver
-  name: openai
-  proxy: $OPENAI_PROXY
-  token: $OPENAI_API_KEY
-- base_url: https://api.anthropic.com/v1
-  driver: openai_driver
-  name: anthropic
-  proxy: $ANTHROPIC_PROXY
-  token: $ANTHROPIC_API_KEY
-- base_url: https://api.deepseek.com/beta
-  driver: openai_driver
-  name: deepseek
-  proxy: null
-  token: $DEEPSEEK_API_KEY
+  - base_url: https://api.moonshot.cn/v1
+    driver: openai_driver
+    name: moonshot
+    token: $MOONSHOT_API_KEY
+  - base_url: https://api.openai.com/v1
+    driver: openai_driver
+    name: openai
+    proxy: $OPENAI_PROXY
+    token: $OPENAI_API_KEY
+    compatible:
+      use_developer_role: true
+  - base_url: https://api.anthropic.com/v1
+    driver: lite_llm_driver
+    name: anthropic
+    proxy: $ANTHROPIC_PROXY
+    token: $ANTHROPIC_API_KEY
+  - base_url: https://api.deepseek.com/beta
+    driver: openai_driver
+    name: deepseek
+    token: $DEEPSEEK_API_KEY

@@ -3,7 +3,7 @@ import streamlit_react_jsonschema as srj
 import streamlit_paste_button as spb
 import time
 from PIL.Image import Image
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 from ghostos.prototypes.streamlitapp.pages.router import (
     GhostChatRoute, GhostTaskRoute,
 )
@@ -25,8 +25,7 @@ from ghostos.core.messages import (
     ImageAssetMessage,
 )
 from streamlit.logger import get_logger
-from ghostos.framework.openai_realtime import RealtimeApp
-from ghostos.abcd.realtime import OperatorName
+from ghostos.abcd.realtime import OperatorName, RealtimeApp
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
@@ -96,22 +95,30 @@ def main_chat():
                         realtime_app.close()
                         realtime_app = get_realtime_app(conversation)
                         created = True
-                    Singleton(realtime_app, RealtimeApp).bind(st.session_state)
-                    if created:
-                        realtime_app.start(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
+                    # error about realtime.
+                    if realtime_app is None:
+                        st.error(
+                            "Realtime mode need pyaudio installed successfully. "
+                            "run `pip install 'ghostos[realtime]'` first"
+                        )
+                        route.realtime = False
                     else:
-                        realtime_app.set_mode(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
+                        Singleton(realtime_app, RealtimeApp).bind(st.session_state)
+                        if created:
+                            realtime_app.start(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
+                        else:
+                            realtime_app.set_mode(vad_mode=route.vad_mode, listen_mode=route.listen_mode)
 
-                    canceled = get_response_button_count()
-                    if not route.vad_mode:
-                        if st.button("response", key=f"create_realtime_response_{canceled}"):
+                        canceled = get_response_button_count()
+                        if not route.vad_mode:
+                            if st.button("response", key=f"create_realtime_response_{canceled}"):
+                                incr_response_button_count()
+                                realtime_app.operate(OperatorName.respond.new(""))
+                                st.rerun()
+                        if st.button("cancel response", key=f"cancel_realtime_response_{canceled}"):
                             incr_response_button_count()
-                            realtime_app.operate(OperatorName.respond.new(""))
+                            realtime_app.operate(OperatorName.cancel_responding.new(""))
                             st.rerun()
-                    if st.button("cancel response", key=f"cancel_realtime_response_{canceled}"):
-                        incr_response_button_count()
-                        realtime_app.operate(OperatorName.cancel_responding.new(""))
-                        st.rerun()
 
             else:
                 if realtime_app is not None:
@@ -186,6 +193,8 @@ def main_chat():
 
 
 def run_realtime(route: GhostChatRoute, app: RealtimeApp):
+    if app is None:
+        st.error("Realtime mode is not installed ready yet.")
     try:
         _run_realtime(route, app)
     except Exception as e:
@@ -238,7 +247,12 @@ def _run_realtime(route: GhostChatRoute, app: RealtimeApp):
     st.write("app is close")
 
 
-def get_realtime_app(conversation: Conversation) -> RealtimeApp:
+def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
+    try:
+        import pyaudio
+    except ImportError:
+        return None
+
     from ghostos.framework.audio import get_pyaudio_pcm16_speaker, get_pyaudio_pcm16_listener
     from ghostos.framework.openai_realtime import get_openai_realtime_app
     speaker = get_pyaudio_pcm16_speaker()

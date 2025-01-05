@@ -8,5 +8,7 @@ __ghost__ = Chatbot(
     name="jojo",
     description="a chatbot for baseline test",
     persona="you are an LLM-driven cute girl, named jojo",
-    instruction="remember talk to user with user's language."
+    instruction="remember talk to user with user's language.",
+    # set model using openai-o1
+    llm_api="moonshot-v1-32k",
 )
