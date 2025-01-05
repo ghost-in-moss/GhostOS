@@ -25,6 +25,16 @@ class Payload(BaseModel, ABC):
             return None
         return cls(**value)
 
+    @classmethod
+    def read_payload_default(cls, message: Union[Message, HasPayloads]) -> Self:
+        """
+        only for payload class that has default values
+        """
+        r = cls.read_payload(message)
+        if r is None:
+            r = cls()
+        return r
+
     def set_payload(self, message: Union[Message, HasPayloads]) -> None:
         message.payloads[self.key] = self.model_dump()
 

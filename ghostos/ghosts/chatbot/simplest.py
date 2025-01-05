@@ -1,4 +1,4 @@
-from typing import Union, Iterable, ClassVar, List
+from typing import Union, Iterable, ClassVar, List, Optional
 
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
 from ghostos.abcd.thoughts import LLMThought, Thought
@@ -22,6 +22,7 @@ class Chatbot(ModelEntity, Agent):
     instruction: str = Field(description="instruction of the chatbot")
     llm_api: str = Field(default="", description="llm api of the chatbot")
     history_turns: int = Field(default=20, description="history turns of thread max turns")
+    id: Optional[str] = Field(default=None)
 
     ArtifactType: ClassVar = None
     ContextType: ClassVar = None
@@ -29,7 +30,7 @@ class Chatbot(ModelEntity, Agent):
 
     def __identifier__(self) -> Identifier:
         return Identifier(
-            id=None,
+            id=self.id,
             name=self.name,
             description=self.description,
         )

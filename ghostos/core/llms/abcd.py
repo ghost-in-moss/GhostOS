@@ -16,6 +16,14 @@ class LLMApi(ABC):
     uniform interface for large language models in GhostOS.
     """
 
+    service: ServiceConf
+    model: ModelConf
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
     @abstractmethod
     def get_service(self) -> ServiceConf:
         """
@@ -46,25 +54,32 @@ class LLMApi(ABC):
         pass
 
     @abstractmethod
-    def chat_completion(self, chat: Prompt) -> Message:
+    def chat_completion(self, prompt: Prompt) -> Message:
         pass
 
     @abstractmethod
-    def chat_completion_chunks(self, chat: Prompt) -> Iterable[Message]:
+    def chat_completion_chunks(self, prompt: Prompt) -> Iterable[Message]:
         """
         todo: 暂时先这么定义了.
         """
         pass
 
-    def deliver_chat_completion(self, chat: Prompt, stream: bool) -> Iterable[Message]:
+    @abstractmethod
+    def reasoning_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+        pass
+
+    def deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
         """
         逐个发送消息的包.
         """
-        if not stream:
-            message = self.chat_completion(chat)
-            return [message]
+        if self.model.reasoning is not None:
+            yield from self.reasoning_completion(prompt, stream)
 
-        yield from self.chat_completion_chunks(chat)
+        elif not stream or not self.model.allow_streaming:
+            message = self.chat_completion(prompt)
+            return [message]
+        else:
+            yield from self.chat_completion_chunks(prompt)
 
 
 class LLMDriver(ABC):
@@ -78,7 +93,7 @@ class LLMDriver(ABC):
         pass
 
     @abstractmethod
-    def new(self, service: ServiceConf, model: ModelConf) -> LLMApi:
+    def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
         pass
 
 
@@ -130,7 +145,7 @@ class LLMs(ABC):
         pass
 
     @abstractmethod
-    def new_api(self, service_conf: ServiceConf, api_conf: ModelConf) -> LLMApi:
+    def new_api(self, service_conf: ServiceConf, api_conf: ModelConf, api_name: str = "") -> LLMApi:
         """
         instance a LLMApi by configs.
         """

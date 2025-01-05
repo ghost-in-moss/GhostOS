@@ -102,7 +102,7 @@ class YamlConfig(Config, BaseModel):
         return cls(**value)
 
     def marshal(self) -> bytes:
-        value = self.model_dump(exclude_defaults=False)
+        value = self.model_dump(exclude_defaults=True)
         comment = f"# from class: {generate_import_path(self.__class__)}"
         result = yaml.safe_dump(value)
         return "\n".join([comment, result]).encode()

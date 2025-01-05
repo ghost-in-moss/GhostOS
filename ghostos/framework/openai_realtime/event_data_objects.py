@@ -319,7 +319,7 @@ class SessionObjectBase(BaseModel):
     """
     model: OpenAIRealtimeModel = Field(OpenAIRealtimeModel.gpt_4o_realtime_preview_2024_12_17)
     modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
-    voice: Voice = Field(
+    voice: str = Field(
         default="coral",
         description="Voice to use",
     )
