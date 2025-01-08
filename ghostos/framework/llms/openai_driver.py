@@ -118,33 +118,38 @@ class OpenAIAdapter(LLMApi):
         messages = self.parse_by_compatible_settings(messages)
         return list(self._parser.parse_message_list(messages, self.model.message_types))
 
+    @staticmethod
+    def _parse_system_to_develop(messages: List[Message]) -> List[Message]:
+        changed = []
+        for message in messages:
+            if message.role == Role.SYSTEM:
+                message = message.model_copy(update={"role": Role.DEVELOPER.value}, deep=True)
+            changed.append(message)
+        return changed
+
     def parse_by_compatible_settings(self, messages: List[Message]) -> List[Message]:
         # developer role test
         if self.service.compatible.use_developer_role:
-            changed = []
-            for message in messages:
-                if message.role == Role.SYSTEM:
-                    message = message.model_copy(update={"role": Role.DEVELOPER}, deep=True)
-                changed.append(message)
-            messages = changed
+            messages = self._parse_system_to_develop(messages)
         else:
             changed = []
             for message in messages:
                 if message.role == Role.DEVELOPER:
-                    message = message.model_copy(update={"role": Role.SYSTEM}, deep=True)
+                    message = message.model_copy(update={"role": Role.SYSTEM.value}, deep=True)
                 changed.append(message)
             messages = changed
 
         # allow system messages
         if not self.service.compatible.allow_system_in_messages:
             changed = []
+            count = 0
             for message in messages:
-                if message.role == Role.SYSTEM or message.role == Role.DEVELOPER:
+                if count > 0 and message.role == Role.SYSTEM or message.role == Role.DEVELOPER:
                     name = f"__{message.role}__"
-                    message = message.model_copy(update={"role": Role.USER, "name": name}, deep=True)
+                    message = message.model_copy(update={"role": Role.USER.value, "name": name}, deep=True)
                 changed.append(message)
+                count += 1
             messages = changed
-
         return messages
 
     def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
@@ -238,6 +243,7 @@ class OpenAIAdapter(LLMApi):
         )
         # include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = prompt.get_messages()
+        messages = self._parse_system_to_develop(messages)
         messages = self.parse_message_params(messages)
         if not messages:
             raise AttributeError("empty chat!!")
