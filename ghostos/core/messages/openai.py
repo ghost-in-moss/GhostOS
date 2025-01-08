@@ -8,6 +8,7 @@ from openai.types.chat.chat_completion_tool_message_param import ChatCompletionT
 from openai.types.chat.chat_completion_assistant_message_param import ChatCompletionAssistantMessageParam, FunctionCall
 from openai.types.chat.chat_completion_message_tool_call_param import ChatCompletionMessageToolCallParam
 from openai.types.chat.chat_completion_system_message_param import ChatCompletionSystemMessageParam
+from openai.types.chat.chat_completion_developer_message_param import ChatCompletionDeveloperMessageParam
 from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 from ghostos.core.messages import (
@@ -188,6 +189,10 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         elif message.role == Role.SYSTEM:
             return [
                 ChatCompletionSystemMessageParam(content=message.get_content(), role="system")
+            ]
+        elif message.role == Role.DEVELOPER:
+            return [
+                ChatCompletionDeveloperMessageParam(content=message.get_content(), role="developer")
             ]
         elif message.role == Role.USER:
             item = ChatCompletionUserMessageParam(content=message.get_content(), role="user")
