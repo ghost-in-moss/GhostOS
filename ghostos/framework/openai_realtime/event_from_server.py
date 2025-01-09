@@ -1,5 +1,6 @@
 import base64
-from typing import Self, List, Optional, Union, ClassVar
+from typing import List, Optional, Union, ClassVar
+from typing_extensions import Self
 from abc import ABC
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -7,7 +8,6 @@ from ghostos.core.messages import Message as GhostOSMessage, MessageType
 from ghostos.framework.openai_realtime.event_data_objects import (
     RateLimit, Response, MessageItem,
     DeltaIndex, ConversationObject, Error, SessionObject,
-    ResponseSettings,
     Content,
 )
 

@@ -1,4 +1,4 @@
-from typing import Optional, Self
+from typing import Optional
 
 from ghostos.streamlit import (
     is_streamlit_renderable,
@@ -11,7 +11,7 @@ from ghostos.streamlit import (
 def test_render_streamlit_object():
     class Foo(StreamlitObject):
 
-        def __streamlit_render__(self) -> Optional[Rendered[Self]]:
+        def __streamlit_render__(self) -> Optional[Rendered]:
             return Rendered(value=self, changed=False)
 
     foo = Foo()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Union, List, Self
+from typing import Union, List
+from typing_extensions import Self
 from abc import ABC
 
 from ghostos.container import Container
@@ -8,7 +9,7 @@ from ghostos.abcd import Taskflow, Session, Operator
 from ghostos.abcd import fire_session_event
 from ghostos.core.runtime import TaskState, EventTypes, TaskBrief
 from ghostos.core.moss import Injection, MossRuntime
-from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role, MessageType
+from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role
 from pprint import pprint
 from contextlib import redirect_stdout
 from io import StringIO

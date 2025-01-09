@@ -2,8 +2,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import (
     Generic,
-    List, Iterable, Tuple, TypeVar, Optional, Dict, Callable, Union, Self
+    List, Iterable, Tuple, TypeVar, Optional, Dict, Callable, Union
 )
+from typing_extensions import Self
 from ghostos.abcd import Conversation
 from ghostos.core.messages import Message, ReceiverBuffer
 from ghostos.entity import ModelEntityMeta, to_entity_model_meta, from_entity_model_meta

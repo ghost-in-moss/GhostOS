@@ -1,4 +1,5 @@
-from typing import Literal, Optional, Callable, Self, Dict, Tuple
+from typing import Optional, Callable, Dict, Tuple
+from typing_extensions import Self, Literal
 
 from spherov2.commands.io import FrameRotationOptions
 

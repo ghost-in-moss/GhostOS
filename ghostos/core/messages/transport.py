@@ -1,7 +1,6 @@
 from __future__ import annotations
-from typing import Iterable, Optional, Tuple, List, Self, Iterator
-
-from typing_extensions import Protocol
+from typing import Iterable, Optional, Tuple, List, Iterator
+from typing_extensions import Protocol, Self
 from collections import deque
 from abc import abstractmethod
 from ghostos.core.messages.message import Message, MessageType

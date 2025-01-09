@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Protocol, Optional, Dict, Self, List, Union
+from typing import Protocol, Optional, Dict, List, Union
+from typing_extensions import Self
 from ghostos.framework.openai_realtime.event_from_server import *
 from ghostos.framework.openai_realtime.event_data_objects import (
     MessageItem,

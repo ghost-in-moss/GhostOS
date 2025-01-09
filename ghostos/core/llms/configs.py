@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 
-from typing import List, Dict, Optional, Any, ClassVar, Literal
+from typing import List, Dict, Optional, Any, ClassVar
+from typing_extensions import Literal
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Payload
-from ghostos.helpers import gettext as _
+
+# from ghostos.helpers import gettext as _
 
 __all__ = [
     'ModelConf', 'ServiceConf', 'LLMsConfig',

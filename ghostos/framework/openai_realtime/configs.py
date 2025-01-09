@@ -1,4 +1,5 @@
-from typing import ClassVar, Optional, Self
+from typing import ClassVar, Optional
+from typing_extensions import Self
 from ghostos.abcd.realtime import RealtimeAppConfig
 from ghostos.contracts.configs import YamlConfig
 from ghostos.framework.openai_realtime.event_data_objects import SessionObject

@@ -1,4 +1,5 @@
-from typing import TypedDict, Optional
+from typing import Optional
+from typing_extensions import TypedDict
 
 
 def test_dict_items():

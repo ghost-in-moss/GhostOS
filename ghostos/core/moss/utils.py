@@ -1,6 +1,7 @@
 import inspect
 import re
-from typing import Any, Dict, Callable, Optional, List, Iterable, TypedDict, is_typeddict
+from typing import Any, Callable, Optional, List, Iterable
+from typing_extensions import TypedDict, is_typeddict
 from pydantic import BaseModel
 
 __all__ = [

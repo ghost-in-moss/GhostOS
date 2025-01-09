@@ -3,7 +3,8 @@ from __future__ import annotations
 import base64
 
 from pydantic import BaseModel, Field
-from typing import Optional, Literal, List, Union, Dict
+from typing import Optional, List, Union, Dict
+from typing_extensions import Literal
 from io import BytesIO
 from ghostos.core.messages import (
     MessageType, Message, AudioMessage, FunctionCallMessage, FunctionCallOutputMessage,

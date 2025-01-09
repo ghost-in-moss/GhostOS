@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from typing import List, Iterable, Optional, Union, Callable, Self, Set
+from typing import List, Iterable, Optional, Union, Callable, Set
+from typing_extensions import Self
 from openai.types.chat.completion_create_params import Function, FunctionCall
 from openai import NotGiven, NOT_GIVEN
 from openai.types.chat.chat_completion_function_call_option_param import ChatCompletionFunctionCallOptionParam
