@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import (
     Type, Generic, Protocol, ClassVar, TypeVar, Callable,
-    Tuple, Optional, Iterable, List, Self, Union, Dict, Any
+    Tuple, Optional, Iterable, List, Union, Dict, Any
 )
+from typing_extensions import Self
 
 from abc import ABC, abstractmethod
 from ghostos.identifier import Identical

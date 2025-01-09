@@ -1,4 +1,5 @@
-from typing import ClassVar, Optional, Protocol, Dict, Union, Self
+from typing import ClassVar, Optional, Protocol, Dict, Union
+from typing_extensions import Self
 from abc import ABC
 from pydantic import BaseModel
 from .message import Message
