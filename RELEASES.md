@@ -5,9 +5,9 @@
 
 first release version.
 
-## v0.1.2
+## v0.1.3
 
-fix import `Self` from `typing`, incompatible to python 3.10.
+fix not import some libs from `typing_extensions` but `typing` , incompatible to python 3.10.
 
 ## v0.1.1
 

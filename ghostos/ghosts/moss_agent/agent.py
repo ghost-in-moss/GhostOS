@@ -1,4 +1,5 @@
-from typing import Union, Optional, Dict, List, Self, Iterable, Tuple, ClassVar
+from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar
+from typing_extensions import Self
 from types import ModuleType
 
 from ghostos.identifier import Identifier

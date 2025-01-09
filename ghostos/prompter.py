@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import inspect
 from typing import (
-    List, Self, Union, Callable, Any, Protocol, Optional, Dict, TypeVar, Type, Generic, Set,
+    List, Union, Callable, Any, Protocol, Optional, Dict, TypeVar, Type, Generic,
 )
+from typing_extensions import Self
 from abc import ABC, abstractmethod
 from types import ModuleType
 from ghostos.container import Container

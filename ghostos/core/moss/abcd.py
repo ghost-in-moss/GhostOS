@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable, Self, TypeVar, ClassVar
+from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable, TypeVar, ClassVar
+from typing_extensions import Self
 from types import ModuleType
 from abc import ABC, abstractmethod
 from ghostos.container import Container, Provider, Factory, provide

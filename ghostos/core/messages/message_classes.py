@@ -1,6 +1,6 @@
 import base64
-from typing import Optional, Dict, List, Iterable, Any, Union, Literal
-from typing_extensions import Self
+from typing import Optional, Dict, List, Iterable, Any, Union
+from typing_extensions import Self, Literal
 
 from ghostos.contracts.variables import Variables
 from ghostos.contracts.assets import FileInfo

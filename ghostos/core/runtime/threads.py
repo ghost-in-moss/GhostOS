@@ -1,4 +1,5 @@
-from typing import Optional, List, Iterable, Dict, Any, Self
+from typing import Optional, List, Iterable, Dict, Any
+from typing_extensions import Self
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Message, copy_messages, Role

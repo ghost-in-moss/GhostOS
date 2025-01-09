@@ -1,4 +1,5 @@
-from typing import Optional, List, ClassVar, Dict, Self
+from typing import Optional, List, ClassVar, Dict
+from typing_extensions import Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field

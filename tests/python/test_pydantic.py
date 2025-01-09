@@ -2,8 +2,8 @@ import time
 
 from pydantic import BaseModel, Field
 from pydantic.errors import PydanticSchemaGenerationError
-from typing import TypedDict, Required, Iterable, List, Optional, ClassVar, Type
-from typing_extensions import Literal
+from typing import Iterable, List, Optional, ClassVar, Type
+from typing_extensions import Literal, Required, TypedDict
 from datetime import datetime
 
 

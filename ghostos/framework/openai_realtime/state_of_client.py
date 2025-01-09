@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import List, Optional, Tuple, Protocol, Self
+from typing import List, Optional, Protocol
+from typing_extensions import Self
 from abc import ABC, abstractmethod
 from ghostos.framework.openai_realtime.configs import OpenAIRealtimeAppConf
 from ghostos.core.runtime import Event as GhostOSEvent

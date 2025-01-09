@@ -1,6 +1,7 @@
 from __future__ import annotations
 import sys
-from typing import Tuple, List, NamedTuple, Any, Optional, Dict, Self
+from typing import Tuple, List, NamedTuple, Any, Optional, Dict
+from typing_extensions import Self
 from types import ModuleType
 
 from ghostos.bootstrap import expect_workspace_dir

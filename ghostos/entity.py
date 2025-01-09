@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Union, Any, TypedDict, Required, Self, TypeVar, Type, Optional, Protocol
+from typing import Union, Any, TypeVar, Type, Optional, Protocol
+from typing_extensions import Required, Self, TypedDict
 from types import ModuleType
 from pydantic import BaseModel
 from ghostos.helpers import generate_import_path, import_from_path, parse_import_path_module_and_attr_name

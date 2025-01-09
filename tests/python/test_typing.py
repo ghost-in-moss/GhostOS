@@ -1,4 +1,5 @@
-from typing import Union, TypedDict, Optional, Literal
+from typing import Union, Optional
+from typing_extensions import Literal, TypedDict
 import inspect
 
 

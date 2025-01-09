@@ -1,4 +1,4 @@
-from typing import Optional, ClassVar, Self
+from typing import Optional, ClassVar
 from abc import ABC
 from enum import Enum
 from pydantic import BaseModel, Field
