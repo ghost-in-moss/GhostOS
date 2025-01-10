@@ -162,3 +162,13 @@ def _get_command_line_as_string() -> str | None:
     cmd_line_as_list = [parent.command_path]
     cmd_line_as_list.extend(sys.argv[1:])
     return subprocess.list2cmdline(cmd_line_as_list)
+
+
+if __name__ == '__main__':
+    # 方便通过IDE调试
+    from ghostos.scripts.cli.run_streamlit_app import start_ghost_app
+    from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
+
+    python_file_or_module = "ghostos.demo.ghost_func_example"
+    ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
+    start_ghost_app(ghost_info, module.__name__, filename, is_temp)

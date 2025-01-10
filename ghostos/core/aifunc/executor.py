@@ -180,6 +180,7 @@ class DefaultAIFuncExecutorImpl(AIFuncExecutor, AIFuncCtx):
             # not every submanager is created at self.execute,
             # so they could be destroyed outside already
             return
+        self._destroyed = True
         del self._container
         del self._values
         del self._exec_step

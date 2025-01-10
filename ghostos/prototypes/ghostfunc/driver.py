@@ -291,5 +291,7 @@ class GhostFuncDriver:
         self._cache.threads[self._target_qualname] = thread
 
     def destroy(self) -> None:
-        del self._cache
-        del self._container
+        if hasattr(self, '_cache'):
+            del self._cache
+        if hasattr(self, '_container'):
+            del self._container
