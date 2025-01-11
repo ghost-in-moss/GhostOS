@@ -1,6 +1,17 @@
 # from class: ghostos.framework.llms.providers:LLMsYamlConfig
 default: gpt-4o
 models:
+  gpt-4o-2024-08-06:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: gpt-4o-2024-08-06
+    n: 1
+    request_timeout: 40
+    service: azure
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
   claude-3-5-sonnet:
     kwargs: { }
     max_tokens: 2000
@@ -151,3 +162,9 @@ services:
     driver: openai_driver
     name: deepseek
     token: $DEEPSEEK_API_KEY
+  - base_url: $AZURE_ENDPOINT
+    name: azure
+    driver: openai_driver
+    azure:
+      api_key: $AZURE_API_KEY
+      api_version: 2023-07-01-preview
