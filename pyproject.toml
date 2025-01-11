@@ -7,10 +7,10 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.urls]
-homepage = "https://github.com/ghost-in-moss/GhostOS"
-repository = "https://github.com/ghost-in-moss/GhostOS"
-documentation = "https://ghost-in-moss.github.io/GhostOS/#/en/"
-issues = "https://github.com/ghost-in-moss/GhostOS/issues"
+Homepage = "https://github.com/ghost-in-moss/GhostOS"
+Repository = "https://github.com/ghost-in-moss/GhostOS"
+Documentation = "https://ghost-in-moss.github.io/GhostOS/#/en/"
+Issues = "https://github.com/ghost-in-moss/GhostOS/issues"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
