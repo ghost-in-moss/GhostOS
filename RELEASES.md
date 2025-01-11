@@ -5,6 +5,10 @@
 
 first release version.
 
+## v0.1.4
+
+add llm driver supporting openai azure api.
+
 ## v0.1.3
 
 fix not import some libs from `typing_extensions` but `typing` , incompatible to python 3.10.
