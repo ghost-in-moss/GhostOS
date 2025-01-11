@@ -6,7 +6,7 @@ from ghostos.core.messages import (
     ImageAssetMessage,
 )
 from ghostos.framework.messages import CompletionUsagePayload, TaskPayload, PromptPayload
-from ghostos.helpers import gettext as _
+from ghostos.helpers import gettext as _, uuid
 
 
 class MessageGroup(NamedTuple):
@@ -68,23 +68,30 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
     with st.container():
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            if st.button(label="Detail", key="Detail" + msg_id):
+            button_key = f"{prefix}_Detail_{msg_id}_{uuid()}"
+            if st.button(label="Detail", key=button_key):
                 open_message_dialog(message)
 
         with col2:
             task_payload = TaskPayload.read_payload(message)
-            if task_payload and st.button(label="Task Info", key="Task Info" + msg_id):
-                open_task_info_dialog(task_payload.task_id)
+            if task_payload:
+                button_key = f"{prefix}_TaskInfo_{msg_id}_{uuid()}"
+                if st.button(label="Task Info", key=button_key):
+                    open_task_info_dialog(task_payload.task_id)
 
         with col3:
             completion_usage = CompletionUsagePayload.read_payload(message)
-            if completion_usage and st.button(label="Token usage", key="token usage" + msg_id):
-                open_completion_usage_dialog(completion_usage)
+            if completion_usage:
+                button_key = f"{prefix}_TokenUsage_{msg_id}_{uuid()}"
+                if st.button(label="Token usage", key=button_key):
+                    open_completion_usage_dialog(completion_usage)
 
         with col4:
             prompt_payload = PromptPayload.read_payload(message)
-            if prompt_payload and st.button(label="Prompt Info", key="Prompt Info" + msg_id):
-                open_prompt_info_dialog(prompt_payload.prompt_id)
+            if prompt_payload:
+                button_key = f"{prefix}_PromptInfo_{msg_id}_{uuid()}"
+                if st.button(label="Prompt Info", key=button_key):
+                    open_prompt_info_dialog(prompt_payload.prompt_id)
 
 
 def render_message_in_content(message: Message, debug: bool, in_expander: bool, *, prefix: str = ""):
