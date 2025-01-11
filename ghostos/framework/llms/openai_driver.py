@@ -1,5 +1,5 @@
 from typing import List, Iterable, Union, Optional
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
 from openai import NOT_GIVEN
@@ -89,13 +89,21 @@ class OpenAIAdapter(LLMApi):
         if service_conf.proxy:
             transport = SyncProxyTransport.from_url(service_conf.proxy)
             http_client = Client(transport=transport)
-        self._client = OpenAI(
-            api_key=service_conf.token,
-            base_url=service_conf.base_url,
-            # todo: 未来再做更多细节.
-            max_retries=0,
-            http_client=http_client,
-        )
+        self._logger.error(f"\n[service_conf] {service_conf.azure.api_key}")
+        if service_conf.azure.api_key:
+            self._client = AzureOpenAI(
+                azure_endpoint=service_conf.base_url,
+                api_version=service_conf.azure.api_version,
+                api_key=service_conf.azure.api_key,
+            )
+        else:
+            self._client = OpenAI(
+                api_key=service_conf.token,
+                base_url=service_conf.base_url,
+                # todo: 未来再做更多细节.
+                max_retries=0,
+                http_client=http_client,
+            )
         self._parser = parser
         if not functional_token_prompt:
             functional_token_prompt = DEFAULT_FUNCTIONAL_TOKEN_PROMPT

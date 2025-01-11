@@ -69,13 +69,18 @@ class Compatible(BaseModel):
     allow_system_in_messages: bool = Field(default=True, description="allow system messages in history")
 
 
+class Azure(BaseModel):
+    api_key: str = Field(default="", description="azure api key. if start with `$`, will read environment variable of it")
+    api_version: str = Field(default="", description="azure api version")
+
+
 class ServiceConf(BaseModel):
     """
     The model api service configuration
     """
 
     name: str = Field(description="Service name")
-    base_url: str = Field(description="LLM service url")
+    base_url: str = Field(description="LLM service url. if start with `$`, will read environment variable of it")
     token: str = Field(default="", description="access token. if start with `$`, will read environment variable of it")
     proxy: Optional[str] = Field(
         default=None,
@@ -92,10 +97,17 @@ class ServiceConf(BaseModel):
         description="the model api compatible configuration",
     )
 
+    azure: Azure = Field(
+        default_factory=Azure,
+        description="azure service configuration",
+    )
+
     def load(self, environ: Optional[Dict] = None) -> None:
-        self.token = self._load_env(self.token, environ=environ)
-        if self.proxy is not None:
-            self.proxy = self._load_env(self.proxy, environ=environ)
+        attributes = [(self, 'base_url'), (self, 'token'), (self, 'proxy'), (self.azure, 'api_key')]
+        for obj, attr in attributes:
+            value = getattr(obj, attr)
+            if value is not None:
+                setattr(obj, attr, self._load_env(value, environ=environ))
 
     @staticmethod
     def _load_env(value: str, environ: Optional[Dict] = None) -> str:
