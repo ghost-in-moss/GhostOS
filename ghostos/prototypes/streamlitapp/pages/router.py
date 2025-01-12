@@ -103,12 +103,21 @@ class GhostChatRoute(Route):
 
 # --- configs --- #
 
+class ChatRoute(Route):
+    link = Link(
+        name="GhostOS Chat",
+        import_path=PagePath.GHOSTS.suffix(":main_chat"),
+        streamlit_icon=":material/chat:",
+        button_help="Go to chat",
+        antd_icon="chat-dots",
+    )
+
 class ConfigsRoute(Route):
     link = Link(
         name="Configs",
         import_path=PagePath.CONFIGS.suffix(":main"),
         streamlit_icon=":material/settings:",
-        button_help="todo",
+        button_help="Go to configs",
         antd_icon="settings",
     )
     config_classes: List[str] = Field(
@@ -218,10 +227,12 @@ def default_router() -> Router:
             GhostTaskRoute(),
 
             ConfigsRoute(),
+            ChatRoute(),
         ],
         home=Home.label(),
         navigator_page_names=[
             ConfigsRoute.label(),
+            ChatRoute.label(),
         ],
         default_menu={
             Home.label(): None,
