@@ -89,7 +89,6 @@ class OpenAIAdapter(LLMApi):
         if service_conf.proxy:
             transport = SyncProxyTransport.from_url(service_conf.proxy)
             http_client = Client(transport=transport)
-        self._logger.error(f"\n[service_conf] {service_conf.azure.api_key}")
         if service_conf.azure.api_key:
             self._client = AzureOpenAI(
                 azure_endpoint=service_conf.base_url,

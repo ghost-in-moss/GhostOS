@@ -1,9 +1,13 @@
 # Releases
 
-
 # v0.1.0
 
 first release version.
+
+## v0.1.6
+
+* upgrade openai package to 1.59, support develop message.
+* fix invalid logger print azure api key.
 
 ## v0.1.5
 
