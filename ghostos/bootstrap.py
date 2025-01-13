@@ -130,7 +130,6 @@ class BootstrapConfig(BaseModel):
         return dirname(dirname(__file__))
 
     def abs_workspace_dir(self) -> str:
-        from os.path import abspath, exists, isdir
         app_dir = abspath(self.workspace_dir)
         if exists(app_dir) and isdir(app_dir):
             return app_dir

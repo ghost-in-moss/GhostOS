@@ -17,7 +17,7 @@ def main():
 
 @main.command("web")
 @click.argument("python_file_or_module")
-@click.option("--src", "-s", default=".", show_default=True)
+@click.option("--src", "-s", default=".", show_default=True, help="load the directory to python path, make sure can import relative packages")
 def start_streamlit_web(python_file_or_module: str, src: str):
     """
     turn a python file or module into a streamlit web agent
