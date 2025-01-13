@@ -44,7 +44,7 @@ def get_config_flag_options(workspace_dir: str) -> List[str]:
 def start_ghost_app(ghost_info: GhostInfo, modulename: str, filename: str, is_temp: bool):
     # path
     conf = get_bootstrap_config(local=True)
-    workspace_dir = conf.workspace_dir
+    workspace_dir = conf.abs_workspace_dir()
     args = RunGhostChatApp(
         modulename=modulename,
         filename=filename,
@@ -53,7 +53,7 @@ def start_ghost_app(ghost_info: GhostInfo, modulename: str, filename: str, is_te
         ghost_meta=ghost_info.ghost,
         context_meta=ghost_info.context,
     )
-    start_streamlit_prototype_cli("run_ghost_chat.py", args.model_dump_json(), conf.workspace_dir)
+    start_streamlit_prototype_cli("run_ghost_chat.py", args.model_dump_json(), workspace_dir)
 
 
 def start_streamlit_prototype_cli(filename: str, cli_args: str, workspace_dir: str):

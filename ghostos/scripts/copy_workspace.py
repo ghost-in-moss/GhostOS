@@ -35,7 +35,7 @@ def main():
     )
     parsed = parser.parse_args(sys.argv[1:])
     target_dir = abspath(parsed.target)
-    copy_workspace(conf.workspace_dir, target_dir)
+    copy_workspace(conf.abs_workspace_dir(), target_dir)
     print(f"Copied skeleton files to {target_dir}")
 
 
