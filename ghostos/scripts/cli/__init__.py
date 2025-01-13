@@ -17,12 +17,19 @@ def main():
 
 @main.command("web")
 @click.argument("python_file_or_module")
-def start_streamlit_web(python_file_or_module: str):
+@click.option("--src", "-s", default=".", show_default=True)
+def start_streamlit_web(python_file_or_module: str, src: str):
     """
     turn a python file or module into a streamlit web agent
     """
     from ghostos.scripts.cli.run_streamlit_app import start_ghost_app
     from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
+    import sys
+    from os.path import abspath
+    if src:
+        # add source path to system so to import the source code.
+        sys.path.append(abspath(src))
+
     ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
     start_ghost_app(ghost_info, module.__name__, filename, is_temp)
 
@@ -44,7 +51,11 @@ def start_web_config():
     """
     from ghostos.scripts.cli.run_streamlit_app import start_streamlit_prototype_cli
     from ghostos.bootstrap import get_bootstrap_config
-    start_streamlit_prototype_cli("run_configs.py", "", get_bootstrap_config().workspace_dir)
+    start_streamlit_prototype_cli(
+        "run_configs.py",
+        "",
+        get_bootstrap_config().abs_workspace_dir(),
+    )
 
 
 @main.command("clear-runtime")
@@ -86,18 +97,19 @@ The Workspace meant to save local files such as configs, logs, cache files.
     ))
 
     conf = get_bootstrap_config(local=False)
+    cwd = getcwd()
     result = Prompt.ask(
-        f"\n>> will init ghostos workspace at `{getcwd()}`. input directory name:",
+        f"\n>> will init ghostos workspace at `{cwd}`. input directory name:",
         default="app",
     )
-    source_dir = join(conf.ghostos_dir, "ghostos/app")
+    source_dir = app_stub_dir()
     real_workspace_dir = abspath(result)
     console.print("start to init ghostos workspace")
     copy_workspace(source_dir, real_workspace_dir)
     console.print("ghostos workspace copied")
-    conf.workspace_dir = real_workspace_dir
-    conf.save(real_workspace_dir)
-    console.print("save .ghostos.yml")
+    conf.workspace_dir = result
+    saved_file = conf.save(cwd)
+    console.print(f"save .ghostos.yml to {saved_file}")
     console.print(Panel(Markdown(f"""
 Done create workspace!
 

@@ -110,14 +110,10 @@ def find_workspace_dir() -> str:
 
 class BootstrapConfig(BaseModel):
     workspace_dir: str = Field(
-        default_factory=find_workspace_dir,
-        description="ghostos workspace directory",
+        default="app",
+        description="ghostos relative workspace directory",
     )
     dotenv_file_path: str = Field(".env", description="ghostos workspace .env file")
-    ghostos_dir: str = Field(
-        default=dirname(dirname(__file__)),
-        description="ghostos source code directory",
-    )
     workspace_configs_dir: str = Field(
         "configs",
         description="ghostos workspace relative path for configs directory",
@@ -129,19 +125,34 @@ class BootstrapConfig(BaseModel):
 
     __from_file__: str = ""
 
+    @staticmethod
+    def abs_ghostos_dir() -> str:
+        return dirname(dirname(__file__))
+
+    def abs_workspace_dir(self) -> str:
+        from os.path import abspath, exists, isdir
+        app_dir = abspath(self.workspace_dir)
+        if exists(app_dir) and isdir(app_dir):
+            return app_dir
+        return find_workspace_dir()
+
     def abs_runtime_dir(self) -> str:
-        return join(self.workspace_dir, "runtime")
+        workspace_dir = self.abs_workspace_dir()
+        return join(workspace_dir, "runtime")
 
     def abs_asserts_dir(self) -> str:
-        return join(self.workspace_dir, "assets")
+        workspace_dir = self.abs_workspace_dir()
+        return join(workspace_dir, "assets")
 
     def env_file(self) -> str:
-        return join(self.workspace_dir, self.dotenv_file_path)
+        workspace_dir = self.abs_workspace_dir()
+        return join(workspace_dir, self.dotenv_file_path)
 
     def env_example_file(self) -> str:
-        return join(self.workspace_dir, ".example.env")
+        workspace_dir = self.abs_workspace_dir()
+        return join(workspace_dir, ".example.env")
 
-    def save(self, dir_path: str = None):
+    def save(self, dir_path: str = None) -> str:
         from ghostos.helpers import yaml_pretty_dump
         if dir_path is None:
             filename = join(abspath(".ghostos.yml"))
@@ -150,6 +161,7 @@ class BootstrapConfig(BaseModel):
         content = yaml_pretty_dump(self.model_dump())
         with open(filename, "w") as f:
             f.write(content)
+        return filename
 
 
 def get_bootstrap_config(local: bool = True) -> BootstrapConfig:
@@ -273,7 +285,7 @@ def default_application_providers(
         DefaultLoggerProvider(),
         # --- workspace --- #
         BasicWorkspaceProvider(
-            workspace_dir=config.workspace_dir,
+            workspace_dir=config.abs_workspace_dir(),
             configs_path=config.workspace_configs_dir,
             runtime_path=config.workspace_runtime_dir,
         ),
@@ -327,7 +339,7 @@ def make_app_container(
     if bootstrap_conf is None:
         bootstrap_conf = get_bootstrap_config(local=True)
     workspace_dir = bootstrap_conf.workspace_dir
-    if workspace_dir.startswith(bootstrap_conf.ghostos_dir):
+    if workspace_dir.startswith(bootstrap_conf.abs_ghostos_dir()):
         warn(
             f"GhostOS workspace dir is not found, better run `ghostos init` at first."
             f"Currently using `{workspace_dir}` as workspace."

@@ -5,6 +5,11 @@
 
 first release version.
 
+## v0.1.5
+
+* `ghostos web` add `--src` option, load the directory to python path, make sure can import relative packages.
+* fix `.ghostos.yml` with relative path, in case share project with absolute local filepath.
+
 ## v0.1.4
 
 add llm driver supporting openai azure api.
