@@ -4,6 +4,11 @@
 
 first release version.
 
+## v0.1.7
+
+* update speaker and listener with pyaudio device_index argument
+* streamlit_app.yml add options about audio_input and audio_output
+
 ## v0.1.6
 
 * upgrade openai package to 1.59, support develop message.

@@ -207,9 +207,12 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 title="Meta Instruction",
                 content=AGENT_META_INTRODUCTION,
             ).with_children(
+                # ghostos meta instruction.
                 TextPrmt(title="GhostOS", content=GHOSTOS_INTRODUCTION),
+                # the information about moss
                 TextPrmt(title="MOSS", content=MOSS_INTRODUCTION),
-                # code context
+
+                # the moss providing context prompter.
                 get_moss_context_prompter("Code Context", runtime),
             ),
             # agent prompt

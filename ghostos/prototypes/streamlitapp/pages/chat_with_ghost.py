@@ -255,8 +255,22 @@ def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
 
     from ghostos.framework.audio import get_pyaudio_pcm16_speaker, get_pyaudio_pcm16_listener
     from ghostos.framework.openai_realtime import get_openai_realtime_app
-    speaker = get_pyaudio_pcm16_speaker()
-    listener = get_pyaudio_pcm16_listener()
+    app_conf = get_app_conf()
+    audio_input = app_conf.audio_input
+    audio_output = app_conf.audio_output
+    speaker = get_pyaudio_pcm16_speaker(
+        rate=audio_output.sample_rate,
+        buffer_size=audio_output.buffer_size,
+        channels=audio_output.channels,
+        output_device_index=audio_output.output_device_index,
+    )
+    listener = get_pyaudio_pcm16_listener(
+        rate=audio_input.sample_rate,
+        interval=audio_input.interval,
+        channels=audio_input.channels,
+        chunk_size=audio_input.chunk_size,
+        input_device_index=audio_input.input_device_index,
+    )
     vad_mode = True
     return get_openai_realtime_app(conversation, vad_mode=vad_mode, listener=listener, speaker=speaker)
 

@@ -3,7 +3,7 @@ try:
 except ImportError:
     raise ImportError(f"Pyaudio is required, please install pyaudio or ghostos[audio] first")
 
-from typing import Callable, Union
+from typing import Callable, Optional
 from ghostos.abcd.realtime import Listener, Listening
 from threading import Thread, Event
 from io import BytesIO
@@ -16,14 +16,22 @@ RATE = 44100
 
 class PyAudioPCM16Listener(Listener):
 
-    def __init__(self, rate: int = 24000, chunk_size: int = CHUNK, interval: float = 0.5):
+    def __init__(
+            self,
+            rate: int = 24000,
+            chunk_size: int = CHUNK,
+            interval: float = 0.5,
+            channels: int = CHANNELS,
+            input_device_index: Optional[int] = None,
+    ):
         self.rate = rate
         self.chunk_size = chunk_size
         self.stream = PyAudio().open(
             format=paInt16,
-            channels=1,
+            channels=channels,
             rate=self.rate,
             input=True,
+            input_device_index=input_device_index,
         )
         self.interval = interval
 
