@@ -161,6 +161,7 @@ class Context(ServerContext):
         with wave.open(buffer, 'wb') as f:
             f.setnchannels(1)
             f.setsampwidth(2)
+            # todo: save rate by configs
             f.setframerate(24000)
             f.writeframes(audio_data)
 

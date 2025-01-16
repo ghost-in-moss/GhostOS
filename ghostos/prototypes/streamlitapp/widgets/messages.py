@@ -188,8 +188,6 @@ def render_message_item(msg: Message, debug: bool):
         render_user_message(msg, debug)
     elif msg.role == Role.SYSTEM.value:
         render_sys_message(msg, debug)
-    elif msg.role == Role.FUNCTION.value:
-        render_func_message(msg, debug)
     else:
         render_other_message(msg, debug)
 

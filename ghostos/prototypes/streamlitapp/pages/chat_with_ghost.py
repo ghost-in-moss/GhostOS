@@ -259,13 +259,15 @@ def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
     audio_input = app_conf.audio_input
     audio_output = app_conf.audio_output
     speaker = get_pyaudio_pcm16_speaker(
-        rate=audio_output.sample_rate,
+        input_rate=audio_output.input_rate,
+        output_rate=audio_output.output_rate,
         buffer_size=audio_output.buffer_size,
         channels=audio_output.channels,
         output_device_index=audio_output.output_device_index,
     )
     listener = get_pyaudio_pcm16_listener(
         rate=audio_input.sample_rate,
+        output_rate=audio_input.output_rate,
         interval=audio_input.interval,
         channels=audio_input.channels,
         chunk_size=audio_input.chunk_size,
