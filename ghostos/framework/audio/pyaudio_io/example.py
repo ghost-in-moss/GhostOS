@@ -9,7 +9,10 @@ import wave
 
 if __name__ == '__main__':
 
-    listener = PyAudioPCM16Listener()
+    listener = PyAudioPCM16Listener(
+        sample_rate=44100,
+        output_rate=24000,
+    )
     ticker = Timeleft(0)
 
     heard = BytesIO()
@@ -46,7 +49,7 @@ if __name__ == '__main__':
         return heard.read(1024)
 
 
-    speaker = PyAudioPCM16Speaker()
+    speaker = PyAudioPCM16Speaker(input_rate=24000, output_rate=44100)
     print("start speaking, %f" % ticker.passed())
     with speaker.speak(read) as speaking:
         speaking.wait()

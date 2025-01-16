@@ -20,6 +20,7 @@ def get_container() -> Container:
 
 class AudioInputConf(BaseModel):
     sample_rate: int = Field(24000)
+    output_rate: int = Field(24000)
     interval: float = Field(0.5)
     channels: int = Field(1)
     chunk_size: int = Field(1024)
@@ -27,7 +28,8 @@ class AudioInputConf(BaseModel):
 
 
 class AudioOutputConf(BaseModel):
-    sample_rate: int = Field(24000)
+    input_rate: int = Field(24000)
+    output_rate: int = Field(24000)
     channels: int = Field(1)
     buffer_size: int = Field(1024 * 5)
     output_device_index: Union[int, None] = Field(None)

@@ -4,6 +4,7 @@ from ghostos.abcd.realtime import Speaker, Listener
 
 def get_pyaudio_pcm16_listener(
         rate: int = 24000,
+        output_rate: int = 24000,
         interval: float = 0.5,
         channels: int = 1,
         chunk_size: int = 1024,
@@ -15,7 +16,8 @@ def get_pyaudio_pcm16_listener(
         raise ImportError(f"pyaudio package is required. run `pip install ghostos[audio]`")
     from ghostos.framework.audio.pyaudio_io.listener import PyAudioPCM16Listener
     return PyAudioPCM16Listener(
-        rate=rate,
+        sample_rate=rate,
+        output_rate=output_rate,
         interval=interval,
         channels=channels,
         chunk_size=chunk_size,
@@ -24,7 +26,8 @@ def get_pyaudio_pcm16_listener(
 
 
 def get_pyaudio_pcm16_speaker(
-        rate: int = 24000,
+        input_rate: int = 24000,
+        output_rate: int = 24000,
         buffer_size: int = 1024 * 5,
         channels: int = 1,
         output_device_index: Union[int, None] = None,
@@ -35,7 +38,8 @@ def get_pyaudio_pcm16_speaker(
         raise ImportError(f"pyaudio package is required. run `pip install ghostos[audio]`")
     from ghostos.framework.audio.pyaudio_io.speaker import PyAudioPCM16Speaker
     return PyAudioPCM16Speaker(
-        rate=rate,
+        input_rate=input_rate,
+        output_rate=output_rate,
         buffer_size=buffer_size,
         channels=channels,
         output_device_index=output_device_index,

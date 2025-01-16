@@ -4,6 +4,10 @@
 
 first release version.
 
+## v0.1.8
+
+* add speaker and listener with audio rate conversion
+
 ## v0.1.7
 
 * update speaker and listener with pyaudio device_index argument
