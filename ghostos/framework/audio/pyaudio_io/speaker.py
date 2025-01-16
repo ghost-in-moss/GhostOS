@@ -10,14 +10,21 @@ from threading import Thread, Event
 
 class PyAudioPCM16Speaker(Speaker):
 
-    def __init__(self, rate: int = 24000, buffer_size: int = 4096):
+    def __init__(
+            self,
+            rate: int = 24000,
+            buffer_size: int = 4096,
+            channels: int = 1,
+            output_device_index: Union[int, None] = None,
+    ):
         self.rate = rate
         self.buffer_size = buffer_size
         self.stream = PyAudio().open(
             format=paInt16,
-            channels=1,
+            channels=channels,
             rate=self.rate,
             output=True,
+            output_device_index=output_device_index,
         )
 
     def speak(self, queue: Callable[[], Union[bytes, None]]) -> Speaking:

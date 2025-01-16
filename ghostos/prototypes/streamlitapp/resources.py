@@ -1,7 +1,7 @@
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Union
 
 from enum import Enum
-from pydantic import Field
+from pydantic import BaseModel, Field
 import streamlit as st
 from ghostos.container import Container
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
@@ -9,7 +9,6 @@ from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.assets import ImageAssets, FileInfo, AudioAssets
 from ghostos.contracts.documents import DocumentRegistry, Documents
 from PIL.Image import Image as ImageType
-from ghostos.core.messages.message_classes import ImageAssetMessage
 from ghostos.helpers import GHOSTOS_DOMAIN, uuid
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
@@ -17,6 +16,21 @@ from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 @st.cache_resource
 def get_container() -> Container:
     return Singleton.get(Container, st.session_state)
+
+
+class AudioInputConf(BaseModel):
+    sample_rate: int = Field(24000)
+    interval: float = Field(0.5)
+    channels: int = Field(1)
+    chunk_size: int = Field(1024)
+    input_device_index: Union[int, None] = Field(None)
+
+
+class AudioOutputConf(BaseModel):
+    sample_rate: int = Field(24000)
+    channels: int = Field(1)
+    buffer_size: int = Field(1024 * 5)
+    output_device_index: Union[int, None] = Field(None)
 
 
 class AppConf(YamlConfig):
@@ -28,6 +42,9 @@ class AppConf(YamlConfig):
     bool_options: Dict[str, bool] = Field(
         default_factory=dict,
     )
+
+    audio_input: AudioInputConf = Field(default_factory=AudioInputConf)
+    audio_output: AudioOutputConf = Field(default_factory=AudioOutputConf)
 
     class BoolOpts(str, Enum):
         HELP_MODE = "ghostos.streamlit.app.help_mode"
