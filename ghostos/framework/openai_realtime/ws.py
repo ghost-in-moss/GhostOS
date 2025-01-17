@@ -54,6 +54,8 @@ class OpenAIWSConnection:
         self._logger.info("connected openai realtime api")
 
     def _create_socket(self, proxy: str, uri: str):
+        if not proxy:
+            return None
         parsed = urllib3.util.parse_url(proxy)
         if parsed.scheme != "socks5":
             error_msg = f"OPENAI_PROXY Only socks5 is supported, got \"{proxy}\""

@@ -70,7 +70,8 @@ class Compatible(BaseModel):
 
 
 class Azure(BaseModel):
-    api_key: str = Field(default="", description="azure api key. if start with `$`, will read environment variable of it")
+    api_key: str = Field(default="",
+                         description="azure api key. if start with `$`, will read environment variable of it")
     api_version: str = Field(default="", description="azure api version")
 
 
