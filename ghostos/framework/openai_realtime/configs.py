@@ -32,7 +32,9 @@ class OpenAIWebsocketsConf(BaseModel):
         if copied.api_key and copied.api_key.startswith("$"):
             copied.api_key = environ[copied.api_key[1:]]
         if copied.proxy and copied.proxy.startswith("$"):
-            copied.proxy = environ[copied.proxy[1:]]
+            key = copied.proxy[1:]
+            if key in environ:
+                copied.proxy = environ[key]
         return copied
 
 

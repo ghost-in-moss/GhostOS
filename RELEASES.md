@@ -4,6 +4,10 @@
 
 first release version.
 
+## v0.1.9
+
+* fix realtime had required openai proxy existence. 
+
 ## v0.1.8
 
 * add speaker and listener with audio rate conversion
