@@ -35,6 +35,8 @@ class OpenAIWebsocketsConf(BaseModel):
             key = copied.proxy[1:]
             if key in environ:
                 copied.proxy = environ[key]
+            else:
+                copied.proxy = ""
         return copied
 
 
