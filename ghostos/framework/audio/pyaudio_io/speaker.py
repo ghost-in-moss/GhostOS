@@ -1,8 +1,5 @@
-try:
-    from pyaudio import PyAudio, paInt16
-    from scipy.signal import resample
-except ImportError:
-    raise ImportError(f"Pyaudio is required, please install pyaudio or ghostos[audio] first")
+from pyaudio import PyAudio, paInt16
+from scipy.signal import resample
 
 import numpy as np
 from typing import Callable, Union

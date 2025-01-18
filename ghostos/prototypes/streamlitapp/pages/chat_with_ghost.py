@@ -248,10 +248,19 @@ def _run_realtime(route: GhostChatRoute, app: RealtimeApp):
 
 
 def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
-    try:
-        import pyaudio
-    except ImportError:
-        return None
+    # 获取并检查 realtime extras 的所有依赖是否已安装
+    from importlib.metadata import distribution
+    dist = distribution('ghostos')
+    requires = dist.requires or []
+    realtime_requires = [r for r in requires if 'extra == "realtime"' in r]
+    # 如果所有依赖都已安装，importlib.metadata 就能找到它们
+    for pkg in realtime_requires:
+        # 从依赖字符串中提取包名（去掉版本和其他限制条件）
+        pkg_name = pkg.split()[0]
+        try:
+            distribution(pkg_name)
+        except ModuleNotFoundError:
+            return None
 
     from ghostos.framework.audio import get_pyaudio_pcm16_speaker, get_pyaudio_pcm16_listener
     from ghostos.framework.openai_realtime import get_openai_realtime_app
