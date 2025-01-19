@@ -4,6 +4,11 @@
 
 first release version.
 
+## v0.1.10
+
+* fix import self from typing_extensions for python 3.10 at sphero
+* fix extra import test at `ghostos[realtime]`
+
 ## v0.1.9
 
 * fix realtime had required openai proxy existence. 

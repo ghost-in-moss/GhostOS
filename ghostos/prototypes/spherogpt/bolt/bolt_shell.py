@@ -1,4 +1,5 @@
-from typing import Self, Optional, Callable, List, Literal, Tuple
+from typing import Optional, Callable, List, Literal, Tuple
+from typing_extensions import Self
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 

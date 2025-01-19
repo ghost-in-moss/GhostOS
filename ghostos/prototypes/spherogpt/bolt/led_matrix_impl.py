@@ -1,4 +1,5 @@
-from typing import List, Dict, Self, Optional, AnyStr
+from typing import List, Dict, Optional, AnyStr
+from typing_extensions import Self
 
 from .sphero_edu_api_patch import SpheroEduAPI
 
