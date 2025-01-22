@@ -68,8 +68,11 @@ class SequencePipe(Pipe):
                         yield item
                 else:
                     yield buffer.as_tail()
-                    buffer = item.as_head()
-                    yield buffer.get_copy()
+                    buffer = item.get_copy()
+                    if buffer.is_chunk():
+                        buffer = buffer.as_head(copy=False)
+                    if not buffer.is_complete():
+                        yield buffer.get_copy()
                     continue
         if buffer is not None:
             yield buffer.as_tail(copy=False)

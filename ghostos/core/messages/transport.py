@@ -380,8 +380,17 @@ class ReceiverBuffer:
         return self._done
 
     def next(self) -> Optional[Self]:
-        list(self.chunks())
-        return self._next
+        self.tail()
+        if self._next is not None:
+            return self._next
+        else:
+            try:
+                item = next(self._iterator)
+                iterator = self._iterator
+                self._iterator = None
+                return ReceiverBuffer(item, iterator)
+            except StopIteration:
+                return None
 
 
 def new_basic_connection(

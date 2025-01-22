@@ -340,8 +340,6 @@ class ShellImpl(Shell):
             len(self._conversations)
         )
         for conversation in self._conversations:
-            if conversation.is_closed():
-                continue
             self.logger.info("closing shell conversation %s", conversation.task_id)
             conversation.close()
         self.logger.info("shell conversations are closed")

@@ -8,13 +8,14 @@ from openai.types.chat.chat_completion_stream_options_param import ChatCompletio
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
-from ghostos.helpers import timestamp
+from ghostos.helpers import timestamp_ms
 from ghostos.core.messages import (
+    MessageStage,
     Message, OpenAIMessageParser, DefaultOpenAIMessageParser,
     CompletionUsagePayload, Role,
 )
 from ghostos.core.llms import (
-    LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME,
+    LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME, DEEPSEEK_DRIVER_NAME,
     Prompt, PromptPayload, PromptStorage,
     FunctionalToken,
 )
@@ -23,6 +24,7 @@ from ghostos.container import Bootstrapper, Container
 __all__ = [
     'OpenAIDriver', 'OpenAIAdapter',
     'LitellmAdapter', 'LiteLLMDriver',
+    'DeepseekDriver', 'DeepseekAdapter',
 ]
 
 
@@ -135,8 +137,15 @@ class OpenAIAdapter(LLMApi):
         return changed
 
     def parse_by_compatible_settings(self, messages: List[Message]) -> List[Message]:
+        compatible = self.model.compatible
+        if compatible is None:
+            compatible = self.service.compatible
+
+        if compatible is None:
+            return messages
+
         # developer role test
-        if self.service.compatible.use_developer_role:
+        if compatible.use_developer_role:
             messages = self._parse_system_to_develop(messages)
         else:
             changed = []
@@ -147,7 +156,7 @@ class OpenAIAdapter(LLMApi):
             messages = changed
 
         # allow system messages
-        if not self.service.compatible.allow_system_in_messages:
+        if not compatible.allow_system_in_messages:
             changed = []
             count = 0
             for message in messages:
@@ -157,6 +166,18 @@ class OpenAIAdapter(LLMApi):
                 changed.append(message)
                 count += 1
             messages = changed
+            self._logger.debug("[compatible] change messages system role to user role")
+
+        if not compatible.allow_system_message:
+            changed = []
+            for message in messages:
+                if message.role == Role.SYSTEM or message.role == Role.DEVELOPER:
+                    name = f"__{message.role}__"
+                    message = message.model_copy(update={"role": Role.USER.value, "name": name}, deep=True)
+                changed.append(message)
+            messages = changed
+            self._logger.debug("[compatible] change all messages system role to user role")
+
         return messages
 
     def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
@@ -168,7 +189,7 @@ class OpenAIAdapter(LLMApi):
         if not messages:
             raise AttributeError("empty chat!!")
         try:
-            prompt.run_start = timestamp()
+            prompt.run_start = timestamp_ms()
             self._logger.debug(f"start chat completion messages %s", messages)
             functions = prompt.get_openai_functions()
             tools = prompt.get_openai_tools()
@@ -195,11 +216,121 @@ class OpenAIAdapter(LLMApi):
             raise
         finally:
             self._logger.debug(f"end chat completion for prompt {prompt.id}")
-            prompt.run_end = timestamp()
+            prompt.run_end = timestamp_ms()
+
+    def _reasoning_completion(self, prompt: Prompt) -> ChatCompletion:
+        if self.model.reasoning is None:
+            raise NotImplementedError(f"current model {self.model} does not support reasoning completion ")
+
+        prompt = self.parse_prompt(prompt)
+        self._logger.info(
+            "start reasoning completion for prompt %s, model %s, reasoning conf %s",
+            prompt.id,
+            self.model.model_dump(exclude_defaults=True),
+            self.model.reasoning,
+        )
+        # include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
+        messages = prompt.get_messages()
+        messages = self.parse_message_params(messages)
+        if not messages:
+            raise AttributeError("empty chat!!")
+        try:
+            prompt.run_start = timestamp_ms()
+            self._logger.debug(f"start reasoning completion messages %s", messages)
+            functions = prompt.get_openai_functions()
+            tools = prompt.get_openai_tools()
+            if self.model.use_tools:
+                functions = NOT_GIVEN
+            else:
+                tools = NOT_GIVEN
+            if self.model.reasoning.effort is None:
+                reasoning_effort = NOT_GIVEN
+            else:
+                reasoning_effort = self.model.reasoning.effort
+
+            # todo: debug
+            return self._client.chat.completions.create(
+                messages=messages,
+                model=self.model.model,
+                # add this parameters then failed:
+                # todo: add reasoning will issue error now.
+                # Error code: 400 - {'error': {'message': "Unknown parameter: 'reasoning_effort'.",
+                # 'type': 'invalid_request_error', 'param': 'reasoning_effort', 'code': 'unknown_parameter'}
+                # reasoning_effort=reasoning_effort,
+                # max_tokens=prompt.model.max_tokens,
+                max_completion_tokens=prompt.model.reasoning.max_completion_tokens or NOT_GIVEN,
+                function_call=prompt.get_openai_function_call(),
+                functions=functions,
+                tools=tools,
+                n=self.model.n,
+                timeout=self.model.timeout,
+                **self.model.kwargs,
+            )
+        except Exception as e:
+            self._logger.error(f"error reasoning completion for prompt {prompt.id}: {e}")
+            raise
+        finally:
+            self._logger.debug(f"end reasoning completion for prompt {prompt.id}")
+            prompt.run_end = timestamp_ms()
+
+    def _reasoning_completion_stream(self, prompt: Prompt) -> Iterable[ChatCompletionChunk]:
+        if self.model.reasoning is None:
+            raise NotImplementedError(f"current model {self.model} does not support reasoning completion ")
+
+        prompt = self.parse_prompt(prompt)
+        self._logger.info(
+            "start reasoning completion for prompt %s, model %s, reasoning conf %s",
+            prompt.id,
+            self.model.model_dump(exclude_defaults=True),
+            self.model.reasoning,
+        )
+        # include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
+        messages = prompt.get_messages()
+        messages = self.parse_message_params(messages)
+        if not messages:
+            raise AttributeError("empty chat!!")
+        try:
+            prompt.run_start = timestamp_ms()
+            self._logger.debug(f"start reasoning completion messages %s", messages)
+            functions = prompt.get_openai_functions()
+            tools = prompt.get_openai_tools()
+            if self.model.use_tools:
+                functions = NOT_GIVEN
+            else:
+                tools = NOT_GIVEN
+            if self.model.reasoning.effort is None:
+                reasoning_effort = NOT_GIVEN
+            else:
+                reasoning_effort = self.model.reasoning.effort
+
+            yield from self._client.chat.completions.create(
+                messages=messages,
+                model=self.model.model,
+                # add this parameters then failed:
+                # todo: add reasoning will issue error now.
+                # Error code: 400 - {'error': {'message': "Unknown parameter: 'reasoning_effort'.",
+                # 'type': 'invalid_request_error', 'param': 'reasoning_effort', 'code': 'unknown_parameter'}
+                # reasoning_effort=reasoning_effort,
+                max_tokens=prompt.model.max_tokens,
+                function_call=prompt.get_openai_function_call(),
+                functions=functions,
+                tools=tools,
+                n=self.model.n,
+                timeout=self.model.timeout,
+                stream=True,
+                **self.model.kwargs,
+            )
+        except Exception as e:
+            self._logger.error(f"error reasoning completion for prompt {prompt.id}: {e}")
+            raise
+        finally:
+            self._logger.debug(f"end reasoning completion for prompt {prompt.id}")
+            prompt.run_end = timestamp_ms()
 
     def chat_completion(self, prompt: Prompt) -> Message:
         try:
             message: ChatCompletion = self._chat_completion(prompt, stream=False)
+            prompt.first_token = timestamp_ms()
             prompt.added = [message]
             pack = self._parser.from_chat_completion(message.choices[0].message)
             # add completion usage
@@ -217,85 +348,57 @@ class OpenAIAdapter(LLMApi):
         finally:
             self._storage.save(prompt)
 
-    def reasoning_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+    def reasoning_completion(self, prompt: Prompt) -> Iterable[Message]:
         try:
-            message: ChatCompletion = self._reasoning_completion(prompt)
-            prompt.added = [message]
-            pack = self._parser.from_chat_completion(message.choices[0].message)
+            cc: ChatCompletion = self._reasoning_completion(prompt)
+            items = self._from_openai_chat_completion_item(cc)
             # add completion usage
-            self.model.set_payload(pack)
-            if message.usage:
-                usage = CompletionUsagePayload.from_usage(message.usage)
-                usage.set_payload(pack)
+            last_item = None
+            for item in items:
+                if not prompt.first_token:
+                    prompt.first_token = timestamp_ms()
+                if last_item is not None:
+                    if last_item.is_complete():
+                        prompt.added.append(last_item)
+                    yield last_item
+                last_item = item
 
-            if not pack.is_complete():
-                pack.chunk = False
-            return [pack]
+            if last_item is not None:
+                self.model.set_payload(last_item)
+                if cc.usage:
+                    usage = CompletionUsagePayload.from_usage(cc.usage)
+                    usage.set_payload(last_item)
+
+                if not last_item.is_complete():
+                    last_item = last_item.as_tail()
+                prompt.added.append(last_item)
+                yield last_item
         except Exception as e:
             prompt.error = str(e)
             raise
         finally:
             self._storage.save(prompt)
 
-    def _reasoning_completion(self, prompt: Prompt) -> ChatCompletion:
-        if self.model.reasoning is None:
-            raise NotImplementedError(f"current model {self.model} does not support reasoning completion ")
+    def _from_openai_chat_completion_item(self, message: ChatCompletion) -> Iterable[Message]:
+        cc_item = message.choices[0].message
+        return [self._parser.from_chat_completion(cc_item)]
 
-        prompt = self.parse_prompt(prompt)
-        self._logger.info(
-            "start reasoning completion for prompt %s, model %s, reasoning conf %s",
-            prompt.id,
-            self.model.model_dump(exclude_defaults=True),
-            self.model.reasoning,
-        )
-        # include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
-        messages = prompt.get_messages()
-        messages = self._parse_system_to_develop(messages)
-        messages = self.parse_message_params(messages)
-        if not messages:
-            raise AttributeError("empty chat!!")
-        try:
-            prompt.run_start = timestamp()
-            self._logger.debug(f"start reasoning completion messages %s", messages)
-            functions = prompt.get_openai_functions()
-            tools = prompt.get_openai_tools()
-            if self.model.use_tools:
-                functions = NOT_GIVEN
-            else:
-                tools = NOT_GIVEN
-            if self.model.reasoning.effort is None:
-                reasoning_effort = NOT_GIVEN
-            else:
-                reasoning_effort = self.model.reasoning.effort
+    def _from_openai_chat_completion_chunks(self, chunks: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
+        yield from self._parser.from_chat_completion_chunks(chunks)
 
-            return self._client.chat.completions.create(
-                messages=messages,
-                model=self.model.model,
-                # add this parameters then failed:
-                # Error code: 400 - {'error': {'message': "Unknown parameter: 'reasoning_effort'.",
-                # 'type': 'invalid_request_error', 'param': 'reasoning_effort', 'code': 'unknown_parameter'}
-                # reasoning_effort=reasoning_effort,
-                function_call=prompt.get_openai_function_call(),
-                functions=functions,
-                tools=tools,
-                n=self.model.n,
-                timeout=self.model.timeout,
-                **self.model.kwargs,
-            )
-        except Exception as e:
-            self._logger.error(f"error reasoning completion for prompt {prompt.id}: {e}")
-            raise
-        finally:
-            self._logger.debug(f"end reasoning completion for prompt {prompt.id}")
-            prompt.run_end = timestamp()
+    def reasoning_completion_stream(self, prompt: Prompt) -> Iterable[Message]:
+        # todo: openai is not support reasoning completion stream yet
+        yield from self.reasoning_completion(prompt)
 
     def chat_completion_chunks(self, prompt: Prompt) -> Iterable[Message]:
         try:
             chunks: Iterable[ChatCompletionChunk] = self._chat_completion(prompt, stream=True)
-            messages = self._parser.from_chat_completion_chunks(chunks)
+            messages = self._from_openai_chat_completion_chunks(chunks)
             prompt_payload = PromptPayload.from_prompt(prompt)
             output = []
             for chunk in messages:
+                if not prompt.first_token:
+                    prompt.first_token = timestamp_ms()
                 yield chunk
                 if chunk.is_complete():
                     self.model.set_payload(chunk)
@@ -368,6 +471,7 @@ class LitellmAdapter(OpenAIAdapter):
         return outputs
 
 
+# todo: move to lite_llm_driver. shall not locate here at very first.
 class LiteLLMDriver(OpenAIDriver):
 
     def driver_name(self) -> str:
@@ -375,3 +479,52 @@ class LiteLLMDriver(OpenAIDriver):
 
     def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
         return LitellmAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
+
+
+class DeepseekAdapter(OpenAIAdapter):
+    # def reasoning_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+    #     if not stream:
+    #         yield from self._reasoning_completion_none_stream(prompt)
+    #     else:
+    #         yield from self._reasoning_completion_stream(prompt)
+    #
+
+    def _from_openai_chat_completion_item(self, message: ChatCompletion) -> Iterable[Message]:
+        cc_item = message.choices[0].message
+        if reasoning := cc_item.reasoning_content:
+            reasoning_message = Message.new_tail(content=reasoning)
+            reasoning_message.stage = MessageStage.REASONING.value
+            yield reasoning_message
+
+        yield self._parser.from_chat_completion(cc_item)
+
+    def reasoning_completion_stream(self, prompt: Prompt) -> Iterable[ChatCompletionChunk]:
+        try:
+            chunks: Iterable[ChatCompletionChunk] = self._reasoning_completion_stream(prompt)
+            messages = self._from_openai_chat_completion_chunks(chunks)
+            prompt_payload = PromptPayload.from_prompt(prompt)
+            output = []
+            for chunk in messages:
+                if not prompt.first_token:
+                    prompt.first_token = timestamp_ms()
+                yield chunk
+                if chunk.is_complete():
+                    self.model.set_payload(chunk)
+                    prompt_payload.set_payload(chunk)
+                    output.append(chunk)
+            prompt.added = output
+        except Exception as e:
+            prompt.error = str(e)
+            raise
+        finally:
+            self._storage.save(prompt)
+
+
+# todo: move to deepseek driver
+class DeepseekDriver(OpenAIDriver):
+
+    def driver_name(self) -> str:
+        return DEEPSEEK_DRIVER_NAME
+
+    def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
+        return DeepseekAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)

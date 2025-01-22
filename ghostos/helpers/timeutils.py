@@ -1,7 +1,7 @@
 from datetime import datetime
 import time
 
-__all__ = ['Timeleft', 'timestamp_datetime', 'timestamp']
+__all__ = ['Timeleft', 'timestamp_datetime', 'timestamp', 'timestamp_ms']
 
 
 class Timeleft:
@@ -29,3 +29,7 @@ def timestamp_datetime() -> datetime:
 
 def timestamp() -> int:
     return int(time.time())
+
+
+def timestamp_ms() -> float:
+    return round(time.time(), 4)

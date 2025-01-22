@@ -1,4 +1,31 @@
 # from class: ghostos.framework.llms.providers:LLMsYamlConfig
+services:
+  - base_url: https://api.moonshot.cn/v1
+    driver: openai_driver
+    name: moonshot
+    token: $MOONSHOT_API_KEY
+  - base_url: https://api.openai.com/v1
+    driver: openai_driver
+    name: openai
+    proxy: $OPENAI_PROXY
+    token: $OPENAI_API_KEY
+    compatible:
+      use_developer_role: true
+  - base_url: https://api.anthropic.com/v1
+    driver: lite_llm_driver
+    name: anthropic
+    proxy: $ANTHROPIC_PROXY
+    token: $ANTHROPIC_API_KEY
+  - base_url: https://api.deepseek.com/beta
+    driver: deepseek_driver
+    name: deepseek
+    token: $DEEPSEEK_API_KEY
+  - base_url: $AZURE_ENDPOINT
+    name: azure
+    driver: openai_driver
+    azure:
+      api_key: $AZURE_API_KEY
+      api_version: 2023-07-01-preview
 default: gpt-4o
 models:
   gpt-4o-2024-08-06:
@@ -45,17 +72,11 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
-  deepseek-coder:
-    kwargs: { }
-    max_tokens: 2000
-    message_types: null
-    model: deepseek/deepseek-coder
-    n: 1
-    request_timeout: 40
+  deepseek-reasoner:
+    max_tokens: 3400
+    model: deepseek-reasoner
     service: deepseek
-    temperature: 0.7
-    timeout: 30
-    use_tools: true
+    reasoning: {}
   gpt-3.5-turbo:
     kwargs: { }
     max_tokens: 2000
@@ -93,10 +114,14 @@ models:
     model: o1-mini
     service: openai
     reasoning: { }
+    compatible:
+      allow_system_message: false
   gpt-o1:
     model: o1
     service: openai
     reasoning: { }
+    compatible:
+      allow_system_message: false
   gpt-4o:
     kwargs: { }
     max_tokens: 2000
@@ -141,30 +166,3 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
-services:
-  - base_url: https://api.moonshot.cn/v1
-    driver: openai_driver
-    name: moonshot
-    token: $MOONSHOT_API_KEY
-  - base_url: https://api.openai.com/v1
-    driver: openai_driver
-    name: openai
-    proxy: $OPENAI_PROXY
-    token: $OPENAI_API_KEY
-    compatible:
-      use_developer_role: true
-  - base_url: https://api.anthropic.com/v1
-    driver: lite_llm_driver
-    name: anthropic
-    proxy: $ANTHROPIC_PROXY
-    token: $ANTHROPIC_API_KEY
-  - base_url: https://api.deepseek.com/beta
-    driver: openai_driver
-    name: deepseek
-    token: $DEEPSEEK_API_KEY
-  - base_url: $AZURE_ENDPOINT
-    name: azure
-    driver: openai_driver
-    azure:
-      api_key: $AZURE_API_KEY
-      api_version: 2023-07-01-preview

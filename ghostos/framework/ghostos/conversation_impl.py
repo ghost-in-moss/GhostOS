@@ -317,6 +317,7 @@ class ConversationImpl(Conversation[G]):
         self._container.shutdown()
         self._container = None
         if self._task_locker.acquired():
+            self.logger.info("task %s is released", self.task_id)
             self._task_locker.release()
 
     def is_closed(self) -> bool:

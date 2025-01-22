@@ -51,7 +51,7 @@ def open_prompt_info_dialog(prompt_id: str):
         return
 
     # description
-    desc = prompt.model_dump(include={"id", "description"})
+    desc = prompt.model_dump(include={"id", "description", "run_start", "first_token", "run_end"})
     st.markdown(f"""
 ```yaml
 {yaml_pretty_dump(desc)}

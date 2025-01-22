@@ -1,6 +1,6 @@
 from ghostos.core.llms.configs import (
     ModelConf, ServiceConf, LLMsConfig,
-    OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME,
+    OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME, DEEPSEEK_DRIVER_NAME,
 )
 from ghostos.core.llms.abcd import LLMs, LLMDriver, LLMApi
 from ghostos.core.llms.prompt import (

@@ -3,6 +3,7 @@ from ghostos.core.messages.message import (
     FunctionCaller, FunctionOutput,
     MessageClass, MessageKind,
     MessageClassesParser,
+    MessageStage,
 )
 from ghostos.core.messages.message_classes import (
     MessageKindParser,
