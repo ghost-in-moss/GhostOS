@@ -17,7 +17,10 @@ class LLMApi(ABC):
     """
 
     service: ServiceConf
+    """service of the api"""
+
     model: ModelConf
+    """model of the api"""
 
     @property
     @abstractmethod
@@ -28,6 +31,7 @@ class LLMApi(ABC):
     def get_service(self) -> ServiceConf:
         """
         get the service configuration of this API
+        Deprecated.
         """
         pass
 
@@ -35,6 +39,7 @@ class LLMApi(ABC):
     def get_model(self) -> ModelConf:
         """
         get new api with the given api_conf and return new LLMAPI
+        Deprecated.
         """
         pass
 
@@ -65,21 +70,34 @@ class LLMApi(ABC):
         pass
 
     @abstractmethod
-    def reasoning_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+    def reasoning_completion(self, prompt: Prompt) -> Iterable[Message]:
+        """
+        reasoning completion is not compatible to chat completion.
+        so we need another api.
+        :param prompt:
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def reasoning_completion_stream(self, prompt: Prompt) -> Iterable[Message]:
         pass
 
     def deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
         """
         逐个发送消息的包.
         """
-        if self.model.reasoning is not None:
-            yield from self.reasoning_completion(prompt, stream)
-
-        elif not stream or not self.model.allow_streaming:
-            message = self.chat_completion(prompt)
-            return [message]
+        if self.model.reasoning:
+            if not stream or not self.model.allow_streaming:
+                yield from self.reasoning_completion(prompt)
+            else:
+                yield from self.reasoning_completion_stream(prompt)
         else:
-            yield from self.chat_completion_chunks(prompt)
+            if not stream or not self.model.allow_streaming:
+                message = self.chat_completion(prompt)
+                return [message]
+            else:
+                yield from self.chat_completion_chunks(prompt)
 
 
 class LLMDriver(ABC):

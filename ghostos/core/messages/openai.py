@@ -12,7 +12,7 @@ from openai.types.chat.chat_completion_developer_message_param import ChatComple
 from openai.types.chat.chat_completion_user_message_param import ChatCompletionUserMessageParam
 from openai.types.chat.chat_completion_function_message_param import ChatCompletionFunctionMessageParam
 from ghostos.core.messages import (
-    Message, MessageType, Role, FunctionCaller, Payload, MessageClass, MessageClassesParser
+    Message, MessageStage, MessageType, Role, FunctionCaller, Payload, MessageClass, MessageClassesParser
 )
 from ghostos.core.messages.message_classes import (
     FunctionOutput, VariableMessage, ImageAssetMessage,
@@ -274,7 +274,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             return []
         buffer = None
         for item in messages:
-            chunk = None
+            parsed_chunks = []
             self.logger.debug("openai parser receive item: %s", item)
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
@@ -285,36 +285,39 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             elif len(item.choices) > 0:
                 choice = item.choices[0]
                 delta = choice.delta
-                chunk = self._new_chunk_from_delta(delta)
+                parsed_chunks = self._new_chunk_from_delta(delta)
             else:
                 continue
-            self.logger.debug("openai parser parsed chunk: %s", chunk)
+            self.logger.debug("openai parser parsed chunks: %r", parsed_chunks)
 
-            if chunk is None:
-                continue
-            elif item.id:
-                chunk.msg_id = item.id
+            for chunk in parsed_chunks:
+                if chunk is None:
+                    continue
+                elif item.id:
+                    # 兼容 stage.
+                    stage = "_" + chunk.stage if chunk.stage else ""
+                    chunk.msg_id = item.id + stage
 
-            if buffer is None:
-                buffer = chunk.as_head(copy=True)
-                yield buffer.get_copy()
-            else:
-                patched = buffer.patch(chunk)
-                if not patched:
-                    yield buffer.as_tail()
+                if buffer is None:
                     buffer = chunk.as_head(copy=True)
                     yield buffer.get_copy()
-                    continue
                 else:
-                    buffer = patched
-                    yield chunk
-                    continue
+                    patched = buffer.patch(chunk)
+                    if not patched:
+                        yield buffer.as_tail()
+                        buffer = chunk.as_head(copy=True)
+                        yield buffer.get_copy()
+                        continue
+                    else:
+                        buffer = patched
+                        yield chunk
+                        continue
 
         if buffer:
             yield buffer.as_tail(copy=False)
 
     @staticmethod
-    def _new_chunk_from_delta(delta: ChoiceDelta) -> Optional[Message]:
+    def _new_chunk_from_delta(delta: ChoiceDelta) -> Iterable[Message]:
 
         # function call
         if delta.function_call:
@@ -323,18 +326,29 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 name=delta.function_call.name,
                 content=delta.function_call.arguments,
             )
-            return pack
+            return [pack]
 
-        # tool calls
-        elif delta.content:
+        # compatible to deepseek reasoning
+        if hasattr(delta, "reasoning_content") and delta.reasoning_content:
+            # todo: refact later.
+            pack = Message.new_chunk(
+                role=Role.ASSISTANT.value,
+                content=delta.reasoning_content,
+                typ_=MessageType.DEFAULT,
+                stage=MessageStage.REASONING.value,
+            )
+            yield pack
+
+        if delta.content:
             pack = Message.new_chunk(
                 role=Role.ASSISTANT.value,
                 content=delta.content,
                 typ_=MessageType.DEFAULT,
             )
-            return pack
+            yield pack
 
-        elif delta.tool_calls:
+        # tool calls
+        if delta.tool_calls:
             for item in delta.tool_calls:
                 pack = Message.new_chunk(
                     typ_=MessageType.FUNCTION_CALL.value,
@@ -342,8 +356,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                     name=item.function.name,
                     content=item.function.arguments,
                 )
-                return pack
-        return None
+                yield pack
 
 
 class DefaultOpenAIParserProvider(Provider[OpenAIMessageParser]):

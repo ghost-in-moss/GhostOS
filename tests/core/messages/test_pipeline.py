@@ -42,3 +42,11 @@ def test_sequence_pipe_with_tail():
     messages = SequencePipe().across([item])
     messages = list(messages)
     assert len(messages) == 1
+
+
+def test_sequence_pipe_with_2_tails():
+    item1 = Message.new_tail(content="hello")
+    item2 = Message.new_tail(content="world")
+    messages = SequencePipe().across([item1, item2])
+    messages = list(messages)
+    assert len(messages) == 2

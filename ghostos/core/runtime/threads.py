@@ -332,6 +332,12 @@ class GoThreadInfo(BaseModel):
             stages: Optional[List[str]] = None,
             truncate: bool = True,
     ) -> Prompt:
+        """
+        :param system: the system instructions for the prompt
+        :param stages: the allowed stages of the messages that allowed in the prompt. if empty, means "" is only allowed
+        :param truncate: if pass truncated history to the prompt. use thread default truncate logic.
+        :return:
+        """
         turn_id = self.last_turn().turn_id
         history = list(self.get_history_messages(truncate))
         inputs = []
@@ -340,6 +346,9 @@ class GoThreadInfo(BaseModel):
         if current_turn is not None:
             inputs = list(current_turn.event_messages(show_instruction=True))
             appending = current_turn.added
+        if stages is None:
+            # the default stage filter is "".  otherwise you must know what stage to use.
+            stages = [""]
 
         prompt = Prompt(
             description=f"created from thread {self.id} turn {turn_id}",

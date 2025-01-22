@@ -1,5 +1,21 @@
 # Releases
 
+# v0.2.0
+
+support deepseek-r1. 
+
+* support deepseek-r1 
+  * consider deepseek api protocol is different from openai, add deepseek api adapter.
+  * implement message stage. 
+  * thread history message to prompt filter by stages `[""]` as default.
+* streamlit chat with ghost support staging message stream. 
+* openai o1 do not support system/developer message now, add new compatible option to the model.
+* now llm model and service both have attribute `compatible` to set universe compatible options.
+* prompt object add first_token attribute for debugging.
+* fix bugs
+  * fix shell does not close conversation correctly
+  * fix sequence pipeline handle multiple complete message wrong.
+
 # v0.1.0
 
 first release version.

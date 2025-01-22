@@ -48,7 +48,7 @@ def main_chat():
 
     # get ghost and context
     conversation = get_conversation(route)
-    if not conversation.refresh():
+    if not conversation or not conversation.refresh():
         st.error("Conversation is Closed")
         return
     realtime_app = Singleton.get(RealtimeApp, st.session_state, force=False)
@@ -286,19 +286,18 @@ def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
     return get_openai_realtime_app(conversation, vad_mode=vad_mode, listener=listener, speaker=speaker)
 
 
-def get_conversation(route: GhostChatRoute) -> Conversation:
-    if "chat_rendered" not in st.session_state:
-        st.session_state["chat_rendered"] = 0
-    else:
-        st.session_state["chat_rendered"] += 1
-    force_create_conversation = st.session_state["chat_rendered"] < 2
-
+def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
     conversation = Singleton.get(Conversation, st.session_state, force=False)
     if not conversation or conversation.is_closed():
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
-        conversation = shell.sync(route.get_ghost(), route.get_context(), force=force_create_conversation)
-        Singleton(conversation, Conversation).bind(st.session_state)
+        try:
+            conversation = shell.sync(route.get_ghost(), route.get_context())
+        except Exception as e:
+            st.error(e)
+            return None
+        if conversation:
+            Singleton(conversation, Conversation).bind(st.session_state)
     return conversation
 
 
@@ -418,25 +417,43 @@ def render_receiver(receiver: Receiver, debug: bool):
 
 
 def render_receive_buffer(buffer: ReceiverBuffer, debug: bool):
+    """
+    iterate buffer and render each one
+    :param buffer:
+    :param debug:
+    :return:
+    """
+    stage = ""
     while buffer is not None:
         st.logger.get_logger("ghostos").debug("receive buffer head: %s", buffer.head())
-        if MessageType.is_text(buffer.head()):
-            with st.empty():
-                contents = chunks_to_st_stream(buffer.chunks())
-                st.write_stream(contents)
-                with st.container():
-                    render_message_in_content(buffer.tail(), debug, in_expander=False)
-
-        elif MessageType.FUNCTION_CALL.match(buffer.head()):
-            contents = chunks_to_st_stream(buffer.chunks())
-            with st.empty():
-                st.write_stream(contents)
-                with st.container():
-                    render_message_in_content(buffer.tail(), debug, in_expander=False)
-        else:
-            render_message_in_content(buffer.tail(), debug, in_expander=False)
+        head = buffer.head()
+        if head.stage != stage:
+            stage = head.stage
+            stage_name = stage or "output"
+            with st.status(stage_name):
+                pass
+        _render_single_buffer(buffer, head, debug, False)
         # render next item
         buffer = buffer.next()
+
+
+def _render_single_buffer(buffer: ReceiverBuffer, head: Message, debug: bool, in_expander: bool):
+    if MessageType.is_text(head):
+        with st.empty():
+            contents = chunks_to_st_stream(buffer.chunks())
+            st.write_stream(contents)
+            with st.container():
+                render_message_in_content(buffer.tail(), debug, in_expander=in_expander)
+
+    elif MessageType.FUNCTION_CALL.match(buffer.head()):
+        contents = chunks_to_st_stream(buffer.chunks())
+        with st.empty():
+            st.write_stream(contents)
+            with st.container():
+                render_message_in_content(buffer.tail(), debug, in_expander=in_expander)
+    else:
+        with st.container():
+            render_message_in_content(buffer.tail(), debug, in_expander=in_expander)
 
 
 def chunks_to_st_stream(chunks: Iterable[Message]) -> Iterable[str]:

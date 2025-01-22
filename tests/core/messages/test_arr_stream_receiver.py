@@ -281,3 +281,41 @@ def test_array_receiver_bad_case_1():
     patched = item.patch(item2)
     assert patched is not None
     assert patched.name == "moss"
+
+
+def test_receiver_with_stages():
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
+
+    def send_data(s: Stream):
+        with s:
+            s.send([
+                Message.new_tail(content="test1", stage="reasoning"),
+                Message.new_tail(content="test2"),
+            ])
+
+    send_data(stream)
+
+    with retriever:
+        items = list(retriever.recv())
+        assert len(items) == 2
+
+
+def test_receiver_buffers_with_stages():
+    stream, retriever = new_basic_connection(timeout=5, idle=0.2, complete_only=False)
+
+    def send_data(s: Stream):
+        with s:
+            s.send([
+                Message.new_tail(content="test", stage="reasoning"),
+                Message.new_tail(content="test"),
+            ])
+
+    send_data(stream)
+
+    with retriever:
+        buffer = ReceiverBuffer.new(retriever.recv())
+        assert buffer is not None
+        assert buffer.tail().stage == "reasoning"
+        buffer = buffer.next()
+        assert buffer is not None
+        assert buffer.tail().stage == ""

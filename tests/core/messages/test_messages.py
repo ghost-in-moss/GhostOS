@@ -110,3 +110,12 @@ def test_message_path_bad_case():
                     seq='chunk', created=1732636557.282)
     patched = item1.patch(item2)
     assert patched is not None
+
+
+def test_message_patch_tail():
+    item1 = Message.new_tail(content="hello")
+    item2 = Message.new_tail(content="world")
+    patched = item1.patch(item2)
+    assert patched is None
+    assert item1.content == "hello"
+    assert item2.content == "world"

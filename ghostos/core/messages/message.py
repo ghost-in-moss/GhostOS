@@ -13,6 +13,7 @@ from copy import deepcopy
 
 __all__ = [
     "Message", "Role", "MessageType",
+    "MessageStage",
     "MessageClass", "MessageClassesParser",
     "MessageKind",
     "FunctionCaller", "FunctionOutput",
@@ -187,6 +188,12 @@ class MessageType(str, enum.Enum):
 # todo: 1. 传输协议和存储协议分开.
 # todo: 2. 传输用弱类型.
 # todo: 3. delta 用于流式传输, content part 用来解决富文本, item 解决消息体.
+
+class MessageStage(str, enum.Enum):
+    DEFAULT = ""
+    REASONING = "reasoning"
+
+
 class Message(BaseModel):
     """ message protocol """
 
@@ -242,6 +249,7 @@ class Message(BaseModel):
             name: Optional[str] = None,
             msg_id: Optional[str] = None,
             call_id: Optional[str] = None,
+            stage: str = "",
     ):
         """
         create a head chunk message
@@ -252,6 +260,7 @@ class Message(BaseModel):
         :param name:
         :param msg_id:
         :param call_id:
+        :param stage:
         # :param created:
         :return:
         """
@@ -271,6 +280,7 @@ class Message(BaseModel):
             type=typ_,
             call_id=call_id,
             msg_id=msg_id,
+            stage=stage,
             created=created,
         )
 
@@ -286,6 +296,7 @@ class Message(BaseModel):
             # todo: change to call id
             call_id: Optional[str] = None,
             attrs: Optional[Dict[str, Any]] = None,
+            stage: str = "",
     ):
         """
         create a tail message, is the complete message of chunks.
@@ -297,6 +308,7 @@ class Message(BaseModel):
         :param msg_id:
         :param call_id:
         :param attrs:
+        :param stage:
         :return:
         """
         msg = cls.new_head(
@@ -307,6 +319,7 @@ class Message(BaseModel):
             typ_=type_,
             msg_id=msg_id,
             call_id=call_id,
+            stage=stage,
         )
         msg.seq = "complete"
         msg.attrs = attrs
@@ -322,6 +335,7 @@ class Message(BaseModel):
             name: Optional[str] = None,
             call_id: Optional[str] = None,
             msg_id: Optional[str] = None,
+            stage: str = "",
     ):
         """
         create a chunk message.
@@ -333,6 +347,7 @@ class Message(BaseModel):
             call_id=call_id,
             msg_id=msg_id or "",
             seq="chunk",
+            stage=stage,
         )
 
     def get_content(self) -> str:
@@ -406,6 +421,8 @@ class Message(BaseModel):
         if not self.type:
             # only update when self type is empty (default)
             self.type = pack.type
+        if pack.stage:
+            self.stage = pack.stage
 
         if not self.role:
             self.role = pack.role

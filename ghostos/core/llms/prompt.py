@@ -49,8 +49,9 @@ class Prompt(BaseModel):
     error: Optional[str] = Field(default=None, description="error message")
     created: int = Field(default_factory=timestamp)
     model: Optional[ModelConf] = Field(default=None, description="model conf")
-    run_start: int = Field(default=0, description="start time")
-    run_end: int = Field(default=0, description="end time")
+    run_start: float = Field(default=0.0, description="start time")
+    first_token: float = Field(default=0.0, description="first token")
+    run_end: float = Field(default=0.0, description="end time")
 
     def system_prompt(self) -> str:
         contents = []

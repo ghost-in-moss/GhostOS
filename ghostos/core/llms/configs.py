@@ -11,13 +11,15 @@ from ghostos.core.messages import Payload
 
 __all__ = [
     'ModelConf', 'ServiceConf', 'LLMsConfig',
-    'OPENAI_DRIVER_NAME', 'LITELLM_DRIVER_NAME',
+    'OPENAI_DRIVER_NAME', 'LITELLM_DRIVER_NAME', 'DEEPSEEK_DRIVER_NAME',
 ]
 
 OPENAI_DRIVER_NAME = "openai_driver"
 """default llm driver name for OpenAI llm message protocol """
 
 LITELLM_DRIVER_NAME = "lite_llm_driver"
+
+DEEPSEEK_DRIVER_NAME = "deepseek_driver"
 
 
 class Reasonable(BaseModel):
@@ -27,6 +29,10 @@ class Reasonable(BaseModel):
     effort: Literal["low", "medium", "high"] = Field(
         "medium",
         description="reasoning effort level",
+    )
+    max_completion_tokens: Optional[int] = Field(
+        None,
+        description="max completion tokens",
     )
 
 
@@ -46,15 +52,17 @@ class ModelConf(Payload):
     request_timeout: float = Field(default=40, description="request timeout")
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="kwargs")
     use_tools: bool = Field(default=True, description="use tools")
-    max_completion_tokens: Optional[int] = Field(
-        None,
-        description="max completion tokens",
-    )
+
     message_types: Optional[List[str]] = Field(None, description="model allow message types")
     allow_streaming: bool = Field(True, description="if the current model allow streaming")
     reasoning: Optional[Reasonable] = Field(
         default=None,
         description="reasoning configuration",
+    )
+
+    compatible: Optional[Compatible] = Field(
+        default=None,
+        description="the model api compatible configuration",
     )
 
     payloads: Dict[str, Dict] = Field(
@@ -67,6 +75,7 @@ class ModelConf(Payload):
 class Compatible(BaseModel):
     use_developer_role: bool = Field(default=False, description="use developer role instead of system")
     allow_system_in_messages: bool = Field(default=True, description="allow system messages in history")
+    allow_system_message: bool = Field(default=True, description="support system message or not")
 
 
 class Azure(BaseModel):
@@ -93,8 +102,8 @@ class ServiceConf(BaseModel):
         description="the adapter driver name of this service. change it only if you know what you are doing",
     )
 
-    compatible: Compatible = Field(
-        default_factory=Compatible,
+    compatible: Optional[Compatible] = Field(
+        default=None,
         description="the model api compatible configuration",
     )
 
