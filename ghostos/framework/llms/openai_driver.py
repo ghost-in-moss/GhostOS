@@ -3,11 +3,12 @@ from openai import OpenAI, AzureOpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
 from openai import NOT_GIVEN
-from openai.types.chat import ChatCompletion, ChatCompletionReasoningEffort
+from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
+from ghostos.core.llms.tools import FunctionalToken
 from ghostos.helpers import timestamp_ms
 from ghostos.core.messages import (
     MessageStage,
@@ -15,17 +16,11 @@ from ghostos.core.messages import (
     CompletionUsagePayload, Role,
 )
 from ghostos.core.llms import (
-    LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME, DEEPSEEK_DRIVER_NAME,
-    Prompt, PromptPayload, PromptStorage,
-    FunctionalToken,
+    LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME,
+    Prompt, PromptPayload, PromptStorage
 )
-from ghostos.container import Bootstrapper, Container
 
-__all__ = [
-    'OpenAIDriver', 'OpenAIAdapter',
-    'LitellmAdapter', 'LiteLLMDriver',
-    'DeepseekDriver', 'DeepseekAdapter',
-]
+__all__ = [ 'OpenAIDriver', 'OpenAIAdapter' ]
 
 
 class FunctionalTokenPrompt(str):
@@ -434,97 +429,3 @@ class OpenAIDriver(LLMDriver):
     def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
         get_ghostos_logger().debug(f"new llm api %s at service %s", model.model, service.name)
         return OpenAIAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
-
-
-class LitellmAdapter(OpenAIAdapter):
-    """
-    adapter class wrap openai api to ghostos.blueprint.kernel.llms.LLMApi
-    """
-
-    def _chat_completion(self, chat: Prompt, stream: bool) -> ChatCompletion:
-        import litellm
-        messages = chat.get_messages()
-        messages = self.parse_message_params(messages)
-        response = litellm.completion(
-            model=self.model.model,
-            messages=list(messages),
-            timeout=self.model.timeout,
-            temperature=self.model.temperature,
-            n=self.model.n,
-            # not support stream yet
-            stream=False,
-            api_key=self.service.token,
-        )
-        return response.choices[0].message
-
-    def parse_message_params(self, messages: List[Message]) -> List[ChatCompletionMessageParam]:
-        parsed = super().parse_message_params(messages)
-        outputs = []
-        count = 0
-        for message in parsed:
-            # filter all the system message to __system__ user message.
-            if count > 0 and "role" in message and message["role"] == Role.SYSTEM.value:
-                message["role"] = Role.USER.value
-                message["name"] = "__system__"
-            outputs.append(message)
-            count += 1
-        return outputs
-
-
-# todo: move to lite_llm_driver. shall not locate here at very first.
-class LiteLLMDriver(OpenAIDriver):
-
-    def driver_name(self) -> str:
-        return LITELLM_DRIVER_NAME
-
-    def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
-        return LitellmAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
-
-
-class DeepseekAdapter(OpenAIAdapter):
-    # def reasoning_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
-    #     if not stream:
-    #         yield from self._reasoning_completion_none_stream(prompt)
-    #     else:
-    #         yield from self._reasoning_completion_stream(prompt)
-    #
-
-    def _from_openai_chat_completion_item(self, message: ChatCompletion) -> Iterable[Message]:
-        cc_item = message.choices[0].message
-        if reasoning := cc_item.reasoning_content:
-            reasoning_message = Message.new_tail(content=reasoning)
-            reasoning_message.stage = MessageStage.REASONING.value
-            yield reasoning_message
-
-        yield self._parser.from_chat_completion(cc_item)
-
-    def reasoning_completion_stream(self, prompt: Prompt) -> Iterable[ChatCompletionChunk]:
-        try:
-            chunks: Iterable[ChatCompletionChunk] = self._reasoning_completion_stream(prompt)
-            messages = self._from_openai_chat_completion_chunks(chunks)
-            prompt_payload = PromptPayload.from_prompt(prompt)
-            output = []
-            for chunk in messages:
-                if not prompt.first_token:
-                    prompt.first_token = timestamp_ms()
-                yield chunk
-                if chunk.is_complete():
-                    self.model.set_payload(chunk)
-                    prompt_payload.set_payload(chunk)
-                    output.append(chunk)
-            prompt.added = output
-        except Exception as e:
-            prompt.error = str(e)
-            raise
-        finally:
-            self._storage.save(prompt)
-
-
-# todo: move to deepseek driver
-class DeepseekDriver(OpenAIDriver):
-
-    def driver_name(self) -> str:
-        return DEEPSEEK_DRIVER_NAME
-
-    def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
-        return DeepseekAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
