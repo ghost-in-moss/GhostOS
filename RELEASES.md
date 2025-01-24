@@ -16,6 +16,15 @@ support deepseek-r1.
   * fix shell does not close conversation correctly
   * fix sequence pipeline handle multiple complete message wrong.
 
+## v0.2.1 
+
+With deepseek-reasoner help, develop the ubuntu agent for feature testing.
+The deepseek-reasoner write all the terminal codes.
+Support ubuntu agent, run `ghostos web ghostos.demo.os_agents.ubuntu_agent` to test it. 
+
+* llms model conf support new compatible option `support_function_call` because deepseek not support it yet.
+* develop `Terminal` library by deepseek-reasoner. 
+
 # v0.1.0
 
 first release version.

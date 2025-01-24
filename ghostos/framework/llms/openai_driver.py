@@ -1,12 +1,14 @@
-from typing import List, Iterable, Union, Optional
+from typing import List, Iterable, Union, Optional, Tuple
 from openai import OpenAI, AzureOpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
-from openai import NOT_GIVEN
+from openai import NOT_GIVEN, NotGiven
 from openai.types.chat import ChatCompletion, ChatCompletionReasoningEffort
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
+from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+from openai.types.chat.completion_create_params import Function
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.helpers import timestamp_ms
 from ghostos.core.messages import (
@@ -15,11 +17,11 @@ from ghostos.core.messages import (
     CompletionUsagePayload, Role,
 )
 from ghostos.core.llms import (
-    LLMs, LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME, DEEPSEEK_DRIVER_NAME,
+    LLMDriver, LLMApi, ModelConf, ServiceConf, OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME, DEEPSEEK_DRIVER_NAME,
     Prompt, PromptPayload, PromptStorage,
+    Compatible,
     FunctionalToken,
 )
-from ghostos.container import Bootstrapper, Container
 
 __all__ = [
     'OpenAIDriver', 'OpenAIAdapter',
@@ -137,9 +139,7 @@ class OpenAIAdapter(LLMApi):
         return changed
 
     def parse_by_compatible_settings(self, messages: List[Message]) -> List[Message]:
-        compatible = self.model.compatible
-        if compatible is None:
-            compatible = self.service.compatible
+        compatible = self._get_compatible_options()
 
         if compatible is None:
             return messages
@@ -191,12 +191,7 @@ class OpenAIAdapter(LLMApi):
         try:
             prompt.run_start = timestamp_ms()
             self._logger.debug(f"start chat completion messages %s", messages)
-            functions = prompt.get_openai_functions()
-            tools = prompt.get_openai_tools()
-            if self.model.use_tools:
-                functions = NOT_GIVEN
-            else:
-                tools = NOT_GIVEN
+            functions, tools = self._get_prompt_functions_and_tools(prompt)
             return self._client.chat.completions.create(
                 messages=messages,
                 model=self.model.model,
@@ -218,6 +213,22 @@ class OpenAIAdapter(LLMApi):
             self._logger.debug(f"end chat completion for prompt {prompt.id}")
             prompt.run_end = timestamp_ms()
 
+    def _get_prompt_functions_and_tools(
+            self,
+            prompt: Prompt,
+    ) -> Tuple[Union[List[Function], NotGiven], Union[List[ChatCompletionToolParam], NotGiven]]:
+        functions = prompt.get_openai_functions()
+        tools = prompt.get_openai_tools()
+        if self.model.use_tools:
+            functions = NOT_GIVEN
+        else:
+            tools = NOT_GIVEN
+        # compatible check
+        if not self._get_compatible_options().support_function_call:
+            functions = NOT_GIVEN
+            tools = NOT_GIVEN
+        return functions, tools
+
     def _reasoning_completion(self, prompt: Prompt) -> ChatCompletion:
         if self.model.reasoning is None:
             raise NotImplementedError(f"current model {self.model} does not support reasoning completion ")
@@ -237,12 +248,7 @@ class OpenAIAdapter(LLMApi):
         try:
             prompt.run_start = timestamp_ms()
             self._logger.debug(f"start reasoning completion messages %s", messages)
-            functions = prompt.get_openai_functions()
-            tools = prompt.get_openai_tools()
-            if self.model.use_tools:
-                functions = NOT_GIVEN
-            else:
-                tools = NOT_GIVEN
+            functions, tools = self._get_prompt_functions_and_tools(prompt)
             if self.model.reasoning.effort is None:
                 reasoning_effort = NOT_GIVEN
             else:
@@ -292,12 +298,7 @@ class OpenAIAdapter(LLMApi):
         try:
             prompt.run_start = timestamp_ms()
             self._logger.debug(f"start reasoning completion messages %s", messages)
-            functions = prompt.get_openai_functions()
-            tools = prompt.get_openai_tools()
-            if self.model.use_tools:
-                functions = NOT_GIVEN
-            else:
-                tools = NOT_GIVEN
+            functions, tools = self._get_prompt_functions_and_tools(prompt)
             if self.model.reasoning.effort is None:
                 reasoning_effort = NOT_GIVEN
             else:
@@ -414,6 +415,9 @@ class OpenAIAdapter(LLMApi):
     def parse_prompt(self, prompt: Prompt) -> Prompt:
         prompt.model = self.model
         return prompt
+
+    def _get_compatible_options(self) -> Compatible:
+        return self.model.compatible or self.service.compatible or Compatible()
 
 
 class OpenAIDriver(LLMDriver):
