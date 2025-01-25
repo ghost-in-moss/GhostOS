@@ -4,7 +4,9 @@ from ghostos.container import Provider, Container
 from ghostos.core.llms import LLMs, LLMsConfig, PromptStorage
 from ghostos.core.messages.openai import OpenAIMessageParser
 from ghostos.framework.llms.llms import LLMsImpl
-from ghostos.framework.llms.openai_driver import OpenAIDriver, LiteLLMDriver, DeepseekDriver
+from ghostos.framework.llms.openai_driver import OpenAIDriver
+from ghostos.framework.llms.lite_llm_driver import LiteLLMDriver
+from ghostos.framework.llms.deepseek_driver import DeepseekDriver
 from ghostos.framework.llms.prompt_storage_impl import PromptStorageImpl
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf
