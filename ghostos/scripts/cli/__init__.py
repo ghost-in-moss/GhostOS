@@ -15,9 +15,20 @@ def main():
     pass
 
 
+@main.command("thread")
+@click.argument("thread_id")
+def show_thread_info(thread_id: str):
+    """
+    show thread info in streamlit app, with thread id or thread filename
+    """
+    from ghostos.scripts.cli.run_streamlit_thread import start_ghostos_thread_info
+    start_ghostos_thread_info(thread_id)
+
+
 @main.command("web")
 @click.argument("python_file_or_module")
-@click.option("--src", "-s", default=".", show_default=True, help="load the directory to python path, make sure can import relative packages")
+@click.option("--src", "-s", default=".", show_default=True,
+              help="load the directory to python path, make sure can import relative packages")
 def start_streamlit_web(python_file_or_module: str, src: str):
     """
     turn a python file or module into a streamlit web agent
@@ -100,7 +111,7 @@ The Workspace meant to save local files such as configs, logs, cache files.
     cwd = getcwd()
     result = Prompt.ask(
         f"\n>> will init ghostos workspace at `{cwd}`. input directory name:",
-        default="app",
+        default="ghostos_ws",
     )
     source_dir = app_stub_dir()
     real_workspace_dir = abspath(result)

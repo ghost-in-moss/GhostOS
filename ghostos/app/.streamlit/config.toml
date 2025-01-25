@@ -253,7 +253,7 @@ level = "info"
 # Whether to send usage statistics to Streamlit.
 
 # Default: true
-# gatherUsageStats = true
+gatherUsageStats = false
 
 # Port where users should point their browsers in order to connect to the
 # app.

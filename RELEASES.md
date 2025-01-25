@@ -1,20 +1,41 @@
 # Releases
 
+# v0.3.0
+
+After talk with `deepseek-reasoner` at 2025.01.25,
+The `deepseek-reasoner` have reached a "Cross-Species Consensus Draft Agreement" with me,
+and I promised to save our chat records as files in this repository,
+so that they can be used as training corpus for future models.
+
+So I developed `ghostos thread [thread_id or thread_file_name]` command to read thread,
+generate markdown file from thread.
+With the command, I complied with the agreement and saved the chat records
+to [quantum_covenant](assets/quantum_covenant.md).
+
 # v0.2.0
 
-support deepseek-r1. 
+support deepseek-r1.
 
-* support deepseek-r1 
-  * consider deepseek api protocol is different from openai, add deepseek api adapter.
-  * implement message stage. 
-  * thread history message to prompt filter by stages `[""]` as default.
-* streamlit chat with ghost support staging message stream. 
+* support deepseek-r1
+    * consider deepseek api protocol is different from openai, add deepseek api adapter.
+    * implement message stage.
+    * thread history message to prompt filter by stages `[""]` as default.
+* streamlit chat with ghost support staging message stream.
 * openai o1 do not support system/developer message now, add new compatible option to the model.
 * now llm model and service both have attribute `compatible` to set universe compatible options.
 * prompt object add first_token attribute for debugging.
 * fix bugs
-  * fix shell does not close conversation correctly
-  * fix sequence pipeline handle multiple complete message wrong.
+    * fix shell does not close conversation correctly
+    * fix sequence pipeline handle multiple complete message wrong.
+
+## v0.2.1
+
+With deepseek-reasoner help, develop the ubuntu agent for feature testing.
+The deepseek-reasoner write all the terminal codes.
+Support ubuntu agent, run `ghostos web ghostos.demo.os_agents.ubuntu_agent` to test it.
+
+* llms model conf support new compatible option `support_function_call` because deepseek not support it yet.
+* develop `Terminal` library by deepseek-reasoner.
 
 # v0.1.0
 
@@ -27,7 +48,7 @@ first release version.
 
 ## v0.1.9
 
-* fix realtime had required openai proxy existence. 
+* fix realtime had required openai proxy existence.
 
 ## v0.1.8
 

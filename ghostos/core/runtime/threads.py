@@ -2,7 +2,7 @@ from typing import Optional, List, Iterable, Dict, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.core.messages import Message, copy_messages, Role
+from ghostos.core.messages import Message, copy_messages, Role, MessageType, MessageStage
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event, EventTypes
@@ -12,6 +12,7 @@ from contextlib import contextmanager
 __all__ = [
     'GoThreads', 'GoThreadInfo', 'Turn',
     'thread_to_prompt',
+    'thread_to_markdown',
 ]
 
 
@@ -415,3 +416,26 @@ class GoThreads(ABC):
     @contextmanager
     def transaction(self):
         yield
+
+
+def thread_to_markdown(thread: GoThreadInfo, stages: Optional[List[str]] = None) -> str:
+    head = f"""
+[//]: # (the messages below are the content of a GhostOS chat thread. )
+[//]: # (each message block is started with `> role: name` to introduce the role and name of the message)
+"""
+    blocks = [head]
+    stages = set(stages) if stages else {""}
+    messages = thread.get_messages(truncated=False)
+    for message in messages:
+        if not MessageType.is_text(message):
+            continue
+        if not MessageStage.allow(message.stage, stages):
+            continue
+        block = f"""
+> `{message.role}`{": " + message.name if message.name else ""}
+
+{message.get_content()}
+"""
+        blocks.append(block)
+
+    return "\n\n".join(blocks)

@@ -4,6 +4,7 @@
 
 * [Documents](https://ghost-in-moss.github.io/GhostOS/#/)
 * [Discord Server](https://discord.gg/NG6VKwd5jV)
+* [Releases](RELEASES.md)
 
 (This document is translated from zh-cn to english by [Moonshot](https://moonshot.cn/))
 

@@ -76,6 +76,7 @@ class Compatible(BaseModel):
     use_developer_role: bool = Field(default=False, description="use developer role instead of system")
     allow_system_in_messages: bool = Field(default=True, description="allow system messages in history")
     allow_system_message: bool = Field(default=True, description="support system message or not")
+    support_function_call: bool = Field(default=True, description="if the service or model support function call")
 
 
 class Azure(BaseModel):

@@ -8,6 +8,8 @@ debug.log
 __pycache__/
 *.py[cod]
 *$py.class
+.ghostos.yml
+ghostos_ws/
 
 # C extensions
 *.so

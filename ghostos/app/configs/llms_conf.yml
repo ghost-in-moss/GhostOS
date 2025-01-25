@@ -77,6 +77,8 @@ models:
     model: deepseek-reasoner
     service: deepseek
     reasoning: {}
+    compatible:
+      support_function_call: false
   gpt-3.5-turbo:
     kwargs: { }
     max_tokens: 2000
