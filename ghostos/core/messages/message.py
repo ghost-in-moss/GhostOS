@@ -193,6 +193,24 @@ class MessageStage(str, enum.Enum):
     DEFAULT = ""
     REASONING = "reasoning"
 
+    @classmethod
+    def allow(cls, value: str, stages: Optional[Iterable[str]]) -> bool:
+        if stages is None:
+            stages = {cls.DEFAULT.value}
+
+        if not stages:
+            return False
+
+        if isinstance(stages, set):
+            if "*" in stages:
+                return True
+            return value in stages
+        else:
+            for val in stages:
+                if val == "*" or val == value:
+                    return True
+        return False
+
 
 class Message(BaseModel):
     """ message protocol """

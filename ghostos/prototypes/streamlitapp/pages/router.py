@@ -20,6 +20,7 @@ __all__ = [
     "GhostChatRoute",
     "AIFuncListRoute",
     "AIFuncDetailRoute",
+    "ShowThreadRoute",
 ]
 
 
@@ -27,6 +28,7 @@ class PagePath(str, Enum):
     HOMEPAGE = "ghostos.prototypes.streamlitapp.pages.homepage"
     AIFUNCS = "ghostos.prototypes.streamlitapp.pages.aifuncs"
     GHOSTS = "ghostos.prototypes.streamlitapp.pages.chat_with_ghost"
+    THREADS = "ghostos.prototypes.streamlitapp.pages.threads"
     CONFIGS = "ghostos.prototypes.streamlitapp.pages.configs"
 
     def suffix(self, attr_name: str):
@@ -43,6 +45,17 @@ class GhostTaskRoute(Route):
         button_help="todo",
         antd_icon="robot",
     )
+
+
+class ShowThreadRoute(Route):
+    link = Link(
+        name="Thread Info",
+        import_path=PagePath.THREADS.suffix(":show_thread"),
+        streamlit_icon=":material/smart_toy:",
+        button_help="show details of a thread",
+        antd_icon="robot",
+    )
+    thread_id: str = Field(default="", description="thread id or file name")
 
 
 class GhostChatRoute(Route):
@@ -216,6 +229,7 @@ def default_router() -> Router:
             # ghosts
             GhostChatRoute(),
             GhostTaskRoute(),
+            ShowThreadRoute(),
 
             ConfigsRoute(),
         ],

@@ -11,6 +11,8 @@ from ghostos.abcd import Ghost
 from pydantic import BaseModel, Field
 from ghostos.entity import EntityMeta, to_entity_meta
 from ghostos.ghosts.moss_agent import new_moss_agent
+from streamlit.web.cli import main_run as run_streamlit_web
+from os import path
 import inspect
 import json
 
@@ -21,7 +23,23 @@ __all__ = [
     'check_ghostos_workspace_exists',
     'parse_args_modulename_or_filename',
     'GhostsConf', 'GhostInfo',
+    'get_streamlit_config_flag_options',
+    'start_streamlit_prototype_cli',
 ]
+
+
+def get_streamlit_config_flag_options(workspace_dir: str) -> List[str]:
+    from toml import loads
+    filename = path.join(workspace_dir, ".streamlit/config.toml")
+    with open(filename, "r") as f:
+        data = loads(f.read())
+    flags = []
+    for key in data:
+        attrs = data[key]
+        for attr_name in attrs:
+            value = attrs[attr_name]
+            flags.append(f"--{key}.{attr_name}={value}")
+    return flags
 
 
 def get_ghost_by_cli_argv() -> Tuple[GhostInfo, ModuleType, str, bool]:
@@ -160,3 +178,13 @@ class GhostsConf(BaseModel):
         content = self.model_dump_json(indent=2)
         with open(ghosts_filename, "w") as f:
             f.write(content)
+
+
+def start_streamlit_prototype_cli(filename: str, cli_args: str, workspace_dir: str):
+    from ghostos.prototypes.streamlitapp import cli
+    script_path = path.join(path.dirname(cli.__file__), filename)
+    args = [script_path, cli_args]
+
+    flags = get_streamlit_config_flag_options(workspace_dir)
+    args.extend(flags)
+    run_streamlit_web(args)
