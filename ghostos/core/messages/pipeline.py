@@ -1,8 +1,11 @@
-from typing import Iterable, List, Optional, Dict
+from typing import Iterable, Optional
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from ghostos.core.messages.message import Message, MessageType
-from ghostos.core.messages.utils import iter_messages
+
+__all__ = [
+    'Pipe', 'pipeline', "SequencePipe", 'TailPatchPipe',
+]
 
 
 class Pipe(ABC):
@@ -19,11 +22,11 @@ class Pipe(ABC):
 def pipeline(pipes: Iterable[Pipe], messages: Iterable[Message]) -> Iterable[Message]:
     """
     build pipeline with pipes
-    :param pipes:
+    :param pipes: pipes from input to output
     :param messages:
     :return:
     """
-    ordered = reversed(list(pipes))
+    ordered = list(pipes)
     outputs = messages
     for pipe in ordered:
         outputs = pipe.across(messages)

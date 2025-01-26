@@ -50,6 +50,7 @@ class DefaultMessenger(Messenger):
                     name=message.name,
                     arguments=message.content,
                 ))
+            # 非 function call 类型但也可以有 caller.
             elif message.callers:
                 callers.extend(message.callers)
         self.destroy()

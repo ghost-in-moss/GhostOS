@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, Tuple
 
 from pydantic import BaseModel, Field
 from ghostos.identifier import Identical, Identifier
@@ -71,12 +71,20 @@ class FunctionalToken(Identical, BaseModel):
     LLMDriver shall define which way to prompt the functional token usage such as xml.
     """
 
-    token: str = Field(description="token that start the function content output")
-    end_token: str = Field(default="", description="end token that close the function content output")
     name: str = Field(description="name of the function")
+    token: str = Field(description="token that start the function content output")
     description: str = Field(default="", description="description of the function")
     visible: bool = Field(default=False, description="if the functional token and the parameters are visible to user")
+
+    # Deprecated
     parameters: Optional[Dict] = Field(default=None, description="functional token parameters")
+    end_token: str = Field(default="", description="end token that close the function content output")
+
+    @classmethod
+    def new(cls, token: str, *, visible: bool = True, name: str = "", desc: str = ""):
+        if not name:
+            name = token
+        return cls(name=name, token=token, description=desc, visible=visible)
 
     def new_caller(self, arguments: str) -> "FunctionCaller":
         """
@@ -100,5 +108,8 @@ class FunctionalToken(Identical, BaseModel):
     def as_tool(self) -> LLMFunc:
         """
         all functional token are compatible to a llm tool.
+        Deprecated
         """
+        from warnings import warn
+        warn("Deprecated: functional token no longer supported in OpenAI Tool", DeprecationWarning)
         return LLMFunc.new(name=self.name, desc=self.description, parameters=self.parameters)
