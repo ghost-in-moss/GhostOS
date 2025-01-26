@@ -187,7 +187,7 @@ class FailOperator(Operator):
         if self.messages:
             messages.extend(self.messages)
         if messages:
-            session.respond(messages)
+            session.respond_buffer(messages)
         return None
 
     def destroy(self):
@@ -210,7 +210,7 @@ class WaitOperator(AbcOperator, ABC):
                 )
                 session.fire_events(event)
             else:
-                session.respond(self.messages)
+                session.respond_buffer(self.messages)
         return None
 
 
@@ -237,5 +237,5 @@ class FinishOperator(AbcOperator):
             )
             session.fire_events(event)
         elif self.messages:
-            session.respond(self.messages)
+            session.respond_buffer(self.messages)
         return None

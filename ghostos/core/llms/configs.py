@@ -51,8 +51,6 @@ class ModelConf(Payload):
     timeout: float = Field(default=30, description="timeout")
     request_timeout: float = Field(default=40, description="request timeout")
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="kwargs")
-    use_tools: bool = Field(default=True, description="use tools")
-
     message_types: Optional[List[str]] = Field(None, description="model allow message types")
     allow_streaming: bool = Field(True, description="if the current model allow streaming")
     reasoning: Optional[Reasonable] = Field(
@@ -73,10 +71,27 @@ class ModelConf(Payload):
 
 
 class Compatible(BaseModel):
+    """
+    all the shitty compatible features for various models
+    """
+
     use_developer_role: bool = Field(default=False, description="use developer role instead of system")
     allow_system_in_messages: bool = Field(default=True, description="allow system messages in history")
     allow_system_message: bool = Field(default=True, description="support system message or not")
     support_function_call: bool = Field(default=True, description="if the service or model support function call")
+    function_call_use_tool: bool = Field(default=True, description="function call use tool protocol")
+    support_functional_tokens: bool = Field(
+        default=False,
+        description="if the service or model support functional tokens",
+    )
+    functional_token_instruction: str = Field(
+        default="",
+        description="custom the functional token prompt",
+    )
+    last_message_shall_be_assistant_or_user: bool = Field(
+        default=False,
+        description="some how last message shall be assistant role",
+    )
 
 
 class Azure(BaseModel):

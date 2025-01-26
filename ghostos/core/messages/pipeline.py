@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from ghostos.core.messages.message import Message, MessageType
 
 __all__ = [
-    'Pipe', 'pipeline', "SequencePipe", 'TailPatchPipe',
+    'Pipe', 'run_pipeline', "SequencePipe", 'TailPatchPipe',
 ]
 
 
@@ -19,10 +19,10 @@ class Pipe(ABC):
         pass
 
 
-def pipeline(pipes: Iterable[Pipe], messages: Iterable[Message]) -> Iterable[Message]:
+def run_pipeline(pipes: Iterable[Pipe], messages: Iterable[Message]) -> Iterable[Message]:
     """
     build pipeline with pipes
-    :param pipes: pipes from input to output
+    :param pipes:  from input to output
     :param messages:
     :return:
     """

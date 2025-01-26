@@ -42,7 +42,7 @@ def __moss_agent_instruction__(agent: MossAgent, moss: Moss) -> str:
     """
     return the instruction string of the agent.
     """
-    return agent.instructions
+    return agent.instruction
 
 
 def __moss_agent_thought__(agent: MossAgent, moss: Moss, *actions: Action) -> Thought:

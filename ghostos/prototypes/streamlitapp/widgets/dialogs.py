@@ -75,6 +75,12 @@ def open_prompt_info_dialog(prompt_id: str):
             for func in prompt.functions:
                 with st.expander(func.name):
                     st.write(func.model_dump())
+    if prompt.functional_tokens:
+        st.subheader("Functional Tokens")
+        with st.container(border=True):
+            for ft in prompt.functional_tokens:
+                with st.expander(ft.name):
+                    st.write(ft.model_dump())
 
     system_prompt = prompt.system_prompt()
     st.subheader("System Prompt")

@@ -1,5 +1,5 @@
 from ghostos.core.messages import Message
-from ghostos.core.messages.pipeline import SequencePipe, pipeline
+from ghostos.core.messages.pipeline import SequencePipe, run_pipeline
 from ghostos.core.messages.functional_tokens import XMLFunctionalTokenPipe
 from ghostos.core.llms.tools import FunctionalToken
 
@@ -17,7 +17,7 @@ def test_xml_functional_token_pipe_baseline():
     for c in content:
         messages.append(Message.new_chunk(content=c))
 
-    items = list(pipeline([sequence_pipe, xml_ft_pipe], messages))
+    items = list(run_pipeline([sequence_pipe, xml_ft_pipe], messages))
     last = items[-1]
     assert last.is_complete()
     assert len(last.callers) == 1
@@ -44,7 +44,7 @@ def test_2_xml_functional_token_pipe():
     for c in content:
         messages.append(Message.new_chunk(content=c))
 
-    items = list(pipeline([sequence_pipe, xml_ft_pipe], messages))
+    items = list(run_pipeline([sequence_pipe, xml_ft_pipe], messages))
     last = items[-1]
     assert last.is_complete()
     assert len(last.callers) == 2
@@ -131,7 +131,7 @@ def test_xml_functional_token_pipe_cases():
         ft = FunctionalToken.new(token=c.token, visible=c.visible)
         sequence_pipe = SequencePipe()
         xml_ft_pipe = XMLFunctionalTokenPipe([ft])
-        items = list(pipeline([sequence_pipe, xml_ft_pipe], messages))
+        items = list(run_pipeline([sequence_pipe, xml_ft_pipe], messages))
         last = items[-1]
         assert last.is_complete()
         if c.caller_count > 0:

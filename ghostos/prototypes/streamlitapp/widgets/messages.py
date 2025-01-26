@@ -167,7 +167,7 @@ def _render_message_caller(callers: Iterable[FunctionCaller]):
     for caller in callers:
         if caller.name == MossAction.DEFAULT_NAME:
             st.caption(f"function call: {caller.name}")
-            code = MossAction.unmarshal_arguments(caller.arguments)
+            code = MossAction.unmarshal_code(caller.arguments)
             st.code(code)
         else:
             st.caption(f"function call: {caller.name}")

@@ -18,4 +18,4 @@ from ghostos.core.messages.openai import (
 from ghostos.core.messages.buffers import Buffer, Flushed
 from ghostos.core.messages.utils import copy_messages
 from ghostos.core.messages.transport import Stream, Receiver, new_basic_connection, ReceiverBuffer
-from ghostos.core.messages.pipeline import SequencePipe
+from ghostos.core.messages.pipeline import SequencePipe, run_pipeline

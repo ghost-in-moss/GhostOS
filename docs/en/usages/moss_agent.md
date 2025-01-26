@@ -74,7 +74,7 @@ __ghost__ = MossAgent(
     name="agent name",
     description="agent desc",
     persona="persona",
-    instructions="system instructions",
+    instruction="system instructions",
     # use llms model defined at app/configs/llms_conf.yml
     llm_api="moonshot-v1-128k",
 )

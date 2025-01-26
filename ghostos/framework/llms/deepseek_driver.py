@@ -4,7 +4,9 @@ from ghostos.core.llms.abcd import LLMApi
 from ghostos.core.llms.prompt import Prompt, PromptPayload
 from ghostos.core.messages import Message, MessageStage
 from ghostos.helpers.timeutils import timestamp_ms
-from ghostos.framework.llms.openai_driver import OpenAIDriver, OpenAIAdapter, ChatCompletion, ChatCompletionChunk
+from ghostos.framework.llms.openai_driver import OpenAIDriver, OpenAIAdapter
+from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+from openai.types.chat import ChatCompletion
 
 
 class DeepseekAdapter(OpenAIAdapter):
@@ -19,6 +21,7 @@ class DeepseekAdapter(OpenAIAdapter):
 
     def reasoning_completion_stream(self, prompt: Prompt) -> Iterable[ChatCompletionChunk]:
         try:
+            prompt = self.parse_prompt(prompt)
             chunks: Iterable[ChatCompletionChunk] = self._reasoning_completion_stream(prompt)
             messages = self._from_openai_chat_completion_chunks(chunks)
             prompt_payload = PromptPayload.from_prompt(prompt)

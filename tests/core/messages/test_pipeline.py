@@ -1,6 +1,6 @@
 from typing import Iterable
 from ghostos.core.messages import Message
-from ghostos.core.messages.pipeline import SequencePipe, pipeline
+from ghostos.core.messages.pipeline import SequencePipe, run_pipeline
 
 
 def test_multi_sequence_pipes():
@@ -11,7 +11,7 @@ def test_multi_sequence_pipes():
             yield Message.new_chunk(content=char)
 
     messages = iter_content(content)
-    parsed = pipeline([SequencePipe(), SequencePipe(), SequencePipe()], messages)
+    parsed = run_pipeline([SequencePipe(), SequencePipe(), SequencePipe()], messages)
     got = list(parsed)
     assert len(got) == len(content) + 1
     assert got[0].is_head()

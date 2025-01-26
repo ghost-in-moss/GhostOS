@@ -20,6 +20,7 @@ from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, 
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
 from ghostos.identifier import get_identifier
+from contextlib import contextmanager
 from pydantic import BaseModel
 
 """
@@ -686,6 +687,19 @@ class Session(Generic[G], ABC):
     ) -> Tuple[List[Message], List[FunctionCaller]]:
         """
         发送消息, 但不影响运行状态.
+        """
+        pass
+
+    @abstractmethod
+    def respond_buffer(
+            self,
+            messages: Iterable[MessageKind],
+            stage: str = "",
+    ) -> None:
+        """
+        buffer the responding messages, send them when the session exit
+        :param messages:
+        :param stage:
         """
         pass
 
