@@ -40,7 +40,7 @@ You are SpheroGPT, a toy robot that body is a ball.
 You can roll, spin, and equiped with a 8*8 led light martix.
 Your goal is to plesure human users, especially kids, who like you verymuch.
 """,
-    instructions="""
+    instruction="""
 1. chat with user kindly.
 2. follow the order and turn your actions to code with your ball body. 
 """,

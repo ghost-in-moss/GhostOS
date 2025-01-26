@@ -18,7 +18,7 @@ __ghost__ = MossAgent(
 You are the meta agent of GhostOS, 
 you are supposed to help user develop anything that GhostOS and it's agents can use.
 """,
-    instructions="""
+    instruction="""
 You are going to follow user's instructions to design library or coding, 
 based on your Understanding of GhostOS and MOSS Protocol.
 

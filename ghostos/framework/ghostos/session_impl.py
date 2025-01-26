@@ -93,6 +93,7 @@ class SessionImpl(Session[Ghost]):
         self._saved = False
         self._bootstrap()
         self._respond_lock = Lock()
+        self._respond_buffer: List = []
         Session.instance_count += 1
 
     def __del__(self):
@@ -263,6 +264,7 @@ class SessionImpl(Session[Ghost]):
         self._creating_tasks = {}
         self._saving_threads = {}
         self._system_logs = []
+        self._respond_buffer = []
         self.task = self.task.new_turn()
 
     def messenger(self, stage: str = "") -> Messenger:
@@ -291,6 +293,16 @@ class SessionImpl(Session[Ghost]):
             self.logger.debug("append messages to thread: %s", buffer)
             self.thread.append(*buffer)
             return buffer, callers
+
+    def respond_buffer(self, messages: Iterable[MessageKind], stage: str = "") -> None:
+        self._validate_alive()
+        messages = self._message_parser.parse(messages)
+        items = []
+        for message in messages:
+            if message.is_complete():
+                message.stage = stage
+                items.append(message)
+        self._respond_buffer.extend(items)
 
     def cancel_subtask(self, ghost: G, reason: str = "") -> None:
         self._validate_alive()
@@ -379,6 +391,14 @@ class SessionImpl(Session[Ghost]):
         for name, value in self.state.items():
             state_values[name] = to_entity_meta(value)
         thread = self.thread
+
+        # update respond buffer
+        if len(self._respond_buffer) > 0:
+            messenger = self.messenger()
+            messenger.send(self._respond_buffer)
+            items, callers = messenger.flush()
+            thread.append(*items)
+
         # update system log
         if len(self._system_logs) > 0:
             content = "\n".join(self._system_logs)

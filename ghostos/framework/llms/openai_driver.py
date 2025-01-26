@@ -2,7 +2,7 @@ from typing import List, Iterable, Union, Optional, Tuple
 from openai import OpenAI, AzureOpenAI
 from httpx import Client
 from httpx_socks import SyncProxyTransport
-from openai import NOT_GIVEN, NotGiven
+from openai import NOT_GIVEN, NotGiven, UnprocessableEntityError
 from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
@@ -14,11 +14,13 @@ from ghostos.helpers import timestamp_ms
 from ghostos.core.messages import (
     Message, OpenAIMessageParser, DefaultOpenAIMessageParser,
     CompletionUsagePayload, Role,
+    SequencePipe, run_pipeline, MessageType,
 )
+from ghostos.core.messages.functional_tokens import XMLFunctionalTokenPipe
 from ghostos.core.llms import (
     LLMApi, LLMDriver,
     ModelConf, ServiceConf, Compatible,
-    OPENAI_DRIVER_NAME, LITELLM_DRIVER_NAME, DEEPSEEK_DRIVER_NAME,
+    OPENAI_DRIVER_NAME,
     FunctionalToken,
     Prompt, PromptPayload, PromptStorage
 )
@@ -39,28 +41,33 @@ class FunctionalTokenPrompt(str):
         return self.format(tokens="\n".join(lines))
 
 
-DEFAULT_FUNCTIONAL_TOKEN_PROMPT = """
+def new_functional_token_instruction(instruction: str, fts: List[FunctionalToken]) -> str:
+    if len(fts) == 0:
+        return ""
+    lines = []
+    for token in fts:
+        lines.append(f"- `{token.token}`: {token.description}")
+    tokens_info = "\n".join(lines)
+
+    return f"""
+{instruction}
+
+the available functional tokens are:
+{tokens_info}
+"""
+
+
+DEFAULT_FUNCTIONAL_TOKEN_INSTRUCTION = """
 # Functional Token
 You are equipped with `functional tokens` parser to understand your outputs.
 
 A functional token is a set of special tokens that corresponds to a system callback function. 
 When a functional token is present in your response, the subsequent output is treated as input parameters for this 
 callback function. 
-You shall embrace the parameter tokens by xml pattern. For example:
-* functional token is start with `<moss>` and end with `</moss>`
-* parameter tokens are `print("hello world")`
-* the whole output should be: `say something if necessary...<moss>print("hello world")</moss>`
-
-Below is a list of the functional tokens available for your use:
-
-{tokens}
-
-**Notices**
-
-0. Your output without functional tokens will send directly.
-1. If the functional tokens is invisible to the user. Do not mention their existence.
-2. Use them only when necessary.
-3. You can only use each functional token at most once during outputting.
+You shall embrace the parameter tokens by xml. For example:
+1. functional token is `moss`
+2. parameter tokens are `print("hello world")`
+3. the output should be: `say something if necessary...<moss>print("hello world")</moss>`
 """
 
 
@@ -104,9 +111,6 @@ class OpenAIAdapter(LLMApi):
                 http_client=http_client,
             )
         self._parser = parser
-        if not functional_token_prompt:
-            functional_token_prompt = DEFAULT_FUNCTIONAL_TOKEN_PROMPT
-        self._functional_token_prompt = functional_token_prompt
 
     @property
     def name(self) -> str:
@@ -151,6 +155,16 @@ class OpenAIAdapter(LLMApi):
                 changed.append(message)
             messages = changed
 
+        if compatible.function_call_use_tool:
+            changed = []
+            for message in messages:
+                if message.type == MessageType.FUNCTION_OUTPUT and message.call_id is None:
+                    # todo: may cause deeper problems.
+                    content = message.content
+                    message = Role.new_system(content=content)
+                changed.append(message)
+            messages = changed
+
         # allow system messages
         if not compatible.allow_system_in_messages:
             changed = []
@@ -174,10 +188,17 @@ class OpenAIAdapter(LLMApi):
             messages = changed
             self._logger.debug("[compatible] change all messages system role to user role")
 
+        if compatible.last_message_shall_be_assistant_or_user:
+            last_idx = len(messages) - 1
+            if last_idx > 0:  # first message could be system
+                last = messages[last_idx]
+                if last.role != Role.ASSISTANT.value and last.role != Role.USER.value:
+                    last = last.model_copy(update={"role": Role.ASSISTANT.value}, deep=True)
+                messages[last_idx] = last
+
         return messages
 
     def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
-        prompt = self.parse_prompt(prompt)
         self._logger.info(f"start chat completion for prompt %s", prompt.id)
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = prompt.get_messages()
@@ -202,6 +223,9 @@ class OpenAIAdapter(LLMApi):
                 stream_options=include_usage,
                 **self.model.kwargs,
             )
+        except UnprocessableEntityError as e:
+            self._logger.error(f"{str(e)} with input messages: {messages}")
+            raise
         except Exception as e:
             self._logger.error(f"error chat completion for prompt {prompt.id}: {e}")
             raise
@@ -215,21 +239,19 @@ class OpenAIAdapter(LLMApi):
     ) -> Tuple[Union[List[Function], NotGiven], Union[List[ChatCompletionToolParam], NotGiven]]:
         functions = prompt.get_openai_functions()
         tools = prompt.get_openai_tools()
-        if self.model.use_tools:
+        compatible = self._get_compatible_options()
+        if not compatible.support_function_call:
+            functions = NOT_GIVEN
+            tools = NOT_GIVEN
+        elif compatible.function_call_use_tool:
             functions = NOT_GIVEN
         else:
-            tools = NOT_GIVEN
-        # compatible check
-        if not self._get_compatible_options().support_function_call:
-            functions = NOT_GIVEN
             tools = NOT_GIVEN
         return functions, tools
 
     def _reasoning_completion(self, prompt: Prompt) -> ChatCompletion:
         if self.model.reasoning is None:
             raise NotImplementedError(f"current model {self.model} does not support reasoning completion ")
-
-        prompt = self.parse_prompt(prompt)
         self._logger.info(
             "start reasoning completion for prompt %s, model %s, reasoning conf %s",
             prompt.id,
@@ -279,7 +301,6 @@ class OpenAIAdapter(LLMApi):
         if self.model.reasoning is None:
             raise NotImplementedError(f"current model {self.model} does not support reasoning completion ")
 
-        prompt = self.parse_prompt(prompt)
         self._logger.info(
             "start reasoning completion for prompt %s, model %s, reasoning conf %s",
             prompt.id,
@@ -326,6 +347,7 @@ class OpenAIAdapter(LLMApi):
 
     def chat_completion(self, prompt: Prompt) -> Message:
         try:
+            prompt = self.parse_prompt(prompt)
             message: ChatCompletion = self._chat_completion(prompt, stream=False)
             prompt.first_token = timestamp_ms()
             prompt.added = [message]
@@ -347,6 +369,7 @@ class OpenAIAdapter(LLMApi):
 
     def reasoning_completion(self, prompt: Prompt) -> Iterable[Message]:
         try:
+            prompt = self.parse_prompt(prompt)
             cc: ChatCompletion = self._reasoning_completion(prompt)
             items = self._from_openai_chat_completion_item(cc)
             # add completion usage
@@ -389,6 +412,7 @@ class OpenAIAdapter(LLMApi):
 
     def chat_completion_chunks(self, prompt: Prompt) -> Iterable[Message]:
         try:
+            prompt = self.parse_prompt(prompt)
             chunks: Iterable[ChatCompletionChunk] = self._chat_completion(prompt, stream=True)
             messages = self._from_openai_chat_completion_chunks(chunks)
             prompt_payload = PromptPayload.from_prompt(prompt)
@@ -409,11 +433,35 @@ class OpenAIAdapter(LLMApi):
             self._storage.save(prompt)
 
     def parse_prompt(self, prompt: Prompt) -> Prompt:
+        # always deep copy prompt.
+        prompt = prompt.model_copy(deep=True)
         prompt.model = self.model
+        support_functional_tokens = self._get_compatible_options().support_functional_tokens
+        if support_functional_tokens and prompt.functional_tokens:
+            prompt = self._generate_functional_token_prompt(prompt)
+
+        return prompt
+
+    def _generate_functional_token_prompt(self, prompt: Prompt) -> Prompt:
+        functional_token_instruction = self._get_compatible_options().functional_token_instruction
+        if not functional_token_instruction:
+            functional_token_instruction = DEFAULT_FUNCTIONAL_TOKEN_INSTRUCTION
+        instruction_text = new_functional_token_instruction(functional_token_instruction, prompt.functional_tokens)
+        if instruction_text:
+            prompt.system.append(Role.new_system(content=instruction_text))
         return prompt
 
     def _get_compatible_options(self) -> Compatible:
         return self.model.compatible or self.service.compatible or Compatible()
+
+    def _parse_delivering_items(self, prompt: Prompt, stream: bool, items: Iterable[Message]) -> Iterable[Message]:
+        pipes = [SequencePipe()]
+
+        # if support functional tokens.
+        support_functional_tokens = self._get_compatible_options().support_functional_tokens
+        if support_functional_tokens and len(prompt.functional_tokens) > 0:
+            pipes.append(XMLFunctionalTokenPipe(prompt.functional_tokens))
+        yield from run_pipeline(pipes, items)
 
 
 class OpenAIDriver(LLMDriver):

@@ -72,6 +72,17 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
+  deepseek-chat-func-tokens:
+    kwargs: { }
+    max_tokens: 2000
+    model: deepseek-chat
+    request_timeout: 40
+    service: deepseek
+    temperature: 0.7
+    timeout: 30
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
   deepseek-reasoner:
     max_tokens: 3400
     model: deepseek-reasoner
@@ -79,6 +90,9 @@ models:
     reasoning: {}
     compatible:
       support_function_call: false
+      support_functional_tokens: true
+      allow_system_in_messages: false
+      last_message_shall_be_assistant_or_user: true
   gpt-3.5-turbo:
     kwargs: { }
     max_tokens: 2000

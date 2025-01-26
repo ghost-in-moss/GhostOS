@@ -4,7 +4,7 @@ from openai.types.chat.chat_completion_chunk import (
     ChoiceDeltaToolCall, ChoiceDeltaToolCallFunction,
 )
 from ghostos.core.messages.message import MessageType
-from ghostos.core.messages.pipeline import SequencePipe, pipeline
+from ghostos.core.messages.pipeline import SequencePipe, run_pipeline
 from ghostos.core.messages.transport import new_basic_connection
 
 
@@ -51,7 +51,7 @@ def test_openai_parser_bad_case_1():
     parser = DefaultOpenAIMessageParser(None, None)
     pipes = [SequencePipe(), SequencePipe(), SequencePipe()]
     messages = parser.from_chat_completion_chunks(items)
-    messages = list(pipeline(pipes, messages))
+    messages = list(run_pipeline(pipes, messages))
     assert len(messages) == len(items) + 2
 
     stream, receiver = new_basic_connection()

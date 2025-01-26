@@ -141,6 +141,11 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             yield from self._parse_message(message)
 
     def _parse_message(self, message: Message) -> Iterable[ChatCompletionMessageParam]:
+        """
+        parse input message into OpenAI chat completion message param.
+        :param message:
+        :return:
+        """
         if message.type == MessageType.FUNCTION_CALL.value:
             if message.call_id:
                 return [
@@ -242,6 +247,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             content=content,
             role="assistant",
             tool_calls=tool_calls,
+            function_call=function_call,
         )
         if message.name:
             item["name"] = message.name

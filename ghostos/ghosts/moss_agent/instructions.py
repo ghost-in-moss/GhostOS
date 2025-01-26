@@ -62,6 +62,7 @@ Notices:
 
 MOSS_FUNCTION_DESC = """
 useful to call MOSS system to execute the code. The code must include a `run` function.
+the code SHALL NOT embraced with "```python". 
 """
 
 

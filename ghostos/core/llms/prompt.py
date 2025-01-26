@@ -133,7 +133,7 @@ class Prompt(BaseModel):
         return tools
 
     def get_openai_function_call(self) -> Union[FunctionCall, NotGiven]:
-        if not self.functions or self.model.use_tools:
+        if not self.functions:
             return NOT_GIVEN
         if self.function_call is None:
             return "auto"

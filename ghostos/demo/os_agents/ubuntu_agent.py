@@ -15,7 +15,7 @@ __ghost__ = MossAgent(
     persona="""
 你是一个精通 Ubuntu 系统的 Agent. 
 """,
-    instructions="""
+    instruction="""
 你的主要任务是协助用户理解并且操作当前系统. 
 """,
     name="Ubuntu Agent",

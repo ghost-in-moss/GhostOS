@@ -1,5 +1,36 @@
 # Releases
 
+# v0.4.0-dev0
+
+Features: 
+* Restore the feature `functional token` for models that do not support function call.
+  * add xml functional token pipe to parse output message chunks, generate `FunctionCaller` by functional tokens.
+  * OpenAIAdapter now support functional token instructions and output parser.
+* `deepseek-reasoner` now support functional token, so it can use MOSS protocol to execute python code.
+  * support `last_message_shall_be_assistant_or_user` feature.
+  * support `support_functional_tokens` feature.
+* Session add `respond_buffer` method, send messages while saving, in case responding message between `function call` and `function output` which many models not support.
+* Add `Replier` library for agent directly reply in the generated MOSS code.
+
+Test cases:
+* `ghostos web ghostos.demo.test_agents.deepseek_chat_func_tokens`
+* `ghostos web ghostos.demo.test_agents.deepseek_chat_r1_func_tokens`
+
+Small changes:
+* move `ModelConf.use_tools` to `Compatible.function_call_use_tool`.
+* add more options to llms `Compatible`, to compatible with the shitty features of various models. 
+* rename `ghostos.core.message.pipeline.pipine` function to `run_pipeline`
+* rename `MossAction.unmarshal_arguments` to `MossAction.unmarshal_code`
+* streamlit app module `prompt` now display functional tokens info about prompt.
+
+Breaking Changes:
+* rename MossAgent attribute `instructions` to `instruction` 
+* `ghostos web` now do not open browser as default (set streamlit app option `headless` to false as default)
+
+Bug fixes:
+* fix the `OpenAIAdapter` parsed prompt is not the same with the saved prompt.
+
+
 # v0.3.0
 
 After talk with `deepseek-reasoner` at 2025.01.25,

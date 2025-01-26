@@ -14,7 +14,7 @@ from ghostos.entity import ModelEntity
 from ghostos.core.messages import FunctionCaller, Role
 from ghostos.core.llms import (
     Prompt, PromptPipe, AssistantNamePipe, run_prompt_pipeline,
-    LLMFunc,
+    LLMFunc, FunctionalToken,
 )
 from .instructions import (
     GHOSTOS_INTRODUCTION, MOSS_INTRODUCTION, AGENT_META_INTRODUCTION, MOSS_FUNCTION_DESC,
@@ -36,7 +36,7 @@ class MossAgent(ModelEntity, Agent):
 
     moss_module: str = Field(description="Moss module name for the agent")
     persona: str = Field(description="Persona for the agent, if not given, use global persona")
-    instructions: str = Field(description="The instruction that the agent should follow")
+    instruction: str = Field(description="The instruction that the agent should follow")
 
     # optional configs
     name: str = Field(default="", description="name of the agent")
@@ -335,14 +335,24 @@ class MossAction(Action, PromptPipe):
         )
         return llm_func
 
+    def as_functional_token(self) -> FunctionalToken:
+        return FunctionalToken.new(
+            token=self.name(),
+            name=self.name(),
+            visible=False,
+            desc=MOSS_FUNCTION_DESC,
+        )
+
     def update_prompt(self, prompt: Prompt) -> Prompt:
         llm_func = self.as_function()
         if llm_func is not None:
             prompt.functions.append(llm_func)
+        # support functional token as default.
+        prompt.functional_tokens.append(self.as_functional_token())
         return prompt
 
     @classmethod
-    def unmarshal_arguments(cls, arguments: str) -> str:
+    def unmarshal_code(cls, arguments: str) -> str:
         try:
             if arguments.startswith("{"):
                 if not arguments.endswith("}"):
@@ -365,11 +375,15 @@ class MossAction(Action, PromptPipe):
     def run(self, session: Session, caller: FunctionCaller) -> Union[Operator, None]:
         session.logger.debug("MossAction receive caller: %s", caller)
         # prepare arguments.
-        arguments = caller.arguments
-        code = self.unmarshal_arguments(arguments)
+        if caller.functional_token:
+            code = self.unmarshal_code(caller.arguments)
+        else:
+            arguments = caller.arguments
+            code = self.unmarshal_code(arguments)
+
         if code.startswith("{") and code.endswith("}"):
             # unmarshal again.
-            code = self.unmarshal_arguments(code)
+            code = self.unmarshal_code(code)
 
         # if code is not exists, inform the llm
         if not code:

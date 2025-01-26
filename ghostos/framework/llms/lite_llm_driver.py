@@ -3,7 +3,9 @@ from ghostos.core.llms.configs import ServiceConf, ModelConf, LITELLM_DRIVER_NAM
 from ghostos.core.llms.abcd import LLMApi
 from ghostos.core.messages import Role, Message
 from ghostos.core.llms.prompt import Prompt
-from ghostos.framework.llms.openai_driver import OpenAIDriver, OpenAIAdapter, ChatCompletionMessageParam, ChatCompletion
+from ghostos.framework.llms.openai_driver import OpenAIDriver, OpenAIAdapter
+from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
+from openai.types.chat import ChatCompletion
 
 
 class LitellmAdapter(OpenAIAdapter):

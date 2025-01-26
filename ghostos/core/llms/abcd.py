@@ -84,6 +84,14 @@ class LLMApi(ABC):
         pass
 
     def deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+        items = self._deliver_chat_completion(prompt, stream)
+        yield from self._parse_delivering_items(prompt, stream, items)
+
+    @abstractmethod
+    def _parse_delivering_items(self, prompt: Prompt, stream: bool, items: Iterable[Message]) -> Iterable[Message]:
+        pass
+
+    def _deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
         """
         逐个发送消息的包.
         """

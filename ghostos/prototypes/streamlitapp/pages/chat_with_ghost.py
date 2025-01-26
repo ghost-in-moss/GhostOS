@@ -292,7 +292,7 @@ def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
         try:
-            conversation = shell.sync(route.get_ghost(), route.get_context())
+            conversation = shell.sync(route.get_ghost(), route.get_context(), force=True)
         except Exception as e:
             st.error(e)
             return None

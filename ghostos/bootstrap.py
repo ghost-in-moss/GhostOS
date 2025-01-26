@@ -274,6 +274,9 @@ def default_application_providers(
     from ghostos.framework.realtime import ConfigBasedRealtimeProvider
     from ghostos.core.aifunc import DefaultAIFuncExecutorProvider, AIFuncRepoByConfigsProvider
 
+    # session level libraries
+    from ghostos.libraries.replier import ReplierImplProvider
+
     if config is None:
         config = get_bootstrap_config(local=True)
 
@@ -321,6 +324,9 @@ def default_application_providers(
 
         GhostOSProvider(),
         ConfigBasedRealtimeProvider(),
+
+        # --- system default session level libraries --- #
+        ReplierImplProvider()
     ]
 
 

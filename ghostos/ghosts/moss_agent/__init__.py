@@ -29,7 +29,7 @@ Your goal is helping user to:
     return MossAgent(
         moss_module=modulename,
         persona=persona,
-        instructions=instruction,
+        instruction=instruction,
         name=name,
         description=description,
         llm_api=llm_api,
