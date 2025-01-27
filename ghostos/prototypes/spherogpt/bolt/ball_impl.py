@@ -8,7 +8,7 @@ from ghostos.contracts.workspace import Workspace
 from ghostos.abcd import Conversation
 from ghostos.entity import ModelEntityMeta, from_entity_model_meta, to_entity_model_meta
 from ghostos.helpers import yaml_pretty_dump
-from ghostos.prompter import Prompter
+from ghostos.prompter import PromptObjectModel
 from ghostos.container import Container, Provider
 from ghostos.core.moss import Injection, MossRuntime
 from pydantic import BaseModel, Field
@@ -198,7 +198,7 @@ class MoveAdapter(Move):
         self._add_event_callback(SpheroEventType.on_landing.name, log, callback)
 
 
-class BallImpl(Ball, Injection, Prompter):
+class BallImpl(Ball, Injection, PromptObjectModel):
 
     def __init__(
             self,

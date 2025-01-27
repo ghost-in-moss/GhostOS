@@ -13,10 +13,10 @@ from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role
 from pprint import pprint
 from contextlib import redirect_stdout
 from io import StringIO
-from ghostos.prompter import Prompter
+from ghostos.prompter import PromptObjectModel
 
 
-class TaskflowImpl(Taskflow, Prompter, Injection):
+class TaskflowImpl(Taskflow, PromptObjectModel, Injection):
 
     def __init__(self, session: Session, parser: MessageKindParser):
         self.task = session.task
@@ -67,7 +67,7 @@ use Taskflow to change the task state if you need.
         observation = f"## observation on turn {task.turns}\n"
         for key, value in kwargs.items():
             observation += f"\n### `{key}`\n"
-            if isinstance(value, Prompter):
+            if isinstance(value, PromptObjectModel):
                 content = value.get_prompt(self.container, depth=3)
             else:
                 buffer = StringIO()

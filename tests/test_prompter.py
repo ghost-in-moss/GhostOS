@@ -1,6 +1,6 @@
 from ghostos.prompter import (
-    TextPrmt, PromptAbleClass, PromptAbleObj, ModelPrompter,
-    InspectPrmt,
+    TextPOM, PromptAbleClass, PromptAbleObj, PydanticPOM,
+    InspectPOM,
 )
 from ghostos.container import Container
 import inspect
@@ -12,13 +12,13 @@ def test_is_abstract():
 
 
 def test_group_prompters():
-    prompter = TextPrmt(
+    prompter = TextPOM(
         title="1"
     ).with_children(
-        TextPrmt(title="1.1"),
-        TextPrmt(title="1.2").with_children(
-            TextPrmt(title="1.2.1"),
-            TextPrmt(title="1.2.2", content="hello world"),
+        TextPOM(title="1.1"),
+        TextPOM(title="1.2").with_children(
+            TextPOM(title="1.2.1"),
+            TextPOM(title="1.2.2", content="hello world"),
         )
     )
 
@@ -31,8 +31,8 @@ def test_group_prompters():
 
 
 def test_inspect_prompters():
-    prmt = InspectPrmt()
-    prmt.inspect_source(InspectPrmt)
+    prmt = InspectPOM()
+    prmt.inspect_source(InspectPOM)
     prmt.inspect_source(test_group_prompters)
     c = Container()
     prompt = prmt.get_prompt(c)
@@ -40,7 +40,7 @@ def test_inspect_prompters():
 
 
 def test_model_prompters():
-    class TestPrompter(ModelPrompter):
+    class TestPrompter(PydanticPOM):
         line: str = "TestPrompter"
 
         def self_prompt(self, container: Container) -> str:

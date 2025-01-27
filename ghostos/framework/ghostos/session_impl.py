@@ -15,7 +15,7 @@ from ghostos.core.runtime import (
     GoThreads,
     GoThreadInfo,
 )
-from ghostos.prompter import Prompter
+from ghostos.prompter import PromptObjectModel
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.variables import Variables
 from ghostos.container import Container, provide, Contracts
@@ -225,10 +225,10 @@ class SessionImpl(Session[Ghost]):
     def subtasks(self) -> Subtasks:
         return SubtasksImpl(self)
 
-    def get_context(self) -> Optional[Prompter]:
+    def get_context(self) -> Optional[PromptObjectModel]:
         if self.task.context is None:
             return None
-        return get_entity(self.task.context, Prompter)
+        return get_entity(self.task.context, PromptObjectModel)
 
     def get_artifact(self) -> Ghost.ArtifactType:
         return self.ghost_driver.get_artifact(self)

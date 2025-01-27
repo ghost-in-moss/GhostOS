@@ -1,5 +1,5 @@
 from ghostos.core.moss import MossRuntime
-from ghostos.prompter import Prompter, TextPrmt
+from ghostos.prompter import PromptObjectModel, TextPOM
 from ghostos.identifier import Identifier
 
 AGENT_META_INTRODUCTION = """
@@ -66,7 +66,7 @@ the code SHALL NOT embraced with "```python".
 """
 
 
-def get_moss_context_prompter(title: str, runtime: MossRuntime) -> Prompter:
+def get_moss_context_prompter(title: str, runtime: MossRuntime) -> PromptObjectModel:
     code_context = runtime.prompter().dump_module_prompt()
 
     injections = runtime.moss_injections()
@@ -74,8 +74,8 @@ def get_moss_context_prompter(title: str, runtime: MossRuntime) -> Prompter:
     container = runtime.container()
 
     for name, injection in injections.items():
-        if isinstance(injection, Prompter):
-            prompter = TextPrmt(
+        if isinstance(injection, PromptObjectModel):
+            prompter = TextPOM(
                 title=f"property moss.{name}",
                 content=injection.self_prompt(container),
             )
@@ -86,16 +86,16 @@ def get_moss_context_prompter(title: str, runtime: MossRuntime) -> Prompter:
         code_context=code_context,
     )
 
-    return TextPrmt(
+    return TextPOM(
         title=title,
         content=content,
     ).with_children(*children)
 
 
-def get_agent_identity(title: str, id_: Identifier) -> Prompter:
+def get_agent_identity(title: str, id_: Identifier) -> PromptObjectModel:
     from ghostos.helpers import yaml_pretty_dump
     value = id_.model_dump(exclude_defaults=True)
-    return TextPrmt(
+    return TextPOM(
         title=title,
         content=f"""
 ```yaml

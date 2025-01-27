@@ -8,7 +8,7 @@ from typing_extensions import Self
 from abc import ABC, abstractmethod
 from ghostos.identifier import Identical
 from ghostos.entity import EntityType, EntityClass
-from ghostos.prompter import Prompter, DataPrompter, DataPrompterDriver
+from ghostos.prompter import PromptObjectModel, DataPOM, DataPOMDriver
 from ghostos.core.runtime import (
     TaskState,
 )
@@ -183,7 +183,7 @@ class GhostDriver(Generic[G], ABC):
         pass
 
 
-class Context(Payload, DataPrompter, ABC):
+class Context(Payload, DataPOM, ABC):
     """
     context prompter that generate prompt to provide information
     the modeling defines strong-typed configuration to generate prompt.
@@ -193,7 +193,7 @@ class Context(Payload, DataPrompter, ABC):
     __driver__: Optional[Type[ContextDriver]] = None
 
 
-class ContextDriver(DataPrompterDriver, ABC):
+class ContextDriver(DataPOMDriver, ABC):
     """
     the context driver is separated from context data.
     LLM see
@@ -628,7 +628,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def get_context(self) -> Optional[Prompter]:
+    def get_context(self) -> Optional[PromptObjectModel]:
         """
         current context for the ghost
         """
@@ -750,7 +750,7 @@ class Session(Generic[G], ABC):
         pass
 
 
-class Taskflow(Prompter, ABC):
+class Taskflow(PromptObjectModel, ABC):
     """
     default operations
     """
@@ -809,7 +809,7 @@ class Taskflow(Prompter, ABC):
         pass
 
 
-class Subtasks(Prompter, ABC):
+class Subtasks(PromptObjectModel, ABC):
     """
     library that can handle async subtasks by other ghost instance.
     """

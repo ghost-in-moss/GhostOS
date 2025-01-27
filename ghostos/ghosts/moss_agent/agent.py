@@ -6,7 +6,7 @@ from ghostos.identifier import Identifier
 from pydantic import BaseModel, Field
 
 from ghostos.helpers import import_from_path
-from ghostos.prompter import TextPrmt, Prompter
+from ghostos.prompter import TextPOM, PromptObjectModel
 from ghostos.abcd import GhostDriver, Operator, Agent, Session, StateValue, Action, Thought, Ghost
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, PyContext, MossRuntime
@@ -199,32 +199,32 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         instruction = prompter.get_prompt(session.container, depth=0)
         return instruction
 
-    def _get_instruction_prompter(self, session: Session, runtime: MossRuntime) -> Prompter:
+    def _get_instruction_prompter(self, session: Session, runtime: MossRuntime) -> PromptObjectModel:
         agent = self.ghost
-        return TextPrmt().with_children(
+        return TextPOM().with_children(
             # system meta prompt
-            TextPrmt(
+            TextPOM(
                 title="Meta Instruction",
                 content=AGENT_META_INTRODUCTION,
             ).with_children(
                 # ghostos meta instruction.
-                TextPrmt(title="GhostOS", content=GHOSTOS_INTRODUCTION),
+                TextPOM(title="GhostOS", content=GHOSTOS_INTRODUCTION),
                 # the information about moss
-                TextPrmt(title="MOSS", content=MOSS_INTRODUCTION),
+                TextPOM(title="MOSS", content=MOSS_INTRODUCTION),
 
                 # the moss providing context prompter.
                 get_moss_context_prompter("Code Context", runtime),
             ),
             # agent prompt
-            TextPrmt(
+            TextPOM(
                 title="Agent Info",
                 content="The Agent info about who you are and what you are doing: ",
             ).with_children(
                 get_agent_identity("Identity", agent.__identifier__()),
-                TextPrmt(title="Persona", content=self._get_agent_persona(session, runtime)),
-                TextPrmt(title="Instruction", content=self._get_agent_instruction(session, runtime)),
+                TextPOM(title="Persona", content=self._get_agent_persona(session, runtime)),
+                TextPOM(title="Instruction", content=self._get_agent_instruction(session, runtime)),
             ),
-            TextPrmt(
+            TextPOM(
                 title="Context",
                 content="",
             ).with_children(
@@ -246,7 +246,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
             fn = compiled.__dict__[fn.__name__]
         return fn(self.ghost, runtime.moss())
 
-    def _get_context_prompter(self, session: Session) -> Optional[Prompter]:
+    def _get_context_prompter(self, session: Session) -> Optional[PromptObjectModel]:
         ctx = session.get_context()
         if ctx is None:
             return None

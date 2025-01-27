@@ -13,7 +13,7 @@ from ghostos.core.moss.abcd import (
     Injection,
 )
 from ghostos.core.moss.pycontext import PyContext
-from ghostos.prompter import Prompter, TextPrmt
+from ghostos.prompter import PromptObjectModel, TextPOM
 from ghostos.helpers import generate_module_and_attr_name, code_syntax_check
 from contextlib import contextmanager, redirect_stdout
 
@@ -343,12 +343,12 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         children = []
         container = self.container()
         for name, injection in injections.items():
-            if isinstance(injection, Prompter):
-                children.append(TextPrmt(
+            if isinstance(injection, PromptObjectModel):
+                children.append(TextPOM(
                     title=f"moss.{name}",
                     content=injection.self_prompt(container),
                 ))
-        prompter = TextPrmt(
+        prompter = TextPOM(
             title="Moss Injections",
         ).with_children(*children)
         return prompter.get_prompt(container)

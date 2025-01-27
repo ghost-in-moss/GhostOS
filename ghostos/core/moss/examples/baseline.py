@@ -3,7 +3,7 @@ from typing import List
 
 from ghostos.container import Container
 from ghostos.core.moss.abcd import Moss as Parent
-from ghostos.prompter import ModelPrompter
+from ghostos.prompter import PydanticPOM
 from inspect import getmembers, getsource
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ def plus(a: int, b: int) -> int:
     return a + b
 
 
-class TestPrompter(ModelPrompter):
+class TestPrompter(PydanticPOM):
     line: str = "TestPrompter"
 
     def self_prompt(self, container: Container) -> str:

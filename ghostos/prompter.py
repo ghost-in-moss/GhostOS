@@ -17,9 +17,10 @@ import json
 __all__ = [
     'get_defined_prompt',
     'set_prompt', 'set_class_prompt',
-    'Prompter', 'DataPrompter', 'DataPrompterDriver',
-    'TextPrmt',
-    'InspectPrmt',
+    'PromptObjectModel', 'POM',
+    'DataPOM', 'DataPOMDriver',
+    'TextPOM',
+    'InspectPOM',
     'PromptAbleObj', 'PromptAbleClass',
 ]
 
@@ -38,7 +39,7 @@ def get_defined_prompt_attr(value: Any, container: Optional[Container] = None) -
         return None
     elif isinstance(value, PromptAbleObj):
         return value.__prompt__
-    elif isinstance(value, Prompter) and container is not None:
+    elif isinstance(value, PromptObjectModel) and container is not None:
         return value.get_prompt(container)
 
     elif isinstance(value, type):
@@ -77,19 +78,21 @@ def set_class_prompt(cls: type, prompter: Union[Callable[[], str], str], force: 
 
 # ---- prompter ---- #
 
-class Prompter(ABC):
+class PromptObjectModel(ABC):
     """
-    is strong-typed model for runtime alternative properties of a ghost.
+    tree like object model to generate a prompt.
+    a POM is a node of the tree.
+    the tree generate prompt from all the nodes.
     """
 
     priority: int = Field(default=0, description='Priority of this prompter.')
 
-    __children__: Optional[List[Prompter]] = None
+    __children__: Optional[List[PromptObjectModel]] = None
     """ children is fractal sub context nodes"""
 
     __self_prompt__: Optional[str] = None
 
-    def with_children(self, *children: Prompter) -> Self:
+    def with_children(self, *children: PromptObjectModel) -> Self:
         children = list(children)
         if len(children) > 0:
             for child in children:
@@ -98,7 +101,7 @@ class Prompter(ABC):
                 self.add_child(child)
         return self
 
-    def add_child(self, *prompters: Prompter) -> Self:
+    def add_child(self, *prompters: PromptObjectModel) -> Self:
         if self.__children__ is None:
             self.__children__ = []
         for prompter in prompters:
@@ -180,7 +183,14 @@ class Prompter(ABC):
         return result
 
 
-class ModelPrompter(BaseModel, Prompter, ABC):
+POM = PromptObjectModel
+"""alias of the PromptObjectModel"""
+
+
+class PydanticPOM(BaseModel, PromptObjectModel, ABC):
+    """
+    use pydantic.BaseModel to define a strong-typed POM
+    """
 
     def __to_entity_meta__(self) -> EntityMeta:
         type_ = generate_import_path(self.__class__)
@@ -205,14 +215,14 @@ class ModelPrompter(BaseModel, Prompter, ABC):
         return result.with_children(*children)
 
 
-class DataPrompter(ModelPrompter, ABC):
-    __driver__: Optional[Type[DataPrompterDriver]] = None
+class DataPOM(PydanticPOM, ABC):
+    __driver__: Optional[Type[DataPOMDriver]] = None
 
-    def get_driver(self) -> DataPrompterDriver:
+    def get_driver(self) -> DataPOMDriver:
         driver = self.__driver__
         if driver is None:
             driver_path = generate_import_path(self.__class__) + "Driver"
-            driver = import_class_from_path(driver_path, DataPrompterDriver)
+            driver = import_class_from_path(driver_path, DataPOMDriver)
         return driver(self)
 
     def self_prompt(self, container: Container) -> str:
@@ -227,10 +237,10 @@ class DataPrompter(ModelPrompter, ABC):
         return self.get_driver().get_title()
 
 
-D = TypeVar("D", bound=DataPrompter)
+D = TypeVar("D", bound=DataPOM)
 
 
-class DataPrompterDriver(Generic[D], ABC):
+class DataPOMDriver(Generic[D], ABC):
 
     def __init__(self, data: D):
         self.data = data
@@ -249,7 +259,7 @@ class DataPrompterDriver(Generic[D], ABC):
         pass
 
 
-class TextPrmt(ModelPrompter):
+class TextPOM(PydanticPOM):
     title: str = ""
     content: str = ""
 
@@ -260,7 +270,7 @@ class TextPrmt(ModelPrompter):
         return self.title
 
 
-class InspectPrmt(DataPrompter):
+class InspectPOM(DataPOM):
     title: str = Field(
         default="Code Inspection",
         description="The title of the inspect prompt.",
@@ -277,7 +287,7 @@ class InspectPrmt(DataPrompter):
         return self
 
 
-class InspectPrmtDriver(DataPrompterDriver[InspectPrmt]):
+class InspectPOMDriver(DataPOMDriver[InspectPOM]):
 
     def self_prompt(self, container: Container) -> str:
         prompts = {}

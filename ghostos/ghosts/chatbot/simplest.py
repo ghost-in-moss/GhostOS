@@ -7,7 +7,7 @@ from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.messages import Role
 from ghostos.core.llms import Prompt, LLMFunc
 from ghostos.entity import ModelEntity
-from ghostos.prompter import TextPrmt, Prompter
+from ghostos.prompter import TextPOM, PromptObjectModel
 from ghostos.identifier import Identifier
 from pydantic import BaseModel, Field
 
@@ -53,10 +53,10 @@ class ChatbotDriver(GhostDriver[Chatbot]):
     def parse_event(self, session: Session, event: Event) -> Union[Event, None]:
         return event
 
-    def get_system_prompter(self) -> Prompter:
-        return TextPrmt().with_children(
-            TextPrmt(title="Persona", content=self.ghost.persona),
-            TextPrmt(title="Instruction", content=self.ghost.instruction),
+    def get_system_prompter(self) -> PromptObjectModel:
+        return TextPOM().with_children(
+            TextPOM(title="Persona", content=self.ghost.persona),
+            TextPOM(title="Instruction", content=self.ghost.instruction),
         )
 
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:

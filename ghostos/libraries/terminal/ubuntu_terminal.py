@@ -4,7 +4,7 @@ from ghostos.container import Container, INSTANCE
 from ghostos.libraries.terminal.abcd import Terminal
 from ghostos.libraries.terminal.terminal_impl import SystemTerminal
 from ghostos.libraries.terminal.ubuntu_context import UbuntuContext
-from ghostos.prompter import Prompter
+from ghostos.prompter import PromptObjectModel
 from ghostos.container import Container, Provider
 
 __all__ = [
@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-class UbuntuTerminal(Terminal, Prompter):
+class UbuntuTerminal(Terminal, PromptObjectModel):
 
     def __init__(self, safe_mode: bool):
         self._terminal = SystemTerminal(safe_mode=safe_mode)
