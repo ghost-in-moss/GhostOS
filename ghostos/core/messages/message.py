@@ -43,6 +43,7 @@ class Role(str, enum.Enum):
             content: str,
             memory: Optional[str] = None,
     ):
+        # maybe switch to developer role in future.
         return cls.SYSTEM.new(content, memory=memory)
 
     def new(
