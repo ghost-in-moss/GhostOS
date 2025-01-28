@@ -122,8 +122,11 @@ class ConversationImpl(Conversation[G]):
         self.refresh()
         self._validate_closed()
         task = self.get_task()
-        thread.id = task.thread_id
+        task.thread_id = thread.id
+        # change the thread id of the task
+        # and save task and thread
         self._threads.save_thread(thread)
+        self._tasks.save_task(task)
 
     def get_ghost(self) -> Ghost:
         self._validate_closed()
@@ -173,7 +176,8 @@ class ConversationImpl(Conversation[G]):
         with session:
             return session.get_artifact(), TaskState(session.task.state)
 
-    def talk(self, query: str, user_name: str = "", context: Optional[Ghost.ContextType] = None) -> Tuple[Event, Receiver]:
+    def talk(self, query: str, user_name: str = "", context: Optional[Ghost.ContextType] = None) -> Tuple[
+        Event, Receiver]:
         self._validate_closed()
         self.logger.debug("talk to user %s", user_name)
         message = Role.USER.new(content=query, name=user_name)
