@@ -90,7 +90,7 @@ models:
     reasoning: {}
     compatible:
       support_function_call: false
-      support_functional_tokens: true
+      support_functional_tokens: false
       allow_system_in_messages: false
       last_message_shall_be_assistant_or_user: true
   gpt-3.5-turbo:
