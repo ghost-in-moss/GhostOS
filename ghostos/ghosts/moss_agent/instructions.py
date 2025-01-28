@@ -67,6 +67,12 @@ the code SHALL NOT embraced with "```python".
 
 
 def get_moss_context_prompter(title: str, runtime: MossRuntime) -> PromptObjectModel:
+    """
+    generate prompt from the runtime injections bound to Moss instance.
+    :param title:
+    :param runtime:
+    :return:
+    """
     code_context = runtime.prompter().dump_module_prompt()
 
     injections = runtime.moss_injections()

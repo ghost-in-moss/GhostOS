@@ -195,11 +195,11 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         :param runtime:
         :return:
         """
-        prompter = self._get_instruction_prompter(session, runtime)
+        prompter = self._get_instruction_pom(session, runtime)
         instruction = prompter.get_prompt(session.container, depth=0)
         return instruction
 
-    def _get_instruction_prompter(self, session: Session, runtime: MossRuntime) -> PromptObjectModel:
+    def _get_instruction_pom(self, session: Session, runtime: MossRuntime) -> PromptObjectModel:
         agent = self.ghost
         return TextPOM().with_children(
             # system meta prompt
