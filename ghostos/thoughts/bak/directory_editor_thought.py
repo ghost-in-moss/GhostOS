@@ -1,9 +1,8 @@
 from typing import TYPE_CHECKING
-from ghostos.thoughts.magic_moss_thought import MagicMossThought
-from ghostos.core.ghosts import Replier, MultiTask, NewTask
+from ghostos.thoughts.bak.magic_moss_thought import MagicMossThought
+from ghostos.core.ghosts import Replier, MultiTask
 from ghostos.core.moss import Moss as Parent
-from ghostos.libraries.file_editor import DirectoryEditor, FileEditor
-from ghostos.thoughts.file_editor_thought import FileEditorThought
+from ghostos.libraries.file_editor import DirectoryEditor
 from pydantic import Field
 
 

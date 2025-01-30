@@ -53,6 +53,13 @@ class Prompt(BaseModel):
     first_token: float = Field(default=0.0, description="first token")
     run_end: float = Field(default=0.0, description="end time")
 
+    @classmethod
+    def new_from_messages(
+            cls,
+            messages: List[Message],
+    ) -> Prompt:
+        return Prompt(history=messages)
+
     def system_prompt(self) -> str:
         contents = []
         if self.system:

@@ -3,7 +3,7 @@ from ghostos.core.llms import LLMApi
 from ghostos.core.moss import PyContext, MossCompiler
 from ghostos.core.runtime import Event, Session, GoThreadInfo
 from ghostos.thoughts.moss_thought import BasicMossThoughtDriver, LLMThoughtDriver
-from ghostos.thoughts import file_editor_moss
+from ghostos.thoughts.bak import file_editor_moss
 from ghostos.libraries.file_editor import FileEditorImpl, FileEditor
 from pydantic import Field
 from ghostos.helpers import md5
