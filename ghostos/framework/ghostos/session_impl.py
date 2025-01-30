@@ -6,7 +6,8 @@ from ghostos.abcd import (
 )
 from ghostos.abcd import get_ghost_driver
 from ghostos.core.messages import (
-    MessageKind, Message, FunctionCaller, Stream, Role, MessageKindParser, MessageType
+    MessageKind, Message, FunctionCaller, Stream, Role, MessageKindParser, MessageType,
+    Payload,
 )
 from ghostos.core.messages.message_classes import FunctionCallMessage
 from ghostos.core.runtime import (
@@ -267,15 +268,27 @@ class SessionImpl(Session[Ghost]):
         self._respond_buffer = []
         self.task = self.task.new_turn()
 
-    def messenger(self, stage: str = "") -> Messenger:
+    def messenger(
+            self, *,
+            name: str = "",
+            stage: str = "",
+            payloads: Optional[List[Payload]] = None,
+    ) -> Messenger:
         self._validate_alive()
+
+        # prepare payloads.
         task_payload = TaskPayload.from_task(self.task)
+        if payloads is None:
+            payloads = [task_payload]
+        else:
+            payloads.append(task_payload)
+
         identity = get_identifier(self.ghost)
         return DefaultMessenger(
             upstream=self.upstream,
-            name=identity.name,
+            name=name or identity.name,
             role=Role.ASSISTANT.value,
-            payloads=[task_payload],
+            payloads=payloads,
             stage=stage,
         )
 

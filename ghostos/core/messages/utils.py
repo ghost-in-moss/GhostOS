@@ -1,5 +1,5 @@
 from typing import Iterable, List, Union, Dict, Optional
-from ghostos.core.messages.message import Message, Role, MessageClass
+from ghostos.core.messages.message import Message, Role, MessageClass, MessageStage
 
 __all__ = [
     'copy_messages', 'iter_messages',
@@ -14,7 +14,7 @@ def copy_messages(messages: Iterable[Message], stages: Optional[List[str]] = Non
     if stages:
         stages = set(stages)
     for message in messages:
-        if not stages or message.stage in stages:
+        if MessageStage.allow(message.stage, stages):
             result.append(message.get_copy())
     return result
 

@@ -72,23 +72,39 @@ class LLMApi(ABC):
     @abstractmethod
     def reasoning_completion(self, prompt: Prompt) -> Iterable[Message]:
         """
-        reasoning completion is not compatible to chat completion.
-        so we need another api.
-        :param prompt:
-        :return:
+        make reasoning completion in complete message.
+        only reasoning model can use this api
         """
         pass
 
     @abstractmethod
     def reasoning_completion_stream(self, prompt: Prompt) -> Iterable[Message]:
+        """
+        make reasoning completion in stream
+        only reasoning model can use this api
+        """
         pass
 
-    def deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+    def deliver_chat_completion(self, prompt: Prompt, stream: bool, stage: str = "") -> Iterable[Message]:
+        """
+        syntax sugar for chat_completion, chat_completion_chunks, reasoning_completion, reasoning_completion_stream
+        determine which api to use by model conf.
+        :param prompt:
+        :param stream:
+        :param stage:
+        :return:
+        """
         items = self._deliver_chat_completion(prompt, stream)
-        yield from self._parse_delivering_items(prompt, stream, items)
+        yield from self._parse_delivering_items(prompt, stream, items, stage)
 
     @abstractmethod
-    def _parse_delivering_items(self, prompt: Prompt, stream: bool, items: Iterable[Message]) -> Iterable[Message]:
+    def _parse_delivering_items(
+            self,
+            prompt: Prompt,
+            stream: bool,
+            items: Iterable[Message],
+            stage: str,
+    ) -> Iterable[Message]:
         pass
 
     def _deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:

@@ -454,14 +454,28 @@ class OpenAIAdapter(LLMApi):
     def _get_compatible_options(self) -> Compatible:
         return self.model.compatible or self.service.compatible or Compatible()
 
-    def _parse_delivering_items(self, prompt: Prompt, stream: bool, items: Iterable[Message]) -> Iterable[Message]:
+    def _parse_delivering_items(
+            self,
+            prompt: Prompt,
+            stream: bool,
+            items: Iterable[Message],
+            stage: str,
+    ) -> Iterable[Message]:
         pipes = [SequencePipe()]
 
         # if support functional tokens.
         support_functional_tokens = self._get_compatible_options().support_functional_tokens
         if support_functional_tokens and len(prompt.functional_tokens) > 0:
             pipes.append(XMLFunctionalTokenPipe(prompt.functional_tokens))
-        yield from run_pipeline(pipes, items)
+
+        # support staging output.
+        items = run_pipeline(pipes, items)
+        if not stage:
+            yield from items
+        else:
+            for item in items:
+                item.stage = stage
+                yield item
 
 
 class OpenAIDriver(LLMDriver):

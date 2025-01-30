@@ -335,7 +335,7 @@ class GoThreadInfo(BaseModel):
     ) -> Prompt:
         """
         :param system: the system instructions for the prompt
-        :param stages: the allowed stages of the messages that allowed in the prompt. if empty, means "" is only allowed
+        :param stages: the allowed stages of the messages that allowed in the prompt. if '*' in stages, means any.
         :param truncate: if pass truncated history to the prompt. use thread default truncate logic.
         :return:
         """
@@ -355,8 +355,9 @@ class GoThreadInfo(BaseModel):
             description=f"created from thread {self.id} turn {turn_id}",
             system=system,
             history=copy_messages(history, stages),
-            inputs=copy_messages(inputs, stages),
-            added=copy_messages(appending, stages),
+            # allow all the stage messages of current turn.
+            inputs=copy_messages(inputs, ['*']),
+            added=copy_messages(appending, ['*']),
         )
         return prompt
 

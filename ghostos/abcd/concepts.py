@@ -671,11 +671,19 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def messenger(self, stage: str = "") -> "Messenger":
+    def messenger(
+            self, *,
+            name: str = "",
+            stage: str = "",
+            payloads: Optional[List[Payload]] = None,
+    ) -> "Messenger":
         """
         Task 当前运行状态下, 向上游发送消息的 Messenger.
         每次会实例化一个 Messenger, 理论上不允许并行发送消息. 但也可能做一个技术方案去支持它.
         Messenger 未来要支持双工协议, 如果涉及多流语音还是很复杂的.
+        :param stage: set the stage of the messages.
+        :param name: if empty, use the ghost name
+        :param payloads: add payloads to all the message complete items.
         """
         pass
 
