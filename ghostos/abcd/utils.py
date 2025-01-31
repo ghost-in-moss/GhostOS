@@ -29,6 +29,8 @@ def get_ghost_driver_type(ghost: Ghost) -> Type[GhostDriver]:
 
 def get_ghost_driver(ghost: Ghost) -> GhostDriver:
     ghost_driver_type = get_ghost_driver_type(ghost)
+    if not ghost_driver_type or not issubclass(ghost_driver_type, GhostDriver):
+        raise NotImplementedError(f"the Ghost {type(ghost)} has no ghost driver type")
     return ghost_driver_type(ghost)
 
 
@@ -44,6 +46,8 @@ def is_ghost(value) -> bool:
         assert issubclass(driver, GhostDriver)
         return True
     except AssertionError:
+        return False
+    except AttributeError:
         return False
 
 

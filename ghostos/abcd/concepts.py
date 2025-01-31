@@ -442,7 +442,9 @@ class Conversation(Protocol[G]):
             self,
             inputs: Iterable[MessageKind],
             context: Optional[G.ContextType] = None,
+            *,
             streaming: bool = True,
+            timeout: float = 0.0,
     ) -> Tuple[Event, Receiver]:
         """
         create response immediately by inputs. the inputs will change to event.

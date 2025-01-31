@@ -57,13 +57,13 @@ def main_chat():
         # other pages
         with st.container(border=True):
             GhostTaskRoute().render_page_link(use_container_width=True)
-        if st.button("Clear Messages", use_container_width=True):
+        if st.button("New Thread", use_container_width=True):
             thread = conversation.get_thread()
             fork = thread.fork()
             thread = fork.reset_history([])
             conversation.update_thread(thread)
             route.link.switch_page()
-        if st.button("Reset Messages", use_container_width=True):
+        if st.button("Clear Thread Messages", use_container_width=True):
             thread = conversation.get_thread()
             thread = thread.reset_history([])
             conversation.update_thread(thread)
@@ -166,6 +166,8 @@ def main_chat():
             _("name"): id_.name,
             _("desc"): id_.description,
             _("class"): import_path,
+            _("task id"):  conversation.task_id,
+            _("thread id"):  conversation.get_thread().id,
         }
         if route.filename:
             data[_("from")] = route.filename
@@ -260,7 +262,8 @@ def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
         pkg_name = pkg.split()[0]
         try:
             distribution(pkg_name)
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as e:
+            logger.exception(e)
             return None
 
     from ghostos.framework.audio import get_pyaudio_pcm16_speaker, get_pyaudio_pcm16_listener
@@ -295,6 +298,7 @@ def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
         try:
             conversation = shell.sync(route.get_ghost(), route.get_context(), force=True)
         except Exception as e:
+            logger.exception(e)
             st.error(e)
             return None
         if conversation:

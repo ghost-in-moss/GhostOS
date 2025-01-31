@@ -8,6 +8,11 @@ __all__ = ['Thought', 'LLMThought', 'SummaryThought', 'ChainOfThoughts']
 
 T = TypeVar("T")
 
+"""
+Thought 的目标是实现一个可以分形嵌套的思维范式, 在单次思考过程中运行. 
+这种工程化的实现, 是为了限制模型的思考逻辑, 在思考过程中丰富上下文, 通过 in-context learning 达到最好的推理效果. 
+"""
+
 
 class Thought(Generic[T], ABC):
     """
@@ -18,6 +23,8 @@ class Thought(Generic[T], ABC):
     def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[T]]:
         pass
 
+
+# --- some basic thoughts --- #
 
 class ChainOfThoughts(Thought[Operator]):
     def __init__(

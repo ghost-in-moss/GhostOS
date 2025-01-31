@@ -313,7 +313,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         from pprint import pprint
         out = io.StringIO()
         with redirect_stdout(out):
-            pprint(*args, **kwargs)
+            if len(args) > 0:
+                pprint(args)
+            if len(kwargs) > 0:
+                pprint(kwargs)
         self._runtime_std_output += str(out.getvalue())
 
     @contextmanager

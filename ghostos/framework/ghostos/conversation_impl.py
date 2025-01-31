@@ -176,12 +176,17 @@ class ConversationImpl(Conversation[G]):
         with session:
             return session.get_artifact(), TaskState(session.task.state)
 
-    def talk(self, query: str, user_name: str = "", context: Optional[Ghost.ContextType] = None) -> Tuple[
-        Event, Receiver]:
+    def talk(
+            self,
+            query: str,
+            user_name: str = "",
+            context: Optional[Ghost.ContextType] = None,
+            timeout: float = 0.0,
+    ) -> Tuple[Event, Receiver]:
         self._validate_closed()
         self.logger.debug("talk to user %s", user_name)
         message = Role.USER.new(content=query, name=user_name)
-        return self.respond([message], context)
+        return self.respond([message], context, timeout=timeout)
 
     def update_context(self, context: Context) -> None:
         self._validate_closed()
@@ -191,7 +196,9 @@ class ConversationImpl(Conversation[G]):
             self,
             inputs: Iterable[MessageKind],
             context: Optional[Ghost.ContextType] = None,
+            *,
             streaming: bool = True,
+            timeout: float = 0.0,
     ) -> Tuple[Event, Receiver]:
         self._validate_closed()
         if self._submit_session_thread:
@@ -207,7 +214,7 @@ class ConversationImpl(Conversation[G]):
             messages=messages,
             context=context_meta,
         )
-        return event, self.respond_event(event, streaming=streaming)
+        return event, self.respond_event(event, streaming=streaming, timeout=timeout)
 
     def respond_event(
             self,
