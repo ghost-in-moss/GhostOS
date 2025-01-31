@@ -289,14 +289,14 @@ class SessionImpl(Session[Ghost]):
             name=name or identity.name,
             role=Role.ASSISTANT.value,
             payloads=payloads,
-            stage=stage,
+            stage=str(stage),
         )
 
     def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[FunctionCaller]]:
         self._validate_alive()
         messages = self._message_parser.parse(messages)
         with self._respond_lock:
-            messenger = self.messenger(stage)
+            messenger = self.messenger(stage=stage)
             try:
                 messenger.send(messages)
             except StreamingError as e:

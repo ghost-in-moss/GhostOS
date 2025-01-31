@@ -63,8 +63,18 @@ def main_chat():
             thread = fork.reset_history([])
             conversation.update_thread(thread)
             route.link.switch_page()
+        if st.button("Reset Messages", use_container_width=True):
+            thread = conversation.get_thread()
+            thread = thread.reset_history([])
+            conversation.update_thread(thread)
+            route.link.switch_page()
 
         st.subheader("chat options")
+        with st.container(border=True):
+            show_ghost_settings = st.toggle("ghost settings")
+            show_instruction = st.toggle("show instructions")
+            show_context = st.toggle("show context")
+
         with st.container(border=True):
             route.realtime = st.toggle(
                 _("realtime chat"),
@@ -165,15 +175,6 @@ def main_chat():
 {yaml_pretty_dump(data)}
 ```
 """)
-        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-        with col1:
-            show_ghost_settings = st.toggle("settings")
-        with col2:
-            show_instruction = st.toggle("instructions")
-        with col3:
-            show_context = st.toggle("context")
-        with col4:
-            pass
 
     # render ghost settings
     if show_ghost_settings:
@@ -440,6 +441,8 @@ def render_receive_buffer(buffer: ReceiverBuffer, debug: bool):
 def _render_single_buffer(buffer: ReceiverBuffer, head: Message, debug: bool, in_expander: bool):
     if MessageType.is_text(head):
         with st.empty():
+            msg_caption = f"{head.role}: {head.name}"
+            st.caption(msg_caption)
             contents = chunks_to_st_stream(buffer.chunks())
             st.write_stream(contents)
             with st.container():

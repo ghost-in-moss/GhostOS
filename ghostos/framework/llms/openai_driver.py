@@ -212,7 +212,7 @@ class OpenAIAdapter(LLMApi):
             return self._client.chat.completions.create(
                 messages=messages,
                 model=self.model.model,
-                function_call=prompt.get_openai_function_call(),
+                function_call=prompt.get_openai_function_call() if functions and functions != NOT_GIVEN else NOT_GIVEN,
                 functions=functions,
                 tools=tools,
                 max_tokens=self.model.max_tokens,
@@ -221,6 +221,7 @@ class OpenAIAdapter(LLMApi):
                 timeout=self.model.timeout,
                 stream=stream,
                 stream_options=include_usage,
+                top_p=self.model.top_p or NOT_GIVEN,
                 **self.model.kwargs,
             )
         except UnprocessableEntityError as e:
