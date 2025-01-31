@@ -11,8 +11,15 @@ from rich.prompt import Prompt
 
 
 @click.group()
+@click.version_option(prog_name="ghostos")
 def main():
-    pass
+    """GhostOS command line interface"""
+    from importlib.metadata import version
+    try:
+        version = version("ghostos")
+    except ImportError:
+        version = "unknown"
+    click.version_option(version=version, prog_name="ghostos")(main)
 
 
 @main.command("thread")
