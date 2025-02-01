@@ -1,11 +1,13 @@
-from typing import Optional, TypeVar, Dict, Any, Iterable
-from .agent import MossAgent
-from ghostos.core.moss import MossRuntime
+from typing import Optional, TypeVar, Dict, Any, Iterable, Generic
+from types import ModuleType
+from ghostos.ghosts.moss_agent.agent import MossAgent
+from ghostos.core.moss import MossRuntime, AttrPrompts
 from ghostos.abcd.concepts import Session, Operator
 from ghostos.core.runtime import GoThreadInfo, Event
 from ghostos.container import Provider
 
-A = TypeVar("A")
+A = TypeVar("A", bound=MossAgent)
+F = TypeVar("F")
 
 
 # <moss-hide>
@@ -36,7 +38,7 @@ def __shell_providers__() -> Iterable[Provider]:
     return []
 
 
-def __moss_agent_creating__(agent: A, session: Session) -> None:
+def __moss_agent_on_creating__(agent: A, session: Session) -> None:
     """
     once a moss agent is creating,
     this function will be called.
@@ -108,5 +110,76 @@ def __moss_agent_on_event_type__(
     you may create any event type handler, instead of default logic in MossAgentDriver.
     """
     pass
+
+
+class AbsMossAgentMethods(Generic[A]):
+    """
+    new way to define custom methods for Moss Agents.
+    the magic methods are troublesome to copy,
+
+    so developer can define a Subclass of MossAgentMethods at the target module,
+    and rewrite the method do customized things.
+    """
+    MOSS_AGENT_METHODS_NAME = "MossAgentMethods"
+
+    @classmethod
+    def from_module(cls, module: ModuleType) -> "AbsMossAgentMethods":
+        name = cls.MOSS_AGENT_METHODS_NAME
+        if name in module.__dict__:
+            wrapper = module.__dict__[name]
+        else:
+            wrapper = cls
+        return wrapper(module)
+
+    def __init__(self, module: Optional[ModuleType] = None):
+        self.module = module
+
+    def _get_module_func(self, expect: F, name: str = "") -> F:
+        if self.module is None:
+            return expect
+        if not name:
+            name = expect.__name__
+        if name in self.module.__dict__:
+            return self.module.__dict__[name]
+        return expect
+
+    def providers(self, agent: A) -> Iterable[Provider]:
+        fn = self._get_module_func(__moss_agent_providers__)
+        yield from fn(agent)
+
+    def shell_providers(self) -> Iterable[Provider]:
+        fn = self._get_module_func(__shell_providers__)
+        yield from fn()
+
+    def on_creating(self, agent: A, session: Session) -> None:
+        fn = self._get_module_func(__moss_agent_on_creating__)
+        return fn(agent, session)
+
+    def truncate_thread(self, agent: MossAgent, session: Session) -> GoThreadInfo:
+        fn = self._get_module_func(__moss_agent_truncate__)
+        return fn(agent, session)
+
+    def agent_parse_event(self, agent: MossAgent, session: Session, event: Event) -> Optional[Event]:
+        fn = self._get_module_func(__moss_agent_parse_event__)
+        return fn(agent, session, event)
+
+    def agent_injections(self, agent: A, session: Session[A]) -> Dict[str, Any]:
+        fn = self._get_module_func(__moss_agent_injections__)
+        return fn(agent, session)
+
+    def agent_on_event(
+            self,
+            agent: MossAgent,
+            session: Session[A],
+            runtime: MossRuntime,
+            event: Event,
+    ) -> Optional[Operator]:
+        event_type = event.type
+        fn_name = f"__moss_agent_on_{event_type}__"
+        fn = self._get_module_func(__moss_agent_on_event_type__, fn_name)
+        return fn(agent, session, runtime, event)
+
+    def __prompt__(self) -> str:
+        return ""
 
 # </moss-hide>

@@ -361,6 +361,25 @@ class GoThreadInfo(BaseModel):
         )
         return prompt
 
+    def delete_turn(self, turn_id: str) -> bool:
+        if self.on_created.turn_id == turn_id:
+            self.on_created = Turn.new(None)
+            return True
+        history = []
+        found = False
+        for turn in self.history:
+            if turn.turn_id == turn_id:
+                found = True
+                continue
+            history.append(turn)
+        self.history = history
+        if found:
+            return True
+        if self.current and self.current.turn_id == turn_id:
+            self.current = None
+            return True
+        return False
+
 
 def thread_to_prompt(
         prompt_id: str,

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from ghostos.container import Container, Provider, Factory, provide
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.prompts import (
-    AttrPrompts, reflect_module_locals, compile_attr_prompts
+    AttrPrompts, reflect_locals_imported, compile_attr_prompts
 )
 
 """
@@ -296,7 +296,7 @@ class MossPrompter(ABC):
         module = self.module()
         name = module.__name__
         local_values = module.__dict__
-        yield from reflect_module_locals(
+        yield from reflect_locals_imported(
             name,
             local_values,
         )

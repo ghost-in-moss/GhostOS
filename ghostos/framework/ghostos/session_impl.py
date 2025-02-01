@@ -464,6 +464,7 @@ class SessionImpl(Session[Ghost]):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.logger.debug("session exited")
         if exc_val is not None:
+            self.logger.error("session exited with error %s", exc_val)
             intercepted = self.fail(exc_val)
             self.destroy()
             return intercepted

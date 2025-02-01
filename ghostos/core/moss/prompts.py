@@ -29,7 +29,7 @@ import inspect
 
 __all__ = [
     'get_prompt',
-    'reflect_module_locals', 'reflect_class_with_methods',
+    'reflect_locals_imported', 'reflect_class_with_methods',
     'join_prompt_lines', 'compile_attr_prompts',
     'get_defined_prompt',
     'AttrPrompts',
@@ -53,7 +53,8 @@ ignore_modules = {
 }
 
 
-def reflect_module_locals(
+# todo: change function name
+def reflect_locals_imported(
         modulename: str,
         local_values: Dict[str, Any],
 ) -> AttrPrompts:
@@ -82,19 +83,20 @@ def reflect_module_locals(
     """
     for name, value in local_values.items():
         try:
-            prompt = reflect_module_attr(name, value, modulename)
+            prompt = reflect_imported_attr(name, value, modulename)
         except Exception as e:
             raise RuntimeError(f"failed to reflect local value {name!r}: {e}")
         if prompt is not None:
             yield name, prompt
 
 
+# todo: change function name
 def reflect_class_with_methods(cls: type) -> str:
     """
     reflect class with all its method signatures.
     """
     from inspect import getsource
-    from .utils import make_class_prompt, get_callable_definition
+    from ghostos.core.moss.utils import make_class_prompt, get_callable_definition
     source = getsource(cls)
     attrs = []
     for name in dir(cls):
@@ -107,7 +109,7 @@ def reflect_class_with_methods(cls: type) -> str:
     return make_class_prompt(source=source, attrs=attrs)
 
 
-def reflect_module_attr(
+def reflect_imported_attr(
         name: str,
         value: Any,
         current_module: str,

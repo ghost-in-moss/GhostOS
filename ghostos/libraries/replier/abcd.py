@@ -10,13 +10,6 @@ class Replier(ABC):
     """
 
     @abstractmethod
-    def say(self, text: str) -> None:
-        """
-        say something
-        """
-        pass
-
-    @abstractmethod
     def wait_for(self, text: str) -> Operator:
         """
         say something and wait for the reply

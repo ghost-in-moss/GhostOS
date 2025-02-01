@@ -91,7 +91,7 @@ class MetaPromptExp3(BaseModel, Thought[Operator]):
     实验3, 一步一步思考.
     """
     llm_api_name: str = Field(default="", description="Name of the LLM API")
-    max_think_steps: int = Field(default=50, description="the maximum number of think steps")
+    max_think_steps: int = Field(default=4, description="the maximum number of think steps")
     start_instruction: str = Field(default="""
 你现在进入了思考模式, 在思考模式中, 你在自己和自己说话. 所以你应该用 "我" 来讨论自己应该干什么. 
 在思考模式中, 你所有的输出不会发送给用户, 而是作为你脑海中的想象供你未来使用.
@@ -102,17 +102,20 @@ class MetaPromptExp3(BaseModel, Thought[Operator]):
 4. 如果你非常确信, 每一步思考都完成了, 你应该把 `[done]` 作为你输出的结尾. 这样思维链就会中断, 进入回复模式. 
 5. 如果你的计划没有执行完, 你不应该认为思考结束了. 
 6. 不需要一次思考完, 你想得太多了后, 可以先输出一部分, 然后等待. 系统会自动调度你下一次观察和反思.
+7. 不要陷入循环思考, 每次反思之前都要观察是否重复之前的错误, 如果是的话, 要尝试想新的思路. 
 
 接下来开始你的思考: 
 """)
     step_instruction: str = Field(
         default="""
-以上是你之前的思考过程. 你现在要: 
+以上是你之前的思考过程. 现在是第 ({current}/{max}) 轮思维运行. 你现在要: 
 1. 观察之前的思考内容, 反思是不是有问题, 或者突然有新的灵感. 如果上一步没有完成的话, 你仍然应该继续上一步的思考. 
-2. 确定一次只思考一步, 想清楚你现在这一步应该干什么, 并把要做的事情写出来. 
-3. 按你思考的这一步, 尝试做一轮推演. 只做一轮推演, 等待下一轮观察反思上一轮思考结果. 
-4. 如果你非常确信, 每一步思考都完成了, 你应该把 `[done]` 作为你输出的结尾. 这样思维链就会中断, 进入回复模式. 
-5. 如果你的思考空间不够, 请用 `[continue]` 作为输出的结尾, 这样系统会自动调度你下一次的观察和反思. 
+2. 观察上面的思考是不是陷入了死循环, 如果是的话, 要跳出来建立新的整体思路, 并把之前的错误总结进去. 
+3. 如果反复陷入循环, 也应该思考是不是问题有误或者没有回答的办法.  
+4. 确定一次只思考一步, 想清楚你现在这一步应该干什么, 并把要做的事情写出来. 
+5. 按你思考的这一步, 尝试做一轮推演. 只做一轮推演, 等待下一轮观察反思上一轮思考结果. 
+6. 如果你非常确信, 每一步思考都完成了, 你应该把 `[done]` 作为你输出的结尾. 这样思维链就会中断, 进入回复模式. 
+7. 如果你的思考空间不够, 请用 `[continue]` 作为输出的结尾, 这样系统会自动调度你下一次的观察和反思. 
 
 请输出你的思考: 
 """
@@ -136,7 +139,10 @@ class MetaPromptExp3(BaseModel, Thought[Operator]):
             if count > 0:
                 _prompt.added.append(
                     Role.new_system(
-                        content=self.step_instruction,
+                        content=self.step_instruction.format(
+                            current=count + 1,
+                            max=self.max_think_steps,
+                        ),
                         stage=MessageStage.REASONING.value,
                     )
                 )

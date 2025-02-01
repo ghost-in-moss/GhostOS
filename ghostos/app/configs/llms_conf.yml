@@ -126,7 +126,7 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
-  gpt-o1-mini:
+  openai-o1-mini:
     model: o1-mini
     service: openai
     reasoning: { }

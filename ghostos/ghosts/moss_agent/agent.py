@@ -1,6 +1,5 @@
-from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar
+from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar, TYPE_CHECKING
 from typing_extensions import Self
-from types import ModuleType
 
 from ghostos.identifier import Identifier
 from pydantic import BaseModel, Field
@@ -16,13 +15,16 @@ from ghostos.core.llms import (
     Prompt, PromptPipe, AssistantNamePipe, run_prompt_pipeline,
     LLMFunc, FunctionalToken,
 )
-from .instructions import (
+from ghostos.ghosts.moss_agent.instructions import (
     GHOSTOS_INTRODUCTION, MOSS_INTRODUCTION, AGENT_META_INTRODUCTION, MOSS_FUNCTION_DESC,
     get_moss_context_prompter, get_agent_identity,
 )
 import json
-
 from ghostos.container import Provider
+
+if TYPE_CHECKING:
+    from ghostos.ghosts.moss_agent.for_developer import AbsMossAgentMethods
+
 
 __all__ = ['MossAgent', 'MossAgentDriver', 'MossAction']
 
@@ -58,20 +60,21 @@ class MossAgent(ModelEntity, Agent):
 
 class MossAgentDriver(GhostDriver[MossAgent]):
 
-    def get_module(self) -> ModuleType:
-        m = import_from_path(self.ghost.moss_module)
-        return m
+    __custom_methods: Optional["AbsMossAgentMethods"] = None
+
+    def get_custom_agent_methods(self) -> "AbsMossAgentMethods":
+        from ghostos.ghosts.moss_agent.for_developer import AbsMossAgentMethods
+        if self.__custom_methods is None:
+            m = import_from_path(self.ghost.moss_module)
+            # user can custom moss agent methods, by define a `MossAgentMethods` class
+            self.__custom_methods = AbsMossAgentMethods.from_module(m)
+        return self.__custom_methods
 
     def providers(self) -> Iterable[Provider]:
         """
         ghost session level providers
         """
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_providers__
-        m = self.get_module()
-        fn = __moss_agent_providers__
-        if __moss_agent_providers__.__name__ in m.__dict__:
-            fn = m.__dict__[__moss_agent_providers__.__name__]
-        return fn(self.ghost)
+        return self.get_custom_agent_methods().providers(self.ghost)
 
     def parse_event(self, session: Session, event: Event) -> Union[Event, None]:
         """
@@ -80,22 +83,14 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         :param event:
         :return:
         """
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_parse_event__
-        fn = __moss_agent_parse_event__
-        if __moss_agent_parse_event__.__name__ in event.__dict__:
-            fn = event.__dict__[__moss_agent_parse_event__.__name__]
-        return fn(self.ghost, session, event)
+        return self.get_custom_agent_methods().agent_parse_event(self.ghost, session, event)
 
     def truncate(self, session: Session) -> GoThreadInfo:
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_truncate__
-        fn = __moss_agent_truncate__
-        if __moss_agent_truncate__.__name__ in session.__dict__:
-            fn = session.__dict__[__moss_agent_truncate__.__name__]
-        return fn(self.ghost, session)
+        return self.get_custom_agent_methods().truncate_thread(self.ghost, session)
 
     def get_artifact(self, session: Session) -> Optional[MossAgent.ArtifactType]:
         from .for_meta_ai import __moss_agent_artifact__
-        m = self.get_module()
+        m = self.get_custom_agent_methods().module
         if __moss_agent_artifact__.__name__ not in m.__dict__:
             return None
         fn = getattr(m, __moss_agent_artifact__.__name__)
@@ -141,12 +136,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         yield moss_action
 
     def on_creating(self, session: Session) -> None:
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_creating__ as fn
-        m = self.get_module()
-        if fn.__name__ in m.__dict__:
-            fn = m.__dict__[fn.__name__]
-        fn(self.ghost, session)
-        return
+        self.get_custom_agent_methods().on_creating(self.ghost, session)
 
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
         compiler = self._get_moss_compiler(session)
@@ -273,7 +263,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
 
         # bind agent level injections.
         fn = __moss_agent_injections__
-        module = self.get_module()
+        module = self.get_custom_agent_methods().module
         # if magic function __agent_moss_injections__ exists, use it to get some instance level injections to moss.
         if __moss_agent_injections__.__name__ in module.__dict__:
             fn = module.__dict__[__moss_agent_injections__.__name__]
@@ -412,13 +402,10 @@ class MossAction(Action, PromptPipe):
                 output = f"Moss output:\n{std_output}"
                 message = caller.new_output(output)
                 session.respond([message])
-                if op is None:
-                    # if std output is not empty, and op is none, observe the output as default.
-                    return session.taskflow().think()
             else:
                 output = caller.new_output("executed")
                 session.respond([output])
-                return None
+            return session.taskflow().think()
 
         except Exception as e:
             session.logger.exception(e)

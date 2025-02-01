@@ -162,29 +162,29 @@ or `git clone https://github.com/ghost-in-moss/GhostOS` then `docsify serve`
     ))
 
 
-@main.command("py-interface")
-@click.argument("import_path")
-@click.option("--force", is_flag=True, flag_value=True, help="Force generate")
-@click.option("--model", default="", show_default=True, help="the llm api name")
-def gen_py_interface(
-        import_path: str,
-        force: bool = False,
-        model: str = "",
-):
-    """
-    generate python interface by large language model from a python function or class import path
-    """
-    from ghostos.libraries.pyeditor import PyInterfaceGenerator
-    from ghostos.bootstrap import get_container
-    container = get_container()
-    pig = container.force_fetch(PyInterfaceGenerator)
-    generated = pig.generate_interface(import_path, cache=not force, llm_api=model)
-    console = Console()
-    console.print(Markdown(f"""
-```python
-{generated}
-```
-"""))
+# @main.command("py-interface")
+# @click.argument("import_path")
+# @click.option("--force", is_flag=True, flag_value=True, help="Force generate")
+# @click.option("--model", default="", show_default=True, help="the llm api name")
+# def gen_py_interface(
+#         import_path: str,
+#         force: bool = False,
+#         model: str = "",
+# ):
+#     """
+#     generate python interface by large language model from a python function or class import path
+#     """
+#     from ghostos.libraries.pyeditor import PyInterfaceGenerator
+#     from ghostos.bootstrap import get_container
+#     container = get_container()
+#     pig = container.force_fetch(PyInterfaceGenerator)
+#     generated = pig.generate_interface(import_path, cache=not force, llm_api=model)
+#     console = Console()
+#     console.print(Markdown(f"""
+# ```python
+# {generated}
+# ```
+# """))
 
 
 @main.command("help")

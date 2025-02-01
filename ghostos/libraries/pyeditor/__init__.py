@@ -1,2 +1,4 @@
 from ghostos.libraries.pyeditor.abcd import *
-from ghostos.libraries.pyeditor.py_interface_generator import LLMSimplePyInterfaceGeneratorProvider
+from ghostos.libraries.pyeditor.gen_interface_llm import LLMPyInterfaceGeneratorProvider
+from ghostos.libraries.pyeditor.inspector_impl import SimplePyInterfaceProvider
+from ghostos.libraries.pyeditor.gen_interface_simple import SimplePyInterfaceGeneratorProvider

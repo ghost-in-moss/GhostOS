@@ -428,7 +428,7 @@ class Message(BaseModel):
         return item
 
     def get_unique_id(self) -> str:
-        return f"{self.type}:{self.msg_id}"
+        return f"{self.type}:{self.role}:{self.name}:{self.stage}:{self.msg_id}"
 
     def update(self, pack: "Message") -> None:
         """

@@ -19,6 +19,8 @@ __all__ = [
     'render_task', 'render_task_by_id',
     'render_thread', 'render_event', 'render_turn', 'render_event_object',
     'render_empty',
+
+    'render_turn_delete',
 ]
 
 T = TypeVar('T')
@@ -70,8 +72,27 @@ def render_thread(thread: GoThreadInfo, max_turn: int = 20, prefix: str = "", de
     count = 0
     for turn in turns:
         count += render_turn(turn, debug, prefix)
+        render_turn_delete(thread, turn, debug)
+
     if count == 0:
         st.info("No thread messages yet")
+
+
+def render_turn_delete(thread: GoThreadInfo, turn: Turn, debug: bool):
+    if debug:
+        st.divider()
+        if st.button("delete turn", key=f"{thread.id}--{turn.turn_id}"):
+            thread.delete_turn(turn.turn_id)
+            save_thread(thread)
+
+
+def save_thread(thread: GoThreadInfo):
+    from ghostos.prototypes.streamlitapp.resources import get_container
+    from ghostos.core.runtime.threads import GoThreads
+    container = get_container()
+    threads = container.force_fetch(GoThreads)
+    threads.save_thread(thread)
+    st.rerun()
 
 
 def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
@@ -82,7 +103,6 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
     if turn.is_from_inputs() or turn.is_from_self():
         messages = list(turn.messages(False))
         render_messages(messages, debug, in_expander=False, prefix=prefix)
-        return len(messages)
     # from other task
     else:
         event = turn.event
@@ -96,7 +116,8 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
         if turn.added:
             render_messages(turn.added, debug, in_expander=False)
         messages = list(turn.messages(False))
-        return len(messages)
+
+    return len(messages)
 
 
 def render_event(event: Event, debug: bool):

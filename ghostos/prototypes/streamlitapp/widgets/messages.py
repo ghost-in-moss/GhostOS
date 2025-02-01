@@ -1,4 +1,3 @@
-import streamlit_antd_components as sac
 import streamlit as st
 from typing import Iterable, List, NamedTuple
 from ghostos.core.messages import (
@@ -64,7 +63,7 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
     if not debug:
         st.empty()
         return
-    msg_id = message.msg_id
+    msg_id = message.get_unique_id()
     with st.container():
         col1, col2, col3, col4 = st.columns(4)
         with col1:

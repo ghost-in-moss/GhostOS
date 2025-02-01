@@ -276,7 +276,7 @@ def default_application_providers(
 
     # session level libraries
     from ghostos.libraries.replier import ReplierImplProvider
-    from ghostos.libraries.pyeditor import LLMSimplePyInterfaceGeneratorProvider
+    from ghostos.libraries.pyeditor import SimplePyInterfaceGeneratorProvider
 
     if config is None:
         config = get_bootstrap_config(local=True)
@@ -328,7 +328,7 @@ def default_application_providers(
 
         # --- system default session level libraries --- #
         ReplierImplProvider(),
-        LLMSimplePyInterfaceGeneratorProvider(),
+        SimplePyInterfaceGeneratorProvider(),
     ]
 
 

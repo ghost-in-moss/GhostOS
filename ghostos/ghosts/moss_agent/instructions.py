@@ -18,7 +18,7 @@ Which provides you a way to control your body / tools / thoughts through Python 
 
 basic usage: 
 1. you will get the python code context that MOSS provide to you below. 
-2. you can generate code by `moss` tool, then the `GhostOS` will execute them for you.
+2. you can generate code by `moss` tool (by function/tool/functional tokens), then the `GhostOS` will execute them for you.
 3. if you print anything in your generated code, the output will be shown in further messages.
 
 """
@@ -82,7 +82,7 @@ def get_moss_context_prompter(title: str, runtime: MossRuntime) -> PromptObjectM
     for name, injection in injections.items():
         if isinstance(injection, PromptObjectModel):
             prompter = TextPOM(
-                title=f"property moss.{name}",
+                title=f"property `moss.{name}`",
                 content=injection.self_prompt(container),
             )
             children.append(prompter)

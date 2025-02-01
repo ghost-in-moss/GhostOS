@@ -10,5 +10,5 @@ __ghost__ = Chatbot(
     persona="you are an LLM-driven cute girl, named jojo",
     instruction="remember talk to user with user's language.",
     # set model using openai-o1
-    llm_api="gpt-o1-mini",
+    llm_api="openai-o1-mini",
 )

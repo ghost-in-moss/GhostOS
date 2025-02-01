@@ -11,7 +11,7 @@ from ghostos.container import Container, Provider, INSTANCE
 from pydantic import BaseModel, Field
 import yaml
 
-__all__ = ['PyInterfaceGeneratorSimpleImpl', 'LLMSimplePyInterfaceGeneratorProvider']
+__all__ = ['LLMPyInterfaceGeneratorImpl', 'LLMPyInterfaceGeneratorProvider']
 
 
 class InterfaceCache(BaseModel):
@@ -110,7 +110,7 @@ now generate the interface code:
 """
 
 
-class PyInterfaceGeneratorSimpleImpl(PyInterfaceGenerator):
+class LLMPyInterfaceGeneratorImpl(PyInterfaceGenerator):
     """
     simple implementation of PyInterfaceGenerator
     """
@@ -139,19 +139,19 @@ class PyInterfaceGeneratorSimpleImpl(PyInterfaceGenerator):
             cache = InterfaceCache()
         return cache
 
-    def generate_interface(self, class_or_function: Union[FunctionType, Type, str], llm_api: str = "",
+    def generate_interface(self, value: Union[FunctionType, Type, str], llm_api: str = "",
                            cache: bool = True) -> str:
-        is_class = inspect.isclass(class_or_function)
-        if is_class or inspect.isfunction(class_or_function):
-            source = inspect.getsource(class_or_function)
-            import_path = generate_import_path(class_or_function)
-        elif isinstance(class_or_function, str):
-            import_path = class_or_function
+        is_class = inspect.isclass(value)
+        if is_class or inspect.isfunction(value):
+            source = inspect.getsource(value)
+            import_path = generate_import_path(value)
+        elif isinstance(value, str):
+            import_path = value
             value = import_from_path(import_path, self._modules.import_module)
             source = inspect.getsource(value)
             is_class = inspect.isclass(value)
         else:
-            raise AttributeError(f"Cannot generate interface for {type(class_or_function)}")
+            raise AttributeError(f"Cannot generate interface for {type(value)}")
 
         return self._generate_interface_from_source(source, import_path, is_class, llm_api, cache)
 
@@ -201,7 +201,7 @@ class PyInterfaceGeneratorSimpleImpl(PyInterfaceGenerator):
         return self._llms.get_api(llm_api)
 
 
-class LLMSimplePyInterfaceGeneratorProvider(Provider[PyInterfaceGenerator]):
+class LLMPyInterfaceGeneratorProvider(Provider[PyInterfaceGenerator]):
 
     def __init__(self, llm_api: str = ""):
         self._llm_api = llm_api
@@ -214,7 +214,7 @@ class LLMSimplePyInterfaceGeneratorProvider(Provider[PyInterfaceGenerator]):
         modules = con.force_fetch(Modules)
         llms = con.force_fetch(LLMs)
 
-        return PyInterfaceGeneratorSimpleImpl(
+        return LLMPyInterfaceGeneratorImpl(
             workspace=ws,
             modules=modules,
             llms=llms,

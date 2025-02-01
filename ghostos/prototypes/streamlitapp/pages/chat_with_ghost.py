@@ -12,7 +12,7 @@ from ghostos.prototypes.streamlitapp.widgets.messages import (
     render_message_in_content, render_messages,
 )
 from ghostos.prototypes.streamlitapp.widgets.renderer import (
-    render_object, render_event, render_turn,
+    render_object, render_event, render_turn, render_turn_delete,
     render_empty,
 )
 from ghostos.prototypes.streamlitapp.resources import (
@@ -558,6 +558,8 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20, truncate: b
     count = 0
     for turn in turns:
         count += render_turn(turn, debug)
+        if count > 1:
+            render_turn_delete(thread, turn, debug)
     if count == 0:
         st.info("No thread messages yet")
     else:

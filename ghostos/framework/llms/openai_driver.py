@@ -203,16 +203,24 @@ class OpenAIAdapter(LLMApi):
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = prompt.get_messages()
         messages = self.parse_message_params(messages)
+        params = None
         if not messages:
             raise AttributeError("empty chat!!")
         try:
             prompt.run_start = timestamp_ms()
             self._logger.debug(f"start chat completion messages %s", messages)
             functions, tools = self._get_prompt_functions_and_tools(prompt)
-            return self._client.chat.completions.create(
+            function_call_param = prompt.get_openai_function_call() \
+                if functions and functions != NOT_GIVEN \
+                else NOT_GIVEN
+            self._logger.debug(
+                f"start chat completion tools %s, functions: %s, function_call_param: %s",
+                tools, functions, function_call_param
+            )
+            params = dict(
                 messages=messages,
                 model=self.model.model,
-                function_call=prompt.get_openai_function_call() if functions and functions != NOT_GIVEN else NOT_GIVEN,
+                function_call=function_call_param,
                 functions=functions,
                 tools=tools,
                 max_tokens=self.model.max_tokens,
@@ -224,11 +232,13 @@ class OpenAIAdapter(LLMApi):
                 top_p=self.model.top_p or NOT_GIVEN,
                 **self.model.kwargs,
             )
+            return self._client.chat.completions.create(**params)
         except UnprocessableEntityError as e:
             self._logger.error(f"{str(e)} with input messages: {messages}")
             raise
         except Exception as e:
             self._logger.error(f"error chat completion for prompt {prompt.id}: {e}")
+            self._logger.debug(f"the chat completion request is %s" % params)
             raise
         finally:
             self._logger.debug(f"end chat completion for prompt {prompt.id}")

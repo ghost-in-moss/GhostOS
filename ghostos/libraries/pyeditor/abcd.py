@@ -1,8 +1,9 @@
-from typing import List, Iterable, Union, Type
+from typing import List, Iterable, Union, Type, Optional, Any
 from typing_extensions import Literal
 from types import FunctionType
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
+from ghostos.prompter import POM
 
 __all__ = [
     'PyInspector',
@@ -12,26 +13,26 @@ __all__ = [
 ]
 
 
-class PyInspector(ABC):
+class PyInspector(POM, ABC):
     """
     这个工具可以自动展示你关心的 python 对象信息.
-    将它绑定到 Moss 上, 你可以自动看到这些对象的相关讯息.
+    作为一个 PromptObjectModel, 如果将它绑定到 Moss 上, 你可以自动看到这些对象的相关讯息, 并且可以在多轮对话中保存.
 
     当你想添加想要关注的对象时, 只要把它的 import_path 添加到相关属性即可.
-    注意当其中一些对象你不需要再关注时, 请通过数组操作主动去掉它们.
+    注意当其中一些对象你不需要再关注, 或者不需要关注你也能看到信息时, 请通过数组操作主动去掉它们, 避免 token 浪费.
     """
 
     _IMPORT_PATH = str
     """str pattern [module_name] or [module_name:attr_name]. such as `inspect:get_source`"""
 
     reading_source: List[_IMPORT_PATH]
-    """你正在关注, 需要展示源代码的对象."""
+    """你正在关注, 需要展示源代码的对象. 可以添加或删除这些关注对象. """
 
     reading_interface: List[_IMPORT_PATH]
-    """你正在关注, 需要展示 interface 信息的对象. interface 只包含调用者关心的讯息"""
+    """你正在关注, 需要展示 interface 信息的对象. interface 只包含调用者关心的讯息. 可以添加或删除这些信息. """
 
     @abstractmethod
-    def get_source(self, import_path: str) -> str:
+    def get_source(self, import_path: _IMPORT_PATH) -> str:
         """
         get the source of the target.
         :return: the source code of the target
@@ -39,25 +40,48 @@ class PyInspector(ABC):
         pass
 
     @abstractmethod
-    def get_brief(self, import_path: str) -> str:
-        """
-        get the brief of the target.
-        """
-        pass
-
-    @abstractmethod
-    def get_interface(self, import_path: str) -> str:
+    def get_interface(self, import_path: _IMPORT_PATH) -> str:
         """
         get the interface of the target.
+        `interface` here means definition of the function or class, exclude code body of function or method.
         """
         pass
 
     @abstractmethod
-    def dump_inspecting(self) -> str:
+    def dump_context(self) -> str:
         """
         :return: the inspecting information
         """
         pass
+
+
+# ---- local pymi ---- #
+
+class ModuleAPI(BaseModel):
+    """
+    the module attribute information
+    """
+    name: str = Field(description="the name of the attribute in the module")
+    type: Literal["function", "class"] = Field(description="the type of the attribute, usually `class` or `function`")
+    description: str = Field(description="the description of the attribute")
+    interface: str = Field(
+        description="the interface of the attribute to whom want to use this attribute."
+                    "the interface of a function shall be definition and it's arguments/returns typehint, and doc."
+                    "the interface of a class shall be definition, public methods, public attributes, __init__. "
+    )
+
+
+class ModuleInfo(BaseModel):
+    """
+    the module information
+    """
+    name: str = Field(description="the module name")
+    description: str = Field(default="", description="the module description, in 100 words")
+    exports: List[ModuleAPI] = Field(
+        default_factory=list,
+        description="the api that useful to the user of the module"
+    )
+    hash: str = Field(description="the content hash of the module.")
 
 
 class PyModuleEditor(ABC):
@@ -70,14 +94,6 @@ class PyModuleEditor(ABC):
 
     filename: str
     """the absolute filename of the module"""
-
-    @classmethod
-    @abstractmethod
-    def new(cls, module_name: str) -> "PyModuleEditor":
-        """
-        generate a new PyModuleEditor
-        """
-        pass
 
     @abstractmethod
     def get_source(
@@ -159,38 +175,28 @@ class PyModuleEditor(ABC):
         """
         pass
 
+    @abstractmethod
+    def save(self, module_info: Optional[ModuleInfo] = None) -> None:
+        """
+        save all the changes
+        """
+        pass
 
-# ---- local pymi ---- #
+    @abstractmethod
+    def get_module_info(self) -> ModuleInfo:
+        """
+        get the module info of this module.
+        """
+        pass
 
-class ModuleAPI(BaseModel):
-    """
-    the module attribute information
-    """
-    name: str = Field(description="the name of the attribute in the module")
-    type: Literal["function", "class"] = Field(description="the type of the attribute, usually `class` or `function`")
-    description: str = Field(description="the description of the attribute")
-    interface: str = Field(
-        description="the interface of the attribute to whom want to use this attribute."
-                    "the interface of a function shall be definition and it's arguments/returns typehint, and doc."
-                    "the interface of a class shall be definition, public methods, public attributes, __init__. "
-    )
-
-
-class ModuleInfo(BaseModel):
-    name: str = Field(description="the module name")
-    description: str = Field(default="", description="the module description, in 100 words")
-    readme: str = Field(default="", description="the basic usage of the module")
-    keywords: List[str] = Field(default_factory=list, description="the keywords of the module")
-    exports: List[ModuleAPI] = Field(
-        default_factory=list,
-        description="the api that useful to the user of the module"
-    )
-    recall_corpus: List[str] = Field(
-        default_factory=list,
-        description="the sentences that you may use to recall the module, "
-                    "system may use them to calculate the similarity from the query"
-    )
-    hash: str = Field(description="the content hash of the module.")
+    @abstractmethod
+    def save_module_info(self, module_info: ModuleInfo) -> None:
+        """
+        save the module information to the index.
+        the module info is useful to recall local python module or attributes.
+        :param module_info: the module info
+        """
+        pass
 
 
 class LocalPyMI(ABC):
@@ -204,10 +210,18 @@ class LocalPyMI(ABC):
     """
 
     @abstractmethod
-    def save_module_info(self, module_info: ModuleInfo) -> None:
+    def save_module(self, modulename: str, code: str) -> None:
         """
-        save the module information to the index.
-        :param module_info: the module info
+        save module with source code
+        :param modulename: the name of the module
+        :param code: the source code
+        """
+        pass
+
+    @abstractmethod
+    def new_module_editor(self, modulename: str) -> PyModuleEditor:
+        """
+        new a python module editor to modify the source code of the module.
         """
         pass
 
@@ -225,13 +239,13 @@ class LocalPyMI(ABC):
             expectation: str,
             query: str,
             top_n: int = 10,
-    ) -> Iterable[ModuleInfo]:
+    ) -> List[ModuleInfo]:
         """
         search the saved module info.
-        :param expectation:
-        :param query:
-        :param top_n:
-        :return:
+        :param expectation: the expectation of your searching modules
+        :param query: the search plan in nature language
+        :param top_n: how many results to return
+        :return: the found module info. you can read result first, then select and import the ones you need.
         """
         pass
 
@@ -244,13 +258,9 @@ class PyInterfaceGenerator(ABC):
     @abstractmethod
     def generate_interface(
             self,
-            class_or_function: Union[FunctionType, Type, str],
-            llm_api: str = "",
-            cache: bool = True,
+            value: Any,
     ) -> str:
         """
-        :param class_or_function: class, function, or it's import path (in pattern [modulename:attr_name])
-        :param llm_api: the llm api name, see ghostos.core.llms.LLMsConf
-        :param cache: read from cache first
+        :param value: class, function, or it's import path (in pattern [modulename:attr_name])
         """
         pass
