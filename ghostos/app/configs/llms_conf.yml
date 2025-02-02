@@ -20,6 +20,9 @@ services:
     driver: deepseek_driver
     name: deepseek
     token: $DEEPSEEK_API_KEY
+  - name: siliconflow
+    base_url: https://api.siliconflow.cn/v1
+    token: $SILICONFLOW_API_KEY
   - base_url: $AZURE_ENDPOINT
     name: azure
     driver: openai_driver
@@ -192,3 +195,24 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
+  siliconflow-deepseek-chat:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: deepseek-ai/DeepSeek-V3
+    n: 1
+    request_timeout: 40
+    service: siliconflow
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  siliconflow-deepseek-r1:
+    max_tokens: 3400
+    model: deepseek-ai/DeepSeek-R1
+    service: siliconflow
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: false
+      allow_system_in_messages: false
+      last_message_shall_be_assistant_or_user: true

@@ -238,7 +238,7 @@ class OpenAIAdapter(LLMApi):
             raise
         except Exception as e:
             self._logger.error(f"error chat completion for prompt {prompt.id}: {e}")
-            self._logger.debug(f"the chat completion request is %s" % params)
+            self._logger.error(f"the chat completion request is %s" % params)
             raise
         finally:
             self._logger.debug(f"end chat completion for prompt {prompt.id}")
