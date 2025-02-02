@@ -55,7 +55,7 @@ def save_thread_markdown_file(thread: GoThreadInfo, filename: str) -> str:
         filename = filename + ".md"
 
     filename = os.path.abspath(filename)
-    content = thread_to_markdown(thread)
+    content = thread_to_markdown(thread, stages=["*"])
     with open(filename, "w") as f:
         f.write(content)
     open_dialog_markdown_content(content)

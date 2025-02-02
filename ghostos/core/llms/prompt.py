@@ -13,7 +13,7 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from pydantic import BaseModel, Field
 from ghostos import helpers
 from ghostos.core.messages import Message, Role, Payload
-from ghostos.helpers import timestamp
+from ghostos.helpers import timestamp, uuid
 from ghostos.core.llms.configs import ModelConf
 from ghostos.core.llms.tools import LLMFunc, FunctionalToken
 
@@ -163,6 +163,13 @@ class Prompt(BaseModel):
             copied.added = join_messages_by_stages([], stages, *copied.added)
         return copied
 
+    def get_new_copy(self, prompt_id: Optional[str] = None) -> Prompt:
+        prompt = self.model_copy(deep=True)
+        if not prompt_id:
+            prompt_id = uuid()
+        prompt.id = prompt_id
+        return prompt
+
     def fork(
             self,
             inputs: Optional[List[Message]],
@@ -176,6 +183,7 @@ class Prompt(BaseModel):
     ) -> Prompt:
         """
         fork current prompt.
+        todo: rebuild
         """
         prompt_id = prompt_id or helpers.uuid()
         description = description

@@ -126,6 +126,16 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
+  gpt-4-turbo-reason:
+    kwargs: { }
+    max_tokens: 4000
+    message_types: null
+    model: gpt-4-turbo
+    n: 1
+    request_timeout: 50
+    service: openai
+    temperature: 0.8
+    timeout: 30
   openai-o1-mini:
     model: o1-mini
     service: openai

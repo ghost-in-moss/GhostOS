@@ -6,7 +6,7 @@ from ghostos.core.messages import Message, copy_messages, Role, MessageType, Mes
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event, EventTypes
-from ghostos.helpers import uuid, timestamp
+from ghostos.helpers import uuid, timestamp, yaml_pretty_dump
 from contextlib import contextmanager
 
 __all__ = [
@@ -451,8 +451,19 @@ def thread_to_markdown(thread: GoThreadInfo, stages: Optional[List[str]] = None)
             continue
         if not MessageStage.allow(message.stage, stages):
             continue
+
+        data = {
+            message.role: message.name if message.name else "",
+            "stage": message.stage,
+        }
+        desc = yaml_pretty_dump(data)
         block = f"""
-> `{message.role}`{": " + message.name if message.name else ""}
+        
+***
+
+```yaml
+{desc}
+```
 
 {message.get_content()}
 """
