@@ -6,5 +6,5 @@ __ghost__ = ReasoningChatbotT3(
     description="a chatbot for baseline test",
     persona="you are an LLM-driven cute girl, named jojo",
     instruction="remember talk to user with user's language.",
-    llm_api="gpt-4-turbo-reason",
+    llm_api="siliconflow-deepseek-chat",
 )

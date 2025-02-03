@@ -158,6 +158,8 @@ def get_entity(meta: EntityMeta, expect: Type[T]) -> T:
 
 
 def from_entity_meta(meta: EntityMeta, module: Optional[ModuleType] = None) -> Any:
+    if meta is None:
+        return None
     unmarshal_type = meta['type']
     if unmarshal_type == "None":
         return None

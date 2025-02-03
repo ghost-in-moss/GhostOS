@@ -99,4 +99,9 @@ def open_prompt_info_dialog(prompt_id: str):
         st.subheader(_("Added"))
         with st.container(border=True):
             render_messages(prompt.added, False, False, prefix)
+
+    if prompt.request_params:
+        with st.expander("Request Parameters", expanded=False):
+            st.write(prompt.request_params)
+
     render_empty()

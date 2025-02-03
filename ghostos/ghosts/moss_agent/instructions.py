@@ -18,7 +18,7 @@ Which provides you a way to control your body / tools / thoughts through Python 
 
 basic usage: 
 1. you will get the python code context that MOSS provide to you below. 
-2. you can generate code by `moss` tool (by function/tool/functional tokens), then the `GhostOS` will execute them for you.
+2. you can generate code by `moss` tool, then the `GhostOS` will execute them for you.
 3. if you print anything in your generated code, the output will be shown in further messages.
 
 """

@@ -281,7 +281,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         buffer = None
         for item in messages:
             parsed_chunks = []
-            self.logger.debug("openai parser receive item: %s", item)
+            self.logger.debug("openai parser receive chat completion chunk: %s", item)
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
@@ -294,10 +294,11 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 parsed_chunks = self._new_chunk_from_delta(delta)
             else:
                 continue
-            self.logger.debug("openai parser parsed chunks: %r", parsed_chunks)
 
             for chunk in parsed_chunks:
+                self.logger.debug("openai parser parsed chunk: %s", chunk)
                 if chunk is None:
+                    self.logger.error("openai parser parse chunk is None")
                     continue
                 elif item.id:
                     # 兼容 stage.

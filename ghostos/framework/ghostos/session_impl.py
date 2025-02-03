@@ -23,11 +23,11 @@ from ghostos.container import Container, provide, Contracts
 from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
 from ghostos.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
-from .taskflow_impl import TaskflowImpl
-from .subtasks_impl import SubtasksImpl
+from ghostos.framework.ghostos.taskflow_impl import TaskflowImpl
+from ghostos.framework.ghostos.subtasks_impl import SubtasksImpl
 from threading import Lock
 
-from ...errors import SessionError
+from ghostos.errors import SessionError
 
 G = TypeVar("G", bound=Ghost)
 
@@ -376,15 +376,18 @@ class SessionImpl(Session[Ghost]):
     def save(self) -> None:
         if self._saved or self._destroyed:
             return
-        self._saved = True
-        self.logger.info("saving session on %s", self.scope.model_dump())
-        self._validate_alive()
-        self._update_subtasks()
-        self._update_state_changes()
-        self._do_create_tasks()
-        self._do_save_threads()
-        self._do_fire_events()
-        self._reset()
+        try:
+            self._saved = True
+            self.logger.info("saving session on %s", self.scope.model_dump())
+            self._validate_alive()
+            self._update_subtasks()
+            self._update_state_changes()
+            self._do_create_tasks()
+            self._do_save_threads()
+            self._do_fire_events()
+            self._reset()
+        except Exception as e:
+            self.logger.exception(e)
 
     def _update_subtasks(self):
         children = self.task.children
@@ -464,7 +467,7 @@ class SessionImpl(Session[Ghost]):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.logger.debug("session exited")
         if exc_val is not None:
-            self.logger.error("session exited with error %s", exc_val)
+            self.logger.exception(exc_val)
             intercepted = self.fail(exc_val)
             self.destroy()
             return intercepted
@@ -477,7 +480,7 @@ class SessionImpl(Session[Ghost]):
         if self._failed:
             return False
         self._failed = True
-        self.logger.exception("Session failed: %s", err)
+        self.logger.error("Session failed: %s", err)
         if self.upstream is not None and self.upstream.alive():
             message = MessageType.ERROR.new(content=str(err))
             self.upstream.deliver(message)

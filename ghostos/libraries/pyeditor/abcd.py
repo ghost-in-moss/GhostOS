@@ -104,7 +104,10 @@ class PyModuleEditor(ABC):
     ) -> str:
         """
         read source code from this module
-        :param show_line_num: if true, each line start with `[number]| `, don't confuse them with the code.
+        :param show_line_num: if true, each line start with `[number]|`, for example:
+                source code: `def foo():`
+                show line number: ` 1|def foo():`.
+               don't confuse the prefix line num is the part of the file.
         :param start_line: start line number
         :param end_line: end line number, if < 0, means end line number
         :return: source code
@@ -172,29 +175,6 @@ class PyModuleEditor(ABC):
         :param attr_name: name of the target attribute of this module.
         :param replace_str: new source code
         :return: the replaced source code. if empty, means target attribute is missing
-        """
-        pass
-
-    @abstractmethod
-    def save(self, module_info: Optional[ModuleInfo] = None) -> None:
-        """
-        save all the changes
-        """
-        pass
-
-    @abstractmethod
-    def get_module_info(self) -> ModuleInfo:
-        """
-        get the module info of this module.
-        """
-        pass
-
-    @abstractmethod
-    def save_module_info(self, module_info: ModuleInfo) -> None:
-        """
-        save the module information to the index.
-        the module info is useful to recall local python module or attributes.
-        :param module_info: the module info
         """
         pass
 

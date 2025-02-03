@@ -106,19 +106,8 @@ class ShellImpl(Shell):
             user_role: str = Role.USER.value,
             force: bool = False,
     ) -> Conversation:
-        driver = get_ghost_driver(ghost)
-        task_id = driver.make_task_id(self._scope)
-        self.logger.debug("sync ghost with task id %s", task_id)
-
-        task = self._tasks.get_task(task_id)
-        if task is None:
-            task = self.create_root_task(task_id, ghost, context)
-            self.logger.debug("create root task task id %s for ghost", task_id)
-
-        task.meta = to_entity_meta(ghost)
-        if context is not None:
-            task.context = to_entity_meta(context)
-        conversation = self.sync_task(
+        task = self.get_or_create_task(ghost, context, always_create=False, save=False)
+        conversation = self._sync_task(
             task,
             throw=True,
             is_background=False,
@@ -128,7 +117,60 @@ class ShellImpl(Shell):
         )
         return conversation
 
+    def get_or_create_task(
+            self,
+            ghost: Ghost,
+            context: Optional[Ghost.ContextType] = None,
+            *,
+            task_id: str = None,
+            always_create: bool = True,
+            save: bool = False,
+    ) -> GoTaskStruct:
+        driver = get_ghost_driver(ghost)
+        if not task_id:
+            task_id = driver.make_task_id(self._scope)
+        task = self._tasks.get_task(task_id)
+        if task is None or always_create:
+            task = self.create_root_task(task_id, ghost, context)
+            self.logger.debug("create root task task id %s for ghost", task_id)
+        task.meta = to_entity_meta(ghost)
+        if context is not None:
+            task.context = to_entity_meta(context)
+        if save:
+            self._tasks.save_task(task)
+        return task
+
     def sync_task(
+            self,
+            task: Union[str, GoTaskStruct],
+            *,
+            username: str = "",
+            user_role: str = "",
+            force: bool = False,
+    ) -> Conversation:
+        if isinstance(task, str):
+            task_id = task
+            task = None
+        elif isinstance(task, GoTaskStruct):
+            task_id = task.task_id
+        else:
+            raise AttributeError(f'task {task} is not a str or GoTaskStruct')
+
+        if task is None:
+            task = self._tasks.get_task(task_id)
+
+        if task is None:
+            raise AttributeError(f'task {task_id} does not exist')
+        return self._sync_task(
+            task,
+            throw=True,
+            is_background=False,
+            username=username,
+            user_role=user_role,
+            force=force,
+        )
+
+    def _sync_task(
             self,
             task: GoTaskStruct,
             *,
@@ -192,7 +234,7 @@ class ShellImpl(Shell):
         timeleft = Timeleft(timeout)
         task_id = uuid()
         task = self.create_root_task(task_id, ghost, context)
-        conversation = self.sync_task(task, throw=True, is_background=False)
+        conversation = self._sync_task(task, throw=True, is_background=False)
         if conversation is None:
             raise RuntimeError('create conversation failed')
         with conversation:
@@ -247,7 +289,7 @@ class ShellImpl(Shell):
             self._eventbus.clear_task(task_id)
             return None
 
-        conversation = self.sync_task(task, throw=False, is_background=True)
+        conversation = self._sync_task(task, throw=False, is_background=True)
         if conversation is None:
             return None
 

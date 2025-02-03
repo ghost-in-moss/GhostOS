@@ -28,7 +28,7 @@ class NotebookConfig(BaseModel):
 
 class Note(BaseModel):
     path: str = Field(description="the path of the notebook node in filename pattern, like 'path/path/name'")
-    description: str = Field(description="the description of the notebook node")
+    description: str = Field(default="", description="the description of the notebook node")
     content: str = Field(default="", description="the content of notebook node")
 
 

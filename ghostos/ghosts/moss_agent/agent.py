@@ -344,6 +344,7 @@ class MossAction(Action, PromptPipe):
     @classmethod
     def unmarshal_code(cls, arguments: str) -> str:
         try:
+            arguments = arguments.strip()
             if arguments.startswith("{"):
                 if not arguments.endswith("}"):
                     arguments += "}"

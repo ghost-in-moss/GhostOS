@@ -20,8 +20,7 @@ from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, 
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
 from ghostos.identifier import get_identifier
-from contextlib import contextmanager
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 """
 # Core Concepts of GhostOS framework.
@@ -251,6 +250,14 @@ class Action(PromptPipe, ABC):
         pass
 
 
+class GhostOSModes(Protocol):
+    """
+    system level global modes
+    """
+    is_debug: bool
+    is_safemode: bool
+
+
 class GhostOS(Protocol):
 
     @abstractmethod
@@ -323,6 +330,28 @@ class Shell(ABC):
         So it never locked until the conversation is created.
         if force is True, the conversation will seize the task locker anyway.
         """
+        pass
+
+    def get_or_create_task(
+            self,
+            ghost: Ghost,
+            context: Optional[Ghost.ContextType] = None,
+            *,
+            task_id: str = None,
+            always_create: bool = True,
+            save: bool = False,
+    ) -> GoTaskStruct:
+        pass
+
+    @abstractmethod
+    def sync_task(
+            self,
+            task: Union[str, GoTaskStruct],
+            *,
+            username: str = "",
+            user_role: str = "",
+            force: bool = False,
+    ) -> Conversation:
         pass
 
     @abstractmethod

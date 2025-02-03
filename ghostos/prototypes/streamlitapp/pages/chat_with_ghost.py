@@ -5,7 +5,7 @@ import time
 from PIL.Image import Image
 from typing import Iterable, List, Optional
 from ghostos.prototypes.streamlitapp.pages.router import (
-    GhostChatRoute, GhostTaskRoute,
+    GhostChatRoute, GhostTaskRoute, ShowThreadRoute
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.prototypes.streamlitapp.widgets.messages import (
@@ -17,6 +17,7 @@ from ghostos.prototypes.streamlitapp.widgets.renderer import (
 )
 from ghostos.prototypes.streamlitapp.resources import (
     get_app_conf, save_uploaded_image, save_pil_image,
+    get_container,
 )
 
 from ghostos.core.runtime import GoThreadInfo, Event, GoTaskStruct
@@ -31,6 +32,7 @@ from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
 from ghostos.helpers import gettext as _
 from ghostos.helpers import generate_import_path, yaml_pretty_dump
+from ghostos.core.runtime import GoTasks
 from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 from pydantic import BaseModel
@@ -51,30 +53,40 @@ def main_chat():
     if not conversation or not conversation.refresh():
         st.error("Conversation is Closed")
         return
-    realtime_app = Singleton.get(RealtimeApp, st.session_state, force=False)
     # run the pages
+    realtime_app = Singleton.get(RealtimeApp, st.session_state, force=False)
     with st.sidebar:
         # other pages
-        with st.container(border=True):
-            GhostTaskRoute().render_page_link(use_container_width=True)
+        if st.button("Task Info", use_container_width=True):
+            _route = GhostTaskRoute(task_id=conversation.get_task().task_id)
+            _route.switch_page()
+            return
+        if st.button("Thread Info", use_container_width=True):
+            task = conversation.get_task()
+            ShowThreadRoute(thread_id=task.thread_id, task_id=task.task_id).switch_page()
+            return
+
         if st.button("New Thread", use_container_width=True):
             thread = conversation.get_thread()
             fork = thread.fork()
             thread = fork.reset_history([])
             conversation.update_thread(thread)
-            route.link.switch_page()
+            route.switch_page()
+            return
         if st.button("Clear Thread Messages", use_container_width=True):
             thread = conversation.get_thread()
             thread = thread.reset_history([])
             conversation.update_thread(thread)
-            route.link.switch_page()
+            route.switch_page()
+            return
 
-        st.subheader("chat options")
+        st.subheader("page options")
         with st.container(border=True):
             show_ghost_settings = st.toggle("ghost settings")
             show_instruction = st.toggle("show instructions")
             show_context = st.toggle("show context")
 
+        st.subheader("chat options")
         with st.container(border=True):
             route.realtime = st.toggle(
                 _("realtime chat"),
@@ -159,15 +171,15 @@ def main_chat():
     # header
     st.title("Ghost")
     with st.container(border=True):
-        ghost = route.get_ghost()
+        ghost = conversation.get_ghost()
         id_ = get_identifier(ghost)
         import_path = generate_import_path(ghost.__class__)
         data = {
             _("name"): id_.name,
             _("desc"): id_.description,
             _("class"): import_path,
-            _("task id"):  conversation.task_id,
-            _("thread id"):  conversation.get_thread().id,
+            _("task id"): conversation.task_id,
+            _("thread id"): conversation.get_thread().id,
         }
         if route.filename:
             data[_("from")] = route.filename
@@ -296,7 +308,7 @@ def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
         try:
-            conversation = shell.sync(route.get_ghost(), route.get_context(), force=True)
+            conversation = shell.sync_task(route.task_id, force=True)
         except Exception as e:
             logger.exception(e)
             st.error(e)
@@ -307,16 +319,18 @@ def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
 
 
 def main_task():
-    route = GhostChatRoute.get(st.session_state)
+    route = GhostTaskRoute().get_or_bind(st.session_state)
     with st.sidebar:
-        # other pages
-        with st.container(border=True):
-            route.render_page_link(use_container_width=True)
-    conversation = get_conversation(route)
-    task = conversation.get_task()
-    thread = conversation.get_thread()
+        if st.button("Chat", use_container_width=True):
+            GhostChatRoute(task_id=route.task_id).switch_page()
+
     st.title("Ghost Task Info")
-    render_task_info_settings(task, thread)
+    tasks = get_container().force_fetch(GoTasks)
+    task = tasks.get_task(route.task_id)
+    if task is None:
+        st.error("Task not found")
+        return
+    render_task_info_settings(task)
 
 
 def chatting(route: GhostChatRoute, conversation: Conversation):
@@ -538,16 +552,13 @@ def render_context_settings(conversation: Conversation):
             render_object(artifact)
 
 
-def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):
+def render_task_info_settings(task: GoTaskStruct):
     from ghostos.core.runtime.tasks import TaskBrief
     brief = TaskBrief.from_task(task)
     srj.pydantic_instance_form(brief, readonly=True)
 
     with st.expander(_("Detail"), expanded=False):
         st.write(task.model_dump(exclude_defaults=True))
-
-    st.subheader("Thread Info")
-    render_thread_messages(thread, max_turn=0, truncate=False)
 
 
 def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20, truncate: bool = True):

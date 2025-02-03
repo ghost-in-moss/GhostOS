@@ -232,13 +232,14 @@ class OpenAIAdapter(LLMApi):
                 top_p=self.model.top_p or NOT_GIVEN,
                 **self.model.kwargs,
             )
+            prompt.request_params = str(params)
+            self._logger.debug(f"the chat completion request params is %s", params)
             return self._client.chat.completions.create(**params)
         except UnprocessableEntityError as e:
             self._logger.error(f"{str(e)} with input messages: {messages}")
             raise
         except Exception as e:
             self._logger.error(f"error chat completion for prompt {prompt.id}: {e}")
-            self._logger.error(f"the chat completion request is %s" % params)
             raise
         finally:
             self._logger.debug(f"end chat completion for prompt {prompt.id}")
@@ -251,6 +252,7 @@ class OpenAIAdapter(LLMApi):
         functions = prompt.get_openai_functions()
         tools = prompt.get_openai_tools()
         compatible = self._get_compatible_options()
+
         if not compatible.support_function_call:
             functions = NOT_GIVEN
             tools = NOT_GIVEN
@@ -258,6 +260,7 @@ class OpenAIAdapter(LLMApi):
             functions = NOT_GIVEN
         else:
             tools = NOT_GIVEN
+
         return functions, tools
 
     def _reasoning_completion(self, prompt: Prompt) -> ChatCompletion:

@@ -82,6 +82,7 @@ class LLMThought(Thought[Operator]):
         session.logger.debug("start llm thinking on prompt %s", prompt.id)
         items = llm_api.deliver_chat_completion(prompt, streaming)
         messages, callers = session.respond(items, self.message_stage)
+        session.logger.debug("end llm thinking receive callers: %s", callers)
         prompt.added.extend(messages)
         session.logger.debug("llm thinking on prompt %s is done", prompt.id)
 

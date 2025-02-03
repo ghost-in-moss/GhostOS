@@ -45,13 +45,14 @@ class Prompt(BaseModel):
     # deprecated
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
 
-    # system info
+    # system debug info
     error: Optional[str] = Field(default=None, description="error message")
     created: int = Field(default_factory=timestamp)
     model: Optional[ModelConf] = Field(default=None, description="model conf")
     run_start: float = Field(default=0.0, description="start time")
     first_token: float = Field(default=0.0, description="first token")
     run_end: float = Field(default=0.0, description="end time")
+    request_params: str = Field(default="", description="real request params")
 
     @classmethod
     def new_from_messages(
@@ -143,7 +144,7 @@ class Prompt(BaseModel):
         if not self.functions:
             return NOT_GIVEN
         if self.function_call is None:
-            return "auto"
+            return ChatCompletionFunctionCallOptionParam(name="auto")
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
 
     def add(self, messages: Iterable[Message]) -> Iterable[Message]:
