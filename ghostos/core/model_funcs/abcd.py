@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Optional
+from typing_extensions import Self
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Message
-from ghostos.core.llms import LLMApi, LLMs, Prompt
+from ghostos.core.llms import LLMApi, LLMs, Prompt, ModelConf
 from ghostos.bootstrap import get_container
 
 """
@@ -46,6 +47,14 @@ class LLMModelFunc(BaseModel, ModelFunc[R], ABC):
         default="",
         description="the llm api name, empty means default. the option is available to all the llm model func.",
     )
+    model: Optional[ModelConf] = Field(
+        default=None,
+        description="the model conf instead of the llm api name",
+    )
+
+    def with_model(self, model: ModelConf) -> Self:
+        self.model = model
+        return self
 
     @abstractmethod
     def run(self) -> R:
@@ -72,51 +81,7 @@ class LLMModelFunc(BaseModel, ModelFunc[R], ABC):
     def _get_llm_api(self) -> LLMApi:
         container = get_container()
         llms = container.get(LLMs)
+        if self.model is not None:
+            return llms.new_model_api(self.model)
+
         return llms.get_api(self.llm_api)
-
-
-class TextCompletion(LLMModelFunc[str]):
-    """
-    a very simple example of how to define a LLMModelFunc
-    """
-
-    text: str = Field(description="the text completion instruction.")
-
-    def run(self) -> str:
-        messages = [{"role": "user", "content": self.text}]
-        return self._generate(messages)
-
-
-class GenerateLLMModelFunc(LLMModelFunc[str]):
-
-    quest: str = Field(description="")
-
-    def run(self) -> str:
-        with open(__file__, 'r') as f:
-            source_code = f.read()
-
-        # instruction is required to the model.
-        instruction = f"""
-Your request is to define a `LLMModelFunc` class that user want. 
-
-The coding context about `LLMModelFunc` is:
-```python
-{source_code}
-```
-"""
-        messages = [
-            {"role": "system", "content": instruction},
-            {"role": "user", "content": self.quest},
-        ]
-        result = self._generate(messages)
-        parts = result.rsplit("```python", 1)
-        result = parts[0] if len(parts) == 1 else parts[1]
-        return result.strip("```python").strip("```").strip()
-
-
-if __name__ == "__main__":
-    text = GenerateLLMModelFunc(
-        quest="请帮我实现一个函数, 这个函数要, 从 N 个选项 (字符串) 中选择一个, 模型要输出选项的序号."
-              "而这个函数把序号转换成选项的值, 返回出来."
-    ).run()
-    print(text)

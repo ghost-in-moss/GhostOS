@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Iterable, Optional
 from ghostos.core.messages import Message, Stream
-from ghostos.core.llms.configs import ModelConf, ServiceConf
+from ghostos.core.llms.configs import ModelConf, ServiceConf, LLMsConfig
 from ghostos.core.llms.prompt import Prompt
 
 __all__ = [
@@ -144,6 +144,12 @@ class LLMs(ABC):
     The repository of LLMApis.
     """
 
+    config: LLMsConfig
+
+    @abstractmethod
+    def update(self, config: LLMsConfig) -> None:
+        pass
+
     @abstractmethod
     def register_driver(self, driver: LLMDriver) -> None:
         """
@@ -192,6 +198,21 @@ class LLMs(ABC):
         instance a LLMApi by configs.
         """
         pass
+
+    def new_model_api(self, model: ModelConf, api_name: str = "") -> LLMApi:
+        """
+        new llm api from a model.
+        :param model:
+        :param api_name:
+        :return:
+        """
+        service_name = model.service
+        service = self.get_service(service_name)
+        if service is None:
+            raise AttributeError(f"Service not found in the model.")
+        if not api_name:
+            api_name = model.model
+        return self.new_api(service, model, api_name)
 
     @abstractmethod
     def get_api(self, api_name: str) -> Optional[LLMApi]:
