@@ -27,30 +27,36 @@ class TerminalExecutor(Terminal):
             return shlex.quote(cleaned)
         return command
 
-    def exec(self, command: str, timeout: float = 10.0) -> Terminal.CommandResult:
+    def exec(self, *commands: str, timeout: float = 10.0) -> Terminal.CommandResult:
         try:
             # 安全预处理流程
-            sanitized_cmd = self._sanitize_command(command)
-            args = shlex.split(sanitized_cmd)
-            self.logger.info(f'Executing command: {sanitized_cmd}')
+            executing = []
+            for command in commands:
+                # sanitized_cmd = self._sanitize_command(command)
+                # args = shlex.split(sanitized_cmd)
+                # executing.append(args)
+                executing.append(command)
+            full_command = ";".join(executing)
+            self.logger.info(f'Executing command: {full_command}')
+            # args = shlex.split(command)
 
             # 执行带超时控制的命令
-            process = subprocess.run(
-                *args,
-                shell=True,
+            process = subprocess.Popen(
+                # args,
+                full_command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                shell=True,
                 text=True,
                 encoding='utf-8',
                 errors='replace',  # 错误字符替换策略
-                timeout=timeout,
-                check=False,
             )
+            output, error = process.communicate(timeout=timeout)
 
             return self.CommandResult(
                 exit_code=process.returncode,
-                stdout=process.stdout.strip(),
-                stderr=process.stderr.strip(),
+                stdout=output,
+                stderr=error,
             )
 
         except subprocess.TimeoutExpired:
@@ -76,8 +82,8 @@ class TerminalImpl(POM, Terminal):
         self._executor = TerminalExecutor(logger, safe_mode)
         self._context = TerminalContext()
 
-    def exec(self, command: str, timeout: float = 10.0) -> Terminal.CommandResult:
-        result = self._executor.exec(command, timeout=timeout)
+    def exec(self, *commands: str, timeout: float = 10.0) -> Terminal.CommandResult:
+        result = self._executor.exec(*commands, timeout=timeout)
         if result.exit_code != 0:
             raise RuntimeError(f"Command failed with exit code {result.exit_code}: {result.stderr}")
         return result
@@ -112,5 +118,5 @@ if __name__ == '__main__':
     from logging import getLogger
 
     t = TerminalImpl(logger=getLogger('ghostos'))
-    r = t.exec('ls -al')
-    print(r)
+    r = t.exec('poetry add fs')
+    print(r.stdout)

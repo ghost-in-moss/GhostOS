@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import NamedTuple
+from typing import NamedTuple, List
 from datetime import datetime
-import pytz
 
 
 class Terminal(ABC):
@@ -23,12 +22,12 @@ class Terminal(ABC):
         stderr: str
 
     @abstractmethod
-    def exec(self, command: str, timeout: float = 10.0) -> CommandResult:
+    def exec(self, *commands: str, timeout: float = 10.0) -> CommandResult:
         """
         Execute a shell command and return structured results.
 
         Args:
-            command: Command string to execute
+            commands: Command lines to execute
             (Note: Implementation should handle proper shell escaping)
             timeout: Timeout in seconds
 
