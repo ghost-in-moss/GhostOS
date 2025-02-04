@@ -1,6 +1,10 @@
-from ghostos.facade._llms import get_llm_configs, set_default_model
+from ghostos.facade._llms import (
+    get_llm_configs,  # get the ghostos llms config
+    set_default_model,  # set the default model to llms, only work during runtime
+)
+
 from ghostos.facade._model_funcs_facade import (
-    text_completion,
+    text_completion,  #
     file_reader,
 )
 
