@@ -48,4 +48,11 @@ class DeepseekDriver(OpenAIDriver):
         return DEEPSEEK_DRIVER_NAME
 
     def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
-        return DeepseekAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
+        return DeepseekAdapter(
+            service_conf=service,
+            model_conf=model,
+            parser=self._parser,
+            storage=self._storage,
+            logger=self._logger,
+            api_name=api_name,
+        )

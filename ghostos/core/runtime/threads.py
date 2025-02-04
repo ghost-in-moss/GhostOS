@@ -188,7 +188,7 @@ class GoThreadInfo(BaseModel):
             return self.history[-1]
         return self.on_created
 
-    def get_history_turns(self, truncate: bool = True) -> List[Turn]:
+    def get_history_turns(self, *, truncate: bool = True) -> List[Turn]:
         turns = []
         if self.history:
             for turn in self.history:
@@ -199,17 +199,17 @@ class GoThreadInfo(BaseModel):
                     turns.append(turn)
         return turns
 
-    def get_history_messages(self, truncated: bool) -> Iterable[Message]:
+    def get_history_messages(self, *, truncated: bool) -> Iterable[Message]:
         """
         返回所有的历史消息.
         """
         yield from self.on_created.messages(False)
-        turns = self.get_history_turns(truncated)
+        turns = self.get_history_turns(truncate=truncated)
         for turn in turns:
             yield from turn.messages(truncated)
 
     def get_messages(self, truncated: bool) -> Iterable[Message]:
-        yield from self.get_history_messages(truncated)
+        yield from self.get_history_messages(truncated=truncated)
         if self.current:
             yield from self.current.messages(False)
 
@@ -340,7 +340,7 @@ class GoThreadInfo(BaseModel):
         :return:
         """
         turn_id = self.last_turn().turn_id
-        history = list(self.get_history_messages(truncate))
+        history = list(self.get_history_messages(truncated=truncate))
         inputs = []
         appending = []
         current_turn = self.current

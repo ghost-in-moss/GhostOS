@@ -119,7 +119,7 @@ class LLMApi(ABC):
         else:
             if not stream or not self.model.allow_streaming:
                 message = self.chat_completion(prompt)
-                return [message]
+                yield from [message]
             else:
                 yield from self.chat_completion_chunks(prompt)
 

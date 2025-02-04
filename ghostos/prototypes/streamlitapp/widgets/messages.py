@@ -162,7 +162,7 @@ def render_message_caller(callers: Iterable[FunctionCaller], debug: bool, in_exp
 
 
 def _render_message_caller(callers: Iterable[FunctionCaller]):
-    from ghostos.ghosts.moss_agent import MossAction
+    from ghostos.abcd import MossAction
     for caller in callers:
         if caller.name == MossAction.DEFAULT_NAME:
             st.caption(f"function call: {caller.name}")

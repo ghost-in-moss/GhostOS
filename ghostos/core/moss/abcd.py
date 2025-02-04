@@ -289,7 +289,7 @@ class MossPrompter(ABC):
         """
         pass
 
-    def reflect_module_attr(self) -> AttrPrompts:
+    def imported_attr_prompts(self) -> AttrPrompts:
         """
         结合已编译的本地变量, 用系统自带的方法反射出上下文属性的 prompts.
         """
@@ -301,7 +301,7 @@ class MossPrompter(ABC):
             local_values,
         )
 
-    def dump_attrs_prompt(self, auto_generation: bool = True, attr_prompts: Dict[str, str] = None) -> str:
+    def dump_imported_prompt(self, auto_generation: bool = True, attr_prompts: Dict[str, str] = None) -> str:
         """
         基于 pycontext code 生成的 Prompt. 用来描述当前上下文里的各种变量.
         主要是从其它库引入的变量.
@@ -324,7 +324,7 @@ class MossPrompter(ABC):
 
         # 合并系统自动生成的.
         if auto_generation:
-            reflected_attr_prompts = self.reflect_module_attr()
+            reflected_attr_prompts = self.imported_attr_prompts()
             for name, prompt in reflected_attr_prompts:
                 if name not in done:
                     names.append(name)

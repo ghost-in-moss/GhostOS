@@ -97,16 +97,3 @@ The coding context about `LLMModelFunc` is:
         parts = result.rsplit("```python", 1)
         result = parts[0] if len(parts) == 1 else parts[1]
         return result.strip("```python").strip("```").strip()
-
-
-if __name__ == "__main__":
-    # text = GenerateLLMModelFunc(
-    #     quest="请帮我实现一个函数, 这个函数要, 从 N 个选项 (字符串) 中选择一个, 模型要输出选项的序号."
-    #           "而这个函数把序号转换成选项的值, 返回出来."
-    # ).run()
-
-    text = FileReader(
-        filename=__file__,
-        question="summarize this file",
-    ).run()
-    print(text)

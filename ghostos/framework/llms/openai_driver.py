@@ -1,7 +1,6 @@
 from typing import List, Iterable, Union, Optional, Tuple
 from openai import OpenAI, AzureOpenAI
 from httpx import Client
-from httpx_socks import SyncProxyTransport
 from openai import NOT_GIVEN, NotGiven, UnprocessableEntityError
 from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_stream_options_param import ChatCompletionStreamOptionsParam
@@ -64,10 +63,10 @@ You are equipped with `functional tokens` parser to understand your outputs.
 A functional token is a set of special tokens that corresponds to a system callback function. 
 When a functional token is present in your response, the subsequent output is treated as input parameters for this 
 callback function. 
-You shall embrace the parameter tokens by xml. For example:
-1. functional token is `moss`
+You shall embrace the parameter tokens in xml pattern. For example:
+1. a functional token is `foo`
 2. parameter tokens are `print("hello world")`
-3. the output should be: `say something if necessary...<moss>print("hello world")</moss>`
+3. the output should be: `say something if necessary...<foo>print("hello world")</foo>`
 """
 
 
@@ -78,13 +77,12 @@ class OpenAIAdapter(LLMApi):
 
     def __init__(
             self,
+            *,
             service_conf: ServiceConf,
             model_conf: ModelConf,
             parser: OpenAIMessageParser,
             storage: PromptStorage,
             logger: LoggerItf,
-            # deprecated:
-            functional_token_prompt: Optional[str] = None,
             api_name: str = "",
     ):
         self._api_name = api_name
@@ -94,8 +92,8 @@ class OpenAIAdapter(LLMApi):
         self._logger = logger
         http_client = None
         if service_conf.proxy:
-            transport = SyncProxyTransport.from_url(service_conf.proxy)
-            http_client = Client(transport=transport)
+            http_client = Client(proxy=service_conf.proxy)
+            self._logger.debug("LLMApi `%s` create client by proxy %s", api_name, service_conf.proxy)
         if service_conf.azure.api_key:
             self._client = AzureOpenAI(
                 azure_endpoint=service_conf.base_url,
@@ -362,20 +360,25 @@ class OpenAIAdapter(LLMApi):
     def chat_completion(self, prompt: Prompt) -> Message:
         try:
             prompt = self.parse_prompt(prompt)
-            message: ChatCompletion = self._chat_completion(prompt, stream=False)
+            completion: ChatCompletion = self._chat_completion(prompt, stream=False)
+            self._logger.debug("received chat completion %s", completion)
             prompt.first_token = timestamp_ms()
-            prompt.added = [message]
-            pack = self._parser.from_chat_completion(message.choices[0].message)
-            # add completion usage
-            self.model.set_payload(pack)
-            if message.usage:
-                usage = CompletionUsagePayload.from_usage(message.usage)
-                usage.set_payload(pack)
+            message = self._parser.from_chat_completion(completion.choices[0].message)
+            if not message.is_complete():
+                message = message.as_tail()
 
-            if not pack.is_complete():
-                pack.chunk = False
-            return pack
+            # add payloads
+            PromptPayload.from_prompt(prompt).set_payload(message)
+            self.model.set_payload(message)
+            if completion.usage:
+                usage = CompletionUsagePayload.from_usage(completion.usage)
+                usage.set_payload(message)
+
+            self._logger.debug("parsed chat completion %s", message)
+            prompt.added = [message]
+            return message
         except Exception as e:
+            self._logger.exception(e)
             prompt.error = str(e)
             raise
         finally:
@@ -408,6 +411,7 @@ class OpenAIAdapter(LLMApi):
                 prompt.added.append(last_item)
                 yield last_item
         except Exception as e:
+            self._logger.exception(e)
             prompt.error = str(e)
             raise
         finally:
@@ -480,6 +484,10 @@ class OpenAIAdapter(LLMApi):
         # if support functional tokens.
         support_functional_tokens = self._get_compatible_options().support_functional_tokens
         if support_functional_tokens and len(prompt.functional_tokens) > 0:
+            self._logger.debug(
+                "prepare functional token pipe with functional tokens: %s",
+                prompt.functional_tokens,
+            )
             pipes.append(XMLFunctionalTokenPipe(prompt.functional_tokens))
 
         # support staging output.
@@ -509,4 +517,11 @@ class OpenAIDriver(LLMDriver):
 
     def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
         get_ghostos_logger().debug(f"new llm api %s at service %s", model.model, service.name)
-        return OpenAIAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
+        return OpenAIAdapter(
+            service_conf=service,
+            model_conf=model,
+            parser=self._parser,
+            storage=self._storage,
+            logger=self._logger,
+            api_name=api_name,
+        )

@@ -2,9 +2,8 @@ from typing import Optional, Generic, TypeVar, Tuple, List, Iterable
 from abc import ABC, abstractmethod
 from ghostos.abcd.concepts import Session, Operator, Action
 from ghostos.core.llms import Prompt, ModelConf, ServiceConf, LLMs, LLMApi
-from pydantic import BaseModel, Field
 
-__all__ = ['Thought', 'LLMThought', 'SummaryThought', 'ChainOfThoughts']
+__all__ = ['Thought', 'LLMThought', 'ChainOfThoughts']
 
 T = TypeVar("T")
 
@@ -29,6 +28,7 @@ class Thought(Generic[T], ABC):
 class ChainOfThoughts(Thought[Operator]):
     def __init__(
             self,
+            *,
             final: Thought[Operator],
             nodes: List[Thought[Operator]],
     ):
@@ -101,27 +101,3 @@ class LLMThought(Thought[Operator]):
         else:
             llm_api = llms.get_api(self.llm_api)
         return llm_api
-
-
-class SummaryThought(BaseModel, Thought[str]):
-    """
-    simple summary thought
-    """
-
-    llm_api: str = Field("", description="the llm api to use")
-    instruction: str = Field(
-        "the chat history is too long. "
-        "You MUST summarizing the history message in 500 words, keep the most important information."
-        "Your Summary:",
-        description="the llm instruction to use",
-    )
-
-    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[str]]:
-        from ghostos.core.messages import Role
-        forked = prompt.fork(None)
-        instruction = Role.SYSTEM.new(content=self.instruction)
-        forked.added.append(instruction)
-        llms = session.container.force_fetch(LLMs)
-        llm_api = llms.get_api(self.llm_api)
-        message = llm_api.chat_completion(forked)
-        return prompt, message.content

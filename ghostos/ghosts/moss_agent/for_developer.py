@@ -1,7 +1,7 @@
 from typing import Optional, TypeVar, Dict, Any, Iterable, Generic
 from types import ModuleType
 from ghostos.ghosts.moss_agent.agent import MossAgent
-from ghostos.core.moss import MossRuntime, AttrPrompts
+from ghostos.core.moss import MossRuntime
 from ghostos.abcd.concepts import Session, Operator
 from ghostos.core.runtime import GoThreadInfo, Event
 from ghostos.container import Provider
@@ -54,30 +54,15 @@ def __moss_agent_truncate__(agent: MossAgent, session: Session) -> GoThreadInfo:
     :param session:
     :return:
     """
-    from ghostos.abcd.thoughts import SummaryThought
-    from ghostos.core.llms import Prompt
+    from ghostos.core.model_funcs import TruncateThreadByLLM
 
-    thread = session.thread
-    turns = thread.get_history_turns(True)
-    # do the truncate
-    if len(turns) > agent.truncate_at_turns:
-        # the history turns to remove
-        truncated = agent.truncate_at_turns - agent.truncate_to_turns
-        if truncated <= 0:
-            return thread
-        turns = turns[:truncated]
-        # last turn of the truncated turns
-        if len(turns) < 1:
-            return thread
-        target = turns[-1]
-        messages = []
-        for turn in turns:
-            messages.extend(turn.messages(False))
-        prompt = Prompt(history=messages)
-        _, summary = SummaryThought(llm_api=agent.llm_api).think(session, prompt)
-        if summary:
-            target.summary = summary
-    return session.thread
+    thread = TruncateThreadByLLM(
+        thread=session.thread,
+        llm_api=agent.llm_api,
+        truncate_at_turns=agent.truncate_at_turns,
+        reduce_to_turns=agent.truncate_to_turns,
+    ).run()
+    return thread
 
 
 def __moss_agent_parse_event__(agent: MossAgent, session: Session, event: Event) -> Optional[Event]:

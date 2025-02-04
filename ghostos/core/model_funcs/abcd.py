@@ -74,6 +74,9 @@ class LLMModelFunc(BaseModel, ModelFunc[R], ABC):
             msg = msg.as_tail(copy=False)
             parsed.append(msg)
         prompt = Prompt.new_from_messages(parsed)
+        return self._generate_from_prompt(prompt)
+
+    def _generate_from_prompt(self, prompt: Prompt) -> str:
         llm_api = self._get_llm_api()
         done = llm_api.chat_completion(prompt)
         return done.get_content()

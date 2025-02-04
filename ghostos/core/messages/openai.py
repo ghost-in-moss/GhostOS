@@ -291,6 +291,9 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             elif len(item.choices) > 0:
                 choice = item.choices[0]
                 delta = choice.delta
+                if delta is None:
+                    self.logger.error("openai parser received invalid chat completion chunk: %s", item)
+                    continue
                 parsed_chunks = self._new_chunk_from_delta(delta)
             else:
                 continue

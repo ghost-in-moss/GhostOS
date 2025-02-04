@@ -15,6 +15,7 @@ from ghostos.core.runtime import (
 from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
+from ghostos.core.moss import PyContext
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
 from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role
 from ghostos.contracts.logger import LoggerItf
@@ -58,6 +59,7 @@ __all__ = (
     "Session", "Messenger", "StateValue", "Scope",
     "Taskflow", "Subtasks",
     "Context",
+    "SessionPyContext",
 )
 
 
@@ -186,6 +188,8 @@ class Context(Payload, DataPOM, ABC):
     """
     context prompter that generate prompt to provide information
     the modeling defines strong-typed configuration to generate prompt.
+
+    todo: I forget why define it extending Payload. maybe remember one day
     """
     key = "ghostos_context"
 
@@ -195,7 +199,7 @@ class Context(Payload, DataPOM, ABC):
 class ContextDriver(DataPOMDriver, ABC):
     """
     the context driver is separated from context data.
-    LLM see
+    LLM seeing the Context source code is enough to use it.
     """
     pass
 
@@ -585,6 +589,24 @@ class StateValue(ABC):
             value = self
             self.bind(session)
         return value
+
+
+class SessionPyContext(PyContext, StateValue):
+    """
+    bind pycontext to session.state
+    """
+
+    def get(self, session: Session) -> Optional[Self]:
+        data = session.state.get(SessionPyContext.__name__, None)
+        if data is not None:
+            if isinstance(data, Dict):
+                return SessionPyContext(**data)
+            elif isinstance(data, SessionPyContext):
+                return data
+        return None
+
+    def bind(self, session: Session) -> None:
+        session.state[SessionPyContext.__name__] = self
 
 
 class Scope(BaseModel):

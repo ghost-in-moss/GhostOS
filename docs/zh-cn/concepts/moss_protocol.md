@@ -149,20 +149,20 @@ from ghostos.core.moss import MossRuntime
 runtime: MossRuntime = ...
 
 with runtime:
-    prompter = runtime.prompter()
-    prompt = prompter.dump_module_prompt()  # 获取模块完整的 Prompt
+   prompter = runtime.prompter()
+   prompt = prompter.dump_module_prompt()  # 获取模块完整的 Prompt
 
-    # prompt 由以下部分构成: 
+   # prompt 由以下部分构成: 
 
-    # 1. 编译模块的源码
-    code = prompter.pycontext_code()  # 获取模块的源码
+   # 1. 编译模块的源码
+   code = prompter.pycontext_code()  # 获取模块的源码
 
-    for attr_name, attr_prompt in prompter.reflect_module_attr():
-        # 获取编译模块中, 各个属性的 prompt. 默认情况只会反射从其它模块 import 的属性. 
-        print(attr_name, attr_prompt)
+   for attr_name, attr_prompt in prompter.imported_attr_prompts():
+      # 获取编译模块中, 各个属性的 prompt. 默认情况只会反射从其它模块 import 的属性. 
+      print(attr_name, attr_prompt)
 
-        # 2. 被引用的变量反射出来的 prompt. 
-    attr_prompt = prompter.dump_attrs_prompt() 
+      # 2. 被引用的变量反射出来的 prompt. 
+   attr_prompt = prompter.dump_imported_prompt() 
 ```
 
 #### Hide Code to LLM

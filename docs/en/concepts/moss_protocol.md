@@ -176,10 +176,10 @@ with runtime:
     code = prompter.pycontext_code()  # 获取模块的源码
 
     # each prompt of the imported attrs
-    for attr_name, attr_prompt in prompter.reflect_module_attr():
+    for attr_name, attr_prompt in prompter.imported_attr_prompts():
         print(attr_name, attr_prompt)
 
-    attr_prompt = prompter.dump_attrs_prompt() 
+    attr_prompt = prompter.dump_imported_prompt() 
 ```
 
 #### Hide Code to LLM
