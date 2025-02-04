@@ -125,7 +125,7 @@ class GhostDriver(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def get_instruction(self, session: Session) -> str:
+    def get_system_instruction(self, session: Session) -> str:
         """
         get system instruction of the ghost.
         usually used in client side.
@@ -443,7 +443,11 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def get_instructions(self) -> str:
+    def get_system_instruction(self) -> str:
+        """
+        the first message of llm request messages is usually system instruction or developer instruction.
+        this method is able to return it to client side.
+        """
         pass
 
     @abstractmethod

@@ -152,7 +152,7 @@ class ConversationImpl(Conversation[G]):
                 functions.append(function)
         return functions
 
-    def get_instructions(self) -> str:
+    def get_system_instruction(self) -> str:
         self.refresh()
         self._validate_closed()
         session = self._create_session(self.get_task(), None)

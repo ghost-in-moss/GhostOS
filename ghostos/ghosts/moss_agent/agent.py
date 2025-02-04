@@ -99,7 +99,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 moss = runtime.moss()
                 return fn(self.ghost, moss)
 
-    def get_instruction(self, session: Session) -> str:
+    def get_system_instruction(self, session: Session) -> str:
         compiler = self._get_moss_compiler(session)
         with compiler:
             rtm = compiler.compile(self.ghost.compile_module)

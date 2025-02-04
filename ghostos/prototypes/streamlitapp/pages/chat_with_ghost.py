@@ -512,7 +512,7 @@ def render_ghost_settings(route: GhostChatRoute):
 
 def render_instruction(conversation: Conversation):
     st.subheader("Instructions")
-    instructions = conversation.get_instructions()
+    instructions = conversation.get_system_instruction()
     with st.container(border=True):
         st.markdown(instructions)
 

@@ -235,7 +235,7 @@ class SessionImpl(Session[Ghost]):
         return self.ghost_driver.get_artifact(self)
 
     def get_instructions(self) -> str:
-        return self.ghost_driver.get_instruction(self)
+        return self.ghost_driver.get_system_instruction(self)
 
     def refresh(self, throw: bool = False) -> bool:
         if self._failed:
