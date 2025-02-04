@@ -3,6 +3,10 @@ from ghostos.facade._llms import (
     set_default_model,  # set the default model to llms, only work during runtime
 )
 
+from ghostos.facade._contracts import (
+    get_logger,  # get ghostos logger
+)
+
 from ghostos.facade._model_funcs_facade import (
     text_completion,  #
     file_reader,
