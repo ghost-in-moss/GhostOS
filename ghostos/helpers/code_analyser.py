@@ -69,6 +69,7 @@ def _get_child_interface(code: str, child: TreeSitterNode) -> str:
         # 处理装饰器
         return _get_decorator_interface(code, child)
 
+
     else:
         return ""
 
@@ -91,7 +92,10 @@ def _get_full_definition(child: TreeSitterNode, depth: int) -> str:
 
 def _get_assignment_interface(code: str, node: TreeSitterNode) -> str:
     expression = node.children[0]
-    if expression.type != 'assignment':
+    if expression.type == 'string':
+        return node.text.decode()
+
+    elif expression.type != 'assignment':
         return ""
 
     # 处理赋值语句

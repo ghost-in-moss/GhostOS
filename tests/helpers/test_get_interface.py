@@ -10,6 +10,8 @@ T = TypeVar('T')
 
 __all__ = ['MyClass']
 
+'''hello world'''
+
 class MyClass(Generic[T], ABC):
     \"\"\"This is class doc.\"\"\"
     
@@ -69,3 +71,4 @@ def decorated_function(a: int, b: int) -> int:
 
     assert "__all__" in interface
     assert "T = TypeVar('T')" in interface
+    assert "'''hello world'''" in interface
