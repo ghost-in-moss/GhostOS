@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os.path
+
 import click
 import sys
 from os import getcwd
@@ -186,6 +188,36 @@ or `git clone https://github.com/ghost-in-moss/GhostOS` then `docsify serve`
 # ```
 # """))
 
+@main.command("moss")
+@click.argument('python_file_or_module')
+def dump_moss_context(python_file_or_module: str):
+    """
+    dump moss context from a python file or module
+    """
+    from ghostos.bootstrap import get_container
+    from ghostos.core.moss import MossCompiler, PyContext
+    container = get_container()
+    compiler = container.force_fetch(MossCompiler)
+
+    filename = os.path.abspath(python_file_or_module)
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            code = f.read()
+            pycontext = PyContext(code=code)
+            compiled = compiler.join_context(pycontext).compile("__target__")
+
+    else:
+        # consider it a module
+        compiled = compiler.compile(python_file_or_module)
+
+    console = Console()
+    context = compiled.prompter().dump_module_prompt()
+    console.print(Markdown(f"""
+```python
+{context}
+```
+"""))
+
 
 @main.command("help")
 def ghostos_help():
@@ -211,12 +243,12 @@ def _get_command_line_as_string() -> str | None:
     cmd_line_as_list.extend(sys.argv[1:])
     return subprocess.list2cmdline(cmd_line_as_list)
 
-
-if __name__ == '__main__':
-    # 方便通过IDE调试
-    from ghostos.scripts.cli.run_streamlit_app import start_ghost_app
-    from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
-
-    python_file_or_module = "ghostos.demo.ghost_func_example"
-    ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
-    start_ghost_app(ghost_info, module.__name__, filename, is_temp)
+#
+# if __name__ == '__main__':
+#     # 方便通过IDE调试
+#     from ghostos.scripts.cli.run_streamlit_app import start_ghost_app
+#     from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
+#
+#     python_file_or_module = "ghostos.demo.ghost_func_example"
+#     ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
+#     start_ghost_app(ghost_info, module.__name__, filename, is_temp)
