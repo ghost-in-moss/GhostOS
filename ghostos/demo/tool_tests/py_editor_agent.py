@@ -26,12 +26,12 @@ help user with your tools.
     llm_api="gpt-4-turbo",
 )
 
-from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods, A
+from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
 
 
 class MossAgentMethods(BaseMossAgentMethods):
 
-    def providers(self, agent: A) -> Iterable[Provider]:
+    def providers(self, agent) -> Iterable[Provider]:
         from ghostos.libraries.pyeditor import SimplePyInterfaceProvider
         yield SimplePyInterfaceProvider()
 

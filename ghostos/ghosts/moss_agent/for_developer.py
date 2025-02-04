@@ -112,7 +112,7 @@ def __moss_agent_on_event_type__(
     pass
 
 
-class AbsMossAgentMethods(Generic[A]):
+class BaseMossAgentMethods(Generic[A]):
     """
     new way to define custom methods for Moss Agents.
     the magic methods are troublesome to copy,
@@ -122,8 +122,10 @@ class AbsMossAgentMethods(Generic[A]):
     """
     MOSS_AGENT_METHODS_NAME = "MossAgentMethods"
 
+    attr_prompts: Dict[str, str]
+
     @classmethod
-    def from_module(cls, module: ModuleType) -> "AbsMossAgentMethods":
+    def from_module(cls, module: ModuleType) -> "BaseMossAgentMethods":
         name = cls.MOSS_AGENT_METHODS_NAME
         if name in module.__dict__:
             wrapper = module.__dict__[name]
@@ -133,6 +135,7 @@ class AbsMossAgentMethods(Generic[A]):
 
     def __init__(self, module: Optional[ModuleType] = None):
         self.module = module
+        self.attr_prompts = {}
 
     def _get_module_func(self, expect: F, name: str = "") -> F:
         if self.module is None:

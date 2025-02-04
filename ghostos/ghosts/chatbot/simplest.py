@@ -41,7 +41,7 @@ class ChatbotDriver(GhostDriver[Chatbot]):
     def get_artifact(self, session: Session) -> None:
         return None
 
-    def get_instructions(self, session: Session) -> str:
+    def get_instruction(self, session: Session) -> str:
         return self.get_system_prompter().get_prompt(session.container)
 
     def actions(self, session: Session) -> List[LLMFunc]:

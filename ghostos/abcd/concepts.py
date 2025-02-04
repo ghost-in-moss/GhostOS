@@ -125,9 +125,9 @@ class GhostDriver(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def get_instructions(self, session: Session) -> str:
+    def get_instruction(self, session: Session) -> str:
         """
-        get system instructions of the ghost.
+        get system instruction of the ghost.
         usually used in client side.
         """
         pass

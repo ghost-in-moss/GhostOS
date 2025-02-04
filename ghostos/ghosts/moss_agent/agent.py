@@ -23,8 +23,7 @@ import json
 from ghostos.container import Provider
 
 if TYPE_CHECKING:
-    from ghostos.ghosts.moss_agent.for_developer import AbsMossAgentMethods
-
+    from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
 
 __all__ = ['MossAgent', 'MossAgentDriver', 'MossAction']
 
@@ -59,15 +58,14 @@ class MossAgent(ModelEntity, Agent):
 
 
 class MossAgentDriver(GhostDriver[MossAgent]):
+    __custom_methods: Optional["BaseMossAgentMethods"] = None
 
-    __custom_methods: Optional["AbsMossAgentMethods"] = None
-
-    def get_custom_agent_methods(self) -> "AbsMossAgentMethods":
-        from ghostos.ghosts.moss_agent.for_developer import AbsMossAgentMethods
+    def get_custom_agent_methods(self) -> "BaseMossAgentMethods":
+        from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
         if self.__custom_methods is None:
             m = import_from_path(self.ghost.moss_module)
             # user can custom moss agent methods, by define a `MossAgentMethods` class
-            self.__custom_methods = AbsMossAgentMethods.from_module(m)
+            self.__custom_methods = BaseMossAgentMethods.from_module(m)
         return self.__custom_methods
 
     def providers(self) -> Iterable[Provider]:
@@ -101,7 +99,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 moss = runtime.moss()
                 return fn(self.ghost, moss)
 
-    def get_instructions(self, session: Session) -> str:
+    def get_instruction(self, session: Session) -> str:
         compiler = self._get_moss_compiler(session)
         with compiler:
             rtm = compiler.compile(self.ghost.compile_module)

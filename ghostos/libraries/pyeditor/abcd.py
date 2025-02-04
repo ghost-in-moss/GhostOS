@@ -1,8 +1,6 @@
 from typing import List, Iterable, Union, Type, Optional, Any
-from typing_extensions import Literal
-from types import FunctionType
+from typing_extensions import Self
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field
 from ghostos.prompter import POM
 
 __all__ = [
@@ -57,33 +55,6 @@ class PyInspector(POM, ABC):
 
 # ---- local pymi ---- #
 
-class ModuleAPI(BaseModel):
-    """
-    the module attribute information
-    """
-    name: str = Field(description="the name of the attribute in the module")
-    type: Literal["function", "class"] = Field(description="the type of the attribute, usually `class` or `function`")
-    description: str = Field(description="the description of the attribute")
-    interface: str = Field(
-        description="the interface of the attribute to whom want to use this attribute."
-                    "the interface of a function shall be definition and it's arguments/returns typehint, and doc."
-                    "the interface of a class shall be definition, public methods, public attributes, __init__. "
-    )
-
-
-class ModuleInfo(BaseModel):
-    """
-    the module information
-    """
-    name: str = Field(description="the module name")
-    description: str = Field(default="", description="the module description, in 100 words")
-    exports: List[ModuleAPI] = Field(
-        default_factory=list,
-        description="the api that useful to the user of the module"
-    )
-    hash: str = Field(description="the content hash of the module.")
-
-
 class PyModuleEditor(ABC):
     """
     can edit python module
@@ -94,6 +65,10 @@ class PyModuleEditor(ABC):
 
     filename: str
     """the absolute filename of the module"""
+
+    @abstractmethod
+    def new_from(self, modulename: str) -> Self:
+        pass
 
     @abstractmethod
     def get_source(
@@ -115,26 +90,11 @@ class PyModuleEditor(ABC):
         pass
 
     @abstractmethod
-    def get_source_block(
-            self,
-            start_with: str,
-            end_with: str,
-    ) -> str:
-        """
-        get first block that match the start and end lines.
-        useful when you want to get the block of the module source code, and replace them later.
-        :param start_with: target block start chars.
-        :param end_with: target block end chars.
-        :return: the origin string
-        """
-        pass
-
-    @abstractmethod
     def replace(
             self,
             target_str: str,
             replace_str: str,
-            count: int = -1
+            count: int = 1,
     ) -> bool:
         """
         replace the source code of this module by replace a specific string
@@ -142,6 +102,8 @@ class PyModuleEditor(ABC):
         :param replace_str: replacement
         :param count: if -1, replace all occurrences of replace_str, else only replace occurrences count times.
         :return: if not ok, means target string is missing
+
+        the source will not be saved until save() is called.
         """
         pass
 
@@ -160,6 +122,8 @@ class PyModuleEditor(ABC):
         remember following the python code format pattern.
         :param source: the inserting code, such like from ... import ... or others.
         :param line_num: the start line of the insertion
+
+        the source will not be saved until save() is called.
         """
         pass
 
@@ -175,18 +139,27 @@ class PyModuleEditor(ABC):
         :param attr_name: name of the target attribute of this module.
         :param replace_str: new source code
         :return: the replaced source code. if empty, means target attribute is missing
+
+        the source will not be saved until save() is called.
         """
         pass
+
+    @abstractmethod
+    def save(self, reload: bool = True, source: Optional[str] = None) -> None:
+        """
+        save the module changes to file.
+        otherwise only the editor's cached source code will be changed.
+        :param reload: if True, reload the module from the saved source code.
+        :param source: if the source given, replace all the source code.
+        """
+        pass
+
 
 
 class LocalPyMI(ABC):
     """
     local python module index.
-    A manager that can recall local python module or attributes.
-
-    useful when:
-    1. you want to check a library is installed, use `exists` method.
-    2. some local python module, function, and classes are unknown to you, you may need to search them.
+    todo: recall modules.
     """
 
     @abstractmethod
@@ -210,22 +183,6 @@ class LocalPyMI(ABC):
         """
         check the existence of an expecting module or module attribute.
         :param import_path: [modulename:attr_name]
-        """
-        pass
-
-    @abstractmethod
-    def search(
-            self,
-            expectation: str,
-            query: str,
-            top_n: int = 10,
-    ) -> List[ModuleInfo]:
-        """
-        search the saved module info.
-        :param expectation: the expectation of your searching modules
-        :param query: the search plan in nature language
-        :param top_n: how many results to return
-        :return: the found module info. you can read result first, then select and import the ones you need.
         """
         pass
 
