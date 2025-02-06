@@ -1,5 +1,27 @@
 # Releases
 
+# v0.4.0-dev1
+
+* done a lot of experiments about `meta-prompt` on agent level reasoning
+* add `MossGhost` and deprecate `MossAgent`, make the logic much more simple and clear. 
+* build `PyEditorAgent` and test about modify existing modules with code-driven tools.
+* refact `ghostos.prompter` about `PromptObjectModel`.
+* move `loop_session_event` and `handle_callers` to `Session` helping us to understand the logic. 
+* llm services support `siliconflow` and `aliyun`
+* modify a lot of methods and functions names, make it more clear, at least to me
+* add `request_timeout` for stream first token
+* rename `Taskflow` to `Mindflow`, which is the origin name of it. 
+* change `FunctionCaller.id` to `FunctionCaller.call_id` and cause a lot of troubles. Hope worth it.
+* develop `pyeditor` module and test baseline cases.
+* move `MossAction` to `ghostos.abcd` for other agents. 
+* develop `notebook` library for some memory-related tests.
+* implements `approve` feature for dangerous agent. 
+* add `safe_mode` concepts for `approve` feature. 
+* fix a lots of annoying issues of `chat_with_ghost` page. 
+* refact the way to browse the streamlit web agent, make the pages switchable. I'm wrong about how to switch pages.
+* add `ghostos.facade` for future encapsule
+* remove some useless expired code with heart break. 
+
 # v0.4.0-dev0
 
 Features: 

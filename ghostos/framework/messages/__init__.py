@@ -1,6 +1,5 @@
 # todo: remove buffer some day
 from ghostos.core.messages import Buffer
-from ghostos.framework.messages.buffers import DefaultBuffer
 
 # default payloads
 

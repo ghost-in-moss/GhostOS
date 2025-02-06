@@ -1,7 +1,7 @@
-from typing import Optional, Type, Union, List, Iterable, Tuple
+from typing import Optional, Type, Union, Iterable, Tuple
 from types import ModuleType
 from abc import ABC, abstractmethod
-from importlib import import_module
+from importlib import import_module, reload
 import pkgutil
 
 from ghostos.container import Provider, Container
@@ -28,6 +28,10 @@ class Modules(ABC):
         like pkgutil.iter_modules.
         :return: Iterable[(module_name, is_package)].
         """
+        pass
+
+    @abstractmethod
+    def reload(self, module: Union[str, ModuleType]):
         pass
 
 
@@ -73,6 +77,11 @@ class DefaultModules(Modules):
         path = module_type.__path__
         for i, name, is_pkg in pkgutil.iter_modules(path, prefix):
             yield name, is_pkg
+
+    def reload(self, module: Union[str, ModuleType]):
+        if isinstance(module, str):
+            module = self.import_module(module)
+        reload(module)
 
 
 class DefaultModulesProvider(Provider[Modules]):

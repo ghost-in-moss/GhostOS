@@ -1,6 +1,6 @@
 import streamlit as st
 from ghostos.helpers import gettext as _, yaml_pretty_dump
-from ghostos.framework.messages import CompletionUsagePayload
+from ghostos.core.messages import CompletionUsagePayload
 from ghostos.core.messages import Message
 from ghostos.prototypes.streamlitapp.widgets.renderer import render_empty
 
@@ -99,4 +99,9 @@ def open_prompt_info_dialog(prompt_id: str):
         st.subheader(_("Added"))
         with st.container(border=True):
             render_messages(prompt.added, False, False, prefix)
+
+    if prompt.request_params:
+        with st.expander("Request Parameters", expanded=False):
+            st.write(prompt.request_params)
+
     render_empty()

@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import TYPE_CHECKING
 from typing import Optional, List, Dict, Any
 
@@ -19,6 +18,8 @@ __all__ = [
     '__moss_exec__',  # execute the generated code attach to the module
 ]
 
+# todo: 整体重命名一遍魔术方法. 魔术方法并不是一个比较好的实现, 太依赖用户的知识了.
+
 
 def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
     """
@@ -34,7 +35,7 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
 
 def __moss_compiled__(moss: "Moss") -> None:
     """
-
+    当 Moss 对象被编译完成时, 回调的 hook
     :param moss:
     :return:
     """
@@ -58,7 +59,7 @@ def __moss_attr_prompts__() -> "AttrPrompts":
     return []
 
 
-def __moss_module_prompt__(prompter: "MossPrompter") -> str:
+def __moss_module_prompt__(prompter: "MossPrompter", attr_prompts: Optional[Dict[str, str]] = None) -> str:
     """
     使用 MOSS Runtime 生成 prompt 的方法.
     可选的魔术方法. 定义的话, runtime.moss_context_prompt 实际上会使用这个方法.
@@ -71,16 +72,16 @@ def __moss_module_prompt__(prompter: "MossPrompter") -> str:
     origin_code = prompter.pycontext_code(exclude_hide_code=True)
 
     # 基于 origin code 生成关于这些变量的 prompt.
-    attrs_prompt = prompter.dump_attrs_prompt()
+    attrs_prompt_str = prompter.dump_imported_prompt(attr_prompts=attr_prompts)
     code_prompt_part = ""
-    if attrs_prompt:
+    if attrs_prompt_str:
         # 这部分变量的描述, 放到一个 string 里表示不污染当前上下文.
-        attrs_prompt = escape_string_quotes(attrs_prompt, '"""')
+        attrs_prompt_str = escape_string_quotes(attrs_prompt_str, '"""')
         code_prompt_part = f'''
 
 # more details about some module attrs above, are list below (quoted by <attr></attr>):
 """
-{attrs_prompt}
+{attrs_prompt_str}
 """
 '''
 

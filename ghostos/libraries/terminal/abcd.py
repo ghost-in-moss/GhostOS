@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import NamedTuple
+from typing import NamedTuple, List
 from datetime import datetime
 
 
@@ -22,12 +22,12 @@ class Terminal(ABC):
         stderr: str
 
     @abstractmethod
-    def exec(self, command: str, timeout: float) -> CommandResult:
+    def exec(self, *commands: str, timeout: float = 10.0) -> CommandResult:
         """
         Execute a shell command and return structured results.
 
         Args:
-            command: Command string to execute
+            commands: Command lines to execute
             (Note: Implementation should handle proper shell escaping)
             timeout: Timeout in seconds
 
@@ -41,75 +41,41 @@ class Terminal(ABC):
         pass
 
 
-class TerminalContext(ABC):
+class TerminalContext:
     """
     Environmental context generator for terminal operations.
     Provides system metadata to help language models understand execution context.
     """
 
-    @abstractmethod
     def pwd(self) -> str:
-        """
-        Get current working directory path.
-        Returns:
-            Absolute path string representing current location
-        """
-        pass
+        """Get current working directory with symlink resolution"""
+        import os
+        return os.getcwd()
 
-    @abstractmethod
-    def os_type(self) -> str:
-        """
-        Describe operating system characteristics.
-        Returns:
-            Natural language description of the OS (e.g. 'Linux', 'Windows 11', 'macOS 13.5')
-        """
-        pass
+    def system_info(self) -> str:
+        """Get detailed Ubuntu version information"""
+        import platform
+        return platform.platform(terse=True)
 
-    @abstractmethod
     def whoami(self) -> str:
-        """
-        Identify current user context.
-        Returns:
-            User information string (format: 'username@hostname [privilege_level]')
-        """
-        pass
+        import getpass
+        return getpass.getuser()
 
-    @abstractmethod
-    def system_architecture(self) -> str:
-        """
-        Detect hardware architecture.
-        Returns:
-            Architecture description (e.g. 'x86_64', 'arm64')
-        """
-        pass
-
-    @abstractmethod
     def time_context(self) -> datetime:
-        """
-        Get current system time.
-        Returns:
-            Timezone-aware datetime object
-        """
-        pass
+        """Get precise time with timezone awareness"""
+        # todo: 带时区.
+        return datetime.now()
 
     def generate_prompt(self) -> str:
         """
         Compile environmental context into natural language prompt.
-
-        Default implementation structure:
-        [System Context]
-        OS: {os_type}
-        User: {whoami}
-        Directory: {pwd}
-        Time: {time_context}
-        Architecture: {system_architecture}
-        Path: {executable_path}
         """
+        time_context = self.time_context()
         return (
             "[System Context]\n"
-            f"OS: {self.os_type()}\n"
+            f"OS: {self.system_info()}\n"
             f"User: {self.whoami()}\n"
-            f"Directory: {self.pwd()}\n"
-            f"Time: {self.time_context().isoformat(sep=' ', timespec='seconds')}\n"
-            f"Architecture: {self.system_architecture()}\n"
+            f"Pwd: {self.pwd()}\n"
+            f"TimeZone: {time_context.astimezone().tzinfo}\n"
+            f"Time: {time_context.isoformat(' ', 'seconds')}\n"
         )

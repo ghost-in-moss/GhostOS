@@ -1,35 +1,41 @@
-from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar
-from typing_extensions import Self
-from types import ModuleType
+from typing import Union, Optional, List, Iterable, Tuple, TYPE_CHECKING
+from warnings import warn
 
 from ghostos.identifier import Identifier
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from ghostos.helpers import import_from_path
-from ghostos.prompter import TextPrmt, Prompter
-from ghostos.abcd import GhostDriver, Operator, Agent, Session, StateValue, Action, Thought, Ghost
-from ghostos.core.runtime import Event, GoThreadInfo
-from ghostos.core.moss import MossCompiler, PyContext, MossRuntime
-from ghostos.entity import ModelEntity
-from ghostos.core.messages import FunctionCaller, Role
-from ghostos.core.llms import (
-    Prompt, PromptPipe, AssistantNamePipe, run_prompt_pipeline,
-    LLMFunc, FunctionalToken,
+from ghostos.prompter import TextPOM, PromptObjectModel
+from ghostos.abcd import (
+    GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, SessionPyContext,
+    MossAction, MOSS_INTRODUCTION, get_moss_context_pom,
 )
-from .instructions import (
-    GHOSTOS_INTRODUCTION, MOSS_INTRODUCTION, AGENT_META_INTRODUCTION, MOSS_FUNCTION_DESC,
-    get_moss_context_prompter, get_agent_identity,
+from ghostos.core.runtime import Event, GoThreadInfo
+from ghostos.core.moss import MossCompiler, MossRuntime
+from ghostos.entity import ModelEntity
+from ghostos.core.messages import Role
+from ghostos.core.llms import (
+    PromptPipe, AssistantNamePipe, run_prompt_pipeline,
+)
+from ghostos.ghosts.moss_agent.instructions import (
+    GHOSTOS_INTRODUCTION, AGENT_META_INTRODUCTION,
+    get_agent_identity,
 )
 import json
-
 from ghostos.container import Provider
 
-__all__ = ['MossAgent', 'MossAgentDriver', 'MossAction']
+if TYPE_CHECKING:
+    from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
+
+__all__ = ['MossAgent', 'MossAgentDriver']
 
 
 class MossAgent(ModelEntity, Agent):
     """
     Basic Agent that turn a python module into a conversational agent.
+
+    Deprecated, this one is too complex during development.
+    Use MossGhost instead!
     """
 
     """ subclass of MossAgent could have a GoalType, default is None"""
@@ -57,21 +63,28 @@ class MossAgent(ModelEntity, Agent):
 
 
 class MossAgentDriver(GhostDriver[MossAgent]):
+    __custom_methods: Optional["BaseMossAgentMethods"] = None
 
-    def get_module(self) -> ModuleType:
-        m = import_from_path(self.ghost.moss_module)
-        return m
+    def __init__(self, ghost: MossAgent):
+        super().__init__(ghost)
+        warn(
+            "MossAgentDriver is deprecated, use ghostos.ghosts.MossGhost instead",
+            DeprecationWarning,
+        )
+
+    def get_custom_agent_methods(self) -> "BaseMossAgentMethods":
+        from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
+        if self.__custom_methods is None:
+            m = import_from_path(self.ghost.moss_module)
+            # user can custom moss agent methods, by define a `MossAgentMethods` class
+            self.__custom_methods = BaseMossAgentMethods.from_module(m)
+        return self.__custom_methods
 
     def providers(self) -> Iterable[Provider]:
         """
         ghost session level providers
         """
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_providers__
-        m = self.get_module()
-        fn = __moss_agent_providers__
-        if __moss_agent_providers__.__name__ in m.__dict__:
-            fn = m.__dict__[__moss_agent_providers__.__name__]
-        return fn(self.ghost)
+        return self.get_custom_agent_methods().providers(self.ghost)
 
     def parse_event(self, session: Session, event: Event) -> Union[Event, None]:
         """
@@ -80,22 +93,14 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         :param event:
         :return:
         """
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_parse_event__
-        fn = __moss_agent_parse_event__
-        if __moss_agent_parse_event__.__name__ in event.__dict__:
-            fn = event.__dict__[__moss_agent_parse_event__.__name__]
-        return fn(self.ghost, session, event)
+        return self.get_custom_agent_methods().agent_parse_event(self.ghost, session, event)
 
     def truncate(self, session: Session) -> GoThreadInfo:
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_truncate__
-        fn = __moss_agent_truncate__
-        if __moss_agent_truncate__.__name__ in session.__dict__:
-            fn = session.__dict__[__moss_agent_truncate__.__name__]
-        return fn(self.ghost, session)
+        return self.get_custom_agent_methods().truncate_thread(self.ghost, session)
 
     def get_artifact(self, session: Session) -> Optional[MossAgent.ArtifactType]:
         from .for_meta_ai import __moss_agent_artifact__
-        m = self.get_module()
+        m = self.get_custom_agent_methods().module
         if __moss_agent_artifact__.__name__ not in m.__dict__:
             return None
         fn = getattr(m, __moss_agent_artifact__.__name__)
@@ -106,7 +111,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 moss = runtime.moss()
                 return fn(self.ghost, moss)
 
-    def get_instructions(self, session: Session) -> str:
+    def get_system_instruction(self, session: Session) -> str:
         compiler = self._get_moss_compiler(session)
         with compiler:
             rtm = compiler.compile(self.ghost.compile_module)
@@ -141,12 +146,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         yield moss_action
 
     def on_creating(self, session: Session) -> None:
-        from ghostos.ghosts.moss_agent.for_developer import __moss_agent_creating__ as fn
-        m = self.get_module()
-        if fn.__name__ in m.__dict__:
-            fn = m.__dict__[fn.__name__]
-        fn(self.ghost, session)
-        return
+        self.get_custom_agent_methods().on_creating(self.ghost, session)
 
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
         compiler = self._get_moss_compiler(session)
@@ -156,7 +156,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 # prepare instructions.
                 op, ok = self._on_custom_event_handler(session, rtm, event)
                 if ok:
-                    return op or session.taskflow().wait()
+                    return op or session.mindflow().wait()
 
                 # prepare thread
                 thread = session.thread
@@ -173,7 +173,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 prompt, op = thought.think(session, prompt)
                 if op is not None:
                     return op
-                return session.taskflow().wait()
+                return session.mindflow().wait()
 
     def _on_custom_event_handler(
             self,
@@ -195,36 +195,36 @@ class MossAgentDriver(GhostDriver[MossAgent]):
         :param runtime:
         :return:
         """
-        prompter = self._get_instruction_prompter(session, runtime)
+        prompter = self._get_instruction_pom(session, runtime)
         instruction = prompter.get_prompt(session.container, depth=0)
         return instruction
 
-    def _get_instruction_prompter(self, session: Session, runtime: MossRuntime) -> Prompter:
+    def _get_instruction_pom(self, session: Session, runtime: MossRuntime) -> PromptObjectModel:
         agent = self.ghost
-        return TextPrmt().with_children(
+        return TextPOM().with_children(
             # system meta prompt
-            TextPrmt(
+            TextPOM(
                 title="Meta Instruction",
                 content=AGENT_META_INTRODUCTION,
             ).with_children(
                 # ghostos meta instruction.
-                TextPrmt(title="GhostOS", content=GHOSTOS_INTRODUCTION),
+                TextPOM(title="GhostOS", content=GHOSTOS_INTRODUCTION),
                 # the information about moss
-                TextPrmt(title="MOSS", content=MOSS_INTRODUCTION),
+                TextPOM(title="MOSS", content=MOSS_INTRODUCTION),
 
                 # the moss providing context prompter.
-                get_moss_context_prompter("Code Context", runtime),
+                get_moss_context_pom("Code Context", runtime),
             ),
             # agent prompt
-            TextPrmt(
+            TextPOM(
                 title="Agent Info",
                 content="The Agent info about who you are and what you are doing: ",
             ).with_children(
                 get_agent_identity("Identity", agent.__identifier__()),
-                TextPrmt(title="Persona", content=self._get_agent_persona(session, runtime)),
-                TextPrmt(title="Instruction", content=self._get_agent_instruction(session, runtime)),
+                TextPOM(title="Persona", content=self._get_agent_persona(session, runtime)),
+                TextPOM(title="Instruction", content=self._get_agent_instruction(session, runtime)),
             ),
-            TextPrmt(
+            TextPOM(
                 title="Context",
                 content="",
             ).with_children(
@@ -246,7 +246,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
             fn = compiled.__dict__[fn.__name__]
         return fn(self.ghost, runtime.moss())
 
-    def _get_context_prompter(self, session: Session) -> Optional[Prompter]:
+    def _get_context_prompter(self, session: Session) -> Optional[PromptObjectModel]:
         ctx = session.get_context()
         if ctx is None:
             return None
@@ -273,7 +273,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
 
         # bind agent level injections.
         fn = __moss_agent_injections__
-        module = self.get_module()
+        module = self.get_custom_agent_methods().module
         # if magic function __agent_moss_injections__ exists, use it to get some instance level injections to moss.
         if __moss_agent_injections__.__name__ in module.__dict__:
             fn = module.__dict__[__moss_agent_injections__.__name__]
@@ -282,7 +282,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
             compiler = compiler.injects(**injections)
         return compiler
 
-    def get_pycontext(self, session: Session) -> PyContext:
+    def get_pycontext(self, session: Session) -> SessionPyContext:
         """
         get moss pycontext. moss pycontext is bind to session.state as default.
         :param session:
@@ -293,139 +293,3 @@ class MossAgentDriver(GhostDriver[MossAgent]):
             code=self.ghost.code,
         )
         return pycontext.get_or_bind(session)
-
-
-class SessionPyContext(PyContext, StateValue):
-    """
-    bind pycontext to session.state
-    """
-
-    def get(self, session: Session) -> Optional[Self]:
-        data = session.state.get(SessionPyContext.__name__, None)
-        if data is not None:
-            if isinstance(data, Dict):
-                return SessionPyContext(**data)
-            elif isinstance(data, SessionPyContext):
-                return data
-        return None
-
-    def bind(self, session: Session) -> None:
-        session.state[SessionPyContext.__name__] = self
-
-
-class MossAction(Action, PromptPipe):
-    DEFAULT_NAME: ClassVar[str] = "moss"
-
-    class Argument(BaseModel):
-        code: str = Field(description="the python code you want to execute. never quote them with ```")
-
-    def __init__(self, runtime: MossRuntime, name: str = DEFAULT_NAME):
-        self.runtime: MossRuntime = runtime
-        self._name = name
-
-    def name(self) -> str:
-        return self._name
-
-    def as_function(self) -> Optional[LLMFunc]:
-        parameters = self.Argument.model_json_schema()
-        llm_func = LLMFunc(
-            name=self.name(),
-            description=MOSS_FUNCTION_DESC,
-            parameters=parameters,
-        )
-        return llm_func
-
-    def as_functional_token(self) -> FunctionalToken:
-        return FunctionalToken.new(
-            token=self.name(),
-            name=self.name(),
-            visible=False,
-            desc=MOSS_FUNCTION_DESC,
-        )
-
-    def update_prompt(self, prompt: Prompt) -> Prompt:
-        llm_func = self.as_function()
-        if llm_func is not None:
-            prompt.functions.append(llm_func)
-        # support functional token as default.
-        prompt.functional_tokens.append(self.as_functional_token())
-        return prompt
-
-    @classmethod
-    def unmarshal_code(cls, arguments: str) -> str:
-        try:
-            if arguments.startswith("{"):
-                if not arguments.endswith("}"):
-                    arguments += "}"
-                data = json.loads(arguments)
-                args = cls.Argument(**data)
-            else:
-                args = cls.Argument(code=arguments)
-        except Exception:
-            args = cls.Argument(code=arguments)
-        code = args.code.strip()
-        if code.startswith("```python"):
-            code.lstrip("```python")
-        if code.startswith("```"):
-            code.lstrip("```")
-        if code.endswith("```"):
-            code.rstrip("```")
-        return code.strip()
-
-    def run(self, session: Session, caller: FunctionCaller) -> Union[Operator, None]:
-        session.logger.debug("MossAction receive caller: %s", caller)
-        # prepare arguments.
-        if caller.functional_token:
-            code = self.unmarshal_code(caller.arguments)
-        else:
-            arguments = caller.arguments
-            code = self.unmarshal_code(arguments)
-
-        if code.startswith("{") and code.endswith("}"):
-            # unmarshal again.
-            code = self.unmarshal_code(code)
-
-        # if code is not exists, inform the llm
-        if not code:
-            return self.fire_error(session, caller, "the moss code is empty")
-        session.logger.debug("moss action code: %s", code)
-
-        error = self.runtime.lint_exec_code(code)
-        if error:
-            return self.fire_error(session, caller, f"the moss code has syntax errors:\n{error}")
-
-        moss = self.runtime.moss()
-        try:
-            result = self.runtime.execute(target="run", code=code, args=[moss])
-            op = result.returns
-            if op is not None and not isinstance(op, Operator):
-                return self.fire_error(session, caller, "result of moss code is not None or Operator")
-            pycontext = result.pycontext
-            # rebind pycontext to bind session
-            pycontext = SessionPyContext(**pycontext.model_dump(exclude_defaults=True))
-            pycontext.bind(session)
-
-            # handle std output
-            std_output = result.std_output
-            session.logger.debug("moss action std_output: %s", std_output)
-            if std_output:
-                output = f"Moss output:\n{std_output}"
-                message = caller.new_output(output)
-                session.respond([message])
-                if op is None:
-                    # if std output is not empty, and op is none, observe the output as default.
-                    return session.taskflow().think()
-            else:
-                output = caller.new_output("executed")
-                session.respond([output])
-                return None
-
-        except Exception as e:
-            session.logger.exception(e)
-            return self.fire_error(session, caller, f"error during executing moss code: {e}")
-
-    @staticmethod
-    def fire_error(session: Session, caller: FunctionCaller, error: str) -> Operator:
-        message = caller.new_output(error)
-        session.respond([message])
-        return session.taskflow().error()

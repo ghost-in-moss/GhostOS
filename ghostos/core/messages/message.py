@@ -42,8 +42,10 @@ class Role(str, enum.Enum):
             cls,
             content: str,
             memory: Optional[str] = None,
+            stage: str = "",
     ):
-        return cls.SYSTEM.new(content, memory=memory)
+        # maybe switch to developer role in future.
+        return cls.SYSTEM.new(content, memory=memory, stage=stage)
 
     def new(
             self,
@@ -51,6 +53,7 @@ class Role(str, enum.Enum):
             memory: Optional[str] = None,
             name: Optional[str] = None,
             type_: Optional[str] = None,
+            stage: str = "",
     ) -> "Message":
         return Message.new_tail(
             type_=type_ if type_ else MessageType.DEFAULT.value,
@@ -58,6 +61,7 @@ class Role(str, enum.Enum):
             name=name,
             content=content,
             memory=memory,
+            stage=stage,
         )
 
 
@@ -71,8 +75,12 @@ class MessageType(str, enum.Enum):
     IMAGE = "image"
     VIDEO = "video"
     FILE = "file"
-    ERROR = "error"
     FINAL = "final"
+
+    # system message type
+    CONFIRM = "confirm"
+    ERROR = "error"
+    DEBUG = "debug"
 
     def new(
             self, *,
@@ -234,8 +242,8 @@ class Message(BaseModel):
         description="Message memory that for llm, if none, means content is memory",
     )
 
-    attrs: Optional[Dict[str, Any]] = Field(
-        None,
+    attrs: Dict[str, Any] = Field(
+        default_factory=dict,
         description="the additional attrs for the message type"
     )
 
@@ -289,7 +297,7 @@ class Message(BaseModel):
             role = role.value
         if isinstance(typ_, MessageType):
             typ_ = typ_.value
-        return cls(
+        item = cls(
             role=role,
             name=name,
             content=content,
@@ -301,6 +309,7 @@ class Message(BaseModel):
             stage=stage,
             created=created,
         )
+        return item
 
     @classmethod
     def new_tail(
@@ -340,6 +349,8 @@ class Message(BaseModel):
             stage=stage,
         )
         msg.seq = "complete"
+        if attrs is None:
+            attrs = {}
         msg.attrs = attrs
         return msg
 
@@ -424,7 +435,7 @@ class Message(BaseModel):
         return item
 
     def get_unique_id(self) -> str:
-        return f"{self.type}:{self.msg_id}"
+        return f"{self.type}:{self.role}:{self.name}:{self.stage}:{self.msg_id}"
 
     def update(self, pack: "Message") -> None:
         """
@@ -505,25 +516,57 @@ class Message(BaseModel):
         return self.__repr__()
 
 
-class MessageClass(ABC):
+class MessageClass(BaseModel, ABC):
     """
     A message class with every field that is strong-typed
     the payloads and attachments shall parse to dict when generate to a Message.
     """
     __message_type__: ClassVar[Union[MessageType, str]]
 
-    @abstractmethod
+    msg_id: str = Field(default="")
+    payloads: Dict[str, Dict] = Field(default_factory=dict)
+    role: str = Field(default="")
+    stage: str = Field(default="")
+    name: Optional[str] = Field(None)
+
     def to_message(self) -> Message:
+        message = Message.new_tail(
+            type_=self.__message_type__,
+            msg_id=self.msg_id,
+            role=self.role,
+            stage=self.stage,
+            name=self.name,
+        )
+        message.payloads = self.payloads
+        return self._to_message(message)
+
+    @abstractmethod
+    def _to_message(self, message: Message) -> Message:
         pass
 
     @classmethod
-    @abstractmethod
     def from_message(cls, message: Message) -> Optional[Self]:
         """
         from a message container generate a strong-typed one.
         :param message:
         :return: None means type not match.
         """
+        if not message.is_complete():
+            return None
+
+        built = cls._from_message(message)
+        if built is None:
+            return None
+        built.msg_id = message.msg_id
+        built.payloads = message.payloads
+        built.role = message.role
+        built.stage = message.stage
+        built.name = message.name
+        return built
+
+    @classmethod
+    @abstractmethod
+    def _from_message(cls, message: Message) -> Optional[Self]:
         pass
 
     @abstractmethod
@@ -535,7 +578,7 @@ class FunctionCaller(BaseModel):
     """
     消息协议中用来描述一个工具或者function 的调用请求.
     """
-    id: Optional[str] = Field(default=None, description="caller 的 id, 用来 match openai 的 tool call 协议. ")
+    call_id: Optional[str] = Field(default=None, description="caller 的 id, 用来 match openai 的 tool call 协议. ")
     name: str = Field(description="方法的名字.")
     arguments: str = Field(description="方法的参数. ")
 
@@ -547,16 +590,19 @@ class FunctionCaller(BaseModel):
 
     def new_output(self, output: str) -> FunctionOutput:
         return FunctionOutput(
-            call_id=self.id,
+            call_id=self.call_id,
             name=self.name,
             content=output,
         )
 
     @classmethod
     def from_message(cls, message: Message) -> Iterable[FunctionCaller]:
+        if not message.is_complete():
+            yield from []
+            return
         if message.type == MessageType.FUNCTION_CALL.value:
             yield FunctionCaller(
-                id=message.call_id,
+                call_id=message.call_id,
                 name=message.name,
                 arguments=message.content,
             )
@@ -565,7 +611,7 @@ class FunctionCaller(BaseModel):
 
 
 # todo: history code, optimize later
-class FunctionOutput(BaseModel, MessageClass):
+class FunctionOutput(MessageClass):
     __message_type__ = MessageType.FUNCTION_OUTPUT.value
 
     call_id: Optional[str] = Field(None, description="caller id")
@@ -575,21 +621,14 @@ class FunctionOutput(BaseModel, MessageClass):
     )
     content: Optional[str] = Field(description="caller output")
 
-    msg_id: str = Field(default_factory=uuid)
-    payloads: Dict[str, Dict] = Field(default_factory=dict)
-
-    def to_message(self) -> Message:
-        return Message(
-            msg_id=self.msg_id,
-            call_id=self.call_id,
-            type=MessageType.FUNCTION_OUTPUT.value,
-            name=self.name,
-            content=self.content,
-            payloads=self.payloads,
-        ).as_tail(copy=True)
+    def _to_message(self, message: Message) -> Message:
+        message.name = self.name
+        message.call_id = self.call_id
+        message.content = self.content
+        return message
 
     @classmethod
-    def from_message(cls, message: Message) -> Optional[Self]:
+    def _from_message(cls, message: Message) -> Optional[Self]:
         if message.type != MessageType.FUNCTION_OUTPUT.value:
             return None
         return cls(

@@ -463,7 +463,7 @@ class AppClient(Client):
 
     def _get_session_obj(self, vad_mode: bool) -> SessionObject:
         session_obj = self.conf.get_session_obj(vad_mode)
-        session_obj.instructions = self.conversation.get_instructions()
+        session_obj.instructions = self.conversation.get_system_instruction()
         tools = []
         for fn in self.conversation.get_functions():
             tool = Tool(**fn.to_dict())

@@ -9,7 +9,7 @@ from ghostos.container import Provider
 
 __all__ = [
     'get_ghost_driver', 'get_ghost_driver_type', 'is_ghost',
-    'run_session_event', 'fire_session_event',
+    'default_init_event_operator',
     'get_module_magic_ghost', 'get_module_magic_shell_providers',
 ]
 
@@ -29,6 +29,8 @@ def get_ghost_driver_type(ghost: Ghost) -> Type[GhostDriver]:
 
 def get_ghost_driver(ghost: Ghost) -> GhostDriver:
     ghost_driver_type = get_ghost_driver_type(ghost)
+    if not ghost_driver_type or not issubclass(ghost_driver_type, GhostDriver):
+        raise NotImplementedError(f"the Ghost {type(ghost)} has no ghost driver type")
     return ghost_driver_type(ghost)
 
 
@@ -45,21 +47,8 @@ def is_ghost(value) -> bool:
         return True
     except AssertionError:
         return False
-
-
-def fire_session_event(session: Session, event: Event) -> Optional[Operator]:
-    event, op = session.parse_event(event)
-    if op is not None:
-        session.logger.info("session event is intercepted and op %s is returned", op)
-        return op
-    if event is None:
-        # if event is intercepted, stop the run.
-        return None
-    driver = get_ghost_driver(session.ghost)
-    session.thread = session.get_truncated_thread()
-    op = driver.on_event(session, event)
-    # only session and driver can change event.
-    return op
+    except AttributeError:
+        return False
 
 
 class InitOperator(Operator):
@@ -67,28 +56,14 @@ class InitOperator(Operator):
         self.event = event
 
     def run(self, session: Session) -> Union[Operator, None]:
-        return fire_session_event(session, self.event)
+        return session.handle_event(self.event)
 
     def destroy(self):
         del self.event
 
 
-def run_session_event(session: Session, event: Event, max_step: int) -> None:
-    op = InitOperator(event)
-    step = 0
-    while op is not None:
-        step += 1
-        if step > max_step:
-            raise RuntimeError(f"Max step {max_step} reached")
-        if not session.refresh(True):
-            raise RuntimeError("Session refresh failed")
-        session.logger.debug("start session op %s", repr(op))
-        next_op = op.run(session)
-        session.logger.debug("done session op %s", repr(op))
-        op.destroy()
-        # session do save after each op
-        session.save()
-        op = next_op
+def default_init_event_operator(event: Event) -> Operator:
+    return InitOperator(event)
 
 
 def get_module_magic_ghost(module: ModuleType) -> Optional[Ghost]:
@@ -98,10 +73,15 @@ def get_module_magic_ghost(module: ModuleType) -> Optional[Ghost]:
 
 
 def __shell_providers__() -> List[Provider]:
+    """
+    magic method to define shell level providers in a target python file.
+    """
     return []
 
 
 def get_module_magic_shell_providers(module: ModuleType) -> List[Provider]:
     if __shell_providers__.__name__ in module.__dict__:
-        return module.__dict__[__shell_providers__.__name__]()
+        fn = module.__dict__[__shell_providers__.__name__]
+        providers = list(fn())
+        return providers
     return []

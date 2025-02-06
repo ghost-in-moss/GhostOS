@@ -8,19 +8,19 @@ from typing_extensions import Self
 from abc import ABC, abstractmethod
 from ghostos.identifier import Identical
 from ghostos.entity import EntityType, EntityClass
-from ghostos.prompter import Prompter, DataPrompter, DataPrompterDriver
+from ghostos.prompter import PromptObjectModel, BasePOM
 from ghostos.core.runtime import (
     TaskState,
 )
 from ghostos.core.runtime.events import Event
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
 from ghostos.core.runtime.threads import GoThreadInfo
+from ghostos.core.moss import PyContext
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
-from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role
+from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role, Pipe as MsgPipe
 from ghostos.contracts.logger import LoggerItf
 from ghostos.container import Container, Provider
 from ghostos.identifier import get_identifier
-from contextlib import contextmanager
 from pydantic import BaseModel
 
 """
@@ -57,8 +57,10 @@ __all__ = (
     "Ghost", "GhostDriver", "GhostOS", "Shell", "Conversation", "Background",
     "Operator", "Action",
     "Session", "Messenger", "StateValue", "Scope",
-    "Taskflow", "Subtasks",
+    "Mindflow", "Subtasks",
     "Context",
+    "Thought",
+    "SessionPyContext",
 )
 
 
@@ -126,9 +128,9 @@ class GhostDriver(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def get_instructions(self, session: Session) -> str:
+    def get_system_instruction(self, session: Session) -> str:
         """
-        get system instructions of the ghost.
+        get system instruction of the ghost.
         usually used in client side.
         """
         pass
@@ -182,23 +184,56 @@ class GhostDriver(Generic[G], ABC):
         """
         pass
 
+    def output_pipes(self) -> List[MsgPipe]:
+        """
+        session will use this pipes to moderate or filter outputting messages
+        rewrite it to define the output pipes.
+        :return: ghost level output pipes
+        """
+        return []
 
-class Context(Payload, DataPrompter, ABC):
+    def is_safe_mode(self) -> bool:
+        """
+        session safe mode is: (conversation level safe mode || ghost level safe mode)
+        rewrite this method can define ghost level safe mode.
+        At the safe mode, ghost action caller will not be executed,
+        and the last turn will be ignored unless next event is ActionCall.
+        """
+        return False
+
+
+class Context(BasePOM, ABC):
     """
-    context prompter that generate prompt to provide information
+    context pom that generate prompt to provide information
     the modeling defines strong-typed configuration to generate prompt.
-    """
-    key = "ghostos_context"
 
-    __driver__: Optional[Type[ContextDriver]] = None
-
-
-class ContextDriver(DataPrompterDriver, ABC):
-    """
-    the context driver is separated from context data.
-    LLM see
+    context is a payload, so it can be set to the message if needed.
     """
     pass
+
+
+"""
+Thought 的目标是实现一个可以分形嵌套的思维范式, 在单次思考过程中运行. 
+这种工程化的实现, 是为了限制模型的思考逻辑, 在思考过程中丰富上下文, 通过 in-context learning 达到最好的推理效果. 
+"""
+
+T = TypeVar("T")
+
+
+class Thought(Generic[T], ABC):
+    """
+    Unit to build LLM workflow fractally. e.g.:
+    1. single thought: a single node of thought
+    2. chain of thoughts: a pipeline of thoughts
+    3. tree-like thought: a router before thoughts
+    4. mode switch thought: change self thought to different sub modes.
+    5. reasoning thought: reasoning before action.
+    6. memory thought: preparing memory before action.
+    """
+
+    @abstractmethod
+    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[T]]:
+        pass
 
 
 class Operator(ABC):
@@ -249,6 +284,14 @@ class Action(PromptPipe, ABC):
     @abstractmethod
     def run(self, session: Session, caller: FunctionCaller) -> Union[Operator, None]:
         pass
+
+
+class GhostOSModes(Protocol):
+    """
+    system level global modes
+    """
+    is_debug: bool
+    is_safemode: bool
 
 
 class GhostOS(Protocol):
@@ -323,6 +366,28 @@ class Shell(ABC):
         So it never locked until the conversation is created.
         if force is True, the conversation will seize the task locker anyway.
         """
+        pass
+
+    def get_or_create_task(
+            self,
+            ghost: Ghost,
+            context: Optional[Ghost.ContextType] = None,
+            *,
+            task_id: str = None,
+            always_create: bool = True,
+            save: bool = False,
+    ) -> GoTaskStruct:
+        pass
+
+    @abstractmethod
+    def sync_task(
+            self,
+            task: Union[str, GoTaskStruct],
+            *,
+            username: str = "",
+            user_role: str = "",
+            force: bool = False,
+    ) -> Conversation:
         pass
 
     @abstractmethod
@@ -414,7 +479,11 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def get_instructions(self) -> str:
+    def get_system_instruction(self) -> str:
+        """
+        the first message of llm request messages is usually system instruction or developer instruction.
+        this method is able to return it to client side.
+        """
         pass
 
     @abstractmethod
@@ -430,7 +499,15 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def talk(self, query: str, user_name: str = "", context: Optional[G.ContextType] = None) -> Tuple[Event, Receiver]:
+    def talk(
+            self,
+            query: str,
+            context: Optional[G.ContextType] = None,
+            *,
+            user_name: str = "",
+            timeout: float = 0.0,
+            request_timeout: float = 0.0,
+    ) -> Tuple[Event, Receiver]:
         pass
 
     @abstractmethod
@@ -442,7 +519,10 @@ class Conversation(Protocol[G]):
             self,
             inputs: Iterable[MessageKind],
             context: Optional[G.ContextType] = None,
+            *,
             streaming: bool = True,
+            timeout: float = 0.0,
+            request_timeout: float = 0.0,
     ) -> Tuple[Event, Receiver]:
         """
         create response immediately by inputs. the inputs will change to event.
@@ -450,7 +530,14 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
-    def respond_event(self, event: Event, streaming: bool = True) -> Receiver:
+    def respond_event(
+            self,
+            event: Event,
+            *,
+            timeout: float = 0.0,
+            request_timeout: float = 0.0,
+            streaming: bool = True,
+    ) -> Receiver:
         """
         create response to the event immediately
         """
@@ -552,6 +639,24 @@ class StateValue(ABC):
         return value
 
 
+class SessionPyContext(PyContext, StateValue):
+    """
+    bind pycontext to session.state
+    """
+
+    def get(self, session: Session) -> Optional[Self]:
+        data = session.state.get(SessionPyContext.__name__, None)
+        if data is not None:
+            if isinstance(data, Dict):
+                return SessionPyContext(**data)
+            elif isinstance(data, SessionPyContext):
+                return data
+        return None
+
+    def bind(self, session: Session) -> None:
+        session.state[SessionPyContext.__name__] = self
+
+
 class Scope(BaseModel):
     """
     scope of the session.
@@ -574,7 +679,14 @@ class Session(Generic[G], ABC):
     """
     instance_count: ClassVar[int] = 0
 
-    upstream: Stream
+    ghost: G
+    """ghost instance"""
+
+    ghost_driver: GhostDriver[G]
+    """ghost driver instance"""
+
+    task: GoTaskStruct
+    """current task object, or session scheduling state object."""
 
     scope: Scope
     """the running scope of the session"""
@@ -584,11 +696,6 @@ class Session(Generic[G], ABC):
 
     container: Container
     """Session level container"""
-
-    ghost: G
-
-    task: GoTaskStruct
-    """current task"""
 
     thread: GoThreadInfo
     """thread info of the task"""
@@ -608,27 +715,57 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
+    def allow_stream(self) -> bool:
+        """
+        :return: if allow stream responding
+        """
+        pass
+
+    @abstractmethod
     def get_truncated_thread(self) -> GoThreadInfo:
+        """
+        根据 Ghost 的逻辑对对话历史消息做处理, 返回处理后的历史消息.
+        这个处理逻辑可能是截断.
+        :return: 处理后的 thread.
+        """
         pass
 
     @abstractmethod
     def to_messages(self, values: Iterable[Union[MessageKind, Any]]) -> List[Message]:
+        """
+        工具函数, 用来将各种类型的数据转化为 Message 方便发送.
+        :param values:
+        :return:str => Text Message; message => message; message class => message. other => VariableMessage.
+        """
         pass
 
     @abstractmethod
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
+        """
+        对输入事件进行预处理, 可以用来拦截, 拒答等.
+        parse input event without handle it.
+        :param event:
+        :return: Tuple[parsed_event, [intercept operator?] ]
+        """
+        pass
+
+    @abstractmethod
+    def is_safe_mode(self) -> bool:
+        """
+        if is safe mode, the output with function callers will not be executed.
+        """
         pass
 
     @abstractmethod
     def system_log(self, log: str) -> None:
         """
-        log system info, save to thread as a system message
+        log system info, save to thread as a system (developer) message
         :param log: log info
         """
         pass
 
     @abstractmethod
-    def get_context(self) -> Optional[Prompter]:
+    def get_context(self) -> Optional[PromptObjectModel]:
         """
         current context for the ghost
         """
@@ -642,7 +779,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def get_instructions(self) -> str:
+    def get_system_instructions(self) -> str:
         pass
 
     @abstractmethod
@@ -660,7 +797,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def taskflow(self) -> Taskflow:
+    def mindflow(self) -> Mindflow:
         """
         basic library to operates the current task
         """
@@ -668,14 +805,25 @@ class Session(Generic[G], ABC):
 
     @abstractmethod
     def subtasks(self) -> Subtasks:
+        """
+        系统默认的多任务管理.
+        """
         pass
 
     @abstractmethod
-    def messenger(self, stage: str = "") -> "Messenger":
+    def messenger(
+            self, *,
+            name: str = "",
+            stage: str = "",
+            payloads: Optional[List[Payload]] = None,
+    ) -> "Messenger":
         """
         Task 当前运行状态下, 向上游发送消息的 Messenger.
         每次会实例化一个 Messenger, 理论上不允许并行发送消息. 但也可能做一个技术方案去支持它.
         Messenger 未来要支持双工协议, 如果涉及多流语音还是很复杂的.
+        :param stage: set the stage of the messages.
+        :param name: if empty, use the ghost name
+        :param payloads: add payloads to all the message complete items.
         """
         pass
 
@@ -717,6 +865,7 @@ class Session(Generic[G], ABC):
     def call(self, ghost: G, ctx: G.ContextType) -> G.ArtifactType:
         """
         创建一个子任务, 阻塞并等待它完成.
+        todo: 未测试
         :param ghost:
         :param ctx:
         :return: the Goal of the task. if the final state is not finish, throw an exception.
@@ -741,6 +890,57 @@ class Session(Generic[G], ABC):
         """
         pass
 
+    def handle_event(self, event: Event) -> Optional[Operator]:
+        # always let ghost driver decide event handling logic first.
+        driver = self.ghost_driver
+
+        # driver parse the event first.
+        event = driver.parse_event(self, event)
+        if event is None:
+            return None
+
+        # session parse event,
+        event, op = self.parse_event(event)
+        if op is not None:
+            self.logger.info("session event is intercepted and op %s is returned", op)
+            return op
+        if event is None:
+            # if event is intercepted, stop the run.
+            return None
+
+        # update self thread to truncated thread.
+        self.thread = self.get_truncated_thread()
+
+        # driver handle event.
+        op = driver.on_event(self, event)
+        # only session and driver can change event.
+        return op
+
+    def handle_callers(self, callers: Iterable[FunctionCaller], force: bool = False) -> Optional[Operator]:
+        """
+        handle caller.
+        """
+        callers = list(callers)
+        if not callers:
+            return None
+        if self.is_safe_mode() and not force:
+            # 开启 safe mode
+            self.thread.set_approval(False, callers)
+            return None
+
+        actions = {a.name(): a for a in self.ghost_driver.actions(self)}
+        for caller in callers:
+            if caller.name not in actions:
+                self.logger.error("session receive caller %s, miss action", caller.name)
+                self.respond([caller.new_output(f"Error: function `{caller.name}` not found")])
+                continue
+            action = actions[caller.name]
+            self.logger.error("session handle caller %s with action %s ", caller.name, type(action))
+            op = action.run(self, caller)
+            if op is not None:
+                return op
+        return None
+
     @abstractmethod
     def __enter__(self):
         pass
@@ -750,10 +950,11 @@ class Session(Generic[G], ABC):
         pass
 
 
-class Taskflow(Prompter, ABC):
+class Mindflow(PromptObjectModel, ABC):
     """
-    default operations
+    control ghost mind with basic operators.
     """
+
     MessageKind = Union[str, Message, Any]
     """message kind shall be string or serializable object"""
 
@@ -809,7 +1010,7 @@ class Taskflow(Prompter, ABC):
         pass
 
 
-class Subtasks(Prompter, ABC):
+class Subtasks(PromptObjectModel, ABC):
     """
     library that can handle async subtasks by other ghost instance.
     """

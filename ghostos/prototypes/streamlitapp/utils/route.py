@@ -7,8 +7,10 @@ from ghostos.prototypes.streamlitapp.utils.session import SessionStateValue
 from ghostos.helpers import generate_import_path, import_from_path
 from pydantic import BaseModel, Field
 import streamlit as st
+from streamlit.navigation.page import StreamlitPage
 from ghostos.helpers import gettext as _
 import streamlit_antd_components as sac
+from urllib.parse import urlencode
 
 __all__ = ["Router", 'Route', 'Link']
 
@@ -38,30 +40,34 @@ class Link:
         self.button_help = button_help
         self.menu_desc = menu_desc
         self.url_path = url_path if url_path else name.lower().replace(" ", '_')
+        self._page_instance: Optional[StreamlitPage] = None
 
     def st_page(
             self, *,
             default: bool = False,
             title: Optional[str] = None,
-            url_path: Optional[str] = None,
     ) -> st.Page:
         title = _(title) if title is not None else None
         # function
-        if ':' in self.import_path:
-            page = import_from_path(self.import_path)
-        else:
-            page = self.import_path
+        if self._page_instance is None:
+            if ':' in self.import_path:
+                page_method = import_from_path(self.import_path)
+            else:
+                page_method = self.import_path
 
-        return st.Page(
-            page=page,
-            title=title,
-            icon=self.streamlit_icon,
-            url_path=url_path,
-            default=default,
-        )
+            self._page_instance = st.Page(
+                page=page_method,
+                title=title,
+                icon=self.streamlit_icon,
+                url_path=self.url_path,
+                default=default,
+            )
+        return self._page_instance
 
-    def switch_page(self, url_path: Optional[str] = None) -> None:
-        st.switch_page(self.st_page(url_path=url_path))
+    def switch_page(self, params: Optional[dict] = None) -> None:
+        if params:
+            st.query_params.from_dict(params)
+        st.switch_page(self.st_page())
 
 
 class Route(SessionStateValue, BaseModel, ABC):
@@ -75,30 +81,26 @@ class Route(SessionStateValue, BaseModel, ABC):
     """
 
     link: ClassVar[Link]
-    url_query: str = Field("", description="urlpath query")
 
     def page(self, default: bool = False) -> st.Page:
-        url_path = self.full_url_path()
-        return self.link.st_page(url_path=url_path, default=default)
+        return self.link.st_page(default=default)
+
+    @property
+    def url_query(self) -> str:
+        data = self.model_dump(exclude_defaults=True)
+        return urlencode(data)
 
     @classmethod
     def label(cls) -> str:
         return _(cls.link.name)
-
-    def full_url_path(self) -> str:
-        url_path = self.link.url_path
-        if self.url_query:
-            url_path += "?" + self.url_query
-        return url_path
 
     def switch_page(self) -> None:
         """
         bind self to the session state and switch the page.
         """
         # bind the route value to the session state
-        url_path = self.full_url_path()
         self.bind(st.session_state)
-        self.link.switch_page(url_path=url_path)
+        self.link.switch_page(self.model_dump(exclude_defaults=True))
 
     def rerun(self) -> None:
         self.bind(st.session_state)
@@ -117,8 +119,9 @@ class Route(SessionStateValue, BaseModel, ABC):
         if help_ is not None:
             help_ = _(help_)
         self.bind(st.session_state)
+        page = self.page()
         st.page_link(
-            self.page(),
+            page,
             label=label,
             help=help_,
             icon=self.link.streamlit_icon,
@@ -149,6 +152,8 @@ class Route(SessionStateValue, BaseModel, ABC):
         key = cls.session_state_key()
         if key in session_state:
             data = session_state[key]
+            for key, val in st.query_params.items():
+                data[key] = val
             return cls(**data)
         return None
 
@@ -232,7 +237,6 @@ class Router:
             idx += 1
             if is_default:
                 route.bind(st.session_state)
-                st.session_state["hello"] = route.model_dump()
             page = route.page(default=is_default)
             pages.append(page)
         return pages

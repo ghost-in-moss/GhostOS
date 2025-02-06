@@ -45,6 +45,7 @@ class GhostTaskRoute(Route):
         button_help="todo",
         antd_icon="robot",
     )
+    task_id: str = Field(default="", description="task id")
 
 
 class ShowThreadRoute(Route):
@@ -56,6 +57,7 @@ class ShowThreadRoute(Route):
         antd_icon="robot",
     )
     thread_id: str = Field(default="", description="thread id or file name")
+    task_id: str = Field(default="", description="chat task id")
 
 
 class GhostChatRoute(Route):
@@ -67,8 +69,6 @@ class GhostChatRoute(Route):
         antd_icon="robot",
     )
     task_id: str = Field(default="", description="Ghost Task ID")
-    ghost_meta: Optional[EntityMeta] = Field(default=None, description="ghost meta")
-    context_meta: Optional[EntityMeta] = Field(default=None, description="context meta")
     filename: Optional[str] = Field(default=None, description="filename to lunch the ghost")
     camera_input: bool = Field(default=False, description="camera input")
     image_input: bool = Field(default=False, description="image input")
@@ -76,8 +76,6 @@ class GhostChatRoute(Route):
     realtime: bool = Field(default=False, description="realtime")
     vad_mode: bool = Field(default=True, description="vad mode")
     listen_mode: bool = Field(default=True, description="listening")
-
-    __ghost__ = None
 
     def generate_key(self, session_state, key: str) -> str:
         turn = self.get_render_turn(session_state)
@@ -98,20 +96,6 @@ class GhostChatRoute(Route):
             session_state[key] = 0
         session_state[key] += 1
         return session_state[key]
-
-    def get_ghost(self) -> Ghost:
-        if self.__ghost__ is None:
-            self.__ghost__ = get_entity(self.ghost_meta, Ghost)
-        return self.__ghost__
-
-    __context__ = None
-
-    def get_context(self) -> Optional[Context]:
-        if self.context_meta is None:
-            return None
-        if self.__context__ is None:
-            self.__context__ = get_entity(self.context_meta, Context)
-        return self.__context__
 
 
 # --- configs --- #

@@ -1,10 +1,11 @@
-import streamlit_antd_components as sac
 import streamlit as st
-from typing import Iterable, List, NamedTuple
+from typing import Iterable, List, NamedTuple, Optional
 from ghostos.core.messages import (
     Message, Role, MessageType, FunctionCaller,
     ImageAssetMessage,
 )
+from ghostos.core.messages.message_classes import ConfirmMessage
+from ghostos.core.runtime.events import Event
 from ghostos.framework.messages import CompletionUsagePayload, TaskPayload, PromptPayload
 from ghostos.helpers import gettext as _
 
@@ -49,10 +50,11 @@ def render_message_group(group: MessageGroup, debug: bool, in_expander: bool, pr
                     for msg in group.messages:
                         render_message_in_content(msg, debug, prefix=prefix, in_expander=True)
         else:
-            with st.chat_message(render_role):
-                st.caption(caption)
-                for msg in group.messages:
-                    render_message_in_content(msg, debug, prefix=prefix, in_expander=in_expander)
+            with st.container():
+                with st.chat_message(render_role):
+                    st.caption(caption)
+                    for msg in group.messages:
+                        render_message_in_content(msg, debug, prefix=prefix, in_expander=in_expander)
 
 
 def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
@@ -64,7 +66,7 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
     if not debug:
         st.empty()
         return
-    msg_id = message.msg_id
+    msg_id = message.get_unique_id()
     with st.container():
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -89,7 +91,7 @@ def render_message_payloads(message: Message, debug: bool, prefix: str = ""):
 
 def render_message_in_content(message: Message, debug: bool, in_expander: bool, *, prefix: str = ""):
     if message.type == MessageType.ERROR.value:
-        st.error(f"Error: {message.content}")
+        st.error(f"Message {message.msg_id} Error: {message.content}")
 
     elif MessageType.is_text(message):
         st.markdown(message.content)
@@ -106,6 +108,15 @@ def render_message_in_content(message: Message, debug: bool, in_expander: bool, 
         render_image_message(message)
     elif MessageType.AUDIO.match(message):
         render_audio_message(message)
+
+    elif MessageType.CONFIRM.match(message):
+        # render confirm button
+        confirm = ConfirmMessage.from_message(message)
+        if confirm and confirm.event:
+            event = Event(**confirm.event)
+            key = event.event_id
+            st.button(confirm.content, key=key, on_click=lambda: save_interactive_event(event), type="primary")
+
     else:
         st.write(message.model_dump(exclude_defaults=True))
     if message.callers:
@@ -113,6 +124,23 @@ def render_message_in_content(message: Message, debug: bool, in_expander: bool, 
 
     render_message_payloads(message, debug, prefix)
     st.empty()
+
+
+def save_interactive_event(event: Event):
+    """
+    save interactive event to session
+    :param event:
+    """
+    if event:
+        st.session_state["interactive_event"] = event
+
+
+def get_interactive_event() -> Optional[Event]:
+    if "interactive_event" in st.session_state:
+        event = st.session_state["interactive_event"]
+        st.session_state["interactive_event"] = None
+        return event
+    return None
 
 
 def render_audio_message(message: Message):
@@ -163,7 +191,7 @@ def render_message_caller(callers: Iterable[FunctionCaller], debug: bool, in_exp
 
 
 def _render_message_caller(callers: Iterable[FunctionCaller]):
-    from ghostos.ghosts.moss_agent import MossAction
+    from ghostos.abcd import MossAction
     for caller in callers:
         if caller.name == MossAction.DEFAULT_NAME:
             st.caption(f"function call: {caller.name}")

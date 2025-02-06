@@ -64,10 +64,10 @@ You are equipped with `functional tokens` parser to understand your outputs.
 A functional token is a set of special tokens that corresponds to a system callback function. 
 When a functional token is present in your response, the subsequent output is treated as input parameters for this 
 callback function. 
-You shall embrace the parameter tokens by xml. For example:
-1. functional token is `moss`
+You shall embrace the parameter tokens in xml pattern. For example:
+1. a functional token is `foo`
 2. parameter tokens are `print("hello world")`
-3. the output should be: `say something if necessary...<moss>print("hello world")</moss>`
+3. the output should be: `say something if necessary...<foo>print("hello world")</foo>`
 """
 
 
@@ -78,13 +78,12 @@ class OpenAIAdapter(LLMApi):
 
     def __init__(
             self,
+            *,
             service_conf: ServiceConf,
             model_conf: ModelConf,
             parser: OpenAIMessageParser,
             storage: PromptStorage,
             logger: LoggerItf,
-            # deprecated:
-            functional_token_prompt: Optional[str] = None,
             api_name: str = "",
     ):
         self._api_name = api_name
@@ -92,10 +91,12 @@ class OpenAIAdapter(LLMApi):
         self.model = model_conf.model_copy(deep=True)
         self._storage: PromptStorage = storage
         self._logger = logger
-        http_client = None
         if service_conf.proxy:
             transport = SyncProxyTransport.from_url(service_conf.proxy)
             http_client = Client(transport=transport)
+            self._logger.debug("LLMApi `%s` create client by proxy %s", api_name, service_conf.proxy)
+        else:
+            http_client = Client()
         if service_conf.azure.api_key:
             self._client = AzureOpenAI(
                 azure_endpoint=service_conf.base_url,
@@ -203,16 +204,24 @@ class OpenAIAdapter(LLMApi):
         include_usage = ChatCompletionStreamOptionsParam(include_usage=True) if stream else NOT_GIVEN
         messages = prompt.get_messages()
         messages = self.parse_message_params(messages)
+        params = None
         if not messages:
             raise AttributeError("empty chat!!")
         try:
             prompt.run_start = timestamp_ms()
             self._logger.debug(f"start chat completion messages %s", messages)
             functions, tools = self._get_prompt_functions_and_tools(prompt)
-            return self._client.chat.completions.create(
+            function_call_param = prompt.get_openai_function_call() \
+                if functions and functions != NOT_GIVEN \
+                else NOT_GIVEN
+            self._logger.debug(
+                f"start chat completion tools %s, functions: %s, function_call_param: %s",
+                tools, functions, function_call_param
+            )
+            params = dict(
                 messages=messages,
                 model=self.model.model,
-                function_call=prompt.get_openai_function_call(),
+                function_call=function_call_param,
                 functions=functions,
                 tools=tools,
                 max_tokens=self.model.max_tokens,
@@ -221,8 +230,12 @@ class OpenAIAdapter(LLMApi):
                 timeout=self.model.timeout,
                 stream=stream,
                 stream_options=include_usage,
+                top_p=self.model.top_p or NOT_GIVEN,
                 **self.model.kwargs,
             )
+            prompt.request_params = str(params)
+            self._logger.debug(f"the chat completion request params is %s", params)
+            return self._client.chat.completions.create(**params)
         except UnprocessableEntityError as e:
             self._logger.error(f"{str(e)} with input messages: {messages}")
             raise
@@ -240,6 +253,7 @@ class OpenAIAdapter(LLMApi):
         functions = prompt.get_openai_functions()
         tools = prompt.get_openai_tools()
         compatible = self._get_compatible_options()
+
         if not compatible.support_function_call:
             functions = NOT_GIVEN
             tools = NOT_GIVEN
@@ -247,6 +261,7 @@ class OpenAIAdapter(LLMApi):
             functions = NOT_GIVEN
         else:
             tools = NOT_GIVEN
+
         return functions, tools
 
     def _reasoning_completion(self, prompt: Prompt) -> ChatCompletion:
@@ -348,20 +363,25 @@ class OpenAIAdapter(LLMApi):
     def chat_completion(self, prompt: Prompt) -> Message:
         try:
             prompt = self.parse_prompt(prompt)
-            message: ChatCompletion = self._chat_completion(prompt, stream=False)
+            completion: ChatCompletion = self._chat_completion(prompt, stream=False)
+            self._logger.debug("received chat completion %s", completion)
             prompt.first_token = timestamp_ms()
-            prompt.added = [message]
-            pack = self._parser.from_chat_completion(message.choices[0].message)
-            # add completion usage
-            self.model.set_payload(pack)
-            if message.usage:
-                usage = CompletionUsagePayload.from_usage(message.usage)
-                usage.set_payload(pack)
+            message = self._parser.from_chat_completion(completion.choices[0].message)
+            if not message.is_complete():
+                message = message.as_tail()
 
-            if not pack.is_complete():
-                pack.chunk = False
-            return pack
+            # add payloads
+            PromptPayload.from_prompt(prompt).set_payload(message)
+            self.model.set_payload(message)
+            if completion.usage:
+                usage = CompletionUsagePayload.from_usage(completion.usage)
+                usage.set_payload(message)
+
+            self._logger.debug("parsed chat completion %s", message)
+            prompt.added = [message]
+            return message
         except Exception as e:
+            self._logger.exception(e)
             prompt.error = str(e)
             raise
         finally:
@@ -394,6 +414,7 @@ class OpenAIAdapter(LLMApi):
                 prompt.added.append(last_item)
                 yield last_item
         except Exception as e:
+            self._logger.exception(e)
             prompt.error = str(e)
             raise
         finally:
@@ -414,12 +435,14 @@ class OpenAIAdapter(LLMApi):
         try:
             prompt = self.parse_prompt(prompt)
             chunks: Iterable[ChatCompletionChunk] = self._chat_completion(prompt, stream=True)
+            self._logger.debug("receive chat completion chunks")
             messages = self._from_openai_chat_completion_chunks(chunks)
             prompt_payload = PromptPayload.from_prompt(prompt)
             output = []
             for chunk in messages:
                 if not prompt.first_token:
                     prompt.first_token = timestamp_ms()
+                self._logger.debug("sending chat completion chunk %s", chunk)
                 yield chunk
                 if chunk.is_complete():
                     self.model.set_payload(chunk)
@@ -454,14 +477,32 @@ class OpenAIAdapter(LLMApi):
     def _get_compatible_options(self) -> Compatible:
         return self.model.compatible or self.service.compatible or Compatible()
 
-    def _parse_delivering_items(self, prompt: Prompt, stream: bool, items: Iterable[Message]) -> Iterable[Message]:
+    def parse_delivering_items(
+            self,
+            prompt: Prompt,
+            stream: bool,
+            items: Iterable[Message],
+            stage: str,
+    ) -> Iterable[Message]:
         pipes = [SequencePipe()]
 
         # if support functional tokens.
         support_functional_tokens = self._get_compatible_options().support_functional_tokens
         if support_functional_tokens and len(prompt.functional_tokens) > 0:
+            self._logger.debug(
+                "prepare functional token pipe with functional tokens: %s",
+                prompt.functional_tokens,
+            )
             pipes.append(XMLFunctionalTokenPipe(prompt.functional_tokens))
-        yield from run_pipeline(pipes, items)
+
+        # support staging output.
+        items = run_pipeline(pipes, items)
+        if not stage:
+            yield from items
+        else:
+            for item in items:
+                item.stage = stage
+                yield item
 
 
 class OpenAIDriver(LLMDriver):
@@ -481,4 +522,11 @@ class OpenAIDriver(LLMDriver):
 
     def new(self, service: ServiceConf, model: ModelConf, api_name: str = "") -> LLMApi:
         get_ghostos_logger().debug(f"new llm api %s at service %s", model.model, service.name)
-        return OpenAIAdapter(service, model, self._parser, self._storage, self._logger, api_name=api_name)
+        return OpenAIAdapter(
+            service_conf=service,
+            model_conf=model,
+            parser=self._parser,
+            storage=self._storage,
+            logger=self._logger,
+            api_name=api_name,
+        )

@@ -1,4 +1,4 @@
-from ghostos.ghosts.moss_agent.agent import MossAgent, MossAgentDriver, MossAction
+from ghostos.ghosts.moss_agent.agent import MossAgent, MossAgentDriver
 
 
 def new_moss_agent(

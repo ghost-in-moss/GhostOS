@@ -5,18 +5,19 @@ import time
 from PIL.Image import Image
 from typing import Iterable, List, Optional
 from ghostos.prototypes.streamlitapp.pages.router import (
-    GhostChatRoute, GhostTaskRoute,
+    GhostChatRoute, GhostTaskRoute, ShowThreadRoute
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.prototypes.streamlitapp.widgets.messages import (
-    render_message_in_content, render_messages,
+    render_message_in_content, render_messages, get_interactive_event,
 )
 from ghostos.prototypes.streamlitapp.widgets.renderer import (
-    render_object, render_event, render_turn,
+    render_object, render_event, render_turn, render_turn_delete,
     render_empty,
 )
 from ghostos.prototypes.streamlitapp.resources import (
     get_app_conf, save_uploaded_image, save_pil_image,
+    get_container,
 )
 
 from ghostos.core.runtime import GoThreadInfo, Event, GoTaskStruct
@@ -31,6 +32,7 @@ from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
 from ghostos.helpers import gettext as _
 from ghostos.helpers import generate_import_path, yaml_pretty_dump
+from ghostos.core.runtime import GoTasks
 from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 from pydantic import BaseModel
@@ -51,18 +53,38 @@ def main_chat():
     if not conversation or not conversation.refresh():
         st.error("Conversation is Closed")
         return
-    realtime_app = Singleton.get(RealtimeApp, st.session_state, force=False)
     # run the pages
+    realtime_app = Singleton.get(RealtimeApp, st.session_state, force=False)
     with st.sidebar:
         # other pages
-        with st.container(border=True):
-            GhostTaskRoute().render_page_link(use_container_width=True)
-        if st.button("Clear Messages", use_container_width=True):
+        if st.button("Task Info", use_container_width=True):
+            _route = GhostTaskRoute(task_id=conversation.get_task().task_id)
+            _route.switch_page()
+            return
+        if st.button("Thread Info", use_container_width=True):
+            task = conversation.get_task()
+            ShowThreadRoute(thread_id=task.thread_id, task_id=task.task_id).switch_page()
+            return
+
+        if st.button("New Thread", use_container_width=True):
             thread = conversation.get_thread()
             fork = thread.fork()
             thread = fork.reset_history([])
             conversation.update_thread(thread)
-            route.link.switch_page()
+            route.switch_page()
+            return
+        if st.button("Clear Thread Messages", use_container_width=True):
+            thread = conversation.get_thread()
+            thread = thread.reset_history([])
+            conversation.update_thread(thread)
+            route.switch_page()
+            return
+
+        st.subheader("page options")
+        with st.container(border=True):
+            show_ghost_settings = st.toggle("ghost settings")
+            show_instruction = st.toggle("show instructions")
+            show_context = st.toggle("show context")
 
         st.subheader("chat options")
         with st.container(border=True):
@@ -149,13 +171,15 @@ def main_chat():
     # header
     st.title("Ghost")
     with st.container(border=True):
-        ghost = route.get_ghost()
+        ghost = conversation.get_ghost()
         id_ = get_identifier(ghost)
         import_path = generate_import_path(ghost.__class__)
         data = {
             _("name"): id_.name,
             _("desc"): id_.description,
             _("class"): import_path,
+            _("task id"): conversation.task_id,
+            _("thread id"): conversation.get_thread().id,
         }
         if route.filename:
             data[_("from")] = route.filename
@@ -165,19 +189,10 @@ def main_chat():
 {yaml_pretty_dump(data)}
 ```
 """)
-        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-        with col1:
-            show_ghost_settings = st.toggle("settings")
-        with col2:
-            show_instruction = st.toggle("instructions")
-        with col3:
-            show_context = st.toggle("context")
-        with col4:
-            pass
 
     # render ghost settings
     if show_ghost_settings:
-        render_ghost_settings(route)
+        render_ghost_settings(conversation, route)
     if show_instruction:
         render_instruction(conversation)
     if show_context:
@@ -259,7 +274,8 @@ def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
         pkg_name = pkg.split()[0]
         try:
             distribution(pkg_name)
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as e:
+            logger.exception(e)
             return None
 
     from ghostos.framework.audio import get_pyaudio_pcm16_speaker, get_pyaudio_pcm16_listener
@@ -292,8 +308,9 @@ def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
         shell = Singleton.get(Shell, st.session_state)
         # create conversation
         try:
-            conversation = shell.sync(route.get_ghost(), route.get_context(), force=True)
+            conversation = shell.sync_task(route.task_id, force=True)
         except Exception as e:
+            logger.exception(e)
             st.error(e)
             return None
         if conversation:
@@ -302,16 +319,18 @@ def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
 
 
 def main_task():
-    route = GhostChatRoute.get(st.session_state)
+    route = GhostTaskRoute().get_or_bind(st.session_state)
     with st.sidebar:
-        # other pages
-        with st.container(border=True):
-            route.render_page_link(use_container_width=True)
-    conversation = get_conversation(route)
-    task = conversation.get_task()
-    thread = conversation.get_thread()
+        if st.button("Chat", use_container_width=True):
+            GhostChatRoute(task_id=route.task_id).switch_page()
+
     st.title("Ghost Task Info")
-    render_task_info_settings(task, thread)
+    tasks = get_container().force_fetch(GoTasks)
+    task = tasks.get_task(route.task_id)
+    if task is None:
+        st.error("Task not found")
+        return
+    render_task_info_settings(task)
 
 
 def chatting(route: GhostChatRoute, conversation: Conversation):
@@ -376,6 +395,14 @@ def _chatting(route: GhostChatRoute, conversation: Conversation):
         with st.container():
             render_event(event, debug)
             render_receiver(receiver, debug)
+    else:
+        event = get_interactive_event()
+        if event is not None:
+            receiver = conversation.respond_event(event, streaming=True)
+            with st.container():
+                render_event(event, debug)
+                render_receiver(receiver, debug)
+            st.rerun()
 
     interval = 0.1
     while not route.media_input() and route.auto_run and conversation.available():
@@ -440,6 +467,8 @@ def render_receive_buffer(buffer: ReceiverBuffer, debug: bool):
 def _render_single_buffer(buffer: ReceiverBuffer, head: Message, debug: bool, in_expander: bool):
     if MessageType.is_text(head):
         with st.empty():
+            msg_caption = f"{head.role}: {head.name}"
+            st.caption(msg_caption)
             contents = chunks_to_st_stream(buffer.chunks())
             st.write_stream(contents)
             with st.container():
@@ -450,7 +479,7 @@ def _render_single_buffer(buffer: ReceiverBuffer, head: Message, debug: bool, in
         with st.empty():
             st.write_stream(contents)
             with st.container():
-                render_message_in_content(buffer.tail(), debug, in_expander=in_expander)
+                render_message_in_content(buffer.tail(), debug, in_expander=True)
     else:
         with st.container():
             render_message_in_content(buffer.tail(), debug, in_expander=in_expander)
@@ -462,13 +491,13 @@ def chunks_to_st_stream(chunks: Iterable[Message]) -> Iterable[str]:
             yield chunk.content
 
 
-def render_ghost_settings(route: GhostChatRoute):
+def render_ghost_settings(conversation: Conversation, route: GhostChatRoute):
     st.subheader(_("Settings"))
     with st.container(border=True):
         if route is None:
             st.error("page is not configured")
             return
-        ghost = route.get_ghost()
+        ghost = conversation.get_ghost()
         # render ghost info
         if isinstance(ghost, BaseModel):
             data, submitted = srj.pydantic_instance_form(ghost)
@@ -491,9 +520,9 @@ def render_ghost_settings(route: GhostChatRoute):
 
 def render_instruction(conversation: Conversation):
     st.subheader("Instructions")
-    instructions = conversation.get_instructions()
+    instruction = conversation.get_system_instruction()
     with st.container(border=True):
-        st.markdown(instructions)
+        st.markdown(instruction)
 
 
 def render_context_settings(conversation: Conversation):
@@ -531,16 +560,13 @@ def render_context_settings(conversation: Conversation):
             render_object(artifact)
 
 
-def render_task_info_settings(task: GoTaskStruct, thread: GoThreadInfo):
+def render_task_info_settings(task: GoTaskStruct):
     from ghostos.core.runtime.tasks import TaskBrief
     brief = TaskBrief.from_task(task)
     srj.pydantic_instance_form(brief, readonly=True)
 
     with st.expander(_("Detail"), expanded=False):
         st.write(task.model_dump(exclude_defaults=True))
-
-    st.subheader("Thread Info")
-    render_thread_messages(thread, max_turn=0, truncate=False)
 
 
 def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20, truncate: bool = True):
@@ -551,6 +577,8 @@ def render_thread_messages(thread: GoThreadInfo, max_turn: int = 20, truncate: b
     count = 0
     for turn in turns:
         count += render_turn(turn, debug)
+        if count > 1:
+            render_turn_delete(thread, turn, debug)
     if count == 0:
         st.info("No thread messages yet")
     else:

@@ -7,7 +7,7 @@ from ghostos.streamlit import render_streamlit_object, StreamlitRenderer
 from ghostos.core.runtime import (
     TaskBrief, GoTasks, GoTaskStruct,
     GoThreads, GoThreadInfo, Turn,
-    Event,
+    Event, EventTypes,
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.container import Container
@@ -19,6 +19,8 @@ __all__ = [
     'render_task', 'render_task_by_id',
     'render_thread', 'render_event', 'render_turn', 'render_event_object',
     'render_empty',
+
+    'render_turn_delete',
 ]
 
 T = TypeVar('T')
@@ -70,8 +72,27 @@ def render_thread(thread: GoThreadInfo, max_turn: int = 20, prefix: str = "", de
     count = 0
     for turn in turns:
         count += render_turn(turn, debug, prefix)
+        render_turn_delete(thread, turn, debug)
+
     if count == 0:
         st.info("No thread messages yet")
+
+
+def render_turn_delete(thread: GoThreadInfo, turn: Turn, debug: bool):
+    if debug:
+        st.divider()
+        if st.button("delete turn", key=f"{thread.id}--{turn.turn_id}"):
+            thread.delete_turn(turn.turn_id)
+            save_thread(thread)
+
+
+def save_thread(thread: GoThreadInfo):
+    from ghostos.prototypes.streamlitapp.resources import get_container
+    from ghostos.core.runtime.threads import GoThreads
+    container = get_container()
+    threads = container.force_fetch(GoThreads)
+    threads.save_thread(thread)
+    st.rerun()
 
 
 def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
@@ -79,24 +100,28 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
     if turn.summary is not None:
         st.info("summary:\n" + turn.summary)
 
-    if turn.is_from_inputs() or turn.is_from_self():
+    if not turn.approved:
+        with st.expander(_("unapproved"), expanded=True):
+            messages = list(turn.messages(False))
+            render_messages(messages, debug, in_expander=True, prefix=prefix)
+
+    elif turn.is_from_client() or turn.is_from_self():
         messages = list(turn.messages(False))
         render_messages(messages, debug, in_expander=False, prefix=prefix)
-        return len(messages)
     # from other task
     else:
         event = turn.event
-        sub_title = _("background run")
         if event is not None:
-            sub_title = _("background event: ") + event.type
-        with st.expander(sub_title, expanded=False):
-            event_messages = turn.event_messages()
-            render_messages(event_messages, debug, in_expander=True)
-            render_event_object(event, debug)
+            sub_title = _("on event: ") + event.type
+            with st.expander(sub_title, expanded=False):
+                event_messages = turn.event_messages()
+                render_messages(event_messages, debug, in_expander=True)
+                render_event_object(event, debug)
         if turn.added:
             render_messages(turn.added, debug, in_expander=False)
         messages = list(turn.messages(False))
-        return len(messages)
+
+    return len(messages)
 
 
 def render_event(event: Event, debug: bool):

@@ -2,11 +2,11 @@ from typing import Optional, List, Iterable, Dict, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.core.messages import Message, copy_messages, Role, MessageType, MessageStage
+from ghostos.core.messages import Message, copy_messages, Role, MessageType, MessageStage, FunctionCaller
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event, EventTypes
-from ghostos.helpers import uuid, timestamp
+from ghostos.helpers import uuid, timestamp, yaml_pretty_dump
 from contextlib import contextmanager
 
 __all__ = [
@@ -44,6 +44,11 @@ class Turn(BaseModel):
         default=None,
         description="The summary before till this turn",
     )
+
+    approved: bool = Field(True, description="if the turn is not approved, will hidden to truncated turns")
+
+    pending_callers: Optional[List[FunctionCaller]] = Field(default=None, description="the pending callers")
+
     extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 
     @classmethod
@@ -89,8 +94,8 @@ class Turn(BaseModel):
     def is_empty(self) -> bool:
         return (self.event is None or self.event.is_empty()) and not self.added
 
-    def is_from_inputs(self) -> bool:
-        return self.event is not None and self.event.type == EventTypes.INPUT.value
+    def is_from_client(self) -> bool:
+        return self.event is not None and self.event.is_from_client()
 
     def is_from_self(self) -> bool:
         return self.event is not None and self.event.is_from_self()
@@ -188,7 +193,7 @@ class GoThreadInfo(BaseModel):
             return self.history[-1]
         return self.on_created
 
-    def get_history_turns(self, truncate: bool = True) -> List[Turn]:
+    def get_history_turns(self, *, truncate: bool = True) -> List[Turn]:
         turns = []
         if self.history:
             for turn in self.history:
@@ -199,17 +204,20 @@ class GoThreadInfo(BaseModel):
                     turns.append(turn)
         return turns
 
-    def get_history_messages(self, truncated: bool) -> Iterable[Message]:
+    def get_history_messages(self, *, truncated: bool) -> Iterable[Message]:
         """
         返回所有的历史消息.
         """
         yield from self.on_created.messages(False)
-        turns = self.get_history_turns(truncated)
+        turns = self.get_history_turns(truncate=truncated)
         for turn in turns:
+            if truncated and not turn.approved:
+                # if truncate, safe mode turn will not be shown.
+                continue
             yield from turn.messages(truncated)
 
     def get_messages(self, truncated: bool) -> Iterable[Message]:
-        yield from self.get_history_messages(truncated)
+        yield from self.get_history_messages(truncated=truncated)
         if self.current:
             yield from self.current.messages(False)
 
@@ -275,16 +283,19 @@ class GoThreadInfo(BaseModel):
         :param turn_id:
         :param pycontext:
         """
-        if self.current is not None:
-            self.history.append(self.current)
-            self.current = None
         if pycontext is None:
             last_turn = self.last_turn()
             pycontext = last_turn.pycontext
+        self.store()
         if turn_id is None and event is not None:
             turn_id = event.event_id
         new_turn = Turn.new(event=event, turn_id=turn_id, pycontext=pycontext)
         self.current = new_turn
+
+    def store(self):
+        if self.current is not None:
+            self.history.append(self.current)
+            self.current = None
 
     def append(self, *messages: Message, pycontext: Optional[PyContext] = None) -> None:
         """
@@ -335,12 +346,12 @@ class GoThreadInfo(BaseModel):
     ) -> Prompt:
         """
         :param system: the system instructions for the prompt
-        :param stages: the allowed stages of the messages that allowed in the prompt. if empty, means "" is only allowed
+        :param stages: the allowed stages of the messages that allowed in the prompt. if '*' in stages, means any.
         :param truncate: if pass truncated history to the prompt. use thread default truncate logic.
         :return:
         """
         turn_id = self.last_turn().turn_id
-        history = list(self.get_history_messages(truncate))
+        history = list(self.get_history_messages(truncated=truncate))
         inputs = []
         appending = []
         current_turn = self.current
@@ -355,10 +366,35 @@ class GoThreadInfo(BaseModel):
             description=f"created from thread {self.id} turn {turn_id}",
             system=system,
             history=copy_messages(history, stages),
-            inputs=copy_messages(inputs, stages),
-            added=copy_messages(appending, stages),
+            # allow all the stage messages of current turn.
+            inputs=copy_messages(inputs, ['*']),
+            added=copy_messages(appending, ['*']),
         )
         return prompt
+
+    def delete_turn(self, turn_id: str) -> bool:
+        if self.on_created.turn_id == turn_id:
+            self.on_created = Turn.new(None)
+            return True
+        history = []
+        found = False
+        for turn in self.history:
+            if turn.turn_id == turn_id:
+                found = True
+                continue
+            history.append(turn)
+        self.history = history
+        if found:
+            return True
+        if self.current and self.current.turn_id == turn_id:
+            self.current = None
+            return True
+        return False
+
+    def set_approval(self, approve: bool, pending: List[FunctionCaller] = None) -> None:
+        if self.current is not None:
+            self.current.approved = approve
+            self.current.pending_callers = pending
 
 
 def thread_to_prompt(
@@ -431,8 +467,19 @@ def thread_to_markdown(thread: GoThreadInfo, stages: Optional[List[str]] = None)
             continue
         if not MessageStage.allow(message.stage, stages):
             continue
+
+        data = {
+            message.role: message.name if message.name else "",
+            "stage": message.stage,
+        }
+        desc = yaml_pretty_dump(data)
         block = f"""
-> `{message.role}`{": " + message.name if message.name else ""}
+        
+***
+
+```yaml
+{desc}
+```
 
 {message.get_content()}
 """

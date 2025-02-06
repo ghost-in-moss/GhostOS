@@ -13,7 +13,7 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from pydantic import BaseModel, Field
 from ghostos import helpers
 from ghostos.core.messages import Message, Role, Payload
-from ghostos.helpers import timestamp
+from ghostos.helpers import timestamp, uuid
 from ghostos.core.llms.configs import ModelConf
 from ghostos.core.llms.tools import LLMFunc, FunctionalToken
 
@@ -45,13 +45,21 @@ class Prompt(BaseModel):
     # deprecated
     functional_tokens: List[FunctionalToken] = Field(default_factory=list)
 
-    # system info
+    # system debug info
     error: Optional[str] = Field(default=None, description="error message")
     created: int = Field(default_factory=timestamp)
     model: Optional[ModelConf] = Field(default=None, description="model conf")
     run_start: float = Field(default=0.0, description="start time")
     first_token: float = Field(default=0.0, description="first token")
     run_end: float = Field(default=0.0, description="end time")
+    request_params: str = Field(default="", description="real request params")
+
+    @classmethod
+    def new_from_messages(
+            cls,
+            messages: List[Message],
+    ) -> Prompt:
+        return Prompt(history=messages)
 
     def system_prompt(self) -> str:
         contents = []
@@ -136,7 +144,7 @@ class Prompt(BaseModel):
         if not self.functions:
             return NOT_GIVEN
         if self.function_call is None:
-            return "auto"
+            return ChatCompletionFunctionCallOptionParam(name="auto")
         return ChatCompletionFunctionCallOptionParam(name=self.function_call)
 
     def add(self, messages: Iterable[Message]) -> Iterable[Message]:
@@ -156,6 +164,13 @@ class Prompt(BaseModel):
             copied.added = join_messages_by_stages([], stages, *copied.added)
         return copied
 
+    def get_new_copy(self, prompt_id: Optional[str] = None) -> Prompt:
+        prompt = self.model_copy(deep=True)
+        if not prompt_id:
+            prompt_id = uuid()
+        prompt.id = prompt_id
+        return prompt
+
     def fork(
             self,
             inputs: Optional[List[Message]],
@@ -169,6 +184,7 @@ class Prompt(BaseModel):
     ) -> Prompt:
         """
         fork current prompt.
+        todo: rebuild
         """
         prompt_id = prompt_id or helpers.uuid()
         description = description

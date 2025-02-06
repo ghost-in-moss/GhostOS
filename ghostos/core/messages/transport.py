@@ -9,7 +9,7 @@ from ghostos.errors import StreamingError
 import time
 
 __all__ = [
-    "Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_basic_connection",
+    "Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_basic_connection", 'ListReceiver',
     "ReceiverBuffer",
 ]
 
@@ -41,6 +41,9 @@ class Stream(Protocol):
         :return:
         """
         pass
+
+    def allow_streaming(self) -> bool:
+        return not self.completes_only()
 
     @abstractmethod
     def alive(self) -> bool:
@@ -130,22 +133,38 @@ class Receiver(Protocol):
         return intercept
 
 
-class StreamPart(Protocol):
-    @abstractmethod
-    def head(self) -> Tuple[Message, bool]:
-        pass
+class ListReceiver(Receiver):
+    """
+    fake receiver with defined list items
+    """
 
-    @abstractmethod
-    def chunks(self) -> Iterable[Message]:
-        pass
+    def __init__(self, items: List[Message]):
+        self._items = items
+        self._closed = False
 
-    @abstractmethod
-    def tail(self) -> Message:
-        pass
+    def recv(self) -> Iterable[Message]:
+        yield from self._items
+        self._closed = True
 
-    @abstractmethod
-    def next(self) -> Optional[Self]:
-        pass
+    def cancel(self):
+        return
+
+    def fail(self, error: str) -> bool:
+        return False
+
+    def closed(self) -> bool:
+        return self._closed
+
+    def error(self) -> Optional[Message]:
+        return None
+
+    def close(self):
+        self._closed = True
+
+    def wait(self) -> List[Message]:
+        items = self._items
+        self.close()
+        return items
 
 
 class ArrayReceiver(Receiver):
@@ -155,6 +174,7 @@ class ArrayReceiver(Receiver):
             timeleft: Timeleft,
             idle: float = 0.1,
             complete_only: bool = False,
+            request_timeout: float = 0.0,
     ):
         self._timeleft = timeleft
         self._idle = idle
@@ -163,12 +183,16 @@ class ArrayReceiver(Receiver):
         self._done = False
         self._error: Optional[Message] = None
         self._complete_only = complete_only
+        self._request_timeout = request_timeout
 
     def recv(self) -> Iterable[Message]:
         if self._closed:
             raise RuntimeError("Receiver is closed")
+        received_any = False
+        first_token_timeleft = Timeleft(self._request_timeout if not self._complete_only else 0.0)
         while not self._done:
             if len(self._streaming) > 0:
+                received_any = True
                 item = self._streaming.popleft()
                 yield item
                 continue
@@ -177,6 +201,9 @@ class ArrayReceiver(Receiver):
                 self._done = True
                 break
             if self._idle:
+                if not received_any and not first_token_timeleft.alive():
+                    self._error = MessageType.ERROR.new(content=f"First token timeout after {self._timeleft.passed()}")
+                    break
                 time.sleep(self._idle)
         if len(self._streaming) > 0:
             yield from self._streaming
@@ -398,16 +425,18 @@ def new_basic_connection(
         timeout: float = 0.0,
         idle: float = 0.2,
         complete_only: bool = False,
+        request_timeout: float = 0.0,
 ) -> Tuple[Stream, Receiver]:
     """
     use array to pass and receive messages in multi-thread
     :param timeout: if negative, wait until done
     :param idle: sleep time in seconds wait for next pull
     :param complete_only: only receive complete message
+    :param request_timeout: first token timeout. only work when complete_only is False
     :return: created stream and receiver
     """
     from ghostos.helpers import Timeleft
     timeleft = Timeleft(timeout)
-    receiver = ArrayReceiver(timeleft, idle, complete_only)
+    receiver = ArrayReceiver(timeleft, idle, complete_only, request_timeout)
     stream = ArrayStream(receiver, complete_only)
     return stream, receiver

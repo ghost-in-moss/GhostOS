@@ -218,7 +218,7 @@ class MessageItem(BaseModel):
                 msg_id=self.id,
                 role=self.role or "",
                 caller=FunctionCaller(
-                    id=self.call_id,
+                    call_id=self.call_id,
                     name=self.name,
                     arguments=self.arguments,
                 )

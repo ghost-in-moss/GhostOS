@@ -8,7 +8,11 @@ from enum import Enum
 
 _PythonParser = None
 
-__all__ = ['tree_sitter_parse', 'code_syntax_check']
+__all__ = [
+    'tree_sitter_parse', 'code_syntax_check', 'traverse_tree', 'get_error_nodes', 'get_node_error',
+    'TreeSitterNode', 'TreeNodeType',
+    'PyNode', 'PyClassNode', 'PyAttrNode', 'PyImportNode', 'PyModuleNode', 'PyStrNode',
+]
 
 
 def tree_sitter_parse(code: str) -> Tree:
@@ -19,6 +23,11 @@ def tree_sitter_parse(code: str) -> Tree:
 
 
 def code_syntax_check(code: str) -> Optional[str]:
+    """
+    check code syntax correctness.
+    :param code:
+    :return:
+    """
     try:
         tree = tree_sitter_parse(code)
     except Exception as e:
@@ -32,6 +41,11 @@ def code_syntax_check(code: str) -> Optional[str]:
 
 
 def traverse_tree(tree: Tree) -> Generator[TreeSitterNode, None, None]:
+    """
+    simplify traversal of tree.
+    :param tree:
+    :return:
+    """
     cursor = tree.walk()
 
     visited_children = False
@@ -124,7 +138,7 @@ class PyNode(ABC):
 
     def tree_sitter_node(self) -> TreeSitterNode:
         if self._tree_sitter_node is None:
-            parsed = parse(self._source)
+            parsed = tree_sitter_parse(self._source)
             self._tree_sitter_node = parsed.root_node
         return self._tree_sitter_node
 

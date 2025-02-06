@@ -11,6 +11,7 @@ from ghostos.prototypes.streamlitapp.pages.router import default_router, GhostCh
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.abcd import Shell, Background
 from ghostos.abcd.utils import get_module_magic_shell_providers
+from ghostos.entity import from_entity_meta
 import importlib
 import streamlit as st
 import sys
@@ -59,16 +60,6 @@ def bootstrap():
     # bootstrap container
     logger.debug(f"generate ghostos app container at workspace {app_arg.workspace_dir}")
 
-    # bound route.
-    page_route = GhostChatRoute(
-        ghost_meta=app_arg.ghost_meta,
-        context_meta=app_arg.context_meta,
-        filename=app_arg.filename,
-    )
-    page_route = page_route.get_or_bind(st.session_state)
-    # initialize router and set aifunc is default
-    router = default_router().with_current(page_route)
-
     ghostos = get_ghostos()
     shell = Singleton.get(Shell, st.session_state, force=False)
     container = get_container()
@@ -80,6 +71,21 @@ def bootstrap():
         )
         shell.background_run(4, StreamlitBackgroundApp())
         Singleton(shell, Shell).bind(st.session_state)
+
+    ghost = from_entity_meta(app_arg.ghost_meta)
+    context = from_entity_meta(app_arg.context_meta)
+    task = shell.get_or_create_task(ghost, context, always_create=False, save=True)
+
+    # bound route.
+    page_route = GhostChatRoute(
+        task_id=task.task_id,
+        filename=app_arg.filename,
+    )
+    page_route = page_route.get_or_bind(st.session_state)
+    # initialize router and set aifunc is default
+    router = default_router()
+    if not st.query_params.to_dict():
+        router = router.with_current(page_route)
 
     return [
         Singleton(container),

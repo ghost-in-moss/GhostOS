@@ -26,7 +26,7 @@ T = TypeVar('T', bound=type)
 
 def import_class_from_path(path: str, parent: Optional[T]) -> T:
     imported = import_from_path(path)
-    if parent and not issubclass(imported, parent):
+    if parent and inspect.isclass(imported) and not issubclass(imported, parent):
         raise TypeError(f'{path} is not a subclass of {parent}')
     return imported
 

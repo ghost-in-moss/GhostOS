@@ -20,6 +20,14 @@ services:
     driver: deepseek_driver
     name: deepseek
     token: $DEEPSEEK_API_KEY
+  - name: siliconflow-deepseek
+    base_url: https://api.siliconflow.cn/v1
+    driver: deepseek_driver
+    token: $SILICONFLOW_API_KEY
+  - name: aliyun-deepseek
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    driver: deepseek_driver
+    token: $ALIYUN_DASHSCOPE_API_KEY
   - base_url: $AZURE_ENDPOINT
     name: azure
     driver: openai_driver
@@ -90,7 +98,7 @@ models:
     reasoning: {}
     compatible:
       support_function_call: false
-      support_functional_tokens: true
+      support_functional_tokens: false
       allow_system_in_messages: false
       last_message_shall_be_assistant_or_user: true
   gpt-3.5-turbo:
@@ -126,7 +134,17 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
-  gpt-o1-mini:
+  gpt-4-turbo-reason:
+    kwargs: { }
+    max_tokens: 4000
+    message_types: null
+    model: gpt-4-turbo
+    n: 1
+    request_timeout: 50
+    service: openai
+    temperature: 0.8
+    timeout: 30
+  openai-o1-mini:
     model: o1-mini
     service: openai
     reasoning: { }
@@ -182,3 +200,39 @@ models:
     temperature: 0.7
     timeout: 30
     use_tools: true
+  siliconflow-deepseek-chat:
+    kwargs: { }
+    max_tokens: 3000
+    message_types: null
+    model: deepseek-ai/DeepSeek-V3
+    n: 1
+    request_timeout: 50
+    service: siliconflow-deepseek
+    temperature: 0.7
+    timeout: 50
+    compatible:
+      function_call_use_tool: false
+  siliconflow-deepseek-r1:
+    max_tokens: 3400
+    model: deepseek-ai/DeepSeek-R1
+    service: siliconflow-deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: false
+      allow_system_in_messages: false
+      last_message_shall_be_assistant_or_user: true
+  aliyun-deepseek-chat:
+    kwargs: { }
+    max_tokens: 3000
+    message_types: null
+    model: deepseek-v3
+    n: 1
+    request_timeout: 50
+    allow_streaming: false
+    service: aliyun-deepseek
+    temperature: 0.7
+    timeout: 50
+    compatible:
+      function_call_use_tool: false
+

@@ -188,6 +188,9 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                         role="function",
                     )
                 ]
+        elif message.type != MessageType.TEXT.value and message.type != MessageType.DEFAULT.value:
+            # other messages do not sent to llms.
+            return []
 
         if message.role == Role.ASSISTANT:
             return self._parse_assistant_chat_completion(message)
@@ -260,16 +263,14 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             caller = FunctionCaller(
                 name=message.function_call.name,
                 arguments=message.function_call.arguments,
-                protocol=True
             )
             caller.add(pack)
         if message.tool_calls:
             for tool_call in message.tool_calls:
                 caller = FunctionCaller(
-                    id=tool_call.id,
+                    call_id=tool_call.id,
                     name=tool_call.function.name,
                     arguments=tool_call.function.arguments,
-                    protocol=True,
                 )
                 caller.add(pack)
         return pack
@@ -277,11 +278,12 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         # 创建首包, 并发送.
         if messages is None:
-            return []
+            yield from []
+            return
         buffer = None
         for item in messages:
             parsed_chunks = []
-            self.logger.debug("openai parser receive item: %s", item)
+            self.logger.debug("openai parser receive chat completion chunk: %s", item)
             if len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
@@ -291,13 +293,17 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             elif len(item.choices) > 0:
                 choice = item.choices[0]
                 delta = choice.delta
+                if delta is None:
+                    self.logger.error("openai parser received invalid chat completion chunk: %s", item)
+                    continue
                 parsed_chunks = self._new_chunk_from_delta(delta)
             else:
                 continue
-            self.logger.debug("openai parser parsed chunks: %r", parsed_chunks)
 
             for chunk in parsed_chunks:
+                self.logger.debug("openai parser parsed chunk: %s", chunk)
                 if chunk is None:
+                    self.logger.error("openai parser parse chunk is None")
                     continue
                 elif item.id:
                     # 兼容 stage.

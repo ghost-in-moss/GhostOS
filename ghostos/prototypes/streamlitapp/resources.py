@@ -63,27 +63,13 @@ class AppConf(YamlConfig):
                 tips: Optional[str] = None,
                 disabled: bool = False,
         ) -> None:
-            key = self.value
-            val = self.get()
-
-            def on_change():
-                """
-                change the config
-                """
-                value = st.session_state[key]
-                conf = get_app_conf()
-                conf.bool_options[self.name] = value
-                configs = get_container().force_fetch(Configs)
-                configs.save(conf)
-
-            st.toggle(
+            conf = get_app_conf()
+            value = st.toggle(
                 label,
-                key=self.value,
-                value=val,
                 disabled=disabled,
                 help=tips,
-                on_change=on_change,
             )
+            conf.bool_options[self.name] = value
 
 
 @st.cache_resource

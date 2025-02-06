@@ -17,7 +17,7 @@ class ReplierImpl(Replier):
 
     def wait_for(self, text: str) -> Operator:
         self._session.respond_buffer([text])
-        return self._session.taskflow().wait()
+        return self._session.mindflow().wait()
 
 
 class ReplierImplProvider(Provider[Replier]):

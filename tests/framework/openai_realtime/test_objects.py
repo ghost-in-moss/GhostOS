@@ -15,8 +15,11 @@ def test_message_item():
                        arguments='{"code":"def run(moss: Moss):\\n    moss.body.new_move(True).spin(360, 1)\\n"}',
                        output=None)
     head = item.to_message_head()
+    assert len(item.call_id) > 0
     assert head.name == "moss"
     complete = item.to_complete_message()
     assert complete.name == "moss"
-    call = FunctionCallMessage.from_message(complete)
-    assert call.caller.name == "moss"
+    assert complete.call_id == item.call_id
+    func_call_msg = FunctionCallMessage.from_message(complete)
+    assert func_call_msg.caller.name == "moss"
+    assert func_call_msg.caller.call_id == item.call_id

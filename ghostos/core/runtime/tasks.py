@@ -90,7 +90,7 @@ Parent task id of the task.
     )
     state_values: Dict[str, EntityMeta] = Field(
         default_factory=dict,
-        description="the state values of the task",
+        description="the state values of the task (session.state)",
     )
 
     state: str = Field(

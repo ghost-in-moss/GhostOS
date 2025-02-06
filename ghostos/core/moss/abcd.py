@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from ghostos.container import Container, Provider, Factory, provide
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.prompts import (
-    AttrPrompts, reflect_module_locals, compile_attr_prompts
+    AttrPrompts, reflect_locals_imported, compile_attr_prompts
 )
 
 """
@@ -289,26 +289,26 @@ class MossPrompter(ABC):
         """
         pass
 
-    def reflect_module_attr(self) -> AttrPrompts:
+    def imported_attr_prompts(self) -> AttrPrompts:
         """
         结合已编译的本地变量, 用系统自带的方法反射出上下文属性的 prompts.
         """
         module = self.module()
         name = module.__name__
         local_values = module.__dict__
-        yield from reflect_module_locals(
+        yield from reflect_locals_imported(
             name,
             local_values,
         )
 
-    def dump_attrs_prompt(self, auto_generation: bool = True) -> str:
+    def dump_imported_prompt(self, auto_generation: bool = True, attr_prompts: Dict[str, str] = None) -> str:
         """
         基于 pycontext code 生成的 Prompt. 用来描述当前上下文里的各种变量.
         主要是从其它库引入的变量.
         :return: 用 python 风格描述的上下文变量.
         """
         from ghostos.core.moss.lifecycle import __moss_attr_prompts__
-        done = {}
+        done = attr_prompts if attr_prompts else {}
         names = []
         # 查看是否有源码自带的魔术方法.
         module = self.module()
@@ -324,8 +324,8 @@ class MossPrompter(ABC):
 
         # 合并系统自动生成的.
         if auto_generation:
-            attr_prompts = self.reflect_module_attr()
-            for name, prompt in attr_prompts:
+            reflected_attr_prompts = self.imported_attr_prompts()
+            for name, prompt in reflected_attr_prompts:
                 if name not in done:
                     names.append(name)
                     done[name] = prompt
@@ -334,7 +334,7 @@ class MossPrompter(ABC):
         prompts = [(name, done[name]) for name in names]
         return compile_attr_prompts(prompts)
 
-    def dump_module_prompt(self) -> str:
+    def dump_module_prompt(self, attr_prompts: Dict[str, str] = None) -> str:
         """
         获取 MOSS 运行时的完整 Python context 的 Prompt.
         这个 Prompt 包含以下几个部分:
@@ -348,10 +348,14 @@ class MossPrompter(ABC):
         if hasattr(compiled, __moss_module_prompt__.__name__):
             fn = getattr(compiled, __moss_module_prompt__.__name__)
             return fn(self)
-        return __moss_module_prompt__(self)
+        return __moss_module_prompt__(self, attr_prompts)
 
     @abstractmethod
     def moss_injections_prompt(self) -> str:
+        """
+        generate prompt from the injections bound to Moss
+        iterate each injection that extends PromptObjectModel to get prompt.
+        """
         pass
 
 

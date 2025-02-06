@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Iterable, Optional
 from ghostos.core.messages import Message, Stream
-from ghostos.core.llms.configs import ModelConf, ServiceConf
+from ghostos.core.llms.configs import ModelConf, ServiceConf, LLMsConfig
 from ghostos.core.llms.prompt import Prompt
 
 __all__ = [
@@ -72,23 +72,39 @@ class LLMApi(ABC):
     @abstractmethod
     def reasoning_completion(self, prompt: Prompt) -> Iterable[Message]:
         """
-        reasoning completion is not compatible to chat completion.
-        so we need another api.
-        :param prompt:
-        :return:
+        make reasoning completion in complete message.
+        only reasoning model can use this api
         """
         pass
 
     @abstractmethod
     def reasoning_completion_stream(self, prompt: Prompt) -> Iterable[Message]:
+        """
+        make reasoning completion in stream
+        only reasoning model can use this api
+        """
         pass
 
-    def deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
+    def deliver_chat_completion(self, prompt: Prompt, stream: bool, stage: str = "") -> Iterable[Message]:
+        """
+        syntax sugar for chat_completion, chat_completion_chunks, reasoning_completion, reasoning_completion_stream
+        determine which api to use by model conf.
+        :param prompt:
+        :param stream:
+        :param stage:
+        :return:
+        """
         items = self._deliver_chat_completion(prompt, stream)
-        yield from self._parse_delivering_items(prompt, stream, items)
+        yield from self.parse_delivering_items(prompt, stream, items, stage)
 
     @abstractmethod
-    def _parse_delivering_items(self, prompt: Prompt, stream: bool, items: Iterable[Message]) -> Iterable[Message]:
+    def parse_delivering_items(
+            self,
+            prompt: Prompt,
+            stream: bool,
+            items: Iterable[Message],
+            stage: str,
+    ) -> Iterable[Message]:
         pass
 
     def _deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
@@ -103,7 +119,7 @@ class LLMApi(ABC):
         else:
             if not stream or not self.model.allow_streaming:
                 message = self.chat_completion(prompt)
-                return [message]
+                yield from [message]
             else:
                 yield from self.chat_completion_chunks(prompt)
 
@@ -127,6 +143,12 @@ class LLMs(ABC):
     """
     The repository of LLMApis.
     """
+
+    config: LLMsConfig
+
+    @abstractmethod
+    def update(self, config: LLMsConfig) -> None:
+        pass
 
     @abstractmethod
     def register_driver(self, driver: LLMDriver) -> None:
@@ -177,10 +199,26 @@ class LLMs(ABC):
         """
         pass
 
+    def new_model_api(self, model: ModelConf, api_name: str = "") -> LLMApi:
+        """
+        new llm api from a model.
+        :param model:
+        :param api_name:
+        :return:
+        """
+        service_name = model.service
+        service = self.get_service(service_name)
+        if service is None:
+            raise AttributeError(f"Service not found in the model.")
+        if not api_name:
+            api_name = model.model
+        return self.new_api(service, model, api_name)
+
     @abstractmethod
-    def get_api(self, api_name: str) -> Optional[LLMApi]:
+    def get_api(self, api_name: str = "") -> Optional[LLMApi]:
         """
         get a defined api by name, which shall be defined in ghostos.core.llms.configs.LLMsConfig .
+        :param api_name: empty means default api
         """
         pass
 
