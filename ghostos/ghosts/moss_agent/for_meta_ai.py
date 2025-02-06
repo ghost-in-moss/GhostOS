@@ -1,7 +1,7 @@
 from typing import TypeVar, Iterable
 from .agent import MossAgent
 from ghostos.core.moss import Moss
-from ghostos.abcd import Action, Thought, LLMThought
+from ghostos.abcd import Action, Thought, ActionThought
 
 A = TypeVar("A")
 
@@ -60,7 +60,7 @@ def __moss_agent_thought__(agent: MossAgent, moss: Moss, *actions: Action) -> Th
 
     we can easily build this pipeline by code.
     """
-    return LLMThought(
+    return ActionThought(
         llm_api=agent.llm_api,
         actions=actions,
         message_stage="",

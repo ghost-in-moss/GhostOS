@@ -44,6 +44,7 @@ class ModelConf(Payload):
     key: ClassVar[str] = "model_conf"
 
     model: str = Field(description="llm model name that service provided")
+    description: str = Field(default="", description="service description")
     service: str = Field(description="llm service name")
     temperature: float = Field(default=0.7, description="temperature")
     n: int = Field(default=1, description="number of iterations")
@@ -111,6 +112,7 @@ class ServiceConf(BaseModel):
     """
 
     name: str = Field(description="Service name")
+    description: str = Field(default="", description="service description")
     base_url: str = Field(description="LLM service url. if start with `$`, will read environment variable of it")
     token: str = Field(default="", description="access token. if start with `$`, will read environment variable of it")
     proxy: Optional[str] = Field(

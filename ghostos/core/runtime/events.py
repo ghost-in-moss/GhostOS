@@ -79,6 +79,9 @@ class Event(BaseModel):
         """
         return self.task_id == self.from_task_id
 
+    def is_from_client(self) -> bool:
+        return self.from_task_id is None
+
     def no_reason_or_instruction(self) -> bool:
         return not self.reason and not self.instruction
 
@@ -142,13 +145,16 @@ class EventTypes(str, Enum):
     默认的消息类型.
     """
 
-    # --- upstream events --- #
+    # --- upstream system level events --- #
 
     CREATED = "created"
 
     INPUT = "input"
 
     ACTION_CALL = "action_call"
+
+    APPROVE = "approve"
+    """if last turn is safe mode, will approve its callers"""
 
     NOTIFY = "notify"
 

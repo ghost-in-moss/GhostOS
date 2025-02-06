@@ -1,7 +1,9 @@
-from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar, Generic, TypeVar, Any
+import inspect
+from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar, Type, Any
 from typing_extensions import Self
 from types import ModuleType
 
+from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
 from ghostos.identifier import Identifier
 from pydantic import Field
 
@@ -9,7 +11,7 @@ from ghostos.helpers import import_from_path
 from ghostos.prompter import TextPOM, PromptObjectModel, PromptAbleClass
 from ghostos.entity import ModelEntity
 from ghostos.abcd import (
-    GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, LLMThought, ChainOfThoughts,
+    GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, ActionThought, ChainOfThoughts,
     SessionPyContext, MOSS_INTRODUCTION, get_moss_context_pom, MossAction,
 )
 from ghostos.core.runtime import Event, GoThreadInfo
@@ -41,6 +43,8 @@ class MossGhost(ModelEntity, Agent):
     instruction: str = Field(default="", description="The instruction from agent developer")
     llm_api: str = Field(default="", description="The llm api to use. if empty use ghostos default llm api")
     model: Optional[ModelConf] = Field(default=None, description="The model to use, instead of the llm_api")
+
+    safe_mode: bool = Field(default=False, description="if safe mode, anything unsafe shall be approve first")
 
     def __identifier__(self) -> Identifier:
         name = self.name if self.name else self.modul
@@ -86,14 +90,17 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
         :return:
         """
         return ChainOfThoughts(
-            final=LLMThought(
+            final=ActionThought(
                 llm_api=self.agent.llm_api,
                 actions=actions,
                 model=self.agent.model,
                 message_stage="",
             ),
-            nodes=[],
+            chain=self.get_thought_chain(session, runtime),
         )
+
+    def get_thought_chain(self, session: Session, runtime: MossRuntime) -> List[Thought]:
+        return []
 
     def make_instruction_pom(self, session: Session, runtime: MossRuntime) -> PromptObjectModel:
         """
@@ -231,6 +238,12 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
         # get the bound pycontext from the session.
         return pycontext.get_or_bind(session)
 
+    def is_safe_mode(self) -> bool:
+        """
+        :return: if the ghost is safe mode.
+        """
+        return False
+
     def get_persona(self, session: Session, runtime: MossRuntime) -> str:
         return self.agent.persona
 
@@ -296,7 +309,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
             # prepare instructions.
             op, ok = self.on_custom_event_handler(session, rtm, event)
             if ok:
-                return op or session.taskflow().wait()
+                return op or session.mindflow().wait()
 
             # prepare thread
             thread = session.thread
@@ -312,13 +325,14 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
             prompt = run_prompt_pipeline(prompt, pipes)
 
             # prepare actions
-            thought = self.thought(session, rtm)
+            actions = self.get_actions(session)
+            thought = self.thought(session, rtm, actions=actions)
             prompt, op = thought.think(session, prompt)
             if op is not None:
                 return op
 
             # wait for response as default.
-            return session.taskflow().wait()
+            return session.mindflow().wait()
 
     @classmethod
     def __class_prompt__(cls) -> str:
@@ -334,12 +348,34 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
                 self._moss_runtime = compiler.compile(self.agent.module)
         return self._moss_runtime
 
+    __class_methods: ClassVar[Dict] = {}
+
     @classmethod
-    def new_from_module(cls, agent: MossGhost, module: ModuleType) -> Self:
+    def find_moss_ghost_methods(cls, module: ModuleType) -> Type[Self]:
+        name = module.__name__
+        if name in cls.__class_methods:
+            return cls.__class_methods[name]
+
+        wrapper = None
         if cls.EXPECT_CLASS_NAME in module.__dict__:
             wrapper = module.__dict__[cls.EXPECT_CLASS_NAME]
         else:
+            for name, value in module.__dict__.items():
+                if not inspect.isclass(value):
+                    continue
+                if value.__module__ != module.__name__:
+                    continue
+                if issubclass(value, BaseMossAgentMethods):
+                    wrapper = value
+
+        if not wrapper:
             wrapper = cls
+        cls.__class_methods[name] = wrapper
+        return wrapper
+
+    @classmethod
+    def new_from_module(cls, agent: MossGhost, module: ModuleType) -> Self:
+        wrapper = cls.find_moss_ghost_methods(module)
         return wrapper(agent, module)
 
     def __del__(self):
@@ -357,7 +393,7 @@ class MossGhostDriver(GhostDriver[MossGhost], PromptAbleClass):
     def get_methods(self) -> BaseMossGhostMethods:
         if self._methods is None:
             moss_module = import_from_path(self.ghost.module)
-            self._methods = BaseMossGhostMethods.new_from_module(moss_module)
+            self._methods = BaseMossGhostMethods.new_from_module(self.ghost, moss_module)
         return self._methods
 
     def get_artifact(self, session: Session) -> Optional[MossGhost.ArtifactType]:
@@ -383,6 +419,9 @@ class MossGhostDriver(GhostDriver[MossGhost], PromptAbleClass):
 
     def truncate(self, session: Session) -> GoThreadInfo:
         return self.get_methods().truncate(session)
+
+    def is_safe_mode(self) -> bool:
+        return self.get_methods().is_safe_mode()
 
     @classmethod
     def __class_prompt__(cls) -> str:

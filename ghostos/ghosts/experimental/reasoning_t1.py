@@ -1,6 +1,6 @@
 from typing import List
 
-from ghostos.abcd import Session, Thought, LLMThought, ChainOfThoughts
+from ghostos.abcd import Session, Thought, ActionThought, ChainOfThoughts
 from ghostos.ghosts.chatbot import Chatbot, ChatbotDriver
 from ghostos.thoughts.meta_prompt_experiments import MetaPromptExp1
 from pydantic import BaseModel, Field
@@ -25,11 +25,11 @@ class ReasoningChatbotT1Driver(ChatbotDriver):
 
     def thought(self, session: Session) -> Thought:
         return ChainOfThoughts(
-            final=LLMThought(
+            final=ActionThought(
                 llm_api=self.ghost.llm_api,
                 actions=self.actions(session),
             ),
-            nodes=[
+            chain=[
                 MetaPromptExp1(
                     llm_api_name=self.ghost.llm_api,
                     reasoning=self.ghost.reasoning,

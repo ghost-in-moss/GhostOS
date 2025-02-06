@@ -1,4 +1,4 @@
-from ghostos.abcd import Session, Thought, LLMThought, ChainOfThoughts
+from ghostos.abcd import Session, Thought, ActionThought, ChainOfThoughts
 from ghostos.ghosts.chatbot import Chatbot, ChatbotDriver
 from ghostos.thoughts.meta_prompt_experiments import MetaPromptExp3
 
@@ -14,11 +14,11 @@ class ReasoningChatbotT3Driver(ChatbotDriver):
 
     def thought(self, session: Session) -> Thought:
         return ChainOfThoughts(
-            final=LLMThought(
+            final=ActionThought(
                 llm_api=self.ghost.llm_api,
                 actions=self.actions(session),
             ),
-            nodes=[
+            chain=[
                 MetaPromptExp3(
                     llm_api_name=self.ghost.llm_api,
                 ),

@@ -7,7 +7,7 @@ from ghostos.streamlit import render_streamlit_object, StreamlitRenderer
 from ghostos.core.runtime import (
     TaskBrief, GoTasks, GoTaskStruct,
     GoThreads, GoThreadInfo, Turn,
-    Event,
+    Event, EventTypes,
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.container import Container
@@ -100,19 +100,23 @@ def render_turn(turn: Turn, debug: bool, prefix: str = "") -> int:
     if turn.summary is not None:
         st.info("summary:\n" + turn.summary)
 
-    if turn.is_from_inputs() or turn.is_from_self():
+    if not turn.approved:
+        with st.expander(_("unapproved"), expanded=True):
+            messages = list(turn.messages(False))
+            render_messages(messages, debug, in_expander=True, prefix=prefix)
+
+    elif turn.is_from_client() or turn.is_from_self():
         messages = list(turn.messages(False))
         render_messages(messages, debug, in_expander=False, prefix=prefix)
     # from other task
     else:
         event = turn.event
-        sub_title = _("background run")
         if event is not None:
-            sub_title = _("background event: ") + event.type
-        with st.expander(sub_title, expanded=False):
-            event_messages = turn.event_messages()
-            render_messages(event_messages, debug, in_expander=True)
-            render_event_object(event, debug)
+            sub_title = _("on event: ") + event.type
+            with st.expander(sub_title, expanded=False):
+                event_messages = turn.event_messages()
+                render_messages(event_messages, debug, in_expander=True)
+                render_event_object(event, debug)
         if turn.added:
             render_messages(turn.added, debug, in_expander=False)
         messages = list(turn.messages(False))

@@ -17,7 +17,7 @@ class SyncReasoningOperator(Operator):
         fork = thread.fork()
         llms = session.container.force_fetch(LLMs)
         llm_api = llms.get_api(self.llm_api)
-        instruction = session.get_instructions()
+        instruction = session.get_system_instructions()
         systems = []
         if instruction:
             systems.append(Role.new_system(content=instruction))
@@ -32,7 +32,7 @@ class SyncReasoningOperator(Operator):
         messages, callers = messenger.flush()
         session.thread.append(*messages)
 
-        return session.taskflow().think(sync=True)
+        return session.mindflow().think(sync=True)
 
     def destroy(self):
         pass

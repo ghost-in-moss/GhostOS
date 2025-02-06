@@ -44,6 +44,13 @@ def test_head_is_not_empty():
     assert msg.is_empty()
 
 
+def test_message_attrs():
+    msg = Message.new_head()
+    assert msg.attrs is not None
+    msg = Message.new_tail(content="hello world")
+    assert msg.attrs is not None
+
+
 def test_head_pack_patch():
     msg = Message.new_head(content="a")
     patch = msg.patch(Message.new_chunk(content="b"))
@@ -101,12 +108,12 @@ def test_function_call_message():
 def test_message_path_bad_case():
     item1 = Message(msg_id='d5ff6a6a-2b05-4819-864d-82afdf9ac5fc', call_id=None,
                     from_id='chatcmpl-AXs0YM2VxVZbo50C1lIOC0qlWumtN', index=None, type='function_call', stage='',
-                    role='assistant', name=None, content='{"', memory=None, attrs=None, payloads={}, callers=[],
+                    role='assistant', name=None, content='{"', memory=None, attrs={}, payloads={}, callers=[],
                     seq='chunk',
                     created=0.0)
     item2 = Message(msg_id='d5ff6a6a-2b05-4819-864d-82afdf9ac5fc', call_id='call_DCaC3PJy336sZ9ryhxijgFlq',
                     from_id='chatcmpl-AXs0YM2VxVZbo50C1lIOC0qlWumtN', index=None, type='function_call', stage='',
-                    role='assistant', name='moss', content='{"', memory=None, attrs=None, payloads={}, callers=[],
+                    role='assistant', name='moss', content='{"', memory=None, attrs={}, payloads={}, callers=[],
                     seq='chunk', created=1732636557.282)
     patched = item1.patch(item2)
     assert patched is not None

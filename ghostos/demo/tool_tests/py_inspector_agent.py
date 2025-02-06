@@ -32,7 +32,7 @@ from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods, A
 class MossAgentMethods(BaseMossAgentMethods):
 
     def providers(self, agent: A) -> Iterable[Provider]:
-        from ghostos.libraries.pyeditor import SimplePyInterfaceProvider
-        yield SimplePyInterfaceProvider()
+        from ghostos.libraries.pyeditor import SimplePyInspectorProvider
+        yield SimplePyInspectorProvider()
 
 # </moss-hide>

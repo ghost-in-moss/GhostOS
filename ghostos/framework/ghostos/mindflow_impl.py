@@ -5,8 +5,7 @@ from typing_extensions import Self
 from abc import ABC
 
 from ghostos.container import Container
-from ghostos.abcd import Taskflow, Session, Operator
-from ghostos.abcd import fire_session_event
+from ghostos.abcd import Mindflow, Session, Operator
 from ghostos.core.runtime import TaskState, EventTypes, TaskBrief
 from ghostos.core.moss import Injection, MossRuntime
 from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role
@@ -16,7 +15,7 @@ from io import StringIO
 from ghostos.prompter import PromptObjectModel
 
 
-class TaskflowImpl(Taskflow, PromptObjectModel, Injection):
+class MindflowImpl(Mindflow, PromptObjectModel, Injection):
 
     def __init__(self, session: Session, parser: MessageKindParser):
         self.task = session.task
@@ -146,7 +145,7 @@ class RotateOperator(Operator):
             instruction=self.instruction,
         )
         if self.sync:
-            return fire_session_event(session, event)
+            return session.handle_event(event)
         else:
             # msg = Role.SYSTEM.new(content=f"issue observation at turn {task.turns}")
             # session.thread.append(msg)

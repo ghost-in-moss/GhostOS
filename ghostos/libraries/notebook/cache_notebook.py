@@ -112,7 +112,7 @@ class NoteTree:
             return result
 
         if len(self.children) == 0:
-            return "empty"
+            return ""
 
         return '\n'.join(dfs(self, 0))
 

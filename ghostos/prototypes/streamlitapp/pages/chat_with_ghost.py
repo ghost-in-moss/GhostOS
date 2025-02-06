@@ -9,7 +9,7 @@ from ghostos.prototypes.streamlitapp.pages.router import (
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.prototypes.streamlitapp.widgets.messages import (
-    render_message_in_content, render_messages,
+    render_message_in_content, render_messages, get_interactive_event,
 )
 from ghostos.prototypes.streamlitapp.widgets.renderer import (
     render_object, render_event, render_turn, render_turn_delete,
@@ -192,7 +192,7 @@ def main_chat():
 
     # render ghost settings
     if show_ghost_settings:
-        render_ghost_settings(route)
+        render_ghost_settings(conversation, route)
     if show_instruction:
         render_instruction(conversation)
     if show_context:
@@ -395,6 +395,14 @@ def _chatting(route: GhostChatRoute, conversation: Conversation):
         with st.container():
             render_event(event, debug)
             render_receiver(receiver, debug)
+    else:
+        event = get_interactive_event()
+        if event is not None:
+            receiver = conversation.respond_event(event, streaming=True)
+            with st.container():
+                render_event(event, debug)
+                render_receiver(receiver, debug)
+            st.rerun()
 
     interval = 0.1
     while not route.media_input() and route.auto_run and conversation.available():
@@ -471,7 +479,7 @@ def _render_single_buffer(buffer: ReceiverBuffer, head: Message, debug: bool, in
         with st.empty():
             st.write_stream(contents)
             with st.container():
-                render_message_in_content(buffer.tail(), debug, in_expander=in_expander)
+                render_message_in_content(buffer.tail(), debug, in_expander=True)
     else:
         with st.container():
             render_message_in_content(buffer.tail(), debug, in_expander=in_expander)
@@ -483,13 +491,13 @@ def chunks_to_st_stream(chunks: Iterable[Message]) -> Iterable[str]:
             yield chunk.content
 
 
-def render_ghost_settings(route: GhostChatRoute):
+def render_ghost_settings(conversation: Conversation, route: GhostChatRoute):
     st.subheader(_("Settings"))
     with st.container(border=True):
         if route is None:
             st.error("page is not configured")
             return
-        ghost = route.get_ghost()
+        ghost = conversation.get_ghost()
         # render ghost info
         if isinstance(ghost, BaseModel):
             data, submitted = srj.pydantic_instance_form(ghost)
@@ -512,9 +520,9 @@ def render_ghost_settings(route: GhostChatRoute):
 
 def render_instruction(conversation: Conversation):
     st.subheader("Instructions")
-    instructions = conversation.get_system_instruction()
+    instruction = conversation.get_system_instruction()
     with st.container(border=True):
-        st.markdown(instructions)
+        st.markdown(instruction)
 
 
 def render_context_settings(conversation: Conversation):

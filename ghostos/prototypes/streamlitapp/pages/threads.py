@@ -9,7 +9,6 @@ import yaml
 
 
 def show_thread():
-    st.write(st.query_params)
     route = ShowThreadRoute().get_or_bind(st.session_state)
     with st.sidebar:
         if route.task_id:

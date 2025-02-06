@@ -40,8 +40,9 @@ def test_thread_sending_message_with_stage():
     for message in thread.last_turn().added:
         assert message.content.startswith("hello world")
 
+    thread.new_turn(None)
     prompt = thread.to_prompt([], [""])
-    assert len(prompt.added) == 2
+    assert len(prompt.history) == 2
     prompt = thread.to_prompt([], ["a", "b"])
-    assert len(prompt.added) == 3
+    assert len(prompt.history) == 3
 

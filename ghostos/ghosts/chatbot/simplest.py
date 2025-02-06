@@ -1,7 +1,7 @@
 from typing import Union, Iterable, ClassVar, List, Optional
 
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
-from ghostos.abcd.thoughts import LLMThought, Thought
+from ghostos.abcd.thoughts import ActionThought, Thought
 from ghostos.container import Provider
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.messages import Role
@@ -69,7 +69,7 @@ class ChatbotDriver(GhostDriver[Chatbot]):
         return
 
     def thought(self, session: Session) -> Thought:
-        thought = LLMThought(llm_api=self.ghost.llm_api)
+        thought = ActionThought(llm_api=self.ghost.llm_api)
         return thought
 
     def prompt(self, session: Session) -> Prompt:
@@ -100,4 +100,4 @@ class ChatbotDriver(GhostDriver[Chatbot]):
         prompt, op = thought.think(session, prompt)
         if op is not None:
             return op
-        return session.taskflow().wait()
+        return session.mindflow().wait()

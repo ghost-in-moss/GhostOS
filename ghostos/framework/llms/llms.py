@@ -86,10 +86,15 @@ class LLMsImpl(LLMs):
         driver = self._llm_drivers.get(service_conf.driver, self._default_driver)
         return driver.new(service_conf, api_conf, api_name=api_name)
 
-    def get_api(self, api_name: str) -> Optional[LLMApi]:
+    def get_api(self, api_name: str = "") -> Optional[LLMApi]:
+        if not api_name:
+            api_name = self.config.default
+
+        # from cache. maybe not necessary
         api = self._apis.get(api_name, None)
         if api is not None:
             return api
+
         if api_name:
             model_conf = self._llm_models.get(api_name, None)
         else:

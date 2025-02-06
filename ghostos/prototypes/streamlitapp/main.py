@@ -97,4 +97,7 @@ def main_run(bootstrap: BOOTSTRAP) -> None:
     # if open_navigator:
     #     app_navigator_dialog()
 
-    pgs.run()
+    try:
+        pgs.run()
+    except Exception as e:
+        st.exception(e)

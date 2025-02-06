@@ -66,42 +66,36 @@ class SimplePyModuleEditor(POM, PyModuleEditor):
         block = parts[0] + end_with
         return block
 
-    def replace(self, target_str: str, replace_str: str, count: int = 1) -> bool:
+    def replace(self, target_str: str, replace_str: str, count: int = 1, reload: bool = False) -> bool:
         module_source = self._get_module_source()
         if target_str not in module_source:
             return False
         source = module_source.replace(target_str, replace_str, count)
-        self._source = source
+        self.save(reload=reload, source=source)
         return True
 
-    def append(self, source: str) -> None:
+    def append(self, source: str, reload: bool = False) -> None:
         source = source.strip()
         module_source = self._get_module_source()
         saving = module_source.rstrip("\n")
         saving = saving + "\n\n" + source + "\n"
-        self._source = saving
+        self.save(reload=reload, source=saving)
 
-    def insert(self, source: str, line_num: int) -> None:
+    def insert(self, source: str, line_num: int, reload: bool = False) -> None:
         module_source = self._get_module_source()
         lines = module_source.splitlines()
-        outputs = []
-        idx = 0
-        for line in lines:
-            idx += 1
-            if line_num == idx:
-                outputs.append(source)
-            outputs.append(line)
-        replace = "\n".join(outputs)
-        self._source = replace
+        lines.insert(line_num, source)
+        replace = "\n".join(lines)
+        self.save(reload=reload, source=replace)
 
-    def replace_attr(self, attr_name: str, replace_str: str) -> str:
+    def replace_attr(self, attr_name: str, replace_str: str, reload: bool = False) -> str:
         if attr_name not in self._module.__dict__:
             return f"attribute {attr_name} is not defined in this module"
         value = self._module.__dict__[attr_name]
         if not inspect.isclass(value) and not inspect.isfunction(value):
             return f"attribute {attr_name} is not class or function that can be replaced"
         source = inspect.getsource(value)
-        ok = self.replace(source, replace_str, count=1)
+        ok = self.replace(source, replace_str, count=1, reload=reload)
         return "ok" if ok else "replace failed"
 
     def save(self, reload: bool = True, source: Optional[str] = None) -> None:

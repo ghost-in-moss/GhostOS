@@ -156,7 +156,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 # prepare instructions.
                 op, ok = self._on_custom_event_handler(session, rtm, event)
                 if ok:
-                    return op or session.taskflow().wait()
+                    return op or session.mindflow().wait()
 
                 # prepare thread
                 thread = session.thread
@@ -173,7 +173,7 @@ class MossAgentDriver(GhostDriver[MossAgent]):
                 prompt, op = thought.think(session, prompt)
                 if op is not None:
                     return op
-                return session.taskflow().wait()
+                return session.mindflow().wait()
 
     def _on_custom_event_handler(
             self,

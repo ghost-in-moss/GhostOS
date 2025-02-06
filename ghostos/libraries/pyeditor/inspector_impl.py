@@ -13,8 +13,8 @@ import inspect
 
 class Inspecting(BaseModel, StateValue):
     property_name: str = Field()
-    reading_source: List[str] = Field(default_factory=list)
-    reading_interface: List[str] = Field(default_factory=list)
+    watching_source: List[str] = Field(default_factory=list)
+    watching_interface: List[str] = Field(default_factory=list)
 
     def get(self, session: Session) -> Optional[Self]:
         pass
@@ -23,7 +23,7 @@ class Inspecting(BaseModel, StateValue):
         pass
 
 
-class PyInspectorImpl(Injection, PyInspector):
+class PyInspectorSessionImpl(Injection, PyInspector):
 
     def __init__(
             self,
@@ -39,15 +39,15 @@ class PyInspectorImpl(Injection, PyInspector):
     def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
         self._property_name = property_name
         bound = self._get_inspecting()
-        self.reading_source = bound.reading_source
-        self.reading_interface = bound.reading_interface
+        self.reading_source = bound.watching_source
+        self.reading_interface = bound.watching_interface
         return self
 
     def _get_inspecting(self) -> Inspecting:
         return Inspecting(
             property_name=self._property_name,
-            reading_source=list(set(self.reading_source)),
-            reading_interface=list(set(self.reading_interface)),
+            watching_source=list(set(self.reading_source)),
+            watching_interface=list(set(self.reading_interface)),
         )
 
     def on_destroy(self) -> None:
@@ -114,7 +114,7 @@ The interface that you are inspecting are:
         return "PyInspector Context"
 
 
-class SimplePyInterfaceProvider(Provider[PyInspector]):
+class SimplePyInspectorProvider(Provider[PyInspector]):
 
     def singleton(self) -> bool:
         return False
@@ -123,7 +123,7 @@ class SimplePyInterfaceProvider(Provider[PyInspector]):
         session = con.force_fetch(Session)
         modules = con.force_fetch(Modules)
 
-        return PyInspectorImpl(
+        return PyInspectorSessionImpl(
             session=session,
             modules=modules,
         )

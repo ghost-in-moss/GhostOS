@@ -23,16 +23,17 @@ class PyInspector(POM, ABC):
     _IMPORT_PATH = str
     """str pattern [module_name] or [module_name:attr_name]. such as `inspect:get_source`"""
 
-    reading_source: List[_IMPORT_PATH]
+    watching_source: List[_IMPORT_PATH]
     """你正在关注, 需要展示源代码的对象. 可以添加或删除这些关注对象. """
 
-    reading_interface: List[_IMPORT_PATH]
+    watching_interface: List[_IMPORT_PATH]
     """你正在关注, 需要展示 interface 信息的对象. interface 只包含调用者关心的讯息. 可以添加或删除这些信息. """
 
     @abstractmethod
     def get_source(self, import_path: _IMPORT_PATH) -> str:
         """
         get the source of the target.
+        调用这个方法就不需要 watching.
         :return: the source code of the target
         """
         pass
@@ -42,6 +43,7 @@ class PyInspector(POM, ABC):
         """
         get the interface of the target.
         `interface` here means definition of the function or class, exclude code body of function or method.
+        调用这个方法就不需要 watching.
         """
         pass
 
@@ -95,34 +97,36 @@ class PyModuleEditor(ABC):
             target_str: str,
             replace_str: str,
             count: int = 1,
+            reload: bool = False,
     ) -> bool:
         """
         replace the source code of this module by replace a specific string
         :param target_str: target string in the source code
         :param replace_str: replacement
         :param count: if -1, replace all occurrences of replace_str, else only replace occurrences count times.
+        :param reload: if False, update but note save to the module.
         :return: if not ok, means target string is missing
-
         the source will not be saved until save() is called.
         """
         pass
 
     @abstractmethod
-    def append(self, source: str) -> None:
+    def append(self, source: str, reload: bool = False) -> None:
         """
         append source code to this module.
         :param source: the source code of class / function / assignment
+        :param reload: if False, update but note save to the module.
         """
         pass
 
     @abstractmethod
-    def insert(self, source: str, line_num: int) -> None:
+    def insert(self, source: str, line_num: int, reload: bool = False) -> None:
         """
         insert source code to this module at line number.
         remember following the python code format pattern.
         :param source: the inserting code, such like from ... import ... or others.
-        :param line_num: the start line of the insertion
-
+        :param line_num: the start line of the insertion. if 0, insert to the top. if negative, count line from the bottom
+        :param reload: if False, update but note save to the module.
         the source will not be saved until save() is called.
         """
         pass
@@ -132,15 +136,15 @@ class PyModuleEditor(ABC):
             self,
             attr_name: str,
             replace_str: str,
+            reload: bool = False,
     ) -> str:
         """
         replace a module attribute's source code.
         the target attribute shall be a class or a function.
         :param attr_name: name of the target attribute of this module.
         :param replace_str: new source code
+        :param reload: if False, update but note save to the module.
         :return: the replaced source code. if empty, means target attribute is missing
-
-        the source will not be saved until save() is called.
         """
         pass
 
@@ -153,7 +157,6 @@ class PyModuleEditor(ABC):
         :param source: if the source given, replace all the source code.
         """
         pass
-
 
 
 class LocalPyMI(ABC):

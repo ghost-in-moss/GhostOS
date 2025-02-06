@@ -95,10 +95,10 @@ class LLMApi(ABC):
         :return:
         """
         items = self._deliver_chat_completion(prompt, stream)
-        yield from self._parse_delivering_items(prompt, stream, items, stage)
+        yield from self.parse_delivering_items(prompt, stream, items, stage)
 
     @abstractmethod
-    def _parse_delivering_items(
+    def parse_delivering_items(
             self,
             prompt: Prompt,
             stream: bool,
@@ -215,9 +215,10 @@ class LLMs(ABC):
         return self.new_api(service, model, api_name)
 
     @abstractmethod
-    def get_api(self, api_name: str) -> Optional[LLMApi]:
+    def get_api(self, api_name: str = "") -> Optional[LLMApi]:
         """
         get a defined api by name, which shall be defined in ghostos.core.llms.configs.LLMsConfig .
+        :param api_name: empty means default api
         """
         pass
 

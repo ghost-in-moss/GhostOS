@@ -58,9 +58,11 @@ class MetaPromptExp2(BaseModel, Thought[Operator]):
 你现在进入了思考模式, 在思考模式中, 你在自己和自己说话. 所以你应该用 "我" 来讨论自己应该干什么. 
 在思考模式中, 你所有的输出不会发送给用户, 而是作为你脑海中的想象供你未来使用.
 你需要先回答以下几个问题: 
-1. 用户的意图是什么, 更完整的表达内容应该是什么.
-2. 结合上下文与用户的意图, 回顾你得到的所有指令, 你应该注意哪些事项.
-3. 根据以上思考, 你需要将你的思路写成给自己的 Chain of thoughts.
+1. 用户的意图是什么, 更完整的表达内容应该是什么?
+2. 结合上下文与用户的意图, 回顾你得到的所有指令, 你应该注意哪些事项?
+3. 你现在拥有的信息是否已经充分, 还是有容易忽略的点会让你思考错误?
+4. 这件事是否可以一步完成, 还是你需要拆分成多步. 
+5. 根据以上思考, 你需要将你的思路写成给自己的 Chain of thoughts.
 现在请给出你写的 Chain of thoughts:
 """)
 
@@ -80,8 +82,14 @@ class MetaPromptExp2(BaseModel, Thought[Operator]):
         items = llm_api.deliver_chat_completion(_prompt, not messenger.completes_only())
         messenger.send(items)
         messages, _ = messenger.flush()
+        if len(messages) > 0:
+            session.logger.debug("reasoning thoughts: %s", messages[-1].get_content())
+
         _prompt.added.extend(messages)
         _reasoning.extend(messages)
+
+        # update response to origin prompt
+        session.thread.append(*_reasoning)
         prompt.added.extend(_reasoning)
         return prompt, None
 

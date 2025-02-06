@@ -152,12 +152,16 @@ class MossAction(Action, PromptPipe):
 
         moss = self.runtime.moss()
         try:
+            # run the codes.
             result = self.runtime.execute(target="run", code=code, args=[moss])
+
+            # check operator result
             op = result.returns
             if op is not None and not isinstance(op, Operator):
                 return self.fire_error(session, caller, "result of moss code is not None or Operator")
+
             pycontext = result.pycontext
-            # rebind pycontext to bind session
+            # rebind pycontext to session
             pycontext = SessionPyContext(**pycontext.model_dump(exclude_defaults=True))
             pycontext.bind(session)
 
@@ -165,13 +169,15 @@ class MossAction(Action, PromptPipe):
             std_output = result.std_output
             session.logger.debug("moss action std_output: %s", std_output)
             if std_output:
-                output = f"Moss output:\n{std_output}"
+                output = f"Moss output:\n```text\n{std_output}\n```"
                 message = caller.new_output(output)
-                session.respond([message])
             else:
-                output = caller.new_output("executed")
-                session.respond([output])
-            return session.taskflow().think()
+                # add empty message since the function output is required.
+                message = caller.new_output("executed")
+            session.respond([message])
+            if op:
+                return op
+            return session.mindflow().think()
 
         except Exception as e:
             session.logger.exception(e)
@@ -181,7 +187,7 @@ class MossAction(Action, PromptPipe):
     def fire_error(session: Session, caller: FunctionCaller, error: str) -> Operator:
         message = caller.new_output(error)
         session.respond([message])
-        return session.taskflow().error()
+        return session.mindflow().error()
 
 
 def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:

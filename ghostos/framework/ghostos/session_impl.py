@@ -1,15 +1,18 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any, Callable
 from ghostos.errors import StreamingError
 from ghostos.abcd import (
-    Session, Ghost, GhostDriver, Shell, Scope, Taskflow, Operator, Subtasks,
+    Session, Ghost, GhostDriver, Shell, Scope, Mindflow, Operator, Subtasks,
     Messenger,
 )
 from ghostos.abcd import get_ghost_driver
 from ghostos.core.messages import (
     MessageKind, Message, FunctionCaller, Stream, Role, MessageKindParser, MessageType,
-    Payload,
+    Payload
 )
-from ghostos.core.messages.message_classes import FunctionCallMessage
+from ghostos.core.messages.message_classes import (
+    FunctionCallMessage,
+    ConfirmMessage,
+)
 from ghostos.core.runtime import (
     TaskBrief, GoTaskStruct, TaskPayload, GoTasks, TaskState,
     EventBus, Event, EventTypes,
@@ -23,7 +26,7 @@ from ghostos.container import Container, provide, Contracts
 from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
 from ghostos.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
-from ghostos.framework.ghostos.taskflow_impl import TaskflowImpl
+from ghostos.framework.ghostos.mindflow_impl import MindflowImpl
 from ghostos.framework.ghostos.subtasks_impl import SubtasksImpl
 from threading import Lock
 
@@ -58,6 +61,7 @@ class SessionImpl(Session[Ghost]):
             refresh_callback: Callable[[], bool],
             alive_check: Callable[[], bool],
             max_errors: int,
+            safe_mode: bool = False,
     ):
         # session level container
         self.container = Container(parent=container, name="session")
@@ -95,6 +99,8 @@ class SessionImpl(Session[Ghost]):
         self._bootstrap()
         self._respond_lock = Lock()
         self._respond_buffer: List = []
+        self._safe_mode = safe_mode
+
         Session.instance_count += 1
 
     def __del__(self):
@@ -109,7 +115,7 @@ class SessionImpl(Session[Ghost]):
         self.container.set(MessageKindParser, self._message_parser)
         self.container.register(provide(GoTaskStruct, False)(lambda c: self.task))
         self.container.register(provide(GoThreadInfo, False)(lambda c: self.thread))
-        self.container.register(provide(Taskflow, False)(lambda c: self.taskflow()))
+        self.container.register(provide(Mindflow, False)(lambda c: self.mindflow()))
         self.container.register(provide(Subtasks, False)(lambda c: self.subtasks()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
         self.container.bootstrap()
@@ -132,6 +138,9 @@ class SessionImpl(Session[Ghost]):
             return False
         return self._alive_check() and (self.upstream is None or self.upstream.alive())
 
+    def allow_stream(self) -> bool:
+        return self.upstream.allow_streaming() if self.upstream else False
+
     def _validate_alive(self):
         if not self.alive():
             raise RuntimeError(f"Session is not alive")
@@ -140,37 +149,46 @@ class SessionImpl(Session[Ghost]):
         return list(self._message_parser.parse(values))
 
     def parse_event(self, event: Event) -> Tuple[Optional[Event], Optional[Operator]]:
+        # todo: add logs
+        self.logger.info("session parse event %s", event.event_id)
         self._validate_alive()
         driver = get_ghost_driver(self.ghost)
+
         # if the task is new, initialize the task.
         if self.task.state == TaskState.NEW.value:
+            self.logger.info("session initialize task %s before event %s", self.task.task_id, event.event_id)
             driver.on_creating(self)
             self.task.state = TaskState.RUNNING.value
 
-        # always let ghost driver decide event handling logic first.
-        event = driver.parse_event(self, event)
-        if event is None:
-            return None, None
+        # approve pending callers
+        if EventTypes.APPROVE.value == event.type:
+            last_turn = self.thread.last_turn()
+            if last_turn.approved:
+                self.logger.error("session received approve event %s but already approved", event.event_id)
+                return None, None
+            elif last_turn.pending_callers:
+                last_turn.approved = True
+                self.logger.info("session approved last turn %s", last_turn.turn_id)
+                op = self.handle_callers(last_turn.pending_callers, True)
+                return None, op
+            else:
+                self.logger.info("session received approved event but no pending callers", event.event_id)
+                return None, None
 
         if EventTypes.ACTION_CALL.value == event.type:
             self.thread.new_turn(event)
-            actions = self.ghost_driver.actions(self)
-            actions_map = {action.name(): action for action in actions}
+            callers = []
             for message in event.messages:
                 fc = FunctionCallMessage.from_message(message)
                 if fc is None:
                     continue
-                if fc.caller.name in actions_map:
-                    action = actions_map[fc.caller.name]
-                    op = action.run(self, fc.caller)
-                    if op is not None:
-                        return None, op
-            return None, None
+                callers.append(fc.caller)
+            return None, self.handle_callers(callers, True)
 
         # notification do not trigger the handling
         if EventTypes.NOTIFY.value == event.type:
             self.thread.new_turn(event)
-            return None, None
+            return None, EmptyOperator()
 
         if EventTypes.INPUT.value == event.type:
             # only input event can reset errors.
@@ -192,7 +210,7 @@ class SessionImpl(Session[Ghost]):
             self.task.errors += 1
             if self.task.errors > self._max_errors:
                 # if reach max errors, fail the task
-                return None, self.taskflow().fail("task failed too much, exceeds max errors")
+                return None, self.mindflow().fail("task failed too much, exceeds max errors")
 
         if EventTypes.CANCEL.value == event.type:
             # cancel self and all subtasks.
@@ -219,9 +237,12 @@ class SessionImpl(Session[Ghost]):
     def system_log(self, log: str) -> None:
         self._system_logs.append(log)
 
-    def taskflow(self) -> Taskflow:
+    def is_safe_mode(self) -> bool:
+        return self._safe_mode or self.ghost_driver.is_safe_mode()
+
+    def mindflow(self) -> Mindflow:
         self._validate_alive()
-        return TaskflowImpl(self, self._message_parser)
+        return MindflowImpl(self, self._message_parser)
 
     def subtasks(self) -> Subtasks:
         return SubtasksImpl(self)
@@ -234,7 +255,7 @@ class SessionImpl(Session[Ghost]):
     def get_artifact(self) -> Ghost.ArtifactType:
         return self.ghost_driver.get_artifact(self)
 
-    def get_instructions(self) -> str:
+    def get_system_instructions(self) -> str:
         return self.ghost_driver.get_system_instruction(self)
 
     def refresh(self, throw: bool = False) -> bool:
@@ -290,6 +311,7 @@ class SessionImpl(Session[Ghost]):
             role=Role.ASSISTANT.value,
             payloads=payloads,
             stage=str(stage),
+            output_pipes=self.ghost_driver.output_pipes()
         )
 
     def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[FunctionCaller]]:
@@ -388,6 +410,7 @@ class SessionImpl(Session[Ghost]):
             self._reset()
         except Exception as e:
             self.logger.exception(e)
+            raise
 
     def _update_subtasks(self):
         children = self.task.children
@@ -402,11 +425,16 @@ class SessionImpl(Session[Ghost]):
 
     def _update_state_changes(self) -> None:
         task = self.task
+        thread = self.thread
         task.meta = to_entity_meta(self.ghost)
         state_values = {}
         for name, value in self.state.items():
             state_values[name] = to_entity_meta(value)
-        thread = self.thread
+
+        task.thread_id = thread.id
+        task.state_values = state_values
+        if task.state == TaskState.RUNNING.value:
+            task.state = TaskState.WAITING.value
 
         # update respond buffer
         if len(self._respond_buffer) > 0:
@@ -422,10 +450,22 @@ class SessionImpl(Session[Ghost]):
             thread.append(message)
             self._system_logs = []
 
-        task.thread_id = thread.id
-        task.state_values = state_values
-        if task.state == TaskState.RUNNING.value:
-            task.state = TaskState.WAITING.value
+        # if current thread is not approved, send message to client side.
+        if thread.current and not thread.current.approved:
+            confirm = ConfirmMessage.new(
+                content="approve",
+                visible=False,
+                event=EventTypes.APPROVE.new(
+                    task_id=task.task_id,
+                    messages=[],
+                ).model_dump(exclude_defaults=True),
+            )
+            confirm_msg = confirm.to_message()
+            messenger = self.messenger()
+            messenger.send([confirm_msg])
+            sent, _ = messenger.flush()
+            # do not save confirm to thread.
+            thread.store()
 
         tasks = self.container.force_fetch(GoTasks)
         threads = self.container.force_fetch(GoThreads)
@@ -480,7 +520,7 @@ class SessionImpl(Session[Ghost]):
         if self._failed:
             return False
         self._failed = True
-        self.logger.error("Session failed: %s", err)
+        self.logger.error("Session failed: %s at task %s", err, self.task.task_id)
         if self.upstream is not None and self.upstream.alive():
             message = MessageType.ERROR.new(content=str(err))
             self.upstream.deliver(message)

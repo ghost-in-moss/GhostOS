@@ -2,12 +2,12 @@ from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable
 
 from ghostos.container import Container
 from ghostos.abcd import Conversation, Scope, Ghost, Context
-from ghostos.abcd import run_session_event
+from ghostos.abcd import default_init_event_operator
 from ghostos.errors import SessionError
 from ghostos.contracts.variables import Variables
 from ghostos.core.messages import (
     Message, Role, MessageKind, MessageKindParser,
-    Stream, Receiver, new_basic_connection,
+    Stream, Receiver, new_basic_connection, ListReceiver,
 )
 from ghostos.core.runtime import (
     Event, EventTypes, EventBus,
@@ -156,11 +156,9 @@ class ConversationImpl(Conversation[G]):
         self.refresh()
         self._validate_closed()
         session = self._create_session(self.get_task(), None)
-        try:
-            instructions = session.get_instructions()
+        with session:
+            instructions = session.get_system_instructions()
             return instructions
-        finally:
-            session.destroy()
 
     def refresh(self) -> bool:
         self._validate_closed()
@@ -179,14 +177,16 @@ class ConversationImpl(Conversation[G]):
     def talk(
             self,
             query: str,
-            user_name: str = "",
             context: Optional[Ghost.ContextType] = None,
+            *,
+            user_name: str = "",
             timeout: float = 0.0,
+            request_timeout: float = 0.0,
     ) -> Tuple[Event, Receiver]:
         self._validate_closed()
         self.logger.debug("talk to user %s", user_name)
         message = Role.USER.new(content=query, name=user_name)
-        return self.respond([message], context, timeout=timeout)
+        return self.respond([message], context, timeout=timeout, request_timeout=request_timeout)
 
     def update_context(self, context: Context) -> None:
         self._validate_closed()
@@ -199,6 +199,7 @@ class ConversationImpl(Conversation[G]):
             *,
             streaming: bool = True,
             timeout: float = 0.0,
+            request_timeout: float = 0.0,
     ) -> Tuple[Event, Receiver]:
         self._validate_closed()
         if self._submit_session_thread:
@@ -214,16 +215,22 @@ class ConversationImpl(Conversation[G]):
             messages=messages,
             context=context_meta,
         )
-        return event, self.respond_event(event, streaming=streaming, timeout=timeout)
+        return event, self.respond_event(event, streaming=streaming, timeout=timeout, request_timeout=request_timeout)
 
     def respond_event(
             self,
             event: Event,
+            *,
             timeout: float = 0.0,
+            request_timeout: float = 0.0,
             streaming: bool = True,
     ) -> Receiver:
         self.refresh()
         self._validate_closed()
+        if event.task_id != self.task_id:
+            self.send_event(event)
+            return ListReceiver([])
+
         if self._handling_event:
             raise RuntimeError("conversation is handling event")
         # complete task_id
@@ -235,6 +242,7 @@ class ConversationImpl(Conversation[G]):
             timeout=timeout,
             idle=self._conf.message_receiver_idle,
             complete_only=self._is_background or not streaming,
+            request_timeout=request_timeout,
         )
         if self._submit_session_thread:
             self._submit_session_thread.join()
@@ -263,7 +271,7 @@ class ConversationImpl(Conversation[G]):
                         event.event_id, task.task_id,
                     )
                     with session:
-                        run_session_event(session, event, self._conf.max_session_step)
+                        self.loop_session_event(session, event, self._conf.max_session_step)
             except Exception as e:
                 if not self.fail(error=e):
                     raise
@@ -272,6 +280,23 @@ class ConversationImpl(Conversation[G]):
                     self._eventbus.notify_task(event.task_id)
                 self._handling_event = False
                 self._submit_session_thread = None
+
+    def loop_session_event(self, session: SessionImpl, event: Event, max_step: int) -> None:
+        op = default_init_event_operator(event)
+        step = 0
+        while op is not None:
+            step += 1
+            if step > max_step:
+                raise RuntimeError(f"Max step {max_step} reached")
+            if not session.refresh(True):
+                raise RuntimeError("Session refresh failed")
+            self.logger.debug("start session op %s", repr(op))
+            next_op = op.run(session)
+            self.logger.debug("done session op %s", repr(op))
+            op.destroy()
+            # session do save after each op
+            session.save()
+            op = next_op
 
     def _create_session(
             self,

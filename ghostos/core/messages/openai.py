@@ -188,6 +188,9 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                         role="function",
                     )
                 ]
+        elif message.type != MessageType.TEXT.value and message.type != MessageType.DEFAULT.value:
+            # other messages do not sent to llms.
+            return []
 
         if message.role == Role.ASSISTANT:
             return self._parse_assistant_chat_completion(message)
@@ -260,16 +263,14 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             caller = FunctionCaller(
                 name=message.function_call.name,
                 arguments=message.function_call.arguments,
-                protocol=True
             )
             caller.add(pack)
         if message.tool_calls:
             for tool_call in message.tool_calls:
                 caller = FunctionCaller(
-                    id=tool_call.id,
+                    call_id=tool_call.id,
                     name=tool_call.function.name,
                     arguments=tool_call.function.arguments,
-                    protocol=True,
                 )
                 caller.add(pack)
         return pack
@@ -277,7 +278,8 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
     def from_chat_completion_chunks(self, messages: Iterable[ChatCompletionChunk]) -> Iterable[Message]:
         # 创建首包, 并发送.
         if messages is None:
-            return []
+            yield from []
+            return
         buffer = None
         for item in messages:
             parsed_chunks = []

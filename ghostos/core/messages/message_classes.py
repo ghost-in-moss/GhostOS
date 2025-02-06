@@ -6,8 +6,8 @@ from ghostos.contracts.variables import Variables
 from ghostos.contracts.assets import FileInfo
 from ghostos.container import Container
 from ghostos.prompter import get_defined_prompt
-from .message import Message, MessageClass, MessageType, FunctionOutput, MessageKind, Role, FunctionCaller
-from ghostos.helpers import uuid
+from ghostos.core.messages.message import Message, MessageClass, MessageType, FunctionOutput, MessageKind, Role, \
+    FunctionCaller
 from pydantic import BaseModel, Field
 
 __all__ = [
@@ -18,42 +18,32 @@ __all__ = [
     "ImageAssetMessage",
     "AudioMessage",
     "MessageKindParser",
+    "ConfirmMessage",
+    "DebugMessage",
 ]
 
 FunctionCallOutputMessage = FunctionOutput
 
 
-class FunctionCallMessage(MessageClass, BaseModel):
+class FunctionCallMessage(MessageClass):
     __message_type__ = MessageType.FUNCTION_CALL.value
 
-    msg_id: str = Field(default_factory=uuid, description="message id")
-    payloads: Dict[str, Dict] = Field(
-        default_factory=dict,
-        description="payload type key to payload item. payload shall be a strong-typed dict"
-    )
-    role: str = Field(default="", description="who send the message")
     caller: FunctionCaller
 
-    def to_message(self) -> Message:
-        return Message.new_tail(
-            type_=self.__message_type__,
-            msg_id=self.msg_id,
-            role=self.role,
-            name=self.caller.name,
-            call_id=self.caller.id,
-            content=self.caller.arguments,
-        )
+    def _to_message(self, message: Message) -> Message:
+        message.call_id = self.caller.call_id
+        message.content = self.caller.arguments
+        message.name = self.caller.name
+        return message
 
     @classmethod
-    def from_message(cls, message: Message) -> Optional[Self]:
+    def _from_message(cls, message: Message) -> Optional[Self]:
         if message.type != cls.__message_type__:
             return None
         return cls(
-            msg_id=message.msg_id,
-            payloads=message.payloads,
             role=message.role,
             caller=FunctionCaller(
-                id=message.call_id,
+                call_id=message.call_id,
                 name=message.name,
                 arguments=message.content,
             )
@@ -78,47 +68,33 @@ class FunctionCallMessage(MessageClass, BaseModel):
         )]
 
 
-class VariableMessage(MessageClass, BaseModel):
+class VariableMessage(MessageClass):
     """
     变量类型消息.
     """
 
     __message_type__ = MessageType.VARIABLE.value
 
-    msg_id: str = Field(default_factory=uuid, description="message id")
-    payloads: Dict[str, Dict] = Field(
-        default_factory=dict,
-        description="payload type key to payload item. payload shall be a strong-typed dict"
-    )
     role: str = Field(default="", description="who send the message")
     name: Optional[str] = Field(None, description="who send the message")
     attrs: Variables.Var = Field(
         description="variable pointer info"
     )
 
-    def to_message(self) -> Message:
-        message = Message.new_tail(
-            type_=MessageType.VARIABLE.value,
-            content="",
-            role=self.role,
-            name=self.name,
-            attrs=self.attrs.model_dump(),
-            msg_id=self.msg_id,
-        )
-        message.payloads = self.payloads
+    def _to_message(self, message: Message) -> Message:
+        message.attrs = self.attrs.model_dump()
+        message.content = ""
         return message
 
     @classmethod
-    def from_message(cls, message: Message) -> Optional[Self]:
+    def _from_message(cls, message: Message) -> Optional[Self]:
         if message.type != MessageType.VARIABLE.value:
             return None
 
         obj = cls(
-            msg_id=message.msg_id,
             role=message.role,
             name=message.name,
             attrs=message.attrs,
-            payloads=message.payloads,
         )
         return obj
 
@@ -151,12 +127,7 @@ class ImageAttrs(BaseModel):
     images: List[ImageId] = Field(default_factory=list, description="file id")
 
 
-class ImageAssetMessage(MessageClass, BaseModel):
-    msg_id: str = Field(default_factory=uuid, description="message id")
-    payloads: Dict[str, Dict] = Field(
-        default_factory=dict,
-        description="payload type key to payload item. payload shall be a strong-typed dict"
-    )
+class ImageAssetMessage(MessageClass):
     role: str = Field(default="", description="who send the message")
     name: Optional[str] = Field(None, description="who send the message")
     content: Optional[str] = Field("", description="content of the image message")
@@ -165,16 +136,9 @@ class ImageAssetMessage(MessageClass, BaseModel):
 
     __message_type__ = MessageType.IMAGE.value
 
-    def to_message(self) -> Message:
-        message = Message.new_tail(
-            role=self.role,
-            name=self.name,
-            content=self.content,
-            type_=self.__message_type__,
-            attrs=self.attrs.model_dump(),
-            msg_id=self.msg_id,
-        )
-        message.payloads = self.payloads
+    def _to_message(self, message: Message) -> Message:
+        message.attrs = self.attrs.model_dump()
+        message.content = self.content
         return message
 
     @classmethod
@@ -197,16 +161,14 @@ class ImageAssetMessage(MessageClass, BaseModel):
         )
 
     @classmethod
-    def from_message(cls, message: Message) -> Optional[Self]:
+    def _from_message(cls, message: Message) -> Optional[Self]:
         if message.type != cls.__message_type__:
             return None
         return cls(
-            msg_id=message.msg_id,
             role=message.role,
             name=message.name,
             content=message.content,
             attrs=message.attrs,
-            payloads=message.payloads,
         )
 
     def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
@@ -275,43 +237,90 @@ class ImageAssetMessage(MessageClass, BaseModel):
         return [item]
 
 
-class AudioMessage(MessageClass, BaseModel):
-    msg_id: str = Field(default_factory=uuid, description="message id")
-    payloads: Dict[str, Dict] = Field(
-        default_factory=dict,
-        description="payload type key to payload item. payload shall be a strong-typed dict"
-    )
+class AudioMessage(MessageClass):
+    __message_type__ = MessageType.AUDIO.value
+
     role: str = Field(default="", description="who send the message")
     name: Optional[str] = Field(None, description="who send the message")
     content: str = Field("", description="transcription of the audio message")
 
-    __message_type__ = MessageType.AUDIO.value
-
-    def to_message(self) -> Message:
-        message = Message.new_tail(
-            role=self.role,
-            name=self.name,
-            content=self.content,
-            type_=self.__message_type__,
-            msg_id=self.msg_id,
-        )
-        message.payloads = self.payloads
+    def _to_message(self, message: Message) -> Message:
+        message.content = self.content
         return message
 
     @classmethod
-    def from_message(cls, message: Message) -> Optional[Self]:
+    def _from_message(cls, message: Message) -> Optional[Self]:
         if message.type != cls.__message_type__:
             return None
         return cls(
-            msg_id=message.msg_id,
             role=message.role,
             name=message.name,
             content=message.content,
-            payloads=message.payloads,
         )
 
     def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
         raise NotImplementedError("todo")
+
+
+class DebugMessage(MessageClass):
+    """
+    debug type message. show debug info to client side.
+    """
+
+    __message_type__ = MessageType.DEBUG.value
+    debug_type: str = Field(default="", description="debug type")
+    debug_data: dict = Field(description="debug data")
+
+    def _to_message(self, message: Message) -> Message:
+        message.attrs = {
+            "type": self.debug_type,
+            "data": self.debug_data,
+        }
+        return message
+
+    @classmethod
+    def _from_message(cls, message: Message) -> Optional[Self]:
+        return cls(
+            debug_type=message.attrs.get("type", ""),
+            debug_data=message.attrs.get("data", {}),
+        )
+
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
+        # debug message is not visible to llm
+        return []
+
+
+class ConfirmMessage(MessageClass):
+    """
+    ask client side to confirm the message, the client shall send event with payload and message.
+    """
+    __message_type__ = MessageType.CONFIRM.value
+
+    content: str = Field(description="the question that ask the user to confirm")
+    visible: bool = Field(default=False, description="whether the question is visible to assistant")
+    event: Optional[dict] = Field(default=None, description="the basic event data, if confirm, shall send te event")
+
+    @classmethod
+    def new(cls, *, content: str, event: dict, visible: bool = False) -> "ConfirmMessage":
+        return cls(content=content, event=event, visible=visible)
+
+    def _to_message(self, message: Message) -> Message:
+        message.content = self.content
+        message.attrs["event"] = self.event
+        message.attrs["visible"] = self.visible
+        return message
+
+    @classmethod
+    def _from_message(cls, message: Message) -> Optional[Self]:
+        return cls(
+            content=message.content,
+            event=message.attrs.get("event", None),
+            visible=message.attrs.get("visible", False),
+        )
+
+    def to_openai_param(self, container: Optional[Container], compatible: bool = False) -> List[Dict]:
+        # the confirmation message is system message, not shown to llm.
+        return []
 
 
 class MessageKindParser:

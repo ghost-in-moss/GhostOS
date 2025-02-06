@@ -1,5 +1,5 @@
 from ghostos.prompter import (
-    TextPOM, PromptAbleClass, PromptAbleObj, PydanticPOM,
+    TextPOM, PromptAbleClass, PromptAbleObj, BasePOM,
     InspectPOM,
 )
 from ghostos.container import Container
@@ -40,7 +40,7 @@ def test_inspect_prompters():
 
 
 def test_model_prompters():
-    class TestPrompter(PydanticPOM):
+    class TestPrompter(BasePOM):
         line: str = "TestPrompter"
 
         def self_prompt(self, container: Container) -> str:

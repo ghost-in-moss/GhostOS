@@ -2,7 +2,7 @@ from typing import Optional, List, Iterable, Dict, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.core.messages import Message, copy_messages, Role, MessageType, MessageStage
+from ghostos.core.messages import Message, copy_messages, Role, MessageType, MessageStage, FunctionCaller
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event, EventTypes
@@ -44,6 +44,11 @@ class Turn(BaseModel):
         default=None,
         description="The summary before till this turn",
     )
+
+    approved: bool = Field(True, description="if the turn is not approved, will hidden to truncated turns")
+
+    pending_callers: Optional[List[FunctionCaller]] = Field(default=None, description="the pending callers")
+
     extra: Dict[str, Any] = Field(default_factory=dict, description="extra information")
 
     @classmethod
@@ -89,8 +94,8 @@ class Turn(BaseModel):
     def is_empty(self) -> bool:
         return (self.event is None or self.event.is_empty()) and not self.added
 
-    def is_from_inputs(self) -> bool:
-        return self.event is not None and self.event.type == EventTypes.INPUT.value
+    def is_from_client(self) -> bool:
+        return self.event is not None and self.event.is_from_client()
 
     def is_from_self(self) -> bool:
         return self.event is not None and self.event.is_from_self()
@@ -206,6 +211,9 @@ class GoThreadInfo(BaseModel):
         yield from self.on_created.messages(False)
         turns = self.get_history_turns(truncate=truncated)
         for turn in turns:
+            if truncated and not turn.approved:
+                # if truncate, safe mode turn will not be shown.
+                continue
             yield from turn.messages(truncated)
 
     def get_messages(self, truncated: bool) -> Iterable[Message]:
@@ -275,16 +283,19 @@ class GoThreadInfo(BaseModel):
         :param turn_id:
         :param pycontext:
         """
-        if self.current is not None:
-            self.history.append(self.current)
-            self.current = None
         if pycontext is None:
             last_turn = self.last_turn()
             pycontext = last_turn.pycontext
+        self.store()
         if turn_id is None and event is not None:
             turn_id = event.event_id
         new_turn = Turn.new(event=event, turn_id=turn_id, pycontext=pycontext)
         self.current = new_turn
+
+    def store(self):
+        if self.current is not None:
+            self.history.append(self.current)
+            self.current = None
 
     def append(self, *messages: Message, pycontext: Optional[PyContext] = None) -> None:
         """
@@ -379,6 +390,11 @@ class GoThreadInfo(BaseModel):
             self.current = None
             return True
         return False
+
+    def set_approval(self, approve: bool, pending: List[FunctionCaller] = None) -> None:
+        if self.current is not None:
+            self.current.approved = approve
+            self.current.pending_callers = pending
 
 
 def thread_to_prompt(

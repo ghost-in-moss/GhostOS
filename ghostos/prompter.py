@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from typing import (
-    List, Union, Callable, Any, Protocol, Optional, Dict, TypeVar, Type, Generic,
+    List, Union, Callable, Any, Protocol, Optional, Dict, TypeVar, Type, Generic, Iterable,
 )
 from typing_extensions import Self
 from abc import ABC, abstractmethod
@@ -15,15 +15,22 @@ from ghostos.entity import EntityMeta, from_entity_meta, to_entity_meta
 import json
 
 __all__ = [
-    'get_defined_prompt',
-    'set_prompt', 'set_class_prompt',
-    'PromptObjectModel', 'POM',
+
+    # -- prompt object model -- #
+    'PromptObjectModel', 'POM', 'BasePOM',
     'DataPOM', 'DataPOMDriver',
     'TextPOM',
     'InspectPOM',
+
+    # --- get value prompt --- #
+    'get_defined_prompt',
+    'set_prompt', 'set_class_prompt',
     'PromptAbleObj', 'PromptAbleClass',
 ]
 
+
+# todo: 我不太喜欢早期用 `prompt` 这个概念人为定义类的反射结果. 本意是想达到 "拒绝反射" 或者 "自定义反射" 的效果, 但太侵入源码了.
+# todo: 而且 `prompt` 这个词也过于狭窄. 考虑未来整体拿掉, 用关联反射替代.
 
 def get_defined_prompt(value: Any, container: Optional[Container] = None) -> Union[str, None]:
     attr = get_defined_prompt_attr(value, container)
@@ -85,20 +92,22 @@ class PromptObjectModel(ABC):
     the tree generate prompt from all the nodes.
     """
 
-    priority: int = Field(default=0, description='Priority of this prompter.')
-
     __children__: Optional[List[PromptObjectModel]] = None
     """ children is fractal sub context nodes"""
 
-    __self_prompt__: Optional[str] = None
+    __named_children__: Optional[Dict[str, PromptObjectModel]] = None
+    """ children with unique names"""
 
-    def with_children(self, *children: PromptObjectModel) -> Self:
+    def with_children(self, *children: PromptObjectModel, **slots_children: PromptObjectModel) -> Self:
         children = list(children)
         if len(children) > 0:
             for child in children:
                 if child is None:
                     continue
                 self.add_child(child)
+
+        for key, value in slots_children.items():
+            self.add_named_child(key, value)
         return self
 
     def add_child(self, *prompters: PromptObjectModel) -> Self:
@@ -106,6 +115,12 @@ class PromptObjectModel(ABC):
             self.__children__ = []
         for prompter in prompters:
             self.__children__.append(prompter)
+        return self
+
+    def add_named_child(self, key: str, value: PromptObjectModel) -> Self:
+        if self.__named_children__ is None:
+            self.__named_children__ = {}
+        self.__named_children__[key] = value
         return self
 
     @abstractmethod
@@ -124,8 +139,14 @@ class PromptObjectModel(ABC):
         """
         pass
 
-    def get_priority(self) -> int:
-        return self.priority
+    def list_children(self) -> Iterable[PromptObjectModel]:
+        if self.__named_children__ is not None:
+            for child in self.__named_children__.values():
+                yield child
+
+        if self.__children__ is not None:
+            for child in self.__children__:
+                yield child
 
     def get_prompt(self, container: Container, depth: int = 0) -> str:
         """
@@ -134,8 +155,6 @@ class PromptObjectModel(ABC):
         :param depth:
         :return:
         """
-        if self.__self_prompt__ is not None:
-            return self.__self_prompt__
 
         title = self.get_title()
         depth = depth
@@ -148,11 +167,11 @@ class PromptObjectModel(ABC):
         if self_prompt:
             prompts.append(self_prompt)
 
-        if self.__children__ is not None:
-            for child in self.__children__:
-                child_prompt = child.get_prompt(container, depth=depth)
-                if child_prompt:
-                    prompts.append(child_prompt)
+        for child in self.list_children():
+            child_prompt = child.get_prompt(container, depth=depth)
+            if child_prompt:
+                prompts.append(child_prompt)
+
         # empty prompts
         if not prompts:
             return ""
@@ -165,15 +184,15 @@ class PromptObjectModel(ABC):
             paragraph = paragraph.strip()
             if paragraph:
                 output += "\n\n" + paragraph
-        self.__self_prompt__ = output.strip()
-        return self.__self_prompt__
+
+        return output.strip()
 
     def flatten(self, index: str = "") -> Dict[str, Self]:
         if not index:
             index = "0"
         result = {index: self}
         idx = 0
-        for child in self.__children__:
+        for child in self.list_children():
             if not child:
                 continue
             sub_index = index + "." + str(idx)
@@ -183,14 +202,7 @@ class PromptObjectModel(ABC):
         return result
 
 
-POM = PromptObjectModel
-"""alias of the PromptObjectModel"""
-
-
-class PydanticPOM(BaseModel, PromptObjectModel, ABC):
-    """
-    use pydantic.BaseModel to define a strong-typed POM
-    """
+class BasePOM(BaseModel, PromptObjectModel, ABC):
 
     def __to_entity_meta__(self) -> EntityMeta:
         type_ = generate_import_path(self.__class__)
@@ -215,7 +227,15 @@ class PydanticPOM(BaseModel, PromptObjectModel, ABC):
         return result.with_children(*children)
 
 
-class DataPOM(PydanticPOM, ABC):
+POM = PromptObjectModel
+"""alias of the PromptObjectModel"""
+
+
+class DataPOM(PromptObjectModel, ABC):
+    """
+    data pom separate DataPOMDriver from the data.
+    want to hide methods to whom look at its source.
+    """
     __driver__: Optional[Type[DataPOMDriver]] = None
 
     def get_driver(self) -> DataPOMDriver:
@@ -259,7 +279,10 @@ class DataPOMDriver(Generic[D], ABC):
         pass
 
 
-class TextPOM(PydanticPOM):
+class TextPOM(BasePOM):
+    """
+    simplest text Project Object Model.
+    """
     title: str = ""
     content: str = ""
 
@@ -270,7 +293,11 @@ class TextPOM(PydanticPOM):
         return self.title
 
 
-class InspectPOM(DataPOM):
+class InspectPOM(BasePOM, DataPOM):
+    """
+    test only object.
+    """
+
     title: str = Field(
         default="Code Inspection",
         description="The title of the inspect prompt.",
