@@ -197,6 +197,10 @@ class OpenAIAdapter(LLMApi):
                     last = last.model_copy(update={"role": Role.ASSISTANT.value}, deep=True)
                 messages[last_idx] = last
 
+        # compatible parser
+        if parser := compatible.get_compatible_parser():
+            messages = parser.parse(messages)
+
         return messages
 
     def _chat_completion(self, prompt: Prompt, stream: bool) -> Union[ChatCompletion, Iterable[ChatCompletionChunk]]:
