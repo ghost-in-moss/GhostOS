@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import os
-
+from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Any, ClassVar
 from typing_extensions import Literal
 from pydantic import BaseModel, Field
-from ghostos.core.messages import Payload
+from ghostos.core.messages import Payload, Message
 
 # from ghostos.helpers import gettext as _
 
 __all__ = [
     'ModelConf', 'ServiceConf', 'LLMsConfig',
     'OPENAI_DRIVER_NAME', 'LITELLM_DRIVER_NAME', 'DEEPSEEK_DRIVER_NAME',
+    'Compatible', 'MessagesCompatibleParser',
 ]
 
 OPENAI_DRIVER_NAME = "openai_driver"
@@ -76,6 +77,17 @@ means only the tokens comprising the top 10% probability mass are considered.
     )
 
 
+class MessagesCompatibleParser(ABC):
+    """
+    messages params parser
+    parse List[Message] to the messages that model can accept
+    """
+
+    @abstractmethod
+    def parse(self, messages: List[Message]) -> List[Message]:
+        pass
+
+
 class Compatible(BaseModel):
     """
     all the shitty compatible features for various models
@@ -98,6 +110,18 @@ class Compatible(BaseModel):
         default=False,
         description="some how last message shall be assistant role",
     )
+    message_parser: Optional[str] = Field(default=None, description="the message param parser for the model")
+
+    def get_compatible_parser(self) -> Optional[MessagesCompatibleParser]:
+        """
+        get a predefined message parser to messages compatible transform
+        :return: messages params to the model
+        """
+        from ghostos.helpers import import_instance_from_path
+        if self.message_parser is None:
+            return None
+        parser = import_instance_from_path(self.message_parser, MessagesCompatibleParser)
+        return parser
 
 
 class Azure(BaseModel):

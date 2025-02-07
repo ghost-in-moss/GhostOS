@@ -5,6 +5,7 @@ from ghostos.helpers.yaml import yaml_pretty_dump, yaml_multiline_string_pipe
 from ghostos.helpers.modules import (
     import_from_path,
     import_class_from_path,
+    import_instance_from_path,
     parse_import_path_module_and_attr_name,
     join_import_module_and_spec,
     get_module_attr,
