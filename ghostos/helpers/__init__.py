@@ -28,6 +28,7 @@ from ghostos.helpers.coding import reflect_module_code, unwrap
 from ghostos.helpers.openai import get_openai_key
 from ghostos.helpers.tree_sitter import tree_sitter_parse, code_syntax_check
 from ghostos.helpers.code_analyser import get_code_interface, get_code_interface_str
+from ghostos.helpers.files import generate_directory_tree, list_dir, match_pathname
 
 if TYPE_CHECKING:
     from typing import Callable
