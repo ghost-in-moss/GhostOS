@@ -28,7 +28,7 @@ def timestamp_datetime() -> datetime:
 
 
 def timestamp() -> int:
-    return int(time.time())
+    return int(round(time.time(), 0))
 
 
 def timestamp_ms() -> float:
