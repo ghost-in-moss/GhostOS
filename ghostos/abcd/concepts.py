@@ -832,9 +832,14 @@ class Session(Generic[G], ABC):
             self,
             messages: Iterable[MessageKind],
             stage: str = "",
+            save: bool = True,
     ) -> Tuple[List[Message], List[FunctionCaller]]:
         """
-        发送消息, 但不影响运行状态.
+        sending messages to client side.
+        :param messages: the items to send. streaming or complete message.
+        :param stage: set the stage of the all the messages.
+        :param save: save the messages to session.thread. If false, shall handle the messages manually
+        :return: join the chunks, return parsed (complete messages, function callers)
         """
         pass
 
