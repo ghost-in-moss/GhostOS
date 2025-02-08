@@ -31,7 +31,12 @@ MOSS_CONTEXT_TEMPLATE = """
 The python context `{modulename}` that MOSS provides to you are below:
 
 ```python
-{code_context}
+{source_code}
+```
+
+interfaces of some imported attrs are:
+```python
+{imported_attrs_prompt}
 ```
 
 Notices:
@@ -197,7 +202,9 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
     :param runtime:
     :return:
     """
-    code_context = runtime.prompter().dump_module_prompt()
+    prompter = runtime.prompter()
+    source_code = prompter.get_source_code()
+    imported_attrs_prompt = prompter.get_imported_attrs_prompt([Operator])
 
     injections = runtime.moss_injections()
     children = []
@@ -213,7 +220,8 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
 
     content = MOSS_CONTEXT_TEMPLATE.format(
         modulename=runtime.module().__name__,
-        code_context=code_context,
+        source_code=source_code,
+        imported_attrs_prompt=imported_attrs_prompt,
     )
 
     return TextPOM(

@@ -1,21 +1,27 @@
+from abc import ABC, abstractmethod
 from typing import Optional, TypeVar, Tuple, List, Iterable
 from ghostos.abcd.concepts import Session, Operator, Action, Thought
 from ghostos.core.llms import Prompt, ModelConf, ServiceConf, LLMs, LLMApi
-from ghostos.core.runtime.events import EventTypes
+from ghostos.core.messages import Message
 
-__all__ = ['ActionThought', 'ChainOfThoughts', 'Thought', 'T']
-
-T = TypeVar('T')
+__all__ = ['ActionThought', 'ChainOfThoughts', 'OpThought']
 
 
 # --- some basic thoughts --- #
 
-class ChainOfThoughts(Thought[Operator]):
+class OpThought(Thought[Operator]):
+
+    @abstractmethod
+    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[Operator]]:
+        pass
+
+
+class ChainOfThoughts(OpThought):
     def __init__(
             self,
             *,
-            final: Thought[Operator],
-            chain: List[Thought[Operator]],
+            final: OpThought,
+            chain: List[OpThought],
     ):
         self.chain = chain
         self.final = final
@@ -29,7 +35,22 @@ class ChainOfThoughts(Thought[Operator]):
         return self.final.think(session, prompt)
 
 
-class ActionThought(Thought[Operator]):
+class MemoryThought(OpThought, ABC):
+    """
+    add memory before inputs.
+    """
+
+    @abstractmethod
+    def memory(self, session: Session) -> List[Message]:
+        pass
+
+    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[Operator]]:
+        memory = self.memory(session)
+        prompt.history.extend(memory)
+        return prompt, None
+
+
+class ActionThought(OpThought):
     """
     basic llm thought
     """
