@@ -15,7 +15,7 @@ from ghostos.abcd.utils import (
     get_module_magic_shell_providers,
     get_module_magic_ghost,
 )
-from ghostos.abcd.thoughts import ActionThought, ChainOfThoughts
+from ghostos.abcd.thoughts import ActionThought, ChainOfThoughts, OpThought
 from ghostos.abcd.moss_action import (
     MOSS_INTRODUCTION, MOSS_FUNCTION_DESC, MOSS_CONTEXT_TEMPLATE, MossAction, get_moss_context_pom,
 )

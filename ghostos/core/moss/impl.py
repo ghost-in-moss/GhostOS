@@ -12,6 +12,7 @@ from ghostos.core.moss.abcd import (
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
     Injection,
 )
+from ghostos.core.moss.prompts import reflect_code_prompt
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.prompter import PromptObjectModel, TextPOM
 from ghostos.helpers import generate_module_and_attr_name, code_syntax_check
@@ -66,11 +67,6 @@ class MossCompilerImpl(MossCompiler):
 
     def with_locals(self, **kwargs) -> "MossCompiler":
         self._predefined_locals.update(kwargs)
-        return self
-
-    def with_ignore_prompts(self, *attr_names) -> "MossCompiler":
-        for attr_name in attr_names:
-            self._attr_prompts.append((attr_name, ""))
         return self
 
     def injects(self, **attrs: Any) -> "MossCompiler":
@@ -158,12 +154,13 @@ class MossStub(Moss):
     __output__: str
     __printer__: Callable
 
-    def __init__(self, pycontext: PyContext, container: Container, printer: Callable):
+    def __init__(self, pycontext: PyContext, container: Container, printer: Callable, watching: List):
         MossStub.instance_count += 1
         self.__dict__['__pycontext__'] = pycontext
         self.__dict__['__container__'] = container
         self.__dict__['__output__'] = ""
         self.__dict__['__printer__'] = printer
+        self.__dict__['__watching__'] = watching
 
     def fetch(self, abstract: Moss.T) -> Optional[Moss.T]:
         return self.__container__.fetch(abstract)
@@ -183,7 +180,8 @@ class MossStub(Moss):
 def new_moss_stub(cls: Type[Moss], container: Container, pycontext: PyContext, pprint: Callable) -> Moss:
     # cls 必须不包含参数.
 
-    stub = MossStub(pycontext, container, pprint)
+    watching = cls.__watching__
+    stub = MossStub(pycontext, container, pprint, watching)
     stub.executing_code = None
     # assert stub.instance_count > 0
     for attr_name in dir(cls):
@@ -225,8 +223,11 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._attr_prompts: Dict[str, str] = attr_prompts
         self._closed: bool = False
         self._injected = set()
+        self._injected_types = set()
         self._moss: Moss = self._compile_moss()
         self._initialize_moss()
+
+        self._imported_attrs: Optional[Dict[str, Any]] = None
         MossRuntime.instance_count += 1
 
     def _compile_moss(self) -> Moss:
@@ -267,9 +268,13 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             if name.startswith('_'):
                 continue
 
+            # 记录所有定义过的类型.
+            self._injected_types.add(typehint)
+
             # 已经有的就不再注入.
             if hasattr(moss, name):
                 continue
+
             # 为 None 才依赖注入.
             value = self._container.force_fetch(typehint)
             # 依赖注入.
@@ -326,7 +331,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             yield
             self._runtime_std_output += str(buffer.getvalue())
 
-    def pycontext_code(
+    def get_source_code(
             self,
             exclude_hide_code: bool = True,
     ) -> str:
@@ -341,16 +346,83 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             injections[name] = injection
         return injections
 
-    def moss_injections_prompt(self) -> str:
+    def get_imported_attrs(self) -> Dict[str, Any]:
+        if self._imported_attrs is None:
+            self._imported_attrs = {}
+            modulename = self._compiled.__module__
+            for name, value in self._compiled.__dict__.items():
+                if name.startswith("_"):
+                    continue
+
+                elif not value:
+                    continue
+                elif inspect.isbuiltin(value):
+                    # 系统内置的, 都不展示.
+                    continue
+                elif inspect.ismodule(value):
+                    # module can not get itself
+                    self._imported_attrs[name] = value
+                elif hasattr(value, "__module__") and hasattr(value, "__name__"):
+                    if value.__module__ == modulename:
+                        continue
+                    self._imported_attrs[name] = value
+            return self._imported_attrs
+
+    def get_imported_attrs_prompt(self, includes: List = None) -> str:
+        imported_attrs = self.get_imported_attrs()
+        reverse_imported = {}
+        reflection_types = set()
+
+        # add all function and method to reflections.
+        # and prepare reverse imported.
+        for key, value in imported_attrs.items():
+            if value not in reverse_imported:
+                reverse_imported[value] = key
+                if inspect.isfunction(value) or inspect.ismethod(value):
+                    reflection_types.add(value)
+        if includes:
+            for value in includes:
+                if value not in reverse_imported:
+                    continue
+                reflection_types.add(value)
+
+        # add injected first .
+        for injected_type in self._injected_types:
+            # only imported value shall be reflected.
+            if injected_type in reverse_imported:
+                reflection_types.add(injected_type)
+
+        for watched in self.moss().__watching__:
+            if watched in reverse_imported:
+                reflection_types.add(watched)
+
+        blocks = []
+        for reflection_type in reflection_types:
+            name = reverse_imported[reflection_type]
+            prompt = reflect_code_prompt(reflection_type)
+            if prompt:
+                block = f"# <attr name=`{name}`>\n{prompt}\n# </attr>"
+                blocks.append(block)
+        return "\n".join(blocks)
+
+    def get_moss_injections_poms(self) -> Dict[str, PromptObjectModel]:
+        poms = {}
         injections = self.moss_injections()
-        children = []
-        container = self.container()
         for name, injection in injections.items():
             if isinstance(injection, PromptObjectModel):
-                children.append(TextPOM(
-                    title=f"moss.{name}",
-                    content=injection.self_prompt(container),
-                ))
+                poms[name] = injection
+        return poms
+
+    def get_moss_injections_poms_prompt(self) -> str:
+        container = self.container()
+        children = []
+        # replace the pom title.
+        for name, pom in self.get_moss_injections_poms().items():
+            children.append(TextPOM(
+                title=f"moss.{name}",
+                content=pom.self_prompt(container),
+            ))
+
         prompter = TextPOM(
             title="Moss Injections",
         ).with_children(*children)

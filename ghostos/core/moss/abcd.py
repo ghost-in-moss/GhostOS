@@ -1,13 +1,14 @@
 from __future__ import annotations
 from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable, TypeVar, ClassVar
 from typing_extensions import Self
-from types import ModuleType
+from types import ModuleType, FunctionType
 from abc import ABC, abstractmethod
 from ghostos.container import Container, Provider, Factory, provide
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.prompts import (
     AttrPrompts, reflect_locals_imported, compile_attr_prompts
 )
+from ghostos.prompter import PromptObjectModel
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -82,6 +83,9 @@ class Moss(ABC):
 
     executing_code: Optional[str]
     """the code that execute the moss instance."""
+
+    __watching__: List[Union[FunctionType, ModuleType, type]] = []
+    """the class or module that dose not bound to moss but still want to watch the interface of them"""
 
     @abstractmethod
     def fetch(self, abstract: Type[T]) -> Optional[T]:
@@ -278,7 +282,7 @@ class MossPrompter(ABC):
         pass
 
     @abstractmethod
-    def pycontext_code(
+    def get_source_code(
             self,
             exclude_hide_code: bool = True,
     ) -> str:
@@ -286,6 +290,37 @@ class MossPrompter(ABC):
         返回通过 pycontext.module 预定义的代码.
         第一行应该是 from __future__ import annotations. 解决上下文乱续的提示问题.
         :param exclude_hide_code: 如果为 True, 只返回大模型可以阅读的代码.
+        """
+        pass
+
+    @abstractmethod
+    def get_imported_attrs(self) -> Dict[str, Any]:
+        """
+        get imported attrs (function, class, or module) of the compiled module
+        """
+        pass
+
+    @abstractmethod
+    def get_imported_attrs_prompt(self, includes: List = None) -> str:
+        """
+        get the default prompt of the imported attrs.
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def get_moss_injections_poms(self) -> Dict[str, PromptObjectModel]:
+        """
+        get prompt object models that bound to moss
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def get_moss_injections_poms_prompt(self) -> str:
+        """
+        generate prompt from the injections bound to Moss
+        iterate each injection that extends PromptObjectModel to get prompt.
         """
         pass
 
@@ -349,14 +384,6 @@ class MossPrompter(ABC):
             fn = getattr(compiled, __moss_module_prompt__.__name__)
             return fn(self)
         return __moss_module_prompt__(self, attr_prompts)
-
-    @abstractmethod
-    def moss_injections_prompt(self) -> str:
-        """
-        generate prompt from the injections bound to Moss
-        iterate each injection that extends PromptObjectModel to get prompt.
-        """
-        pass
 
 
 class MossRuntime(ABC):

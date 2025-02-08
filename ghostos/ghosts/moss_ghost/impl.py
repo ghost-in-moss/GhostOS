@@ -285,7 +285,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
         container = compiler.container()
 
         compiler = compiler.join_context(pycontext)
-        compiler = compiler.with_locals(Optional=Optional)
+        compiler = compiler.with_locals(Optional=Optional, Operator=Operator)
 
         # register self
         container.set(Ghost, self.agent)

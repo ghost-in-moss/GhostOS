@@ -155,7 +155,7 @@ with runtime:
    # prompt 由以下部分构成: 
 
    # 1. 编译模块的源码
-   code = prompter.pycontext_code()  # 获取模块的源码
+   code = prompter.get_source_code()  # 获取模块的源码
 
    for attr_name, attr_prompt in prompter.imported_attr_prompts():
       # 获取编译模块中, 各个属性的 prompt. 默认情况只会反射从其它模块 import 的属性. 

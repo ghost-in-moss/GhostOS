@@ -28,7 +28,7 @@ import inspect
 """
 
 __all__ = [
-    'get_prompt',
+    'reflect_code_prompt',
     'reflect_locals_imported', 'reflect_class_with_methods',
     'join_prompt_lines', 'compile_attr_prompts',
     'get_defined_prompt',
@@ -134,10 +134,10 @@ def reflect_imported_attr(
         if value_modulename.startswith(ignore_module_name):
             return None
 
-    return get_prompt(value)
+    return reflect_code_prompt(value)
 
 
-def get_prompt(value: Any) -> Optional[str]:
+def reflect_code_prompt(value: Any) -> Optional[str]:
     """
     get prompt from value.
     only:
