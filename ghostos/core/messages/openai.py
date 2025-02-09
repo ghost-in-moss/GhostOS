@@ -227,7 +227,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                 if not caller.functional_token:
                     # 如果不是协议信息, 则不做额外的封装.
                     continue
-                if caller.id is None:
+                if caller.call_id is None:
                     function_call = FunctionCall(
                         name=caller.name,
                         arguments=caller.arguments,
@@ -236,7 +236,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                     if tool_calls is None:
                         tool_calls = []
                     tool_call = ChatCompletionMessageToolCallParam(
-                        id=caller.id,
+                        id=caller.call_id,
                         function=FunctionCall(
                             name=caller.name,
                             arguments=caller.arguments,

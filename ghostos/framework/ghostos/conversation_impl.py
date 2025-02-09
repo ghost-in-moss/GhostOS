@@ -1,7 +1,7 @@
-from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable
+from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable, Dict
 
 from ghostos.container import Container
-from ghostos.abcd import Conversation, Scope, Ghost, Context
+from ghostos.abcd import Conversation, Scope, Ghost, Context, EntityType
 from ghostos.abcd import default_init_event_operator
 from ghostos.errors import SessionError
 from ghostos.contracts.variables import Variables
@@ -108,6 +108,15 @@ class ConversationImpl(Conversation[G]):
     def get_task(self) -> GoTaskStruct:
         self._validate_closed()
         return self._tasks.get_task(self.scope.task_id)
+
+    def get_state_values(self) -> Dict[str, EntityType]:
+        from ghostos.entity import from_entity_meta
+        self._validate_closed()
+        values = {}
+        metas = self.get_task().state_values
+        for key, meta in metas.items():
+            values[key] = from_entity_meta(meta)
+        return values
 
     def get_thread(self, truncated: bool = False) -> GoThreadInfo:
         self._validate_closed()

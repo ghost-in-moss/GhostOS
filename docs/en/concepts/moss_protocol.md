@@ -173,7 +173,7 @@ with runtime:
     # prompt is composed by: 
 
     # 1. source code of the module
-    code = prompter.pycontext_code()  # 获取模块的源码
+    code = prompter.get_source_code()  # 获取模块的源码
 
     # each prompt of the imported attrs
     for attr_name, attr_prompt in prompter.imported_attr_prompts():

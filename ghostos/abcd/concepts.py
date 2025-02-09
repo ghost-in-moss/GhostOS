@@ -12,8 +12,8 @@ from ghostos.prompter import PromptObjectModel, BasePOM
 from ghostos.core.runtime import (
     TaskState,
 )
-from ghostos.core.runtime.events import Event
-from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
+from ghostos.core.runtime.events import Event, EventBus
+from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief, GoTasks
 from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos.core.moss import PyContext
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
@@ -56,7 +56,7 @@ and the Most valuable features about ghost are:
 __all__ = (
     "Ghost", "GhostDriver", "GhostOS", "Shell", "Conversation", "Background",
     "Operator", "Action",
-    "Session", "Messenger", "StateValue", "Scope",
+    "Session", "Messenger", "StateValue", "Scope", "EntityType",
     "Mindflow", "Subtasks",
     "Context",
     "Thought",
@@ -380,6 +380,14 @@ class Shell(ABC):
         pass
 
     @abstractmethod
+    def tasks(self) -> GoTasks:
+        pass
+
+    @abstractmethod
+    def eventbus(self) -> EventBus:
+        pass
+
+    @abstractmethod
     def sync_task(
             self,
             task: Union[str, GoTaskStruct],
@@ -458,6 +466,10 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def get_state_values(self) -> Dict[str, EntityType]:
+        pass
+
+    @abstractmethod
     def get_thread(self, truncated: bool = False) -> GoThreadInfo:
         pass
 
@@ -512,6 +524,10 @@ class Conversation(Protocol[G]):
 
     @abstractmethod
     def update_context(self, context: Context) -> None:
+        """
+        update the current context pom of the task
+        :param context: context pom
+        """
         pass
 
     @abstractmethod
@@ -832,9 +848,14 @@ class Session(Generic[G], ABC):
             self,
             messages: Iterable[MessageKind],
             stage: str = "",
+            save: bool = True,
     ) -> Tuple[List[Message], List[FunctionCaller]]:
         """
-        发送消息, 但不影响运行状态.
+        sending messages to client side.
+        :param messages: the items to send. streaming or complete message.
+        :param stage: set the stage of the all the messages.
+        :param save: save the messages to session.thread. If false, shall handle the messages manually
+        :return: join the chunks, return parsed (complete messages, function callers)
         """
         pass
 

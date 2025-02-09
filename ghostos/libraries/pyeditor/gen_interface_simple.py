@@ -1,7 +1,7 @@
 from typing import Any, Optional
 from typing_extensions import is_protocol, is_typeddict
 from ghostos.libraries.pyeditor.abcd import PyInterfaceGenerator
-from ghostos.core.moss.prompts import get_prompt
+from ghostos.core.moss.prompts import reflect_code_prompt
 from ghostos.container import Container, Provider
 from ghostos.helpers import get_code_interface
 import inspect
@@ -13,7 +13,7 @@ class SimplePyInterfaceGenerator(PyInterfaceGenerator):
             self,
             value: Any,
     ) -> str:
-        prompt = get_prompt(value)
+        prompt = reflect_code_prompt(value)
         if prompt is not None:
             return prompt
         try:

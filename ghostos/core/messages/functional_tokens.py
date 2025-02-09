@@ -21,8 +21,12 @@ class XMLFunctionalTokenPipe(Pipe):
     def __init__(
             self,
             functional_tokens: List[FunctionalToken],
+            stages: Optional[List[str]] = None
     ):
         self.functional_tokens = functional_tokens
+        if stages is None:
+            stages = ['']
+        self.stages = set(stages)
 
     def new(self) -> Self:
         return self
@@ -37,6 +41,9 @@ class XMLFunctionalTokenPipe(Pipe):
                 yield item
                 continue
             if not MessageType.is_text(item):
+                yield item
+                continue
+            if item.stage not in self.stages:
                 yield item
                 continue
 

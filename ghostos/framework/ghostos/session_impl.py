@@ -314,7 +314,12 @@ class SessionImpl(Session[Ghost]):
             output_pipes=self.ghost_driver.output_pipes()
         )
 
-    def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[FunctionCaller]]:
+    def respond(
+            self,
+            messages: Iterable[MessageKind],
+            stage: str = "",
+            save: bool = True,
+    ) -> Tuple[List[Message], List[FunctionCaller]]:
         self._validate_alive()
         messages = self._message_parser.parse(messages)
         with self._respond_lock:
@@ -326,7 +331,8 @@ class SessionImpl(Session[Ghost]):
 
             buffer, callers = messenger.flush()
             self.logger.debug("append messages to thread: %s", buffer)
-            self.thread.append(*buffer)
+            if save:
+                self.thread.append(*buffer)
             return buffer, callers
 
     def respond_buffer(self, messages: Iterable[MessageKind], stage: str = "") -> None:

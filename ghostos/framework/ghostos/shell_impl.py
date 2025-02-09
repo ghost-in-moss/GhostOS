@@ -117,6 +117,12 @@ class ShellImpl(Shell):
         )
         return conversation
 
+    def tasks(self) -> GoTasks:
+        return self._tasks
+
+    def eventbus(self) -> EventBus:
+        return self._eventbus
+
     def get_or_create_task(
             self,
             ghost: Ghost,

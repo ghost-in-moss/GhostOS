@@ -69,7 +69,7 @@ def __moss_module_prompt__(prompter: "MossPrompter", attr_prompts: Optional[Dict
     from ghostos.core.moss.utils import escape_string_quotes
 
     # 获取原始的代码.
-    origin_code = prompter.pycontext_code(exclude_hide_code=True)
+    origin_code = prompter.get_source_code(exclude_hide_code=True)
 
     # 基于 origin code 生成关于这些变量的 prompt.
     attrs_prompt_str = prompter.dump_imported_prompt(attr_prompts=attr_prompts)

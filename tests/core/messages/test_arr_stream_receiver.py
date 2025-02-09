@@ -271,7 +271,7 @@ def test_array_receiver_bad_case_1():
             "name": "SpheroGPT",
             "content": "os",
             "memory": None,
-            "attrs": None,
+            "attrs": {},
             "payloads": {},
             "callers": [],
             "seq": "chunk",

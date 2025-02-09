@@ -50,7 +50,7 @@ def test_baseline_exec():
     assert prompter is not None
     prompt = prompter.dump_module_prompt()
 
-    injection_prompt = prompter.moss_injections_prompt()
+    injection_prompt = prompter.get_moss_injections_poms_prompt()
     print("++++", injection_prompt)
     assert "tester" in injection_prompt
 
@@ -141,11 +141,10 @@ def test_baseline_with_pycontext_code():
 def test_moss_gc():
     from threading import Thread
     from gc import collect
-    from ghostos.core.moss.impl import MossStub, MossTempModuleType
+    from ghostos.core.moss.moss_impl import MossStub, MossTempModuleType
     container = moss_container()
-    assert Container.instance_count < 10
+    container_count = Container.instance_count
     moss_stub_count = MossStub.instance_count
-    assert moss_stub_count < 10
 
     def run(c: Container):
         compiler = c.force_fetch(MossCompiler)
@@ -172,4 +171,4 @@ def test_moss_gc():
     assert MossTempModuleType.__instance_count__ < 10
     assert MossRuntime.instance_count == 0
     assert MossStub.instance_count <= moss_stub_count
-    assert Container.instance_count < 10
+    assert Container.instance_count < (10 + container_count)

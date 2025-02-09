@@ -47,6 +47,10 @@ class Role(str, enum.Enum):
         # maybe switch to developer role in future.
         return cls.SYSTEM.new(content, memory=memory, stage=stage)
 
+    @classmethod
+    def is_system(cls, role: str) -> bool:
+        return role == cls.SYSTEM.value or role == cls.DEVELOPER.value
+
     def new(
             self,
             content: str,
@@ -54,6 +58,7 @@ class Role(str, enum.Enum):
             name: Optional[str] = None,
             type_: Optional[str] = None,
             stage: str = "",
+            msg_id: Optional[str] = None,
     ) -> "Message":
         return Message.new_tail(
             type_=type_ if type_ else MessageType.DEFAULT.value,
@@ -62,6 +67,7 @@ class Role(str, enum.Enum):
             content=content,
             memory=memory,
             stage=stage,
+            msg_id=msg_id,
         )
 
 

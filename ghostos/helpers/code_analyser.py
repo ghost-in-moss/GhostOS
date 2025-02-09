@@ -3,10 +3,12 @@ from tree_sitter import (
     Node as TreeSitterNode,
 )
 from ghostos.helpers.tree_sitter import tree_sitter_parse
+from functools import lru_cache
 
 __all__ = ['get_code_interface', 'get_code_interface_str']
 
 
+@lru_cache(maxsize=256)
 def get_code_interface_str(code: str) -> str:
     return "\n\n".join(get_code_interface(code))
 
@@ -43,7 +45,7 @@ def _get_child_interface_in_depth(code: str, node: TreeSitterNode, depth: int) -
 def _get_child_interface(code: str, child: TreeSitterNode) -> str:
     if child.type == 'import_statement' or child.type == 'import_from_statement':
         # 如果是引用语句，保持原样
-        return code[child.start_byte:child.end_byte]
+        return child.text.decode()
 
     elif child.type == 'expression_statement':
         # 处理表达式语句
@@ -53,14 +55,8 @@ def _get_child_interface(code: str, child: TreeSitterNode) -> str:
         # 处理函数定义
         func_name = child.child_by_field_name('name').text.decode()
         if func_name and not func_name.startswith('_'):
-            docstring = get_node_docstring(child)
-            definition = _get_full_definition(child, 0)
-
-            func_interface = [definition]
-            if docstring:
-                func_interface.append(f'    """{docstring}"""')
-            func_interface.append("    pass")
-            return "\n".join(func_interface)
+            definition = _get_function_interface(child)
+            return definition
 
     elif child.type == 'class_definition':
         return _get_class_interface(code, child)
@@ -68,26 +64,33 @@ def _get_child_interface(code: str, child: TreeSitterNode) -> str:
     elif child.type == 'decorated_definition':
         # 处理装饰器
         return _get_decorator_interface(code, child)
-
-
     else:
         return ""
 
 
-def _get_decorator_interface(code: str, child: TreeSitterNode, depth: int = 0) -> str:
+def _get_decorator_interface(code: str, child: TreeSitterNode) -> str:
     decorator = child.children[0]
     definition = child.children[1]
-    body = _get_child_interface_in_depth(code, definition, depth)
-    decorator_interfaces = [(' ' * 4 * depth) + f"@{decorator.text.decode()}", body]
+    body = _get_child_interface_in_depth(code, definition, 0)
+    decorator_interfaces = [f"{decorator.text.decode()}", body]
     return "\n".join(decorator_interfaces)
 
 
-def _get_full_definition(child: TreeSitterNode, depth: int) -> str:
-    children = child.children[1:len(child.children) - 1]
-    definition = child.children[0].text.decode() + " "
-    for child in children:
-        definition += child.text.decode()
-    return ' ' * 4 * depth + definition
+def _get_full_definition(node: TreeSitterNode, docstring: bool = True) -> str:
+    definition = node.children[0].text.decode() + ' '
+    for child in node.children[1:]:
+        if child.type != "block":
+            definition += child.text.decode()
+        else:
+            if len(child.children) > 0 and docstring:
+                doc_node = child.children[0]
+                if doc_node.type == 'expression_statement' and doc_node.children[0].type == "string":
+                    doc_node = doc_node.children[0]
+                    doc = "\n".join([line.lstrip() for line in doc_node.text.decode().splitlines()])
+                    doc = insert_depth_to_code(doc, 1)
+                    definition += "\n" + doc
+            break
+    return definition.lstrip()
 
 
 def _get_assignment_interface(code: str, node: TreeSitterNode) -> str:
@@ -102,16 +105,16 @@ def _get_assignment_interface(code: str, node: TreeSitterNode) -> str:
     left = expression.children[0]
     right = expression.children[2]
     if left.type == 'identifier':
-        var_name = code[left.start_byte:left.end_byte]
+        var_name = left.text.decode()
         if var_name.startswith('__') and var_name.endswith('__'):
             # 保持魔术变量和类型变量赋值原样
-            return code[node.start_byte:node.end_byte]
+            return node.text.decode()
         elif var_name.startswith('_') or var_name.startswith('__'):
             # 忽略私有变量赋值
             return ""
         else:
             # 如果赋值语句长度小于50个字符，保留原样
-            assignment_code = code[node.start_byte:node.end_byte]
+            assignment_code = node.text.decode()
             if len(assignment_code) < 500:
                 return assignment_code
             else:
@@ -124,68 +127,62 @@ def _get_class_interface(code, class_node: TreeSitterNode) -> str:
     class_name = class_node.child_by_field_name('name').text.decode()
     if class_name.startswith('_'):
         return ""
-    class_definition = [_get_full_definition(class_node, 0)]
+    class_definition = _get_full_definition(class_node, docstring=False)
 
-    # 处理类的 docstring
-    docstring = get_node_docstring(class_node)
-    if docstring:
-        class_definition.append(f'    """{docstring}"""')
-
-    class_interface = ["\n".join(class_definition)]
+    class_body_interface = []
     # 处理类中的公共方法和__init__中的公共属性赋值
     property_count = 0
     class_body = class_node.children[-1]
     for class_child in class_body.children:
-
         if class_child.type == 'decorated_definition':
             # 处理装饰器
-            decorator_interface = _get_decorator_interface(code, class_child, depth=1)
-            class_interface.append(decorator_interface)
+            decorator_interface = _get_decorator_interface(code, class_child)
+            class_body_interface.append(decorator_interface)
 
         elif class_child.type == 'function_definition':
             method_name = class_child.child_by_field_name('name').text.decode()
             if method_name == '__init__':
-                init_method_interface = _get_class_init_body_interface(code, method_name, class_child)
-                class_interface.append(init_method_interface)
+                init_method_interface = _get_class_init_body_interface(code, class_child)
+                class_body_interface.append(init_method_interface)
             elif not method_name.startswith('_'):
-                method_interface = _get_class_method_interface(method_name, class_child)
-                class_interface.append(method_interface)
+                method_interface = _get_function_interface(class_child)
+                class_body_interface.append(method_interface)
             property_count += 1
-        # elif class_child.type == 'expression_statement':
-        #     # 处理类的公共属性定义
-        #     _get_assignment_interface(code, class_child)
-        #     expr = class_child.children[0]
-        #     if expr.type == 'assignment':
-        #         left = expr.children[0]
-        #         if left.type == 'identifier':
-        #             var_name = code[left.start_byte:left.end_byte]
-        #             if not (var_name.startswith('_') or var_name.startswith('__')):
-        #                 class_interface.append(f"    {var_name} = ...")
-        #                 property_count += 1
         else:
-            interface = _get_child_interface_in_depth(code, class_child, 1)
+            interface = _get_child_interface_in_depth(code, class_child, 0)
             if interface:
-                class_interface.append(interface)
+                class_body_interface.append(interface)
                 property_count += 1
 
     if property_count == 0:
-        class_interface.append("    pass")
-    return "\n\n".join(class_interface)
+        class_body_interface.append("    pass")
+    class_body = "\n\n".join(class_body_interface)
+    class_body = insert_depth_to_code(class_body, 1)
+    return class_definition + "\n" + class_body
 
 
-def _get_class_method_interface(method_name: str, method_node: TreeSitterNode) -> str:
-    method_interface = [f"    def {method_name}(...):"]
-    docstring = get_node_docstring(method_node)
-    if docstring:
-        method_interface.append(f'        """{docstring}"""')
-    method_interface.append("        pass")
+def insert_depth_to_code(code: str, depth: int) -> str:
+    if depth < 1:
+        return code
+    indent = ' ' * 4 * depth
+    lines = []
+    for line in code.splitlines():
+        if line:
+            line = indent + line
+        lines.append(line)
+    return '\n'.join(lines)
+
+
+def _get_function_interface(method_node: TreeSitterNode) -> str:
+    definition = _get_full_definition(method_node)
+    method_interface = [definition, "    pass"]
     return "\n".join(method_interface)
 
 
-def _get_class_init_body_interface(code: str, method_name: str, method_node: TreeSitterNode) -> str:
+def _get_class_init_body_interface(code: str, method_node: TreeSitterNode) -> str:
     # 处理__init__方法中的公共属性赋值
-    init_method_interface = [f"    def {method_name}(...):"]
-    docstring = get_node_docstring(method_node)
+    definition = _get_full_definition(method_node)
+    init_method_interface = [definition]
     body_interface = []
     for init_child in method_node.children:
         if init_child.type == 'block':
@@ -195,12 +192,13 @@ def _get_class_init_body_interface(code: str, method_name: str, method_node: Tre
                     if expr.type == 'assignment':
                         left = expr.children[0]
                         if left.type == 'attribute':
-                            attr_name = code[left.start_byte:left.end_byte]
+                            attr_name = left.text.decode()
                             if not (attr_name.startswith('_') or attr_name.startswith('self._')):
-                                body_interface.append(f"        {attr_name} = ...")
+                                expr_line = expr.text.decode()
+                                if len(expr_line) > 50:
+                                    expr_line = expr_line[:50] + "..."
+                                body_interface.append(f"    {expr_line}")
     body = "\n".join(body_interface)
-    if docstring:
-        init_method_interface.append(f'        """{docstring}"""')
     if body:
         init_method_interface.append(body)
     else:
@@ -209,7 +207,7 @@ def _get_class_init_body_interface(code: str, method_name: str, method_node: Tre
     return "\n".join(init_method_interface)
 
 
-def get_node_docstring(node: TreeSitterNode) -> str:
+def _get_node_docstring(node: TreeSitterNode) -> str:
     """
     获取函数或类的 docstring.
     """
@@ -219,5 +217,5 @@ def get_node_docstring(node: TreeSitterNode) -> str:
                 if block_child.type == 'expression_statement':
                     expr = block_child.children[0]
                     if expr.type == 'string':
-                        return expr.text.decode().strip().strip("'''").strip('"""')
+                        return expr.text.decode().strip()
     return ""

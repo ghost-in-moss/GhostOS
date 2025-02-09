@@ -95,12 +95,21 @@ models:
     max_tokens: 3400
     model: deepseek-reasoner
     service: deepseek
-    reasoning: {}
+    reasoning: { }
     compatible:
       support_function_call: false
       support_functional_tokens: false
       allow_system_in_messages: false
       last_message_shall_be_assistant_or_user: true
+  deepseek-reasoner-fc:
+    max_tokens: 3400
+    model: deepseek-reasoner
+    service: deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+      message_parser: ghostos.framework.model_compatible:deepseek_reasoner_support_functions
   gpt-3.5-turbo:
     kwargs: { }
     max_tokens: 2000
@@ -222,6 +231,15 @@ models:
       support_functional_tokens: false
       allow_system_in_messages: false
       last_message_shall_be_assistant_or_user: true
+  siliconflow-deepseek-r1-fc:
+    max_tokens: 3400
+    model: deepseek-ai/DeepSeek-R1
+    service: siliconflow-deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+      message_parser: ghostos.framework.model_compatible:deepseek_reasoner_support_functions
   aliyun-deepseek-chat:
     kwargs: { }
     max_tokens: 3000
@@ -235,4 +253,13 @@ models:
     timeout: 50
     compatible:
       function_call_use_tool: false
+  aliyun-deepseek-reasoner-fc:
+    max_tokens: 3400
+    model: deepseek-r1
+    service: aliyun-deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+      message_parser: ghostos.framework.model_compatible:deepseek_reasoner_support_functions
 

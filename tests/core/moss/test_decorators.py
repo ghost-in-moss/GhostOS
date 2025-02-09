@@ -3,7 +3,7 @@ from ghostos.core.moss.decorators import (
     source_code, cls_source_code, cls_definition, definition,
 )
 from ghostos.core.moss.utils import strip_source_indent
-from ghostos.core.moss.prompts import get_prompt
+from ghostos.core.moss.prompts import reflect_code_prompt
 
 
 class Foo:
@@ -30,7 +30,7 @@ def test_source_code():
     ]
     idx = 0
     for case in cases:
-        prompt = get_prompt(case.value)
+        prompt = reflect_code_prompt(case.value)
         assert prompt == case.expect, f"{idx} and case is {case}"
         idx += 1
 
@@ -40,23 +40,23 @@ def test_definition():
     """
     hello
     """
-    prompt = get_prompt(test_definition)
+    prompt = reflect_code_prompt(test_definition)
     assert "pass" in prompt
     assert "test" in prompt
 
     # 尝试替换 doc. 必须用 force.
     # 所以 decorator 有污染效果, 还是要考虑直接用方法获取.
     wrapped = cls_definition(doc="test foo", force=True)(Foo)
-    prompt = get_prompt(wrapped)
+    prompt = reflect_code_prompt(wrapped)
     assert "test foo" in prompt
 
     # 强制重写.
     t = definition(force=True)(test_definition)
-    prompt = get_prompt(t)
+    prompt = reflect_code_prompt(t)
     assert "hello" in prompt
 
     # 有副作用.
-    prompt = get_prompt(test_definition)
+    prompt = reflect_code_prompt(test_definition)
     assert "hello" in prompt
 
 
@@ -69,7 +69,7 @@ def test_cls_source_code_extends():
     class BarImpl(Bar):
         bar: int = 234
 
-    bar_prompt = get_prompt(Bar)
+    bar_prompt = reflect_code_prompt(Bar)
     assert "Bar:" in bar_prompt
-    bar_impl_prompt = get_prompt(BarImpl)
+    bar_impl_prompt = reflect_code_prompt(BarImpl)
     assert "BarImpl(Bar):" in bar_impl_prompt

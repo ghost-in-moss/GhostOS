@@ -35,7 +35,7 @@ class MossGhost(ModelEntity, Agent):
     """ subclass of MossAgent could have a GoalType, default is None"""
 
     # optional configs
-    name: str = Field(ddescription="name of the agent")
+    name: str = Field(description="name of the agent")
     module: str = Field(description="Moss module name for the agent")
     description: str = Field(default="", description="description of the agent")
 
@@ -285,7 +285,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
         container = compiler.container()
 
         compiler = compiler.join_context(pycontext)
-        compiler = compiler.with_locals(Optional=Optional)
+        compiler = compiler.with_locals(Optional=Optional, Operator=Operator)
 
         # register self
         container.set(Ghost, self.agent)

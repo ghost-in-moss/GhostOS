@@ -6,6 +6,7 @@ __all__ = [
     'Importer',
     'import_from_path',
     'import_class_from_path',
+    'import_instance_from_path',
     'get_calling_modulename',
     'get_module_attr',
     'generate_import_path',
@@ -22,12 +23,20 @@ __all__ = [
 Importer = Callable[[str], ModuleType]
 
 T = TypeVar('T', bound=type)
+I = TypeVar('I')
 
 
 def import_class_from_path(path: str, parent: Optional[T]) -> T:
     imported = import_from_path(path)
     if parent and inspect.isclass(imported) and not issubclass(imported, parent):
         raise TypeError(f'{path} is not a subclass of {parent}')
+    return imported
+
+
+def import_instance_from_path(path: str, parent: Optional[Type[I]]) -> I:
+    imported = import_from_path(path)
+    if parent and inspect.isclass(imported) and not isinstance(imported, parent):
+        raise TypeError(f'{path} is not a instance of {parent}')
     return imported
 
 
