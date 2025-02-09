@@ -90,6 +90,7 @@ def main_chat():
         with st.container(border=True):
             show_ghost_settings = st.toggle("ghost settings")
             show_instruction = st.toggle("show instructions")
+            show_state_values = st.toggle("show state values")
             show_context = st.toggle("show context")
 
         st.subheader("chat options")
@@ -201,6 +202,8 @@ def main_chat():
         render_ghost_settings(conversation, route)
     if show_instruction:
         render_instruction(conversation)
+    if show_state_values:
+        render_state_values(conversation)
     if show_context:
         render_context_settings(conversation)
 
@@ -529,6 +532,14 @@ def render_instruction(conversation: Conversation):
     instruction = conversation.get_system_instruction()
     with st.container(border=True):
         st.markdown(instruction)
+
+
+def render_state_values(conversation: Conversation):
+    values = conversation.get_state_values()
+    with st.container(border=True):
+        for key, value in values.items():
+            st.subheader(key)
+            st.write(value)
 
 
 def render_context_settings(conversation: Conversation):

@@ -49,6 +49,15 @@ class MossCompilerImpl(MossCompiler):
         }
         self._injections: Dict[str, Any] = {}
         self._attr_prompts: List = []
+        # the default ignored modules
+        self._ignored_modules = [
+            'pydantic',
+            'typing',
+            'typing_extensions',
+            'inspect',
+            'abc',
+            'openai',
+        ]
         self._compiled = False
         self._closed = False
 
@@ -67,6 +76,10 @@ class MossCompilerImpl(MossCompiler):
 
     def with_locals(self, **kwargs) -> "MossCompiler":
         self._predefined_locals.update(kwargs)
+        return self
+
+    def with_ignored_imported(self, module_names: List[str]) -> "MossCompiler":
+        self._ignored_modules = module_names
         return self
 
     def injects(self, **attrs: Any) -> "MossCompiler":
@@ -129,6 +142,7 @@ class MossCompilerImpl(MossCompiler):
             compiled=module,
             injections=self._injections,
             attr_prompts=attr_prompts,
+            ignored_modules=self._ignored_modules,
         )
 
     def pycontext_code(self) -> str:
@@ -163,13 +177,21 @@ class MossStub(Moss):
     __output__: str
     __printer__: Callable
 
-    def __init__(self, pycontext: PyContext, container: Container, printer: Callable, watching: List):
+    def __init__(
+            self,
+            pycontext: PyContext,
+            container: Container,
+            printer: Callable,
+            watching: List,
+            ignored: List,
+    ):
         MossStub.instance_count += 1
         self.__dict__['__pycontext__'] = pycontext
         self.__dict__['__container__'] = container
         self.__dict__['__output__'] = ""
         self.__dict__['__printer__'] = printer
         self.__dict__['__watching__'] = watching
+        self.__dict__['__ignored__'] = ignored
 
     def fetch(self, abstract: Moss.T) -> Optional[Moss.T]:
         return self.__container__.fetch(abstract)
@@ -190,7 +212,7 @@ def new_moss_stub(cls: Type[Moss], container: Container, pycontext: PyContext, p
     # cls 必须不包含参数.
 
     watching = cls.__watching__
-    stub = MossStub(pycontext, container, pprint, watching)
+    stub = MossStub(pycontext, container, pprint, watching, cls.__ignored__)
     stub.executing_code = None
     # assert stub.instance_count > 0
     for attr_name in dir(cls):
@@ -218,6 +240,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             compiled: ModuleType,
             injections: Dict[str, Any],
             attr_prompts: Dict[str, str],
+            ignored_modules: List[str],
     ):
         self._container = container
         self._modules: Modules = container.force_fetch(Modules)
@@ -235,6 +258,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._injected_types = set()
         self._moss: Moss = self._compile_moss()
         self._initialize_moss()
+        self._ignored_modules = set(ignored_modules) | set(self._moss.__ignored__)
 
         self._imported_attrs: Optional[Dict[str, Any]] = None
         MossRuntime.instance_count += 1
@@ -358,7 +382,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
     def get_imported_attrs(self) -> Dict[str, Any]:
         if self._imported_attrs is None:
             self._imported_attrs = {}
-            modulename = self._compiled.__module__
+            self_modulename = self._compiled.__module__
             for name, value in self._compiled.__dict__.items():
                 if name.startswith("_"):
                     continue
@@ -370,12 +394,23 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     continue
                 elif inspect.ismodule(value):
                     # module can not get itself
+                    value_module = value.__name__
                     self._imported_attrs[name] = value
                 elif hasattr(value, "__module__") and hasattr(value, "__name__"):
-                    if value.__module__ == modulename:
+                    value_module = value.__module__
+                    if value_module == self_modulename:
                         continue
                     self._imported_attrs[name] = value
         return self._imported_attrs
+
+    def _is_ignored(self, modulename: str) -> bool:
+        if modulename in self._ignored_modules:
+            return True
+        for ignored in self._ignored_modules:
+            ignored_prefix = ignored.rstrip('.') + '.'
+            if modulename.startswith(ignored_prefix):
+                return True
+        return False
 
     def get_imported_attrs_prompt(self, includes: List = None) -> str:
         # todo: make build class later
@@ -425,6 +460,9 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             blocks.append("#<routines>")
             for item in functions:
                 name = reverse_imported[item]
+                item_module = item.__module__
+                if self._is_ignored(item_module):
+                    continue
                 prompt = reflect_code_prompt(item)
                 name_desc = f" name=`{name}`" if name != item.__name__ else ""
                 if name_desc:
@@ -437,6 +475,9 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             blocks.append("#<classes>")
             for item in classes:
                 name = reverse_imported[item]
+                item_module = item.__module__
+                if self._is_ignored(item_module):
+                    continue
                 name_desc = f" name=`{name}`" if name != item.__name__ else ""
                 prompt = reflect_code_prompt(item)
                 if name_desc:
@@ -449,12 +490,14 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             blocks.append("#<modules>")
             for item in modules:
                 name = reverse_imported[item]
+                item_module = item.__name__
+                if self._is_ignored(item_module):
+                    continue
                 source = inspect.getsource(item)
                 if not source:
                     continue
                 prompt = get_code_interface_str(source)
-                modulename = item.__name__
-                block = f"#<local name=`{name}` module=`{modulename}`>\n{prompt}\n#</local>"
+                block = f"#<local name=`{name}` module=`{item_module}`>\n{prompt}\n#</local>"
                 blocks.append(block)
             blocks.append("#</modules>")
         if len(others) > 0:

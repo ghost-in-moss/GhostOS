@@ -56,7 +56,7 @@ and the Most valuable features about ghost are:
 __all__ = (
     "Ghost", "GhostDriver", "GhostOS", "Shell", "Conversation", "Background",
     "Operator", "Action",
-    "Session", "Messenger", "StateValue", "Scope",
+    "Session", "Messenger", "StateValue", "Scope", "EntityType",
     "Mindflow", "Subtasks",
     "Context",
     "Thought",
@@ -463,6 +463,10 @@ class Conversation(Protocol[G]):
 
     @abstractmethod
     def get_task(self) -> GoTaskStruct:
+        pass
+
+    @abstractmethod
+    def get_state_values(self) -> Dict[str, EntityType]:
         pass
 
     @abstractmethod
