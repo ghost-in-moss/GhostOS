@@ -30,8 +30,7 @@ from ghostos.abcd.realtime import OperatorName, RealtimeApp
 from ghostos.abcd import Shell, Conversation, Context
 from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
-from ghostos.helpers import gettext as _
-from ghostos.helpers import generate_import_path, yaml_pretty_dump
+from ghostos.helpers import generate_import_path, yaml_pretty_dump, uuid, gettext as _
 from ghostos.core.runtime import GoTasks
 from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -64,6 +63,13 @@ def main_chat():
         if st.button("Thread Info", use_container_width=True):
             task = conversation.get_task()
             ShowThreadRoute(thread_id=task.thread_id, task_id=task.task_id).switch_page()
+            return
+        if st.button("Reset Task", use_container_width=True):
+            shell = Singleton.get(Shell, st.session_state, force=True)
+            task = shell.get_or_create_task(conversation.get_ghost(), always_create=True, save=False)
+            task.thread_id = uuid()
+            shell.tasks().save_task(task)
+            route.switch_page()
             return
 
         if st.button("New Thread", use_container_width=True):
