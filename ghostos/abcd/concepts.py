@@ -12,8 +12,8 @@ from ghostos.prompter import PromptObjectModel, BasePOM
 from ghostos.core.runtime import (
     TaskState,
 )
-from ghostos.core.runtime.events import Event
-from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
+from ghostos.core.runtime.events import Event, EventBus
+from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief, GoTasks
 from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos.core.moss import PyContext
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
@@ -380,6 +380,14 @@ class Shell(ABC):
         pass
 
     @abstractmethod
+    def tasks(self) -> GoTasks:
+        pass
+
+    @abstractmethod
+    def eventbus(self) -> EventBus:
+        pass
+
+    @abstractmethod
     def sync_task(
             self,
             task: Union[str, GoTaskStruct],
@@ -512,6 +520,10 @@ class Conversation(Protocol[G]):
 
     @abstractmethod
     def update_context(self, context: Context) -> None:
+        """
+        update the current context pom of the task
+        :param context: context pom
+        """
         pass
 
     @abstractmethod
