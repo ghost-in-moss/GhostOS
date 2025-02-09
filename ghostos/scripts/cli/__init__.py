@@ -198,6 +198,7 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
     """
     from ghostos.bootstrap import get_container
     from ghostos.core.moss import MossCompiler, PyContext
+    from ghostos.helpers import yaml_pretty_dump
 
     container = get_container()
     compiler = container.force_fetch(MossCompiler)
@@ -219,6 +220,7 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
         prompter = compiled.prompter()
         code = prompter.get_source_code()
         imported_prompt = prompter.get_imported_attrs_prompt()
+        pycontext = compiled.dump_pycontext()
         console = Console()
         console.print(
             Panel(
@@ -244,6 +246,30 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
                 ),
                 title="Imported Attrs Prompt",
             ),
+        )
+        console.print(
+            Panel(
+                Markdown(
+                    f"""
+```python
+{imported_prompt}
+```
+"""
+                ),
+                title="Imported Attrs Prompt",
+            ),
+        )
+        console.print(
+            Panel(
+                Markdown(
+                    f"""
+```yaml
+{yaml_pretty_dump(pycontext.model_dump(exclude_defaults=True))}
+```
+""",
+                ),
+                title="pycontext",
+            )
         )
 
         if tokens:

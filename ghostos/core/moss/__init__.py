@@ -4,7 +4,7 @@ from ghostos.core.moss.abcd import (
     AttrPrompts, Injection,
     MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
-from ghostos.core.moss.impl import DefaultMOSSProvider
+from ghostos.core.moss.moss_impl import DefaultMOSSProvider
 from ghostos.core.moss.testsuite import MossTestSuite
 from ghostos.core.moss.pycontext import PyContext
 

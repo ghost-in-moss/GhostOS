@@ -15,7 +15,7 @@ from ghostos.core.moss.abcd import (
 from ghostos.core.moss.prompts import reflect_code_prompt
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.prompter import PromptObjectModel, TextPOM
-from ghostos.helpers import generate_module_and_attr_name, code_syntax_check
+from ghostos.helpers import generate_module_and_attr_name, code_syntax_check, get_code_interface_str
 from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"
@@ -381,7 +381,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         # todo: make build class later
         imported_attrs = self.get_imported_attrs()
         reverse_imported = {}
-        reflection_types = set()
+        reflection_types = {Moss}
 
         # add all function and method to reflections.
         # and prepare reverse imported.
@@ -447,9 +447,12 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             blocks.append("#</classes>")
         if len(modules) > 0:
             blocks.append("#<modules>")
-            for item in classes:
+            for item in modules:
                 name = reverse_imported[item]
-                prompt = inspect.getsource(item)
+                source = inspect.getsource(item)
+                if not source:
+                    continue
+                prompt = get_code_interface_str(source)
                 modulename = item.__name__
                 block = f"#<local name=`{name}` module=`{modulename}`>\n{prompt}\n#</local>"
                 blocks.append(block)
