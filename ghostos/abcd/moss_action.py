@@ -22,7 +22,7 @@ Which provides you a way to control your body / tools / thoughts through Python 
 
 basic usage: 
 1. you will get the python code context that MOSS provide to you below. 
-2. you can generate code by `moss` tool, then the `GhostOS` will execute them for you.
+2. you can generate code with `moss` tool, then the `GhostOS` will execute them for you.
 3. if you print anything in your generated code, the output will be shown in further messages.
 
 """
@@ -69,8 +69,8 @@ Notices:
 * in your code generation, comments is not required, comment only when necessary.
 """
 
-MOSS_FUNCTION_DESC = """useful to execute your generated code in moss protocol. The code must include a `run` function.
-"""
+MOSS_FUNCTION_DESC = ("Useful to execute code in the python context that MOSS provide to you."
+                      "The code must include a `run` function.")
 
 
 class MossAction(Action, PromptPipe):
@@ -190,7 +190,7 @@ class MossAction(Action, PromptPipe):
 
     @staticmethod
     def fire_error(session: Session, caller: FunctionCaller, error: str) -> Operator:
-        message = caller.new_output(error)
+        message = caller.new_output("Function Error: %s" % error)
         session.respond([message])
         return session.mindflow().error()
 

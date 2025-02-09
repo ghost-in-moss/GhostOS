@@ -1,7 +1,7 @@
 from ghostos.abcd.concepts import (
     GhostOS, Ghost, GhostDriver, Shell,
     Operator, Action,
-    Session, Scope, StateValue, Messenger,
+    Session, Scope, StateValue, Messenger, EntityType,
     Background, Conversation,
     Context,
     Mindflow, Subtasks,

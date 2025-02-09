@@ -258,18 +258,6 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
             Panel(
                 Markdown(
                     f"""
-```python
-{imported_prompt}
-```
-"""
-                ),
-                title="Imported Attrs Prompt",
-            ),
-        )
-        console.print(
-            Panel(
-                Markdown(
-                    f"""
 ```yaml
 {yaml_pretty_dump(pycontext.model_dump(exclude_defaults=True))}
 ```

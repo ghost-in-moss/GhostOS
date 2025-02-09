@@ -87,6 +87,9 @@ class Moss(ABC):
     __watching__: List[Union[FunctionType, ModuleType, type]] = []
     """the class or module that dose not bound to moss but still want to watch the interface of them"""
 
+    __ignored__: List[str] = []
+    """the ignored module names that do not need to watch the code interface of them"""
+
     @abstractmethod
     def fetch(self, abstract: Type[T]) -> Optional[T]:
         """
@@ -159,6 +162,13 @@ class MossCompiler(ABC):
         主要解决 __import__ 之类的内置方法, 如果必要的话.
         :param kwargs: locals
         :return: self
+        """
+        pass
+
+    @abstractmethod
+    def with_ignored_imported(self, module_names: List[str]) -> "MossCompiler":
+        """
+        ignored module names will not be prompt from imported attrs
         """
         pass
 

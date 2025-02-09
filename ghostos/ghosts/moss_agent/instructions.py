@@ -2,13 +2,14 @@ from ghostos.prompter import PromptObjectModel, TextPOM
 from ghostos.identifier import Identifier
 
 AGENT_META_INTRODUCTION = """
+<!Private not visible to user!>
 You are the mind of an AI Agent driven by `GhostOS` framework.
 Here are some basic information you might expect:
 """
 
 GHOSTOS_INTRODUCTION = """
 `GhostOS` is an AI Agent framework written in Python, 
-providing llm connections, body shell, tools, memory etc and specially the `MOSS` for you.
+providing llm connections, body shell, tools, memory etc and specially the `MOSS` protocol for you.
 """
 
 

@@ -112,6 +112,8 @@ def to_entity_meta(value: Union[EntityType, Any]) -> EntityMeta:
         return EntityMeta(type="bool", content=str(value))
     elif isinstance(value, int):
         return EntityMeta(type="int", content=str(value))
+    elif isinstance(value, str):
+        return EntityMeta(type="str", content=str(value))
     elif isinstance(value, float):
         return EntityMeta(type="float", content=str(value))
     elif isinstance(value, list):
@@ -165,6 +167,8 @@ def from_entity_meta(meta: EntityMeta, module: Optional[ModuleType] = None) -> A
         return None
     elif unmarshal_type == "int":
         return int(meta['content'])
+    elif unmarshal_type == "str":
+        return str(meta['content'])
     elif unmarshal_type == "bool":
         return meta['content'] == "True"
     elif unmarshal_type == "float":

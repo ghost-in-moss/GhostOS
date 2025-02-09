@@ -4,7 +4,7 @@ from typing_extensions import Self
 from ghostos.prompter import POM
 from ghostos.libraries.terminal import Terminal
 from pydantic import BaseModel, Field
-from pathlib import Path
+import pathlib
 
 
 class ProjectManager(POM, ABC):
@@ -109,7 +109,7 @@ class Directory(ABC):
     this library will get more features in future versions.
     """
 
-    path: Path
+    path: pathlib.Path
     """the pathlib.Path object of the directory"""
 
     ignores: List[str]
@@ -135,21 +135,22 @@ class Directory(ABC):
     def lists(
             self, *,
             prefix: str = "",
-            depth: int = 0,
+            recursion: int = 0,
             files: bool = True,
             dirs: bool = True,
     ) -> str:
         """
         list sub filenames and directories as string.
         :param prefix: the relative path that start the listing.
-        :param depth: the recursion depth, 0 means no recursion.
+        :param recursion: the recursion depth, 0 means no recursion. < 0 means endless recursion.
         :param dirs: True => list dirs
         :param files: True => list files
+        :return: formated string of directory
         """
         pass
 
     @abstractmethod
-    def sub(self, path: str) -> Self:
+    def subdir(self, path: str) -> Self:
         """
         get subdirectory instance by path relative to this directory.
         :param path: the relative path which must be a directory.
@@ -158,7 +159,7 @@ class Directory(ABC):
         pass
 
     @abstractmethod
-    def abspath(self, path: str = "") -> Path:
+    def abspath(self, path: str = "") -> pathlib.Path:
         """
         get the absolute path object from a relative one
         :param path: path relative to this directory.
@@ -175,22 +176,35 @@ class Directory(ABC):
         """
         pass
 
+
+class File(ABC):
+    path: pathlib.Path
+
+    editable: bool
+    """if the file is editable"""
+
     @abstractmethod
-    def read(self, path: str) -> str:
+    def read(self) -> str:
         """
         read a readable (text mainly) file content.
-        you can also get the file object by other library.
-        :param path: the filename relative to this directory.
         :return: the content of the file.
         """
         pass
 
     @abstractmethod
-    def write(self, path: str, content: str, desc: str = "") -> None:
+    def write(self, content: str, desc: str = "") -> None:
         """
-        write content to a file.
-        :param path: filename relative to this directory, must exist.
+        write content to the editable file.
         :param content: the content of the file.
         :param desc: description for this file.
+        """
+        pass
+
+    @abstractmethod
+    def ask(self, question: str) -> str:
+        """
+        ask question about the file, some llm will answer the question.
+        :param question: your question about the file
+        :return: answer
         """
         pass
