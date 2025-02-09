@@ -195,14 +195,17 @@ or `git clone https://github.com/ghost-in-moss/GhostOS` then `docsify serve`
 # ```
 # """))
 
+# todo: 迁移到子文件.
 @main.command("moss")
 @click.argument('python_file_or_module')
-def dump_moss_context(python_file_or_module: str):
+@click.option("--tokens", "-t", default=False, is_flag=True, help="Show tokens count")
+def dump_moss_context(python_file_or_module: str, tokens: bool):
     """
     dump moss context from a python file or module
     """
     from ghostos.bootstrap import get_container
     from ghostos.core.moss import MossCompiler, PyContext
+
     container = get_container()
     compiler = container.force_fetch(MossCompiler)
 
@@ -217,13 +220,45 @@ def dump_moss_context(python_file_or_module: str):
         # consider it a module
         compiled = compiler.compile(python_file_or_module)
 
-    console = Console()
-    context = compiled.prompter().dump_module_prompt()
-    console.print(Markdown(f"""
+    with compiled:
+        modulename = compiled.module().__name__
+        filename = compiled.module().__file__
+        prompter = compiled.prompter()
+        code = prompter.get_source_code()
+        imported_prompt = prompter.get_imported_attrs_prompt()
+        console = Console()
+        console.print(
+            Panel(
+                Markdown(
+                    f"""
+`{modulename}` (`{filename}`):
 ```python
-{context}
+{code}
 ```
-"""))
+""",
+                ),
+                title="Source Code",
+            )
+        )
+        console.print(
+            Panel(
+                Markdown(
+                    f"""
+```python
+{imported_prompt}
+```
+"""
+                ),
+                title="Imported Attrs Prompt",
+            ),
+        )
+
+        if tokens:
+            from tiktoken import get_encoding
+            enc = get_encoding("gpt2")
+            code_tokens_count = len(enc.encode(code))
+            imported_prompt_tokens_count = len(enc.encode(imported_prompt))
+            console.print(f"code tokens:{code_tokens_count}, imported tokens:{imported_prompt_tokens_count}")
 
 
 @main.command("help")
