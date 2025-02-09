@@ -7,6 +7,7 @@ from ghostos.core.moss.abcd import (
 from ghostos.core.moss.moss_impl import DefaultMOSSProvider
 from ghostos.core.moss.testsuite import MossTestSuite
 from ghostos.core.moss.pycontext import PyContext
+from ghostos.core.moss.exports import Exporter
 
 __all__ = [
     # abstract contracts
@@ -20,6 +21,8 @@ __all__ = [
     # testing
     DefaultMOSSProvider,
     MossTestSuite,
+
+    Exporter,  # useful to exports values in group, and other module will reflect them in moss_imported_attrs_prompt
     'moss_container',
     'moss_test_suite',
 
