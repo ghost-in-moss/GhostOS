@@ -39,6 +39,7 @@ interfaces of some imported attrs are:
 {imported_attrs_prompt}
 ```
 
+{magic_prompt_info}
 Notices:
 * the imported functions are only shown with signature, the source code is omitted.
 * the properties on moss instance, will keep existence. 
@@ -205,6 +206,10 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
     prompter = runtime.prompter()
     source_code = prompter.get_source_code()
     imported_attrs_prompt = prompter.get_imported_attrs_prompt([Operator])
+    magic_prompt = prompter.get_magic_prompt()
+    magic_prompt_info = ""
+    if magic_prompt:
+        magic_prompt_info = f"more information about the module:\n```text\n{magic_prompt}\n```\n"
 
     injections = runtime.moss_injections()
     children = []
@@ -222,6 +227,7 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
         modulename=runtime.module().__name__,
         source_code=source_code,
         imported_attrs_prompt=imported_attrs_prompt,
+        magic_prompt_info=magic_prompt_info,
     )
 
     return TextPOM(

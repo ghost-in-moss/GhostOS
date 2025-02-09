@@ -1,5 +1,4 @@
-from abc import ABC
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Any
 from ghostos.prompter import PromptAbleClass
 from ghostos.core.moss.prompts import reflect_code_prompt, join_prompt_lines
 from ghostos.core.moss.utils import add_source_indent, escape_string_quotes
@@ -44,24 +43,36 @@ class Exporter(PromptAbleClass):
 
     @classmethod
     def __attrs_prompts__(cls) -> Iterable[Tuple[str, str]]:
+        """
+        override this method to define str prompt for attribute
+        :return: Iterable[(attr_name, attr_prompt)]
+        """
         return []
 
     @classmethod
+    def __exports__(cls) -> Iterable[Tuple[str, Any]]:
+        """
+        iterate exports attributes
+        """
+        attrs = dir(cls)
+        for attr in attrs:
+            if attr.startswith("_"):
+                continue
+            value = getattr(cls, attr, None)
+            if value is None:
+                continue
+            yield attr, value
+
+    @classmethod
     def __class_prompt__(cls) -> str:
+        if cls is Exporter:
+            return ""
         source = inspect.getsource(cls)
         attr_prompts = {}
         for prop, prompt in cls.__attrs_prompts__():
             attr_prompts[prop] = prompt
 
-        attrs = dir(cls)
-        for attr in attrs:
-            if attr.startswith("_"):
-                continue
-            if attr in attr_prompts:
-                continue
-            value = getattr(cls, attr, None)
-            if value is None:
-                continue
+        for attr, value in cls.__exports__():
             try:
                 attr_interface = reflect_code_prompt(value)
             except Exception:
@@ -87,10 +98,10 @@ class Exporter(PromptAbleClass):
             blocks.append("\n".join(lines))
         if not blocks:
             return source
-        name = cls.__name__
+        self_name = cls.__name__
         appending = join_prompt_lines(*blocks)
         appending = escape_string_quotes(appending, '"""')
-        appending = "\n".join([f'"""\n# attrs of `{name}` are:', appending.rstrip(), '"""'])
+        appending = "\n".join([f'"""\n#attrs of `{self_name}` are:', appending, '"""'])
         appending = add_source_indent(appending, 4)
         return join_prompt_lines(source.rstrip(), appending)
 

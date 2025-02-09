@@ -334,6 +334,21 @@ class MossPrompter(ABC):
         """
         pass
 
+    @abstractmethod
+    def replaced_magic_prompts(self) -> Dict[str, str]:
+        """
+        the ghostos.core.moss.magics.MagicPrompter in this compiled module are replaced into str.
+        :return: the replaced Dict[attr_name, prompt]
+        """
+        pass
+
+    def get_magic_prompt(self) -> str:
+        prompts = self.replaced_magic_prompts()
+        if prompts:
+            lines = [f"`{key}`:\n{prompt.strip()}" for key, prompt in prompts.items()]
+            return "\n\n".join(lines)
+        return ""
+
     def imported_attr_prompts(self) -> AttrPrompts:
         """
         结合已编译的本地变量, 用系统自带的方法反射出上下文属性的 prompts.
