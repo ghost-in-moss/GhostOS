@@ -15,6 +15,7 @@ from ghostos.core.moss.abcd import (
 from ghostos.core.moss.prompts import reflect_code_prompt
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.exports import Exporter
+from ghostos.core.moss.magics import replace_magic_prompter
 from ghostos.prompter import PromptObjectModel, TextPOM
 from ghostos.helpers import generate_module_and_attr_name, code_syntax_check, get_code_interface_str
 from contextlib import contextmanager, redirect_stdout
@@ -254,6 +255,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._built: bool = False
         self._moss_prompt: Optional[str] = None
         self._attr_prompts: Dict[str, str] = attr_prompts
+        self._imported_attrs: Optional[Dict[str, Any]] = None
         self._closed: bool = False
         self._injected = set()
         self._injected_types = set()
@@ -261,7 +263,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._initialize_moss()
         self._ignored_modules = set(ignored_modules) | set(self._moss.__ignored__)
 
-        self._imported_attrs: Optional[Dict[str, Any]] = None
+        self._replaced_magic_prompts = replace_magic_prompter(self._compiled)
         MossRuntime.instance_count += 1
 
     def _compile_moss(self) -> Moss:
@@ -380,6 +382,9 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             injections[name] = injection
         return injections
 
+    def replaced_magic_prompts(self) -> Dict[str, str]:
+        return self._replaced_magic_prompts
+
     def get_imported_attrs(self) -> Dict[str, Any]:
         if self._imported_attrs is None:
             self._imported_attrs = {}
@@ -387,7 +392,6 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             for name, value in self._compiled.__dict__.items():
                 if name.startswith("_"):
                     continue
-
                 elif not value:
                     continue
                 elif inspect.isbuiltin(value):
@@ -395,7 +399,6 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     continue
                 elif inspect.ismodule(value):
                     # module can not get itself
-                    value_module = value.__name__
                     self._imported_attrs[name] = value
                 elif hasattr(value, "__module__") and hasattr(value, "__name__"):
                     value_module = value.__module__
@@ -470,6 +473,8 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 if self._is_ignored(item_module) or item_module in module_names:
                     continue
                 prompt = reflect_code_prompt(item)
+                if not prompt:
+                    continue
                 name_desc = f" name=`{name}`" if name != item.__name__ else ""
                 if name_desc:
                     block = f"#<local{name_desc}>\n{prompt}\n#</local>"
@@ -486,6 +491,8 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     continue
                 name_desc = f" name=`{name}`" if name != item.__name__ else ""
                 prompt = reflect_code_prompt(item)
+                if not prompt:
+                    continue
                 if name_desc:
                     block = f"#<local{name_desc}>\n{prompt}\n#</local>"
                 else:
@@ -503,8 +510,9 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 if not source:
                     continue
                 prompt = get_code_interface_str(source)
-                block = f"#<local name=`{name}` module=`{item_module}`>\n{prompt}\n#</local>"
-                blocks.append(block)
+                if prompt:
+                    block = f"#<local name=`{name}` module=`{item_module}`>\n{prompt}\n#</local>"
+                    blocks.append(block)
             blocks.append("#</modules>")
         if len(others) > 0:
             blocks.append("#<others>")

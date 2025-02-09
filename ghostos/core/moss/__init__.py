@@ -8,6 +8,7 @@ from ghostos.core.moss.moss_impl import DefaultMOSSProvider
 from ghostos.core.moss.testsuite import MossTestSuite
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.exports import Exporter
+from ghostos.core.moss.magics import __is_subclass__, __is_instance__
 
 __all__ = [
     # abstract contracts
@@ -25,6 +26,10 @@ __all__ = [
     Exporter,  # useful to exports values in group, and other module will reflect them in moss_imported_attrs_prompt
     'moss_container',
     'moss_test_suite',
+
+    # magic prompters
+    __is_subclass__,
+    __is_instance__,
 
 ]
 

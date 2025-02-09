@@ -220,6 +220,7 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
         prompter = compiled.prompter()
         code = prompter.get_source_code()
         imported_prompt = prompter.get_imported_attrs_prompt()
+        magic_prompt = prompter.get_magic_prompt()
         pycontext = compiled.dump_pycontext()
         console = Console()
         console.print(
@@ -246,6 +247,18 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
                 ),
                 title="Imported Attrs Prompt",
             ),
+        )
+        console.print(
+            Panel(
+                Markdown(
+                    f"""
+```text
+{magic_prompt}
+```
+""",
+                ),
+                title="magic prompt",
+            )
         )
         console.print(
             Panel(
