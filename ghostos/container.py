@@ -237,7 +237,8 @@ class Container(IoCContainer):
         self._check_destroyed()
         # 进行初始化.
         if not self._bootstrapped:
-            warnings.warn("container is not bootstrapped before using")
+            caller_info = get_caller_info(4)
+            warnings.warn("container is not bootstrapped before using: %s" % (caller_info,))
             self.bootstrap()
 
         # get bound instance

@@ -42,7 +42,7 @@ class MossCompilerImpl(MossCompiler):
     def __init__(self, *, container: Container, pycontext: Optional[PyContext] = None):
         self._container = Container(parent=container, name="moss")
         self._pycontext = pycontext if pycontext else PyContext()
-        self._modules: Modules = self._container.force_fetch(Modules)
+        self._modules: Modules = container.force_fetch(Modules)
         self._predefined_locals: Dict[str, Any] = {
             # 默认代理掉 import.
             '__import__': ImportWrapper(self._modules),
@@ -77,12 +77,21 @@ class MossCompilerImpl(MossCompiler):
         origin: Optional[ModuleType] = None
         filename = "<moss_temp_module>"
         origin_modulename = self._pycontext.module
+        # 没有任何设定的情况下.
+        if origin_modulename is None and self._pycontext.code is None:
+            # 认为传入的 modulename 就是要编译的 module
+            self._pycontext.module = modulename
+            origin_modulename = modulename
+
+        self._container.bootstrap()
         if origin_modulename:
             origin = importlib.import_module(origin_modulename)
             filename = origin.__file__
 
+        # 编译的 module name.
         if modulename is None:
             modulename = origin_modulename if origin_modulename else "__moss__"
+
         code = self.pycontext_code()
         # 创建临时模块.
         module = MossTempModuleType(modulename)
@@ -366,9 +375,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     if value.__module__ == modulename:
                         continue
                     self._imported_attrs[name] = value
-            return self._imported_attrs
+        return self._imported_attrs
 
     def get_imported_attrs_prompt(self, includes: List = None) -> str:
+        # todo: make build class later
         imported_attrs = self.get_imported_attrs()
         reverse_imported = {}
         reflection_types = set()
@@ -378,6 +388,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         for key, value in imported_attrs.items():
             if value not in reverse_imported:
                 reverse_imported[value] = key
+                # only function or methods are reflected automatically
                 if inspect.isfunction(value) or inspect.ismethod(value):
                     reflection_types.add(value)
         if includes:
@@ -397,13 +408,64 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 reflection_types.add(watched)
 
         blocks = []
+        functions = []
+        classes = []
+        modules = []
+        others = []
         for reflection_type in reflection_types:
-            name = reverse_imported[reflection_type]
-            prompt = reflect_code_prompt(reflection_type)
-            if prompt:
-                block = f"# <attr name=`{name}`>\n{prompt}\n# </attr>"
+            if inspect.isclass(reflection_type):
+                classes.append(reflection_type)
+            elif inspect.ismodule(reflection_type):
+                modules.append(reflection_type)
+            elif inspect.isroutine(reflection_type):
+                functions.append(reflection_type)
+            else:
+                others.append(reflection_type)
+        if len(functions) > 0:
+            blocks.append("#<routines>")
+            for item in functions:
+                name = reverse_imported[item]
+                prompt = reflect_code_prompt(item)
+                name_desc = f" name=`{name}`" if name != item.__name__ else ""
+                if name_desc:
+                    block = f"#<local{name_desc}>\n{prompt}\n#</local>"
+                else:
+                    block = prompt
                 blocks.append(block)
-        return "\n".join(blocks)
+            blocks.append("#</routines>")
+        if len(classes) > 0:
+            blocks.append("#<classes>")
+            for item in classes:
+                name = reverse_imported[item]
+                name_desc = f" name=`{name}`" if name != item.__name__ else ""
+                prompt = reflect_code_prompt(item)
+                if name_desc:
+                    block = f"#<local{name_desc}>\n{prompt}\n#</local>"
+                else:
+                    block = prompt
+                blocks.append(block)
+            blocks.append("#</classes>")
+        if len(modules) > 0:
+            blocks.append("#<modules>")
+            for item in classes:
+                name = reverse_imported[item]
+                prompt = inspect.getsource(item)
+                modulename = item.__name__
+                block = f"#<local name=`{name}` module=`{modulename}`>\n{prompt}\n#</local>"
+                blocks.append(block)
+            blocks.append("#</modules>")
+        if len(others) > 0:
+            blocks.append("#<others>")
+            for item in others:
+                name = reverse_imported[item]
+                prompt = reflect_code_prompt(item)
+                if prompt:
+                    type_ = type(item).__name__
+                    block = f"#<local name=`{name}` type=`{type_}`>\n{prompt}\n# </local>"
+                    blocks.append(block)
+            blocks.append("#</others>")
+
+        return "\n\n".join(blocks)
 
     def get_moss_injections_poms(self) -> Dict[str, PromptObjectModel]:
         poms = {}
