@@ -14,6 +14,7 @@ from ghostos.core.moss.abcd import (
 )
 from ghostos.core.moss.prompts import reflect_code_prompt
 from ghostos.core.moss.pycontext import PyContext
+from ghostos.core.moss.exports import Exporter
 from ghostos.prompter import PromptObjectModel, TextPOM
 from ghostos.helpers import generate_module_and_attr_name, code_syntax_check, get_code_interface_str
 from contextlib import contextmanager, redirect_stdout
@@ -426,6 +427,9 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 # only function or methods are reflected automatically
                 if inspect.isfunction(value) or inspect.ismethod(value):
                     reflection_types.add(value)
+                elif inspect.isclass(value) and issubclass(value, Exporter):
+                    # Exports class always add to reflect types.
+                    reflection_types.add(value)
         if includes:
             for value in includes:
                 if value not in reverse_imported:
@@ -446,12 +450,14 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         functions = []
         classes = []
         modules = []
+        module_names = set()
         others = []
         for reflection_type in reflection_types:
             if inspect.isclass(reflection_type):
                 classes.append(reflection_type)
             elif inspect.ismodule(reflection_type):
                 modules.append(reflection_type)
+                module_names.add(reflection_type.__name__)
             elif inspect.isroutine(reflection_type):
                 functions.append(reflection_type)
             else:
@@ -461,7 +467,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             for item in functions:
                 name = reverse_imported[item]
                 item_module = item.__module__
-                if self._is_ignored(item_module):
+                if self._is_ignored(item_module) or item_module in module_names:
                     continue
                 prompt = reflect_code_prompt(item)
                 name_desc = f" name=`{name}`" if name != item.__name__ else ""
@@ -476,7 +482,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             for item in classes:
                 name = reverse_imported[item]
                 item_module = item.__module__
-                if self._is_ignored(item_module):
+                if self._is_ignored(item_module) or item_module in module_names:
                     continue
                 name_desc = f" name=`{name}`" if name != item.__name__ else ""
                 prompt = reflect_code_prompt(item)
