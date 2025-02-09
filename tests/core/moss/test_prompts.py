@@ -2,7 +2,7 @@ import inspect
 from ghostos.core.moss import prompts
 from ghostos.core.moss.prompts import reflect_locals_imported
 
-from ghostos.core.moss.impl import MossRuntimeImpl
+from ghostos.core.moss.moss_impl import MossRuntimeImpl
 from ghostos.core.moss.abcd import (
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )

@@ -72,11 +72,11 @@ MOSS_HIDDEN_UNMARK = "# </moss-hide>"
 
 class Moss(ABC):
     """
-    Language Model-oriented Operating System Simulation.
-    Full python code interface for large language models in multi-turns chat or thinking.
-    The property with SerializeType will persist during multi-turns.
-    SerializeType means: int, float, str, None, list, dict, BaseModel, TypedDict
-    You can edit them if you need.
+    Language Model-oriented Operating System Simulator.
+    Python interface of Runtime Injections for AI-Models in multi-turns chat or thinking.
+    * The members with typehint will be injected with runtime instances.
+    * The property of SerializeType will persist during multi-turns.
+    * SerializeType: int, float, str, None, list, dict, BaseModel, TypedDict
     """
 
     T = TypeVar('T')
