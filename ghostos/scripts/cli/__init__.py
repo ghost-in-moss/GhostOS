@@ -35,7 +35,7 @@ def start_streamlit_web(python_file_or_module: str, src: str):
     """
     turn a python file or module into a streamlit web agent
     """
-    from ghostos.scripts.cli.run_streamlit_app import start_ghost_app
+    from ghostos.scripts.cli.run_streamlit_app import start_streamlit_app_by_ghost_info
     from ghostos.scripts.cli.utils import find_ghost_by_file_or_module
     import sys
     from os.path import abspath
@@ -44,7 +44,7 @@ def start_streamlit_web(python_file_or_module: str, src: str):
         sys.path.append(abspath(src))
 
     ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
-    start_ghost_app(ghost_info, module.__name__, filename, is_temp)
+    start_streamlit_app_by_ghost_info(ghost_info, module.__name__, filename, is_temp)
 
 
 @main.command("console")

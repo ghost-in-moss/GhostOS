@@ -358,6 +358,7 @@ class Shell(ABC):
             context: Optional[G.ContextType] = None,
             username: str = "",
             user_role: str = Role.USER.value,
+            task_id: str = None,
             force: bool = False,
     ) -> Conversation[G]:
         """

@@ -2,13 +2,15 @@ from typing import Optional
 from ghostos.scripts.cli.utils import (
     GhostInfo, start_streamlit_prototype_cli,
 )
+from ghostos.abcd import Ghost, Context
 from ghostos.bootstrap import get_bootstrap_config
-from ghostos.entity import EntityMeta
+from ghostos.entity import EntityMeta, to_entity_meta
 from pydantic import BaseModel, Field
 
 __all__ = [
     "RunGhostChatApp",
-    "start_ghost_app",
+    "start_streamlit_app_by_ghost_info",
+    'start_streamlit_app_by_ghost',
 ]
 
 
@@ -21,7 +23,20 @@ class RunGhostChatApp(BaseModel):
     context_meta: Optional[EntityMeta] = Field(default=None)
 
 
-def start_ghost_app(ghost_info: GhostInfo, modulename: str, filename: str, is_temp: bool):
+def start_streamlit_app_by_ghost(
+        ghost: Ghost,
+        context: Optional[Context] = None,
+        modulename: str = "",
+        filename: str = "",
+):
+    ghost_info = GhostInfo(
+        ghost=to_entity_meta(ghost),
+        context=to_entity_meta(context) if context else None,
+    )
+    start_streamlit_app_by_ghost_info(ghost_info, modulename, filename, is_temp=False)
+
+
+def start_streamlit_app_by_ghost_info(ghost_info: GhostInfo, modulename: str, filename: str, is_temp: bool):
     # path
     conf = get_bootstrap_config(local=True)
     workspace_dir = conf.abs_workspace_dir()

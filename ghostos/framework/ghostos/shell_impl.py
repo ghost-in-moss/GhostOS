@@ -104,9 +104,10 @@ class ShellImpl(Shell):
             *,
             username: str = "",
             user_role: str = Role.USER.value,
+            task_id: str = None,
             force: bool = False,
     ) -> Conversation:
-        task = self.get_or_create_task(ghost, context, always_create=False, save=False)
+        task = self.get_or_create_task(ghost, context, always_create=False, save=False, task_id=task_id)
         conversation = self._sync_task(
             task,
             throw=True,

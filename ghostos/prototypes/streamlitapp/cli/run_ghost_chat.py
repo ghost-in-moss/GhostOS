@@ -48,14 +48,17 @@ def bootstrap():
 
     app_arg = RunGhostChatApp(**data)
 
-    if app_arg.is_temp:
+    started_module = None
+    if app_arg.is_temp and app_arg.module:
         # create temp module
         logger.debug(f"Create Temp module {app_arg.modulename}")
         started_module = create_and_bind_module(app_arg.modulename, app_arg.filename)
-    else:
+    elif app_arg.modulename:
         started_module = importlib.import_module(app_arg.modulename)
 
-    providers = get_module_magic_shell_providers(started_module)
+    shell_providers = []
+    if started_module:
+        shell_providers = get_module_magic_shell_providers(started_module)
 
     # bootstrap container
     logger.debug(f"generate ghostos app container at workspace {app_arg.workspace_dir}")
@@ -67,7 +70,7 @@ def bootstrap():
         logger.debug("start shell background run")
         shell = ghostos.create_shell(
             "ghostos_streamlit_app",
-            providers=providers,
+            providers=shell_providers,
         )
         shell.background_run(4, StreamlitBackgroundApp())
         Singleton(shell, Shell).bind(st.session_state)
