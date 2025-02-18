@@ -85,7 +85,7 @@ class ActionThought(OpThought):
             _prompt = action.update_prompt(prompt)
         llm_api = self.get_llm_api(session)
 
-        streaming = session.allow_stream()
+        streaming = session.allow_streaming()
         session.logger.debug("start llm thinking on prompt %s", prompt.id)
         items = llm_api.deliver_chat_completion(_prompt, streaming)
         messages, callers = session.respond(items, self.message_stage)

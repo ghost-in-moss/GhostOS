@@ -138,7 +138,7 @@ class SessionImpl(Session[Ghost]):
             return False
         return self._alive_check() and (self.upstream is None or self.upstream.alive())
 
-    def allow_stream(self) -> bool:
+    def allow_streaming(self) -> bool:
         return self.upstream.allow_streaming() if self.upstream else False
 
     def _validate_alive(self):
@@ -367,7 +367,7 @@ class SessionImpl(Session[Ghost]):
         for task in tasks:
             self._creating_tasks[task.task_id] = task
 
-    def create_threads(self, *threads: GoThreadInfo) -> None:
+    def save_threads(self, *threads: GoThreadInfo) -> None:
         self._validate_alive()
         for t in threads:
             self._saving_threads[t.id] = t

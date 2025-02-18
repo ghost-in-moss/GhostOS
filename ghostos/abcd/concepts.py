@@ -732,7 +732,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def allow_stream(self) -> bool:
+    def allow_streaming(self) -> bool:
         """
         :return: if allow stream responding
         """
@@ -874,7 +874,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def create_threads(
+    def save_threads(
             self,
             *threads: GoThreadInfo,
     ) -> None:
