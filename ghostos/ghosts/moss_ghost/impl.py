@@ -103,6 +103,9 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
     def get_thought_chain(self, session: Session, runtime: MossRuntime) -> List[OpThought]:
         return []
 
+    def get_moss_providers(self) -> List[Provider]:
+        return []
+
     def make_instruction_pom(self, session: Session, runtime: MossRuntime) -> PromptObjectModel:
         """
         rewrite this method to build the agent special runtime Prompt ObjectModel.
@@ -287,6 +290,10 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
 
         compiler = compiler.join_context(pycontext)
         compiler = compiler.with_locals(Optional=Optional, Operator=Operator)
+
+        # register moss level providers.
+        for provider in self.get_moss_providers():
+            compiler.register(provider)
 
         # register self
         container.set(Ghost, self.agent)

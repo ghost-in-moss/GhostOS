@@ -1,5 +1,9 @@
 # Releases
 
+# v0.4.0-dev2
+
+* temporary dev branch for llm func tests
+
 # v0.4.0-dev1
 
 * done a lot of experiments about `meta-prompt` on agent level reasoning
