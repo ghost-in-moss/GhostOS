@@ -1,6 +1,6 @@
 from typing import Optional
 from ghostos.libraries.pyeditor import PyModuleEditor
-from ghostos.libraries.pyeditor.abcd import LocalPyMI
+from ghostos.libraries.pyeditor.abcd import PyMI
 from ghostos.libraries.pyeditor.simple_module_editor import SimplePyModuleEditor
 from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.helpers import import_from_path
@@ -9,7 +9,7 @@ from ghostos.container import Container, Provider
 __all__ = ['SimpleLocalPyMIProvider', 'SimplePyMI']
 
 
-class SimplePyMI(LocalPyMI):
+class SimplePyMI(PyMI):
 
     def __init__(self, modules: Optional[Modules] = None):
         self._modules = modules if modules is not None else DefaultModules()
@@ -29,11 +29,11 @@ class SimplePyMI(LocalPyMI):
             return False
 
 
-class SimpleLocalPyMIProvider(Provider[LocalPyMI]):
+class SimpleLocalPyMIProvider(Provider[PyMI]):
 
     def singleton(self) -> bool:
         return True
 
-    def factory(self, con: Container) -> Optional[LocalPyMI]:
+    def factory(self, con: Container) -> Optional[PyMI]:
         modules = con.get(Modules)
         return SimplePyMI(modules)

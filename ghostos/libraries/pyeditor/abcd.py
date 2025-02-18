@@ -7,7 +7,7 @@ __all__ = [
     'PyInspector',
     'PyInterfaceGenerator',
     'PyModuleEditor',
-    'LocalPyMI',
+    'PyMI',
 ]
 
 
@@ -70,6 +70,9 @@ class PyModuleEditor(ABC):
 
     @abstractmethod
     def new_from(self, modulename: str) -> Self:
+        """
+        create new module editor
+        """
         pass
 
     @abstractmethod
@@ -159,7 +162,7 @@ class PyModuleEditor(ABC):
         pass
 
 
-class LocalPyMI(ABC):
+class PyMI(ABC):
     """
     local python module index.
     todo: recall modules.

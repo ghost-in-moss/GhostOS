@@ -9,6 +9,8 @@ class Moss(Stub):
 from ghostos.ghosts.moss_ghost.impl import MossGhost, BaseMossGhostMethods
 
 __ghost__ = MossGhost(
+    name="name",
+    module=__name__,
 )
 
 

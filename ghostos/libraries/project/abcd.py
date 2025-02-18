@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple
 from typing_extensions import Self
@@ -7,95 +8,13 @@ from pydantic import BaseModel, Field
 import pathlib
 
 
-class ProjectManager(POM, ABC):
+class Project(POM, ABC):
     """
     the manager useful for managing a filesystem based project.
     """
 
-    class ProjectConfig(BaseModel):
-        name: str = Field(
-            default="",
-            description="The name of the project",
-        )
-        ignores: List[str] = Field(
-            default_factory=lambda: [
-                '__pycache__', '*.pyc', '*.pyo', 'venv', '.idea', r'^\.', '*.log', '.git',
-                'dist',
-            ],
-            description="List of regex patterns of ignored file or directory. combined with `.gitignore`",
-        )
-        memo: Dict[str, str] = Field(
-            default_factory=dict,
-            description="the global memos of how to understand this project. "
-        )
-        instructions: Dict[str, str] = Field(
-            default_factory=dict,
-            description="the global instructions of how to maintain this project. "
-        )
-        watching: List[str] = Field(
-            default_factory=list,
-            description="the watching path notes of the project",
-        )
-
-    config: ProjectConfig
-    """the config of the project manager. modify the values can change default behaviors. """
-
-    terminal: Terminal
-    """terminal that you can use to interact with the operating system."""
-
-    @abstractmethod
-    def save_note(self, relative_path: str, *, desc: str = None, notes: Dict[str, str] = None) -> bool:
-        """
-        save note to a path that you can read later as long-term memory.
-        :param relative_path: relative path to the project root.
-        :param desc: description of the path (is directory or file? type? usage? cares? in 200 words)
-        :param notes: notes of the path in dictionary, key is note topic, value is note content
-        :return: False if the file or directory does not exist.
-        """
-        pass
-
-    @abstractmethod
-    def get_note(self, relative_path: str) -> Tuple[str, Dict[str, str]]:
-        """
-        get the note of a path
-        :param relative_path: relative path to the project root.
-        :return: (description, notes_dictionary)
-        """
-        pass
-
-    @abstractmethod
-    def list_paths(self, prefix: str = '', depth: int = 0, limit: int = 30) -> str:
-        """
-        list the paths under the given prefix, and show description of the path within.
-
-        :param prefix: directory path relative to the project root.
-        :param depth: the list depth
-        :param limit: the limit of listed files.
-        :return: directory and files in the Markdown list pattern, which means:
-            * `+` means is a directory
-            * `-` means is a file
-            * `:` means path note description follows.
-            * indent tells the depth of the path.
-        """
-        pass
-
-    @abstractmethod
-    def read_file(self, filename: str) -> str:
-        """
-        quick method to get content of a file.
-        :param filename: relative to the project root
-        :return: content str
-        """
-        pass
-
-    @abstractmethod
-    def save_file(self, filename: str, content: str) -> None:
-        """
-        quick method to update a file.
-        :param filename: the relative path to the project root.
-        :param content: the content of the file.
-        """
-        pass
+    root: Directory
+    """root path of the project"""
 
 
 class Directory(ABC):
@@ -128,6 +47,20 @@ class Directory(ABC):
         * the watching files contents in this directory.
         * the specialist agents for the maintainer of this directory.
         :return:
+        """
+        pass
+
+    @abstractmethod
+    def instruction(self) -> str:
+        """
+        :return: the content of the instruction.md
+        """
+        pass
+
+    @abstractmethod
+    def ignored(self) -> List[str]:
+        """
+        :return: the ignore patterns combine self.ignores with `.gitignore`
         """
         pass
 

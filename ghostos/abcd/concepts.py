@@ -1025,6 +1025,7 @@ class Mindflow(PromptObjectModel, ABC):
         :param kwargs:
         :return:
         """
+        pass
 
     @abstractmethod
     def error(self, *messages: MessageKind) -> Operator:
