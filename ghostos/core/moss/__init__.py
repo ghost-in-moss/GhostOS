@@ -8,7 +8,7 @@ from ghostos.core.moss.moss_impl import DefaultMOSSProvider
 from ghostos.core.moss.testsuite import MossTestSuite
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.exports import Exporter
-from ghostos.core.moss.magics import __is_subclass__, __is_instance__
+from ghostos.core.moss.magics import __is_subclass__, __is_instance__, MagicPrompter
 
 __all__ = [
     # abstract contracts
@@ -30,6 +30,7 @@ __all__ = [
     # magic prompters
     __is_subclass__,
     __is_instance__,
+    MagicPrompter,
 
 ]
 

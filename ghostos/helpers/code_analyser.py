@@ -57,6 +57,7 @@ def _get_child_interface(code: str, child: TreeSitterNode) -> str:
         if func_name and not func_name.startswith('_'):
             definition = _get_function_interface(child)
             return definition
+        return ""
 
     elif child.type == 'class_definition':
         return _get_class_interface(code, child)
@@ -72,8 +73,10 @@ def _get_decorator_interface(code: str, child: TreeSitterNode) -> str:
     decorator = child.children[0]
     definition = child.children[1]
     body = _get_child_interface_in_depth(code, definition, 0)
-    decorator_interfaces = [f"{decorator.text.decode()}", body]
-    return "\n".join(decorator_interfaces)
+    if body:
+        decorator_interfaces = [f"{decorator.text.decode()}", body]
+        return "\n".join(decorator_interfaces)
+    return ""
 
 
 def _get_full_definition(node: TreeSitterNode, docstring: bool = True) -> str:
@@ -156,7 +159,7 @@ def _get_class_interface(code, class_node: TreeSitterNode) -> str:
 
     if property_count == 0:
         class_body_interface.append("    pass")
-    class_body = "\n\n".join(class_body_interface)
+    class_body = "\n\n".join([itf for itf in class_body_interface if itf])
     class_body = insert_depth_to_code(class_body, 1)
     return class_definition + "\n" + class_body
 

@@ -1,6 +1,6 @@
 from typing import Dict
 from abc import ABC, abstractmethod
-from ghostos.libraries.projectmanager.abcd import ProjectManager
+from ghostos.libraries.project.abcd import Project
 from ghostos.contracts.logger import LoggerItf
 from ghostos.helpers import yaml_pretty_dump
 from pydantic import BaseModel, Field
@@ -16,8 +16,8 @@ class PathNote(BaseModel):
 
 
 class ProjectData(BaseModel):
-    config: ProjectManager.ProjectConfig = Field(
-        default_factory=ProjectManager.ProjectConfig,
+    config: Project.ProjectConfig = Field(
+        default_factory=Project.ProjectConfig,
     )
 
     notes: Dict[str, PathNote] = Field(
@@ -28,11 +28,11 @@ class ProjectData(BaseModel):
 class ProjectDataRepository(ABC):
 
     @abstractmethod
-    def get_config(self) -> ProjectManager.ProjectConfig:
+    def get_config(self) -> Project.ProjectConfig:
         pass
 
     @abstractmethod
-    def save_config(self, config: ProjectManager.ProjectConfig) -> None:
+    def save_config(self, config: Project.ProjectConfig) -> None:
         pass
 
     @abstractmethod
@@ -79,10 +79,10 @@ class FileProjectDataRepository(ProjectDataRepository):
             with open(self._data_filename, "w") as f:
                 f.write(content)
 
-    def get_config(self) -> ProjectManager.ProjectConfig:
+    def get_config(self) -> Project.ProjectConfig:
         return self._data
 
-    def save_config(self, config: ProjectManager.ProjectConfig) -> None:
+    def save_config(self, config: Project.ProjectConfig) -> None:
         self._data.config = config
         self._save_data()
 

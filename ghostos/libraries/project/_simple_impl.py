@@ -3,9 +3,9 @@ from typing_extensions import Self
 
 from ghostos.container import Container
 from ghostos.contracts.logger import LoggerItf
-from ghostos.libraries.projectmanager.abcd import ProjectManager
+from ghostos.libraries.project.abcd import Project
 from ghostos.libraries.terminal import Terminal
-from ghostos.libraries.projectmanager._project_data import FileProjectDataRepository, PathNote
+from ghostos.libraries.project._project_data import FileProjectDataRepository, PathNote
 from ghostos.core.moss import Injection, MossRuntime
 from pathlib import Path
 import os
@@ -57,7 +57,7 @@ class PathNode:
         return ' ' * 2 * self.depth + f"{mark} {name}{content}"
 
 
-class SimpleProjectManager(ProjectManager, Injection):
+class SimpleProjectManager(Project, Injection):
 
     def __init__(
             self,

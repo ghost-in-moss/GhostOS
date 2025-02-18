@@ -13,6 +13,7 @@ from ghostos.entity import ModelEntity
 from ghostos.abcd import (
     GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, ActionThought, ChainOfThoughts,
     SessionPyContext, MOSS_INTRODUCTION, get_moss_context_pom, MossAction,
+    OpThought,
 )
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, PyContext, MossRuntime
@@ -99,7 +100,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
             chain=self.get_thought_chain(session, runtime),
         )
 
-    def get_thought_chain(self, session: Session, runtime: MossRuntime) -> List[Thought]:
+    def get_thought_chain(self, session: Session, runtime: MossRuntime) -> List[OpThought]:
         return []
 
     def make_instruction_pom(self, session: Session, runtime: MossRuntime) -> PromptObjectModel:
