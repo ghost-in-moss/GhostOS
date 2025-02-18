@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, get_args, get_origin, ClassVar
 
@@ -188,3 +186,89 @@ def test_container_shutdown():
     assert Foo.instance_count == 1
     container.shutdown()
     assert Foo.instance_count == 0
+
+
+def test_auto_inject_provider():
+    class ProviderA:
+        def __init__(self):
+            pass
+
+        def dep_info(self):
+            return "ProviderA depend nothing"
+
+    class ProviderB:
+        def __init__(self, A: ProviderA):
+            self.A = A
+
+        def dep_info(self):
+            return f"ProviderB depend {self.A}"
+
+    class ProviderC:
+        def __init__(self, A: ProviderA, B: ProviderB, s: str):
+            self.A = A
+            self.B = B
+            self.s = s
+
+        def dep_info(self):
+            return f"ProviderC depend {self.A} and {self.B} has {self.s}"
+
+    @provide(ProviderA, autowire=True)
+    def make_A(_):
+        return ProviderA()
+
+    @provide(ProviderB, autowire=True)
+    def make_B(_, A: ProviderA):
+        return ProviderB(A)
+
+    @provide(ProviderC, autowire=True)
+    def make_C(_, A: ProviderA, B: ProviderB, s:str="string"):
+        return ProviderC(A, B, s)
+
+    container = Container()
+    container.register(make_A, make_B, make_C)
+    c = container.force_fetch(ProviderC)
+    print(c.dep_info())
+
+def test_manual_inject_provider():
+    class ProviderA:
+        def __init__(self):
+            pass
+
+        def dep_info(self):
+            return "ProviderA depend nothing"
+
+    class ProviderB:
+        def __init__(self, A: ProviderA):
+            self.A = A
+
+        def dep_info(self):
+            return f"ProviderB depend {self.A}"
+
+    class ProviderC:
+        def __init__(self, A: ProviderA, B: ProviderB, s: str):
+            self.A = A
+            self.B = B
+            self.s = s
+
+        def dep_info(self):
+            return f"ProviderC depend {self.A} and {self.B} has {self.s}"
+
+    @provide(ProviderA)
+    def make_A(_):
+        return ProviderA()
+
+    @provide(ProviderB)
+    def make_B(_):
+        A = container.force_fetch(ProviderA)
+        return ProviderB(A)
+
+    @provide(ProviderC)
+    def make_C(_, s:str="string"):
+        A = container.force_fetch(ProviderA)
+        B = container.force_fetch(ProviderB)
+        return ProviderC(A, B, s)
+
+    container = Container()
+    container.register(make_A, make_B, make_C)
+    c = container.force_fetch(ProviderC)
+    print(c.dep_info())

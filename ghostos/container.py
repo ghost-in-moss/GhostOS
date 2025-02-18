@@ -248,7 +248,19 @@ class Container(IoCContainer):
         # use provider as factory to initialize instance of the contract
         if abstract in self._providers:
             provider = self._providers[abstract]
-            made = provider.factory(self)
+            # 自动解析依赖项
+            resolved_deps = []
+            if hasattr(provider, "deps") and len(provider.deps):
+                contracts = list(self.contracts(True))
+                for dep_type in provider.deps:
+                    if dep_type not in contracts:
+                        continue
+                    dep_ins = self.get(dep_type)
+                    if dep_ins is None:
+                        raise NotImplementedError(f"Missing dependency: {dep_type} for {abstract.__name__}")
+                    resolved_deps.append(dep_ins)
+            # 调用工厂方法并注入依赖
+            made = provider.factory(self, *resolved_deps)
             if made is not None and provider.singleton():
                 self._set_instance(abstract, made)
             return made
@@ -432,7 +444,7 @@ class Container(IoCContainer):
         Container.instance_count -= 1
 
 
-Factory = Callable[[Container], Any]
+Factory = Callable[[Container, ...], Any]
 
 
 class Provider(Generic[INSTANCE], metaclass=ABCMeta):
@@ -464,7 +476,7 @@ class Provider(Generic[INSTANCE], metaclass=ABCMeta):
         return []
 
     @abstractmethod
-    def factory(self, con: Container) -> Optional[INSTANCE]:
+    def factory(self, con: Container, *deps: Any) -> Optional[INSTANCE]:
         """
         factory method to generate an instance of the contract.
         """
@@ -515,14 +527,33 @@ class ProviderAdapter(Generic[INSTANCE], Provider[INSTANCE]):
     def __init__(
             self,
             contract_type: Type[INSTANCE],
-            factory: Callable[[Container], Optional[INSTANCE]],
+            factory: Callable[[Container, ...], Optional[INSTANCE]],
             singleton: bool = True,
             lineinfo: str = "",
+            autowire: bool = False,
     ):
         self._contract_type = contract_type
         self._factory = factory
         self._singleton = singleton
         self._lineinfo = lineinfo
+        # 自动分析依赖
+        self.deps = self._analyze_deps(factory, autowire)
+
+    def _analyze_deps(self, factory: Callable, autowire: bool) -> List[Type]:
+        """分析工厂函数的参数类型作为依赖"""
+        deps = []
+        if not autowire:
+            return deps
+        signature = inspect.signature(factory)
+        for param in signature.parameters.values():
+            if param.annotation is param.empty:
+                # 没有说明类型
+                continue
+            if param.annotation is Container:
+                # 类型是Container
+                continue
+            deps.append(param.annotation)
+        return deps
 
     def singleton(self) -> bool:
         return self._singleton
@@ -530,8 +561,8 @@ class ProviderAdapter(Generic[INSTANCE], Provider[INSTANCE]):
     def contract(self) -> Type[INSTANCE]:
         return self._contract_type
 
-    def factory(self, con: Container) -> Optional[INSTANCE]:
-        return self._factory(con)
+    def factory(self, con: Container, *deps: Any) -> Optional[INSTANCE]:
+        return self._factory(con, *deps)
 
     def __repr__(self):
         if self._lineinfo:
@@ -555,6 +586,7 @@ def provide(
         abstract: ABSTRACT,
         singleton: bool = True,
         lineinfo: str = "",
+        autowire: bool = False,
 ) -> Callable[[Factory], Provider]:
     """
     helper function to generate provider with factory.
@@ -564,7 +596,7 @@ def provide(
         lineinfo = get_caller_info(2)
 
     def wrapper(factory: Factory) -> Provider:
-        return ProviderAdapter(abstract, factory, singleton, lineinfo=lineinfo)
+        return ProviderAdapter(abstract, factory, singleton, lineinfo=lineinfo, autowire=autowire)
 
     return wrapper
 
