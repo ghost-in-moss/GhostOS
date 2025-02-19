@@ -2,7 +2,7 @@ from typing import TypeVar, Tuple
 import streamlit as st
 import streamlit_react_jsonschema as srj
 from pydantic import BaseModel
-from ghostos.helpers import generate_import_path, yaml_pretty_dump
+from ghostos_common.helpers import generate_import_path, yaml_pretty_dump
 from ghostos.streamlit import render_streamlit_object, StreamlitRenderer
 from ghostos.core.runtime import (
     TaskBrief, GoTasks, GoTaskStruct,
@@ -11,7 +11,7 @@ from ghostos.core.runtime import (
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos_container import Container
-from ghostos.helpers import gettext as _
+from ghostos_common.helpers import gettext as _
 import inspect
 
 __all__ = [

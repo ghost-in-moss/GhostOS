@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from ghostos.abcd import Session
 from ghostos_container import Container, Provider, INSTANCE
 from ghostos.libraries.memo.abcd import Memo
-from ghostos.entity import EntityMeta, from_entity_meta, to_entity_meta
+from ghostos_common.entity import EntityMeta, from_entity_meta, to_entity_meta
 from pydantic import BaseModel, Field
 
 

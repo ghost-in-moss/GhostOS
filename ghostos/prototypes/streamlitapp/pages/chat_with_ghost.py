@@ -28,9 +28,9 @@ from ghostos.core.messages import (
 from streamlit.logger import get_logger
 from ghostos.abcd.realtime import OperatorName, RealtimeApp
 from ghostos.abcd import Shell, Conversation, Context
-from ghostos.identifier import get_identifier
-from ghostos.entity import to_entity_meta
-from ghostos.helpers import generate_import_path, yaml_pretty_dump, uuid, gettext as _
+from ghostos_common.identifier import get_identifier
+from ghostos_common.entity import to_entity_meta
+from ghostos_common.helpers import generate_import_path, yaml_pretty_dump, uuid, gettext as _
 from ghostos.core.runtime import GoTasks
 from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
 from streamlit.runtime.uploaded_file_manager import UploadedFile

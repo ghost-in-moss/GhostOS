@@ -6,9 +6,9 @@ from typing import Optional, Dict, Set, Iterable, Union, List, Any, ClassVar, Ty
 from typing_extensions import Self, Literal
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.helpers import uuid
+from ghostos_common.helpers import uuid
 from ghostos_container import Container
-from ghostos.entity import EntityType
+from ghostos_common.entity import EntityType
 from copy import deepcopy
 
 __all__ = [

@@ -7,8 +7,8 @@ from ghostos.prototypes.streamlitapp.pages.router import ConfigsRoute
 from ghostos.prototypes.streamlitapp.resources import get_container
 from ghostos.contracts.configs import Configs, Config
 from ghostos.contracts.workspace import Workspace
-from ghostos.helpers import import_from_path
-from ghostos.identifier import identify_class
+from ghostos_common.helpers import import_from_path
+from ghostos_common.identifier import identify_class
 from os.path import join
 
 

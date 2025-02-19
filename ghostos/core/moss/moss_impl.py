@@ -17,7 +17,7 @@ from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.exports import Exporter
 from ghostos.core.moss.magics import replace_magic_prompter
 from ghostos.prompter import PromptObjectModel, TextPOM
-from ghostos.helpers import generate_module_and_attr_name, code_syntax_check, get_code_interface_str
+from ghostos_common.helpers import generate_module_and_attr_name, code_syntax_check, get_code_interface_str
 from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"

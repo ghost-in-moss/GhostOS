@@ -3,7 +3,7 @@ from typing import Optional
 from ghostos.contracts.storage import Storage
 from ghostos.core.llms import Prompt
 from ghostos.core.llms.prompt import PromptStorage
-from ghostos.helpers import yaml_pretty_dump
+from ghostos_common.helpers import yaml_pretty_dump
 import yaml
 
 

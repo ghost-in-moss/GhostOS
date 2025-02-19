@@ -3,7 +3,7 @@ from ghostos.core.llms.configs import ServiceConf, ModelConf, DEEPSEEK_DRIVER_NA
 from ghostos.core.llms.abcd import LLMApi
 from ghostos.core.llms.prompt import Prompt, PromptPayload
 from ghostos.core.messages import Message, MessageStage
-from ghostos.helpers.timeutils import timestamp_ms
+from ghostos_common.helpers.timeutils import timestamp_ms
 from ghostos.framework.llms.openai_driver import OpenAIDriver, OpenAIAdapter
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 from openai.types.chat import ChatCompletion

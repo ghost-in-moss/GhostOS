@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 from mimetypes import guess_type
 from pydantic import BaseModel, Field
 from ghostos.contracts.storage import Storage
-from ghostos.helpers import uuid, yaml_pretty_dump
+from ghostos_common.helpers import uuid, yaml_pretty_dump
 import yaml
 
 

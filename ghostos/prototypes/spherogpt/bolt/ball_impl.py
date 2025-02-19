@@ -6,8 +6,8 @@ from spherov2.commands.io import FrameRotationOptions
 from ghostos.contracts.storage import FileStorage
 from ghostos.contracts.workspace import Workspace
 from ghostos.abcd import Conversation
-from ghostos.entity import ModelEntityMeta, from_entity_model_meta, to_entity_model_meta
-from ghostos.helpers import yaml_pretty_dump
+from ghostos_common.entity import ModelEntityMeta, from_entity_model_meta, to_entity_model_meta
+from ghostos_common.helpers import yaml_pretty_dump
 from ghostos.prompter import PromptObjectModel
 from ghostos_container import Container, Provider
 from ghostos.core.moss import Injection, MossRuntime

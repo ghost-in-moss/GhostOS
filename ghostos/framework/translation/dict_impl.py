@@ -4,7 +4,7 @@ from ghostos.contracts.translation import Translator, Translation, DomainTransla
 from ghostos.contracts.storage import FileStorage
 from ghostos.contracts.workspace import Workspace
 from ghostos_container import Provider, Container, INSTANCE
-from ghostos.helpers import yaml_pretty_dump, generate_import_path
+from ghostos_common.helpers import yaml_pretty_dump, generate_import_path
 from pydantic import BaseModel, Field
 import yaml
 

@@ -1,4 +1,4 @@
-from ghostos.helpers import create_and_bind_module
+from ghostos_common.helpers import create_and_bind_module
 from ghostos.scripts.cli.run_aifunc import RunAIFuncApp
 from ghostos.bootstrap import get_container
 from ghostos.prototypes.streamlitapp.main import main_run

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Callable, Type, Optional, TYPE_CHECKING
 from abc import ABC
 from pydantic import BaseModel
-from ghostos.helpers import generate_import_path, import_from_path
+from ghostos_common.helpers import generate_import_path, import_from_path
 from ghostos.prompter import PromptAbleClass
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.moss.utils import make_class_prompt, add_comment_mark

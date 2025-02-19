@@ -7,7 +7,7 @@ from ghostos_container import Container, Provider, INSTANCE
 from ghostos.libraries.notebook.abcd import Notebook
 from ghostos.contracts.storage import FileStorage
 from ghostos.contracts.workspace import Workspace
-from ghostos.helpers import yaml_pretty_dump
+from ghostos_common.helpers import yaml_pretty_dump
 import yaml
 
 

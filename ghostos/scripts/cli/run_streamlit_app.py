@@ -4,7 +4,7 @@ from ghostos.scripts.cli.utils import (
 )
 from ghostos.abcd import Ghost, Context
 from ghostos.bootstrap import get_bootstrap_config
-from ghostos.entity import EntityMeta, to_entity_meta
+from ghostos_common.entity import EntityMeta, to_entity_meta
 from pydantic import BaseModel, Field
 
 __all__ = [

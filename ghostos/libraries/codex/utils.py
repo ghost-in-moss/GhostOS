@@ -1,7 +1,7 @@
 from typing import List, Iterable, Optional
 from ghostos.libraries.codex.abcd import ModuleInfo
 from types import ModuleType
-from ghostos.helpers import get_code_interface_str, yaml_pretty_dump
+from ghostos_common.helpers import get_code_interface_str, yaml_pretty_dump
 from ghostos.contracts.modules import Modules
 import inspect
 
@@ -56,7 +56,7 @@ def dump_module_infos_to_markdown(infos: Iterable[ModuleInfo]) -> str:
     return "\n\n".join(blocks)
 
 # if __name__ == "__main__":
-#     from ghostos import helpers
+#     from ghostos_common import helpers
 #     from ghostos.contracts.modules import DefaultModules
 #
 #     _modules = DefaultModules()

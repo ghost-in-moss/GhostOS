@@ -1,5 +1,5 @@
 import streamlit as st
-from ghostos.helpers import gettext as _, yaml_pretty_dump
+from ghostos_common.helpers import gettext as _, yaml_pretty_dump
 from ghostos.core.messages import CompletionUsagePayload
 from ghostos.core.messages import Message
 from ghostos.prototypes.streamlitapp.widgets.renderer import render_empty

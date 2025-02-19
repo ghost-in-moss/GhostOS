@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Generic, TypeVar
 from ghostos.core.llms import Prompt, ServiceConf
 from ghostos.core.messages import Message
-from ghostos.entity import EntityMeta, get_entity, to_entity_meta
+from ghostos_common.entity import EntityMeta, get_entity, to_entity_meta
 from pydantic import BaseModel, Field
 
 

@@ -6,10 +6,10 @@ from ghostos.core.moss import MossCompiler, PyContext
 from ghostos.core.llms import LLMApi, Prompt
 from ghostos.core.runtime import GoThreadInfo
 from ghostos.core.messages import Message, Stream, Payload
-from ghostos.identifier import Identifier
-from ghostos.helpers import generate_import_path, uuid
+from ghostos_common.identifier import Identifier
+from ghostos_common.helpers import generate_import_path, uuid
 from ghostos_container import Container
-from ghostos.entity import EntityMeta, to_entity_meta, get_entity
+from ghostos_common.entity import EntityMeta, to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 
 __all__ = [

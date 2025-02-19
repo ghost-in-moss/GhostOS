@@ -9,7 +9,7 @@ from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.assets import ImageAssets, FileInfo, AudioAssets
 from ghostos.contracts.documents import DocumentRegistry, Documents
 from PIL.Image import Image as ImageType
-from ghostos.helpers import GHOSTOS_DOMAIN, uuid
+from ghostos_common.helpers import GHOSTOS_DOMAIN, uuid
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 

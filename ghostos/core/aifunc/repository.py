@@ -2,14 +2,14 @@ import inspect
 from typing import List, Type, Dict, Set, Iterable, Optional
 from types import ModuleType
 
-from ghostos.identifier import Identifier, identify_class
+from ghostos_common.identifier import Identifier, identify_class
 from ghostos.core.aifunc import AIFunc, ExecFrame
 from ghostos.core.aifunc.interfaces import AIFuncRepository
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.workspace import Workspace
-from ghostos.helpers import generate_module_and_attr_name
+from ghostos_common.helpers import generate_module_and_attr_name
 from ghostos_container import Provider, Container
 from pydantic import Field
 from os.path import join

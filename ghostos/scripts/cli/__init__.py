@@ -205,7 +205,7 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
     """
     from ghostos.bootstrap import get_container
     from ghostos.core.moss import MossCompiler, PyContext
-    from ghostos.helpers import yaml_pretty_dump
+    from ghostos_common.helpers import yaml_pretty_dump
 
     container = get_container()
     compiler = container.force_fetch(MossCompiler)

@@ -5,7 +5,7 @@ from ghostos.contracts.configs import Configs
 from ghostos.prototypes.streamlitapp.utils.session import expect, SingletonContracts, Singleton
 from ghostos.prototypes.streamlitapp.utils.route import Router
 from ghostos.prototypes.streamlitapp.resources import AppConf
-from ghostos.helpers import gettext as _
+from ghostos_common.helpers import gettext as _
 
 __all__ = [
     "SINGLETONS", "BOOTSTRAP", "BOOTSTRAPPED_KEY",

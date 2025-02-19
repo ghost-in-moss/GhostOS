@@ -1,4 +1,4 @@
-from ghostos.helpers import Timeleft
+from ghostos_common.helpers import Timeleft
 
 
 def test_timeleft_with_zero():

@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List
 from spherov2.sphero_edu import SpheroEduAPI
 from pydantic import BaseModel, Field
-from ghostos.helpers import Timeleft
+from ghostos_common.helpers import Timeleft
 from ghostos.abcd import Conversation
 from ghostos.contracts.logger import LoggerItf
 from ghostos.core.runtime import EventBus, EventTypes
@@ -258,7 +258,7 @@ exports = {
 }
 
 if __name__ == "__exports__":
-    from ghostos.helpers import yaml_pretty_dump
+    from ghostos_common.helpers import yaml_pretty_dump
 
     print(yaml_pretty_dump(exports))
 

@@ -1,8 +1,7 @@
-from threading import Thread, Event
 import time
 
 
-class TestCommand:
+class FooCommand:
 
     def __init__(self, content: str, duration: float):
         self.content = content
@@ -20,7 +19,7 @@ class TestCommand:
 def test_stop_able_threads():
     from multiprocessing import Process
 
-    t = TestCommand('hello', 2)
+    t = FooCommand('hello', 2)
     p = Process(target=t.run, args=())
     p.start()
     p.terminate()

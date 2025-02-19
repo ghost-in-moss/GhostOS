@@ -2,7 +2,7 @@ from typing import List
 from tree_sitter import (
     Node as TreeSitterNode,
 )
-from ghostos.helpers.tree_sitter import tree_sitter_parse
+from ghostos_common.helpers.tree_sitter import tree_sitter_parse
 from functools import lru_cache
 
 __all__ = ['get_code_interface', 'get_code_interface_str']

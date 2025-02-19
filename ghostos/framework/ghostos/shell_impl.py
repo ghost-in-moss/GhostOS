@@ -11,9 +11,9 @@ from ghostos.core.runtime import (
     GoTasks, TaskState, GoTaskStruct,
 )
 from ghostos.core.messages import Stream
-from ghostos.helpers import uuid, Timeleft, import_from_path
-from ghostos.identifier import get_identifier
-from ghostos.entity import to_entity_meta
+from ghostos_common.helpers import uuid, Timeleft, import_from_path
+from ghostos_common.identifier import get_identifier
+from ghostos_common.entity import to_entity_meta
 from threading import Lock
 from pydantic import BaseModel, Field
 from .conversation_impl import ConversationImpl, ConversationConf

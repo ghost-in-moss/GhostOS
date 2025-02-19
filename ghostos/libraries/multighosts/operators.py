@@ -3,8 +3,8 @@ from typing import Union, List, Dict
 from ghostos.abcd import Operator, Session, Ghost, Shell
 from ghostos.core.runtime import GoTaskStruct, EventTypes, GoThreads
 from ghostos.core.messages import Message, Role
-from ghostos.identifier import get_identifier
-from ghostos.helpers import md5
+from ghostos_common.identifier import get_identifier
+from ghostos_common.helpers import md5
 
 
 class PublicChatOperator(Operator):

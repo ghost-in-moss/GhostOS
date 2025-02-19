@@ -152,7 +152,7 @@ class BootstrapConfig(BaseModel):
         return join(workspace_dir, ".example.env")
 
     def save(self, dir_path: str = None) -> str:
-        from ghostos.helpers import yaml_pretty_dump
+        from ghostos_common.helpers import yaml_pretty_dump
         if dir_path is None:
             filename = join(abspath(".ghostos.yml"))
         else:

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Dict, Any, Optional, Tuple, Iterator
 from types import ModuleType
 from pydantic import BaseModel, Field
-from ghostos.entity import EntityMeta, to_entity_meta, from_entity_meta, is_entity_type
+from ghostos_common.entity import EntityMeta, to_entity_meta, from_entity_meta, is_entity_type
 
 __all__ = [
     'PyContext',

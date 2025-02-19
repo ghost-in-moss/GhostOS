@@ -17,7 +17,7 @@ from ghostos.core.runtime import (
 from ghostos.core.llms import LLMFunc
 from ghostos.contracts.pool import Pool
 from ghostos.contracts.logger import LoggerItf, wrap_logger
-from ghostos.entity import to_entity_meta, get_entity
+from ghostos_common.entity import to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
 from threading import Lock, Thread
@@ -110,7 +110,7 @@ class ConversationImpl(Conversation[G]):
         return self._tasks.get_task(self.scope.task_id)
 
     def get_state_values(self) -> Dict[str, EntityType]:
-        from ghostos.entity import from_entity_meta
+        from ghostos_common.entity import from_entity_meta
         self._validate_closed()
         values = {}
         metas = self.get_task().state_values

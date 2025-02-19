@@ -7,7 +7,7 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage
 from ghostos_container import Provider, Container
 from ghostos.core.runtime.tasks import TaskLocker
-from ghostos.helpers import uuid, timestamp
+from ghostos_common.helpers import uuid, timestamp
 
 __all__ = ['StorageGoTasksImpl', 'StorageTasksImplProvider', 'WorkspaceTasksProvider']
 

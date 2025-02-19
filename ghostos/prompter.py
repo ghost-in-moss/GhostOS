@@ -8,9 +8,9 @@ from typing_extensions import Self
 from abc import ABC, abstractmethod
 from types import ModuleType
 from ghostos_container import Container
-from ghostos.helpers import generate_import_path, import_class_from_path, import_from_path
+from ghostos_common.helpers import generate_import_path, import_class_from_path, import_from_path
 from pydantic import BaseModel, Field
-from ghostos.entity import EntityMeta, from_entity_meta, to_entity_meta
+from ghostos_common.entity import EntityMeta, from_entity_meta, to_entity_meta
 
 import json
 

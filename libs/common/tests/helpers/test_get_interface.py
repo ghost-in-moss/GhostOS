@@ -1,4 +1,4 @@
-from ghostos.helpers.code_analyser import get_code_interface
+from ghostos_common.helpers.code_analyser import get_code_interface
 
 
 def test_get_code_interface_baseline():

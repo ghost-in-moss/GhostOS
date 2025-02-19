@@ -1,7 +1,7 @@
 from typing import List, Union, Dict, Optional
 from typing_extensions import Self
 from pydantic import BaseModel, Field
-from ghostos.entity import ModelEntityMeta, to_entity_model_meta, from_entity_model_meta
+from ghostos_common.entity import ModelEntityMeta, to_entity_model_meta, from_entity_model_meta
 
 from .runtime import BoltBallMovement
 from .sphero_edu_api_patch import SpheroEduAPI

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
 from ghostos.ghosts.chatbot.simplest import Chatbot
-from ghostos.identifier import Identifier
+from ghostos_common.identifier import Identifier
 
 
 class Chatbots(ABC):

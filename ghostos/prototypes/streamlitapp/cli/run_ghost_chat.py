@@ -3,7 +3,7 @@ from typing import List
 from ghostos.core.messages import Message
 from ghostos.core.runtime import Event
 from ghostos.contracts.logger import get_ghostos_logger
-from ghostos.helpers import create_and_bind_module
+from ghostos_common.helpers import create_and_bind_module
 from ghostos.scripts.cli.run_streamlit_app import RunGhostChatApp
 from ghostos.bootstrap import get_ghostos, get_container
 from ghostos.prototypes.streamlitapp.main import main_run
@@ -11,7 +11,7 @@ from ghostos.prototypes.streamlitapp.pages.router import default_router, GhostCh
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.abcd import Shell, Background
 from ghostos.abcd.utils import get_module_magic_shell_providers
-from ghostos.entity import from_entity_meta
+from ghostos_common.entity import from_entity_meta
 import importlib
 import streamlit as st
 import sys

@@ -7,7 +7,7 @@ from ghostos.core.messages import (
 from ghostos.core.messages.message_classes import ConfirmMessage
 from ghostos.core.runtime.events import Event
 from ghostos.framework.messages import CompletionUsagePayload, TaskPayload, PromptPayload
-from ghostos.helpers import gettext as _
+from ghostos_common.helpers import gettext as _
 
 
 class MessageGroup(NamedTuple):

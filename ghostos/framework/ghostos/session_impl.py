@@ -23,8 +23,8 @@ from ghostos.prompter import PromptObjectModel
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.variables import Variables
 from ghostos_container import Container, provide, Contracts
-from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
-from ghostos.identifier import get_identifier
+from ghostos_common.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
+from ghostos_common.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
 from ghostos.framework.ghostos.mindflow_impl import MindflowImpl
 from ghostos.framework.ghostos.subtasks_impl import SubtasksImpl

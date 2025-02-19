@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
 from ghostos.core.messages.message import Message, Role
-from ghostos.entity import EntityMeta
-from ghostos.helpers import uuid
+from ghostos_common.entity import EntityMeta
+from ghostos_common.helpers import uuid
 from contextlib import contextmanager
 
 __all__ = [

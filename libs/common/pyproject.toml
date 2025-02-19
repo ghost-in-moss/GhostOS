@@ -1,0 +1,21 @@
+[project]
+name = "ghostos-common"
+version = "0.1.0"
+description = "common library for GhostOS project"
+authors = [
+    {name = "thirdgerb",email = "thirdgerb@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic (>=2.7.0,<3.0.0)",
+    "tree-sitter (>=0.21.3,<0.22.0)",
+    "tree-sitter-languages (>=1.10.2,<1.11.0)",
+    "pyyaml (>=6.0.1,<7.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

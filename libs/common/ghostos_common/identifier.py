@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Union, Callable, Any
 from pydantic import BaseModel, Field
-from ghostos.helpers import generate_import_path
+from ghostos_common.helpers import generate_import_path
 from typing_extensions import Protocol
 import inspect
 

@@ -1,9 +1,9 @@
 from typing import Dict
 from pydantic import BaseModel, Field
 from ghostos.abcd import Ghost
-from ghostos.entity import EntityMeta, to_entity_meta, from_entity_meta
-from ghostos.identifier import Identifier, get_identifier
-from ghostos.helpers import md5
+from ghostos_common.entity import EntityMeta, to_entity_meta, from_entity_meta
+from ghostos_common.identifier import Identifier, get_identifier
+from ghostos_common.helpers import md5
 
 
 class Topic(BaseModel):

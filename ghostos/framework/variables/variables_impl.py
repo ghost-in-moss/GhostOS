@@ -5,9 +5,9 @@ from pydantic import BaseModel
 from ghostos.contracts.variables import Variables
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.workspace import Workspace
-from ghostos.entity import EntityType, to_entity_meta, from_entity_meta, EntityMeta
-from ghostos.identifier import try_get_identifier
-from ghostos.helpers import md5, generate_import_path, uuid
+from ghostos_common.entity import EntityType, to_entity_meta, from_entity_meta, EntityMeta
+from ghostos_common.identifier import try_get_identifier
+from ghostos_common.helpers import md5, generate_import_path, uuid
 from ghostos_container import Provider, Container
 import json
 

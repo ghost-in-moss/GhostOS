@@ -1,8 +1,8 @@
 from typing import Optional, Type, Union, List
 from types import ModuleType
-from ghostos.helpers import import_class_from_path
-from ghostos.identifier import get_identifier
-from ghostos.entity import to_entity_meta
+from ghostos_common.helpers import import_class_from_path
+from ghostos_common.identifier import get_identifier
+from ghostos_common.entity import to_entity_meta
 from ghostos.abcd.concepts import Ghost, GhostDriver, Session, Operator
 from ghostos.core.runtime import Event
 from ghostos_container import Provider

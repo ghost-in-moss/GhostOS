@@ -8,7 +8,7 @@ from ghostos.core.runtime import GoThreadInfo, EventTypes, thread_to_prompt
 from ghostos.core.moss import MossRuntime, MossCompiler, PyContext
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.messages import Role, Message
-from ghostos.helpers import yaml_pretty_dump
+from ghostos_common.helpers import yaml_pretty_dump
 from pydantic import BaseModel, Field
 
 __all__ = ["GhostFuncDriver", "GhostFuncCache", 'get_ghost_func_cache', 'save_ghost_func_cache']

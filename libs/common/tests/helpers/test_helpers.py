@@ -1,4 +1,4 @@
-from ghostos import helpers
+from ghostos_common import helpers
 
 
 def test_camel_to_snake():
@@ -19,7 +19,7 @@ def test_camel_to_snake():
 
 def test_yaml_pretty_dump():
     import yaml
-    from ghostos.helpers import yaml_pretty_dump
+    from ghostos_common.helpers import yaml_pretty_dump
 
     data = {"foo": "foo\nbar"}
     dumped = yaml_pretty_dump(data)

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from typing_extensions import Self
-from ghostos.entity import ModelEntity
+from ghostos_common.entity import ModelEntity
 from pydantic import BaseModel, Field
 from .sphero_edu_api_patch import SpheroEduAPI
 

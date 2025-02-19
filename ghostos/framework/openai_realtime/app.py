@@ -12,7 +12,7 @@ from collections import deque
 from ghostos.abcd import Conversation
 from ghostos.core.messages import ReceiverBuffer, Message
 from ghostos.abcd.realtime import RealtimeApp, Listener, Speaker, Operator
-from ghostos.helpers import Timeleft
+from ghostos_common.helpers import Timeleft
 from threading import Thread
 from queue import Empty
 import time

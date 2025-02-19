@@ -2,7 +2,7 @@ from typing import Dict
 
 from ghostos.libraries.codex.abcd import PyCodexGenerator, ModuleInfo
 from ghostos.libraries.codex.utils import recursive_generate_module_infos
-from ghostos.helpers import yaml_pretty_dump
+from ghostos_common.helpers import yaml_pretty_dump
 from ghostos.contracts.modules import Modules
 import yaml
 

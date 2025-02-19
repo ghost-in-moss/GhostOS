@@ -19,7 +19,7 @@ from ghostos.core.messages.message_classes import (
 )
 from ghostos.contracts.logger import LoggerItf, FakeLogger
 from ghostos_container import Provider, Container
-from ghostos.helpers import import_class_from_path
+from ghostos_common.helpers import import_class_from_path
 
 __all__ = [
     "OpenAIMessageParser", "DefaultOpenAIMessageParser", "DefaultOpenAIParserProvider",

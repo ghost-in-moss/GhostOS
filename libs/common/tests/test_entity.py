@@ -1,4 +1,4 @@
-from ghostos.entity import to_entity_meta, from_entity_meta
+from ghostos_common.entity import to_entity_meta, from_entity_meta
 from pydantic import BaseModel
 
 

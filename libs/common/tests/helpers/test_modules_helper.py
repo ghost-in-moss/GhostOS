@@ -1,4 +1,4 @@
-from ghostos.helpers import get_calling_modulename
+from ghostos_common.helpers import get_calling_modulename
 
 
 def test_get_calling_modulename():

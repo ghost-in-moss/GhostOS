@@ -1,4 +1,4 @@
-from ghostos.helpers.tree_sitter import code_syntax_check
+from ghostos_common.helpers.tree_sitter import code_syntax_check
 
 
 def test_lint_code_success():

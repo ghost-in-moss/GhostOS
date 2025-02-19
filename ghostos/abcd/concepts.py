@@ -6,8 +6,8 @@ from typing import (
 from typing_extensions import Self
 
 from abc import ABC, abstractmethod
-from ghostos.identifier import Identical
-from ghostos.entity import EntityType, EntityClass
+from ghostos_common.identifier import Identical
+from ghostos_common.entity import EntityType, EntityClass
 from ghostos.prompter import PromptObjectModel, BasePOM
 from ghostos.core.runtime import (
     TaskState,
@@ -20,7 +20,7 @@ from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
 from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role, Pipe as MsgPipe
 from ghostos.contracts.logger import LoggerItf
 from ghostos_container import Container, Provider
-from ghostos.identifier import get_identifier
+from ghostos_common.identifier import get_identifier
 from pydantic import BaseModel
 
 """
@@ -105,7 +105,7 @@ class GhostDriver(Generic[G], ABC):
         """
         generate unique instance id (task id) of the ghost instance.
         """
-        from ghostos.helpers import md5
+        from ghostos_common.helpers import md5
         id_ = get_identifier(self.ghost)
         if id_.id:
             # if ghost instance has id, it is unique in process.

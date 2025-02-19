@@ -1,5 +1,5 @@
 from ghostos.prompter import PromptObjectModel, TextPOM
-from ghostos.identifier import Identifier
+from ghostos_common.identifier import Identifier
 
 AGENT_META_INTRODUCTION = """
 <!Private not visible to user!>
@@ -14,7 +14,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
 
 
 def get_agent_identity(title: str, id_: Identifier) -> PromptObjectModel:
-    from ghostos.helpers import yaml_pretty_dump
+    from ghostos_common.helpers import yaml_pretty_dump
     value = id_.model_dump(exclude_defaults=True)
     return TextPOM(
         title=title,

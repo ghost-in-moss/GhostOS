@@ -10,7 +10,7 @@ from ghostos.core.messages import (
     MessageType, Message, AudioMessage, FunctionCallMessage, FunctionCallOutputMessage,
     FunctionCaller, Role,
 )
-from ghostos.helpers import md5
+from ghostos_common.helpers import md5
 from enum import Enum
 
 

@@ -1,7 +1,7 @@
 from typing import Iterable, List, Dict, Optional
 from typing_extensions import Self
 
-from ghostos.identifier import Identifier
+from ghostos_common.identifier import Identifier
 from ghostos.contracts.storage import FileStorage
 from ghostos.contracts.documents import Documents, DocumentRegistry
 from ghostos_container import Provider, Container

@@ -7,7 +7,7 @@ from typing_extensions import Literal
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Payload, Message
 
-# from ghostos.helpers import gettext as _
+# from ghostos_common.helpers import gettext as _
 
 __all__ = [
     'ModelConf', 'ServiceConf', 'LLMsConfig',
@@ -117,7 +117,7 @@ class Compatible(BaseModel):
         get a predefined message parser to messages compatible transform
         :return: messages params to the model
         """
-        from ghostos.helpers import import_instance_from_path
+        from ghostos_common.helpers import import_instance_from_path
         if self.message_parser is None:
             return None
         parser = import_instance_from_path(self.message_parser, MessagesCompatibleParser)

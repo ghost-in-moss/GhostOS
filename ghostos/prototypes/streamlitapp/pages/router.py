@@ -3,8 +3,8 @@ from ghostos.prototypes.streamlitapp.utils.route import Route, Router, Link
 from ghostos.core.messages import Message
 from ghostos.core.aifunc import ExecFrame
 from ghostos.abcd import Ghost, Context
-from ghostos.entity import EntityMeta, get_entity
-from ghostos.helpers import generate_import_path
+from ghostos_common.entity import EntityMeta, get_entity
+from ghostos_common.helpers import generate_import_path
 from enum import Enum
 from pydantic import Field
 from ghostos.framework.llms import LLMsYamlConfig

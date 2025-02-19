@@ -1,10 +1,10 @@
 from typing import Union, Optional, List, Iterable, Tuple, TYPE_CHECKING
 from warnings import warn
 
-from ghostos.identifier import Identifier
+from ghostos_common.identifier import Identifier
 from pydantic import Field
 
-from ghostos.helpers import import_from_path
+from ghostos_common.helpers import import_from_path
 from ghostos.prompter import TextPOM, PromptObjectModel
 from ghostos.abcd import (
     GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, SessionPyContext,
@@ -12,7 +12,7 @@ from ghostos.abcd import (
 )
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.moss import MossCompiler, MossRuntime
-from ghostos.entity import ModelEntity
+from ghostos_common.entity import ModelEntity
 from ghostos.core.messages import Role
 from ghostos.core.llms import (
     PromptPipe, AssistantNamePipe, run_prompt_pipeline,

@@ -6,7 +6,7 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.core.messages import MessageType
 from ghostos.core.runtime import EventBus, Event, EventTypes as GhostOSEventTypes
 from ghostos_container import Container, BootstrapProvider, INSTANCE
-from ghostos.helpers import Timeleft
+from ghostos_common.helpers import Timeleft
 from threading import Thread, Event, Lock
 from collections import deque
 

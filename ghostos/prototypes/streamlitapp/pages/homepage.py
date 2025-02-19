@@ -1,4 +1,4 @@
-from ghostos.helpers import gettext as _
+from ghostos_common.helpers import gettext as _
 
 
 def home():

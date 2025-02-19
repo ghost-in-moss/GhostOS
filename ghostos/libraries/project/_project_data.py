@@ -2,7 +2,7 @@ from typing import Dict
 from abc import ABC, abstractmethod
 from ghostos.libraries.project.abcd import Project
 from ghostos.contracts.logger import LoggerItf
-from ghostos.helpers import yaml_pretty_dump
+from ghostos_common.helpers import yaml_pretty_dump
 from pydantic import BaseModel, Field
 from threading import Lock
 from os.path import join, isdir, isfile, exists, abspath

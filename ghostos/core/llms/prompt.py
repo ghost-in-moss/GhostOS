@@ -11,9 +11,9 @@ from openai.types.shared_params.function_definition import FunctionDefinition
 from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 
 from pydantic import BaseModel, Field
-from ghostos import helpers
+from ghostos_common import helpers
 from ghostos.core.messages import Message, Role, Payload
-from ghostos.helpers import timestamp, uuid
+from ghostos_common.helpers import timestamp, uuid
 from ghostos.core.llms.configs import ModelConf
 from ghostos.core.llms.tools import LLMFunc, FunctionalToken
 

@@ -4,12 +4,12 @@ from typing_extensions import Self
 from types import ModuleType
 
 from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
-from ghostos.identifier import Identifier
+from ghostos_common.identifier import Identifier
 from pydantic import Field
 
-from ghostos.helpers import import_from_path
+from ghostos_common.helpers import import_from_path
 from ghostos.prompter import TextPOM, PromptObjectModel, PromptAbleClass
-from ghostos.entity import ModelEntity
+from ghostos_common.entity import ModelEntity
 from ghostos.abcd import (
     GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, ActionThought, ChainOfThoughts,
     SessionPyContext, MOSS_INTRODUCTION, get_moss_context_pom, MossAction,
@@ -23,7 +23,7 @@ from ghostos.core.llms import (
 )
 from ghostos.core.model_funcs import TruncateThreadByLLM
 from ghostos_container import Provider
-from ghostos.helpers import md5, yaml_pretty_dump
+from ghostos_common.helpers import md5, yaml_pretty_dump
 
 __all__ = ['MossGhost', 'MossGhostDriver', 'BaseMossGhostMethods']
 

@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 from openai.types.chat.completion_create_params import Function
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
-from ghostos.helpers import timestamp_ms
+from ghostos_common.helpers import timestamp_ms
 from ghostos.core.messages import (
     Message, OpenAIMessageParser, DefaultOpenAIMessageParser,
     CompletionUsagePayload, Role,
