@@ -27,7 +27,7 @@ from ghostos.prototypes.spherogpt.bolt import (
     LedMatrix,
     Animation,
 )
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Moss(Parent):
@@ -301,7 +301,7 @@ The inheritance hierarchy of Containers in GhostOS is as follows:
 * Conversation
   level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
 * Moss
-  level: [ghostos.core.moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py)
+  level: [ghostos_moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py)
 
 Registering Containers and Providers at the appropriate level can be used to manage dependencies that need to be
 inherited or isolated.

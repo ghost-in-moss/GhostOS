@@ -1,7 +1,7 @@
 from typing import Any, Optional
 from typing_extensions import is_protocol, is_typeddict
 from ghostos.libraries.pyeditor.abcd import PyInterfaceGenerator
-from ghostos.core.moss.prompts import reflect_code_prompt
+from ghostos_moss.prompts import reflect_code_prompt
 from ghostos_container import Container, Provider
 from ghostos_common.helpers import get_code_interface
 import inspect

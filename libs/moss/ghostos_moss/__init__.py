@@ -1,14 +1,14 @@
 from ghostos_container import Container
-from ghostos.core.moss.abcd import (
+from ghostos_moss.abcd import (
     Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
     AttrPrompts, Injection,
     MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
-from ghostos.core.moss.moss_impl import DefaultMOSSProvider
-from ghostos.core.moss.testsuite import MossTestSuite
-from ghostos.core.moss.pycontext import PyContext
-from ghostos.core.moss.exports import Exporter
-from ghostos.core.moss.magics import __is_subclass__, __is_instance__, MagicPrompter
+from ghostos_moss.moss_impl import DefaultMOSSProvider
+from ghostos_moss.testsuite import MossTestSuite
+from ghostos_moss.pycontext import PyContext
+from ghostos_moss.exports import Exporter
+from ghostos_moss.magics import __is_subclass__, __is_instance__, MagicPrompter
 
 __all__ = [
     # abstract contracts

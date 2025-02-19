@@ -98,7 +98,7 @@ The default reflection principle can be found in [MOSS Protocol](/en/concepts/mo
 
 The large model will call a tool named `moss` based on the instruction to generate code.
 The generated code will be executed in the temporary module compiled
-by [Moss](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py).
+by [Moss](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py).
 
 Source
 Code: [MossAction](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/agent.py#MossAction).
@@ -154,7 +154,7 @@ All lifecycle methods can be found in the following three files:
     - `__moss_agent_thought__`
     - `__moss_agent_instruction__`
     - `__moss_agent_persona__`
-- [moss lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/lifecycle.py)
+- [moss lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/lifecycle.py)
 
 Copy these methods into the current file to activate custom magic methods.
 All these magic methods are **optional**. If they can solve the problem, then you can use them.
@@ -174,7 +174,7 @@ need to introduce the `Moss` class. (Model-oriented Operating System Simulator):
 Define a Moss class in the target module:
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Moss(Parent):
@@ -213,7 +213,7 @@ saved, so MossAgent can directly use them as variables.
 Note that these variable types must be serializable. For example:
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from pydantic import BaseModel, Field
 
 
@@ -241,7 +241,7 @@ abstract classes:
 - Pass in instances at definition:
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Foo:
@@ -257,7 +257,7 @@ class Moss(Parent):
 - Through the magic method `__moss_agent_injections__`, manually define the instances to be injected.
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from foo import Foo
 
 
@@ -315,7 +315,7 @@ Some dependencies provided by the `GhostOS` system are as follows:
 - [Session](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
 - [Scope](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
 - [Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-- [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py)
+- [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py)
 - [Tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/tasks.py)
 - [Threads](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/threads.py)
 - [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py)

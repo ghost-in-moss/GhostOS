@@ -1,5 +1,5 @@
 import inspect
-from ghostos.core.moss.exports import Exporter
+from ghostos_moss.exports import Exporter
 
 
 class Exports(Exporter):

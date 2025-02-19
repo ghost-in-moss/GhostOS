@@ -10,7 +10,7 @@ from ghostos_common.entity import ModelEntityMeta, from_entity_model_meta, to_en
 from ghostos_common.helpers import yaml_pretty_dump
 from ghostos.prompter import PromptObjectModel
 from ghostos_container import Container, Provider
-from ghostos.core.moss import Injection, MossRuntime
+from ghostos_moss import Injection, MossRuntime
 from pydantic import BaseModel, Field
 from ghostos.prototypes.spherogpt.bolt.sphero_edu_api_patch import SpheroEventType
 from ghostos.prototypes.spherogpt.bolt.bolt_shell import Ball, Move, RollFunc, Animation

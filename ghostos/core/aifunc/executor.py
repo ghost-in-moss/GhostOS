@@ -5,7 +5,7 @@ from typing_extensions import Self
 
 from ghostos_container import Container, Provider, ABSTRACT
 from ghostos.core.llms import LLMApi, LLMs
-from ghostos.core.moss import MossCompiler
+from ghostos_moss import MossCompiler
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type
 from ghostos.core.aifunc.interfaces import AIFuncExecutor, AIFuncCtx, AIFuncDriver, ExecFrame, ExecStep
 from ghostos.core.aifunc.driver import DefaultAIFuncDriverImpl

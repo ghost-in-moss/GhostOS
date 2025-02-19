@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING
 from typing import Optional, List, Dict, Any
 
 if TYPE_CHECKING:
-    from ghostos.core.moss.prompts import AttrPrompts
-    from ghostos.core.moss.abcd import MossPrompter, Execution, MossRuntime, MossCompiler, Moss
+    from ghostos_moss.prompts import AttrPrompts
+    from ghostos_moss.abcd import MossPrompter, Execution, MossRuntime, MossCompiler, Moss
 
 """
 这个文件提供了 MOSS 生命周期的关键方法, 每一个都是可选的.
@@ -66,7 +66,7 @@ def __moss_module_prompt__(prompter: "MossPrompter", attr_prompts: Optional[Dict
 
     这个方法生成的 Prompt, 会用来描述当前文件, 其中包含了注入的 MOSS 类和 moss 实例.
     """
-    from ghostos.core.moss.utils import escape_string_quotes
+    from ghostos_moss.utils import escape_string_quotes
 
     # 获取原始的代码.
     origin_code = prompter.get_source_code(exclude_hide_code=True)
@@ -115,7 +115,7 @@ def __moss_exec__(
     :param kwargs: 从外部注入的参数变量.
     """
     from typing import Callable
-    from ghostos.core.moss.abcd import Execution
+    from ghostos_moss.abcd import Execution
     pycontext = runtime.dump_pycontext()
     pycontext.execute_code = code
     pycontext.executed = False

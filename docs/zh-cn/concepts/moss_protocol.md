@@ -15,7 +15,7 @@
 
 ## MOSS
 
-MOSS 的实现 [ghostos.core.moss](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss) 
+MOSS 的实现 [ghostos_moss](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss) 
 是一个可以脱离 `GhostOS` 项目使用的 python 模块.
 
 ### Purpose
@@ -31,7 +31,7 @@ from ghostos.prototypes.spherogpt.bolt import (
     LedMatrix,
     Animation,
 )
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Moss(Parent):
@@ -62,9 +62,9 @@ def run(moss: Moss):
 
 `MOSS` 实现的核心是三个类:
 
-* [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 编译任何 python module, 生成一个可供解析的临时模块.
-* [MossPrompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 反射 python module, 用来生成大模型看到的 Prompt.
-* [MossRuntime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): 在编译的临时 module 中, 执行大模型生成的代码.
+* [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py): 编译任何 python module, 生成一个可供解析的临时模块.
+* [MossPrompter](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py): 反射 python module, 用来生成大模型看到的 Prompt.
+* [MossRuntime](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py): 在编译的临时 module 中, 执行大模型生成的代码.
 
 ![moss architecture](../../assets/moss_achitecture.png)
 
@@ -74,20 +74,20 @@ def run(moss: Moss):
 
 ```python
 from ghostos.bootstrap import get_container
-from ghostos.core.moss import MossCompiler
+from ghostos_moss import MossCompiler
 
 compiler = get_container().force_fetch(MossCompiler)
 ```
 
 ### PyContext
 
-`MossCompiler` 使用 [PyContext](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/pycontext.py) 数据结构来管理一个可持久化的上下文.
+`MossCompiler` 使用 [PyContext](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/pycontext.py) 数据结构来管理一个可持久化的上下文.
 它可以用来存储运行时定义, 修改过的变量; 也可以管理对 python 代码的直接修改, 用于下一次运行.
 
 每个 `MossCompiler` 都会继承一个独立的 IoC Container, 因此可以使用它进行依赖注入的注册:
 
 ```python
-from ghostos.core.moss import MossCompiler
+from ghostos_moss import MossCompiler
 from ghostos_container import Provider
 
 compiler: MossCompiler = ...
@@ -115,7 +115,7 @@ compiler.with_locals(attr_name=attr_value)  # 在目标 python module 注入一�
 
 ```python
 from ghostos.bootstrap import get_container
-from ghostos.core.moss import MossCompiler, PyContext
+from ghostos_moss import MossCompiler, PyContext
 
 pycontext_instance: PyContext = ...
 compiler = get_container().force_fetch(MossCompiler)
@@ -132,7 +132,7 @@ runtime = compiler.compile(None)
 
 ```python
 from types import ModuleType
-from ghostos.core.moss import MossRuntime
+from ghostos_moss import MossRuntime
 
 runtime: MossRuntime = ...
 
@@ -144,7 +144,7 @@ module: ModuleType = runtime.module()
 使用 `MossRuntime` 可以得到一个 `MossPrompter`, 用来生成大模型的 Prompt:
 
 ```python
-from ghostos.core.moss import MossRuntime
+from ghostos_moss import MossRuntime
 
 runtime: MossRuntime = ...
 
@@ -175,7 +175,7 @@ with runtime:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-   from ghostos.core.moss import MossPrompter
+   from ghostos_moss import MossPrompter
 
 
 # 这里定义的代码会正常执行, 但不会提交给 LLM
@@ -228,9 +228,9 @@ def __moss_attr_prompts__() -> "AttrPrompts":
 基本原理就是使用当前模块作为上下文, 编译执行大模型生成的代码. 内部逻辑如下:
 
 ```python
-import ghostos.core.moss
+import ghostos_moss
 
-runtime: ghostos.core.moss.MossRuntime = ...
+runtime: ghostos_moss.MossRuntime = ...
 pycontext = runtime.dump_pycontext()
 local_values = runtime.locals()
 
@@ -245,9 +245,9 @@ exec(compiled, local_values)
 我们可以要求大模型生成的代码是一个 `main` 函数, 我们用 `MossRuntime` 编译完代码后可以立刻执行这个函数:
 
 ```python
-import ghostos.core.moss
+import ghostos_moss
 
-runtime: ghostos.core.moss.MossRuntime = ...
+runtime: ghostos_moss.MossRuntime = ...
 # 包含 main 函数的代码
 generated_code: str = ...
 
@@ -263,7 +263,7 @@ with runtime:
 ### Custom Lifecycle functions
 
 `MossRuntime` 在运行的生命周期中, 会尝试寻找编译模块里的魔术方法并执行.
-所有的魔术方法都定义在 [ghostos.core.moss.lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/lifecycle.py) 中. 详情请查看文件.
+所有的魔术方法都定义在 [ghostos_moss.lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/lifecycle.py) 中. 详情请查看文件.
 主要有以下几个方法:
 
 ```python
@@ -278,7 +278,7 @@ __all__ = [
 
 ### Moss 类
 
-在使用 `MossCompiler` 编译的目标模块中, 可以定义一个名为 `Moss` 的类, 它需要继承自 `ghostos.core.moss.Moss`,
+在使用 `MossCompiler` 编译的目标模块中, 可以定义一个名为 `Moss` 的类, 它需要继承自 `ghostos_moss.Moss`,
 这样它就可以在生命周期中得到关键的依赖注入, 达到所见即所得的效果.
 
 `Moss` 类的作用有两个:
@@ -291,7 +291,7 @@ __all__ = [
 
 ```python
 from abc import ABC
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 class Foo(ABC):
    ...
@@ -318,14 +318,14 @@ def main(moss) -> int:
 1. 变量存储: 所有绑定到 `Moss` 实例上的 `pydantic.BaseModel` 和 `int | str | float | bool` 等变量, 会自动存储到
    pycontext.
 2. 抽象类依赖注入: 所以在 `Moss` 上挂载的类, 会自动用 IoC Container 尝试注入实例
-3. 生命周期管理: 如果一个实现了 `ghostos.core.moss.Injection` 的类, 在注入到 `moss` 实例时,
+3. 生命周期管理: 如果一个实现了 `ghostos_moss.Injection` 的类, 在注入到 `moss` 实例时,
    会自动调用它的 `on_injection` 与 `on_destroy` 方法.
 4. 定义一个 `Moss` 类, 并不会污染破坏目标文件的原有功能.
 
 也可以使用 `MossRuntime` 来获取所有对 `Moss` 类的注入结果:
 
 ```python
-from ghostos.core.moss import Moss, MossRuntime
+from ghostos_moss import Moss, MossRuntime
 
 runtime: MossRuntime = ...
 
@@ -340,7 +340,7 @@ injections = runtime.moss_injections()
 
 ## Examples
 
-关于 `MOSS` 的基线测试用例在 [ghostos.core.moss.examples](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/examples)
+关于 `MOSS` 的基线测试用例在 [ghostos_moss.examples](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/examples)
 可以参考其中的测试代码理解它的原理. 
 
 ## MOSS TestSuite
@@ -349,6 +349,6 @@ injections = runtime.moss_injections()
 
 在文件中定义出来的函数, 变量和类是可以单元测试的, 但运行时依赖注入则需要构建测试套件. 
 
-`GhostOS` 提供了一个默认的套件 `ghostos.core.moss.testsuite.MossTextSuite`, 详情请见代码. 
+`GhostOS` 提供了一个默认的套件 `ghostos_moss.testsuite.MossTextSuite`, 详情请见代码. 
 
 

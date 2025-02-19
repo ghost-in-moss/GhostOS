@@ -1,5 +1,5 @@
 import streamlit as st
-from ghostos.core.moss import PyContext
+from ghostos_moss import PyContext
 from ghostos_common.helpers import gettext as _
 
 

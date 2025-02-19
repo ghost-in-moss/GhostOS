@@ -1,7 +1,7 @@
 import json
 from typing import NamedTuple, Any, List, TypedDict, Optional
 from types import ModuleType
-from ghostos.core.moss.pycontext import PyContext
+from ghostos_moss.pycontext import PyContext
 from pydantic import BaseModel, Field
 
 

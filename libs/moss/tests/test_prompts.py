@@ -1,9 +1,9 @@
 import inspect
-from ghostos.core.moss import prompts
-from ghostos.core.moss.prompts import reflect_locals_imported
+from ghostos_moss import prompts
+from ghostos_moss.prompts import reflect_locals_imported
 
-from ghostos.core.moss.moss_impl import MossRuntimeImpl
-from ghostos.core.moss.abcd import (
+from ghostos_moss.moss_impl import MossRuntimeImpl
+from ghostos_moss.abcd import (
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
 
@@ -12,7 +12,7 @@ def test_reflect_locals_imported_baseline():
     assert inspect.ismodule(prompts)
     # inspect 也被 prompts 库引用了.
     assert not inspect.isbuiltin(inspect)
-    attr_prompts = reflect_locals_imported("ghostos.core.moss.prompts", prompts.__dict__)
+    attr_prompts = reflect_locals_imported("ghostos_moss.prompts", prompts.__dict__)
     data = {}
     array = []
     for name, prompt in attr_prompts:

@@ -187,7 +187,7 @@ def default_application_contracts() -> Contracts:
     """
     Application level contracts
     """
-    from ghostos.core.moss import MossCompiler
+    from ghostos_moss import MossCompiler
     from ghostos.core.messages.openai import OpenAIMessageParser
     from ghostos.contracts.shutdown import Shutdown
     from ghostos.contracts.modules import Modules
@@ -257,7 +257,7 @@ def default_application_providers(
     """
     from ghostos.contracts.shutdown import ShutdownProvider
     from ghostos.contracts.modules import DefaultModulesProvider
-    from ghostos.core.moss import DefaultMOSSProvider
+    from ghostos_moss import DefaultMOSSProvider
     from ghostos.core.messages.openai import DefaultOpenAIParserProvider
     from ghostos.framework.workspaces import BasicWorkspaceProvider
     from ghostos.framework.configs import WorkspaceConfigsProvider

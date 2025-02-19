@@ -5,7 +5,7 @@ import importlib
 
 from ghostos_container import Container
 from ghostos.core.runtime import GoThreadInfo, EventTypes, thread_to_prompt
-from ghostos.core.moss import MossRuntime, MossCompiler, PyContext
+from ghostos_moss import MossRuntime, MossCompiler, PyContext
 from ghostos.core.llms import LLMs, LLMApi
 from ghostos.core.messages import Role, Message
 from ghostos_common.helpers import yaml_pretty_dump

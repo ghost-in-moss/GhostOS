@@ -204,7 +204,7 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
     dump moss context from a python file or module
     """
     from ghostos.bootstrap import get_container
-    from ghostos.core.moss import MossCompiler, PyContext
+    from ghostos_moss import MossCompiler, PyContext
     from ghostos_common.helpers import yaml_pretty_dump
 
     container = get_container()

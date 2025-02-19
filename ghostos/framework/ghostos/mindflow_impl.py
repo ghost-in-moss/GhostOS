@@ -7,7 +7,7 @@ from abc import ABC
 from ghostos_container import Container
 from ghostos.abcd import Mindflow, Session, Operator
 from ghostos.core.runtime import TaskState, EventTypes, TaskBrief
-from ghostos.core.moss import Injection, MossRuntime
+from ghostos_moss import Injection, MossRuntime
 from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role
 from pprint import pprint
 from contextlib import redirect_stdout

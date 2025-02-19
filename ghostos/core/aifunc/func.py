@@ -5,9 +5,9 @@ from pydantic import BaseModel
 from ghostos_common.helpers import generate_import_path, import_from_path
 from ghostos.prompter import PromptAbleClass
 from ghostos.core.llms import LLMs, LLMApi
-from ghostos.core.moss.utils import make_class_prompt, add_comment_mark
-from ghostos.core.moss.prompts import reflect_code_prompt
-from ghostos.core.moss.pycontext import PyContext
+from ghostos_moss.utils import make_class_prompt, add_comment_mark
+from ghostos_moss.prompts import reflect_code_prompt
+from ghostos_moss.pycontext import PyContext
 import inspect
 
 if TYPE_CHECKING:

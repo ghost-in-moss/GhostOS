@@ -2,7 +2,7 @@ from ghostos.framework.threads import MsgThreadRepoByStorageProvider, GoThreads,
 from ghostos.framework.storage import MemStorage, Storage
 from ghostos.framework.logger import FakeLogger, LoggerItf
 from ghostos.core.messages import Message
-from ghostos.core.moss import PyContext
+from ghostos_moss import PyContext
 from ghostos_container import Container
 
 

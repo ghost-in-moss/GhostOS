@@ -1,7 +1,7 @@
 from typing import Optional, List
 from ghostos.core.aifunc import AIFunc, AIFuncResult
 from pydantic import BaseModel, Field
-from ghostos.core.moss import Moss
+from ghostos_moss import Moss
 
 
 class NewsAIFunc(AIFunc):

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from ghostos_container import Container
-from ghostos.core.moss.abcd import Moss as Parent
+from ghostos_moss.abcd import Moss as Parent
 from ghostos.prompter import BasePOM
 from inspect import getmembers, getsource
 from pydantic import BaseModel
@@ -51,7 +51,7 @@ class Moss(Parent, ABC):
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ghostos.core.moss.abcd import MossCompiler, AttrPrompts, MossPrompter, Execution
+    from ghostos_moss.abcd import MossCompiler, AttrPrompts, MossPrompter, Execution
 
 
 def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
@@ -90,13 +90,13 @@ def __moss_attr_prompts__() -> "AttrPrompts":
 
 def __moss_prompt__(prompter: "MossPrompter") -> str:
     # 测试生命周期生效.
-    from ghostos.core.moss.lifecycle import __moss_module_prompt__
+    from ghostos_moss.lifecycle import __moss_module_prompt__
     return __moss_module_prompt__(prompter)
 
 
 def __moss_exec__(*args, **kwargs) -> "Execution":
     # 测试生命周期生效.
-    from ghostos.core.moss.lifecycle import __moss_exec__
+    from ghostos_moss.lifecycle import __moss_exec__
     return __moss_exec__(*args, **kwargs)
 
 

@@ -1,4 +1,4 @@
-from ghostos.core.moss import Moss as Stub
+from ghostos_moss import Moss as Stub
 
 
 class Moss(Stub):

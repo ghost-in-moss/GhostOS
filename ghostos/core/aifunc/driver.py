@@ -10,7 +10,7 @@ from ghostos.core.aifunc.func import (
     get_aifunc_instruction, get_aifunc_result_type, get_aifunc_pycontext, get_aifunc_llmapi,
 )
 from ghostos.core.llms import LLMs, Prompt
-from ghostos.core.moss.abcd import MossRuntime
+from ghostos_moss.abcd import MossRuntime
 from ghostos.core.runtime import GoThreadInfo, EventTypes, GoThreads, thread_to_prompt
 from ghostos.core.messages import Role, Message, Stream
 from ghostos_container import Container

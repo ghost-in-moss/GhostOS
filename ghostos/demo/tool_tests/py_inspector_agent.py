@@ -1,7 +1,7 @@
 from typing import Iterable
 
 from ghostos_container import Provider
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from ghostos.libraries.pyeditor import PyInspector
 from ghostos.libraries.replier import Replier
 

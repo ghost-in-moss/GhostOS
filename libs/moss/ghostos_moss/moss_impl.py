@@ -6,17 +6,16 @@ import io
 
 from ghostos_container import Container, Provider
 from ghostos.contracts.modules import Modules, ImportWrapper
-from ghostos.core.moss.abcd import (
+from ghostos_moss.abcd import (
     Moss,
     MossCompiler, MossRuntime, MossPrompter, MOSS_VALUE_NAME, MOSS_TYPE_NAME,
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
     Injection,
 )
-from ghostos.core.moss.prompts import reflect_code_prompt
-from ghostos.core.moss.pycontext import PyContext
-from ghostos.core.moss.exports import Exporter
-from ghostos.core.moss.magics import replace_magic_prompter
-from ghostos.prompter import PromptObjectModel, TextPOM
+from ghostos_moss.prompts import reflect_code_prompt
+from ghostos_moss.pycontext import PyContext
+from ghostos_moss.exports import Exporter
+from ghostos_moss.magics import replace_magic_prompter
 from ghostos_common.helpers import generate_module_and_attr_name, code_syntax_check, get_code_interface_str
 from contextlib import contextmanager, redirect_stdout
 

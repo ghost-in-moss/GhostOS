@@ -3,7 +3,7 @@ from typing import Union, Optional, ClassVar, Dict
 from pydantic import BaseModel, Field
 from ghostos.abcd.concepts import Operator, Session, Action, SessionPyContext
 from ghostos.prompter import PromptObjectModel, TextPOM
-from ghostos.core.moss import MossRuntime
+from ghostos_moss import MossRuntime
 from ghostos.core.messages import FunctionCaller
 from ghostos.core.llms import (
     Prompt, PromptPipe,

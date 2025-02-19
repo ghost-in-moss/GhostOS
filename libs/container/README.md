@@ -31,7 +31,7 @@ from ghostos.prototypes.spherogpt.bolt import (
     LedMatrix,
     Animation,
 )
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Moss(Parent):

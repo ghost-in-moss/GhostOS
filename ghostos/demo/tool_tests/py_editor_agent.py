@@ -2,7 +2,7 @@ from typing import Iterable, Dict, Any, List
 
 from ghostos.abcd import Session, Thought
 from ghostos_container import Provider
-from ghostos.core.moss import Moss as Parent, MossRuntime
+from ghostos_moss import Moss as Parent, MossRuntime
 from ghostos.libraries.pyeditor import PyInspector, PyMI, PyModuleEditor
 from ghostos.libraries.replier import Replier
 

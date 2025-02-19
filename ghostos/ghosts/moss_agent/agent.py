@@ -11,7 +11,7 @@ from ghostos.abcd import (
     MossAction, MOSS_INTRODUCTION, get_moss_context_pom,
 )
 from ghostos.core.runtime import Event, GoThreadInfo
-from ghostos.core.moss import MossCompiler, MossRuntime
+from ghostos_moss import MossCompiler, MossRuntime
 from ghostos_common.entity import ModelEntity
 from ghostos.core.messages import Role
 from ghostos.core.llms import (

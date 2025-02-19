@@ -1,9 +1,8 @@
 from typing import Any, Optional, Dict, Tuple, Iterable
-from ghostos.core.moss.utils import (
+from ghostos_moss.utils import (
     get_modulename,
     get_callable_definition,
 )
-from ghostos.prompter import get_defined_prompt
 from pydantic import BaseModel
 from dataclasses import is_dataclass
 import inspect
@@ -31,7 +30,6 @@ __all__ = [
     'reflect_code_prompt',
     'reflect_locals_imported', 'reflect_class_with_methods',
     'join_prompt_lines', 'compile_attr_prompts',
-    'get_defined_prompt',
     'AttrPrompts',
 ]
 
@@ -96,7 +94,7 @@ def reflect_class_with_methods(cls: type) -> str:
     reflect class with all its method signatures.
     """
     from inspect import getsource
-    from ghostos.core.moss.utils import make_class_prompt, get_callable_definition
+    from ghostos_moss.utils import make_class_prompt, get_callable_definition
     source = getsource(cls)
     attrs = []
     for name in dir(cls):
@@ -146,10 +144,6 @@ def reflect_code_prompt(value: Any) -> Optional[str]:
     3. function or method
     will generate prompt
     """
-    defined_prompt = get_defined_prompt(value)
-    if defined_prompt:
-        return defined_prompt
-
     if inspect.isclass(value):
         # only reflect abstract class
         if inspect.isabstract(value) or issubclass(value, BaseModel) or is_dataclass(value):

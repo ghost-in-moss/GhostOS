@@ -1,6 +1,6 @@
 from typing import Optional
 from ghostos_container import Container
-from ghostos.core.moss import moss_container, MossCompiler
+from ghostos_moss import moss_container, MossCompiler
 
 from ghostos.core.llms import LLMs
 from ghostos.framework.configs import ConfigsByStorageProvider

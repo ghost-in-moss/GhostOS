@@ -4,8 +4,8 @@ from typing_extensions import Self
 from types import ModuleType, FunctionType
 from abc import ABC, abstractmethod
 from ghostos_container import Container, Provider, Factory, provide
-from ghostos.core.moss.pycontext import PyContext
-from ghostos.core.moss.prompts import (
+from ghostos_moss.pycontext import PyContext
+from ghostos_moss.prompts import (
     AttrPrompts, reflect_locals_imported, compile_attr_prompts
 )
 
@@ -216,7 +216,7 @@ class MossCompiler(ABC):
         正式编译出一个 MOSSRuntime. 每一个 Compiler 只能编译一次.
         :param modulename: 生成的 ModuleType 所在的包名. 相关代码会在这个临时 ModuleType 里生成. 如果 modulename为空, 则使用原来的
         """
-        from ghostos.core.moss.lifecycle import __moss_compile__
+        from ghostos_moss.lifecycle import __moss_compile__
         if self.__compiling__:
             raise RuntimeError('recursively calling compile method')
         if self.__compiled__:
@@ -320,7 +320,7 @@ class MossPrompter(ABC):
     @abstractmethod
     def replaced_magic_prompts(self) -> Dict[str, str]:
         """
-        the ghostos.core.moss.magics.MagicPrompter in this compiled module are replaced into str.
+        the ghostos_moss.magics.MagicPrompter in this compiled module are replaced into str.
         :return: the replaced Dict[attr_name, prompt]
         """
         pass
@@ -350,7 +350,7 @@ class MossPrompter(ABC):
         主要是从其它库引入的变量.
         :return: 用 python 风格描述的上下文变量.
         """
-        from ghostos.core.moss.lifecycle import __moss_attr_prompts__
+        from ghostos_moss.lifecycle import __moss_attr_prompts__
         done = attr_prompts if attr_prompts else {}
         names = []
         # 查看是否有源码自带的魔术方法.
@@ -385,7 +385,7 @@ class MossPrompter(ABC):
         2. pycontext_code_prompt: 对 predefined code 里各种引用类库的描述 prompt. 会包裹在 `\"""` 中展示.
         3. moss_prompt: moss 会注入到当前上下文里, 因此会生成 MOSS Prompt.
         """
-        from ghostos.core.moss.lifecycle import __moss_module_prompt__
+        from ghostos_moss.lifecycle import __moss_module_prompt__
         compiled = self.module()
         # 基于 moss prompter 来生成.
         if hasattr(compiled, __moss_module_prompt__.__name__):
@@ -507,7 +507,7 @@ class MossRuntime(ABC):
         :return: 根据 result_name 从 code 中获取返回值.
         :exception: any exception will be raised, handle them outside
         """
-        from ghostos.core.moss.lifecycle import __moss_exec__
+        from ghostos_moss.lifecycle import __moss_exec__
         self.update_executing_code(code)
         if self.__executing__:
             raise RuntimeError(f"Moss already executing")

@@ -6,7 +6,7 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.libraries.project.abcd import Project
 from ghostos.libraries.terminal import Terminal
 from ghostos.libraries.project._project_data import FileProjectDataRepository, PathNote
-from ghostos.core.moss import Injection, MossRuntime
+from ghostos_moss import Injection, MossRuntime
 from pathlib import Path
 import os
 

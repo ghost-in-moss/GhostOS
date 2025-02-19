@@ -16,6 +16,7 @@ Issues = "https://github.com/ghost-in-moss/GhostOS/issues"
 python = ">=3.10"
 ghostos-container = { path = "libs/container" }
 ghostos-common = { path = "libs/common" }
+ghostos-moss = { path = "libs/moss" }
 openai = "^1.59.0"
 rich = "^13.7.1"
 httpx-socks = "^0.9.1"

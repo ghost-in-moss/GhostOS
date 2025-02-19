@@ -15,7 +15,7 @@ from ghostos.core.runtime import (
 from ghostos.core.runtime.events import Event, EventBus
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief, GoTasks
 from ghostos.core.runtime.threads import GoThreadInfo
-from ghostos.core.moss import PyContext
+from ghostos_moss import PyContext
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
 from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role, Pipe as MsgPipe
 from ghostos.contracts.logger import LoggerItf

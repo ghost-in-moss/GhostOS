@@ -16,7 +16,7 @@ from ghostos.abcd import (
     OpThought,
 )
 from ghostos.core.runtime import Event, GoThreadInfo
-from ghostos.core.moss import MossCompiler, PyContext, MossRuntime
+from ghostos_moss import MossCompiler, PyContext, MossRuntime
 from ghostos.core.messages import Role
 from ghostos.core.llms import (
     PromptPipe, AssistantNamePipe, run_prompt_pipeline, ModelConf,

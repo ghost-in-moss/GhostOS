@@ -1,13 +1,13 @@
+from abc import ABC
 from typing import Iterable, Tuple, Any
-from ghostos.prompter import PromptAbleClass
-from ghostos.core.moss.prompts import reflect_code_prompt, join_prompt_lines
-from ghostos.core.moss.utils import add_source_indent, escape_string_quotes
+from ghostos_moss.prompts import reflect_code_prompt, join_prompt_lines
+from ghostos_moss.utils import add_source_indent, escape_string_quotes
 import inspect
 
 __all__ = ['Exporter', 'is_exports']
 
 
-class Exporter(PromptAbleClass):
+class Exporter(ABC):
     """
     class that exports function, method and class of a module.
     and moss.get_imported_attr_prompts will reflect all the attributes assign to the Exports subclass.
@@ -16,7 +16,7 @@ class Exporter(PromptAbleClass):
 
     1. module `Foo` define an Exports subclass for other module to import:
     ```python
-    from ghostos.core.moss import Exports
+    from ghostos_moss import Exports
     class Foo:
         ...
 
@@ -117,10 +117,3 @@ class _ExportsExample(Exporter):
     """
     getsource = inspect.getsource
     Exports = Exporter
-
-
-if __name__ == "__main__":
-    from ghostos.prompter import get_defined_prompt
-
-    print(get_defined_prompt(_ExportsExample))
-    print(is_exports(_ExportsExample))

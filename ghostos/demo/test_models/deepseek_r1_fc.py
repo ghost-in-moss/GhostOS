@@ -1,5 +1,5 @@
 from ghostos.ghosts.moss_ghost import MossGhost
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from ghostos.libraries.replier import Replier
 
 

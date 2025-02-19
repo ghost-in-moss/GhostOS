@@ -1,7 +1,7 @@
 from ghostos_container import Container
 from ghostos.libraries.multighosts.abs_impl import BaseMultiGhosts
 from ghostos.abcd import Session
-from ghostos.core.moss import Injection
+from ghostos_moss import Injection
 from ghostos.libraries.multighosts.data import MultiGhostData
 
 

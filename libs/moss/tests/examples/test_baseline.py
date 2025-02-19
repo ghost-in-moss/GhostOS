@@ -1,9 +1,9 @@
 import time
 
-from ghostos.core.moss import moss_container
-from ghostos.core.moss.abcd import MossCompiler, Moss, MOSS_TYPE_NAME, MossRuntime
-from ghostos.core.moss.pycontext import PyContext
-from ghostos.core.moss.examples import baseline
+from ghostos_moss import moss_container
+from ghostos_moss.abcd import MossCompiler, Moss, MOSS_TYPE_NAME, MossRuntime
+from ghostos_moss.pycontext import PyContext
+from ghostos_moss.examples import baseline
 from ghostos.contracts.modules import ImportWrapper
 from ghostos_container import Container
 
@@ -137,7 +137,7 @@ def test_baseline_with_pycontext_code():
 def test_moss_gc():
     from threading import Thread
     from gc import collect
-    from ghostos.core.moss.moss_impl import MossStub, MossTempModuleType
+    from ghostos_moss.moss_impl import MossStub, MossTempModuleType
     container = moss_container()
     container_count = Container.instance_count
     moss_stub_count = MossStub.instance_count

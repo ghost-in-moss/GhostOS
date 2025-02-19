@@ -25,7 +25,7 @@ from ghostos.prototypes.spherogpt.bolt import (
     LedMatrix,
     Animation,
 )
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Moss(Parent):
@@ -284,6 +284,6 @@ class SpheroBoltProvider(BootstrapProvider):
 * Conversation
   level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
 * Moss
-  level: [ghostos.core.moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py)
+  level: [ghostos_moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py)
 
 在正确的层级注册 Container 和 Provider, 可以用来管理需要继承或隔离的依赖关系. 

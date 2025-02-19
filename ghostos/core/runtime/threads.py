@@ -3,7 +3,7 @@ from typing_extensions import Self
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.core.messages import Message, copy_messages, Role, MessageType, MessageStage, FunctionCaller
-from ghostos.core.moss.pycontext import PyContext
+from ghostos_moss.pycontext import PyContext
 from ghostos.core.llms import Prompt
 from ghostos.core.runtime.events import Event, EventTypes
 from ghostos_common.helpers import uuid, timestamp, yaml_pretty_dump
