@@ -39,7 +39,11 @@ def test_storage_tasks_impl():
     assert new_got != task
     assert new_got == new_turn
 
-    assert TaskBrief.from_task(task) == TaskBrief.from_task(new_got)
+    t1 = TaskBrief.from_task(task)
+    t2 = TaskBrief.from_task(new_got)
+    t1.created = t2.created
+    t1.updated = t2.updated
+    assert t1 == t2
 
 
 def test_storage_tasks_impl_lock():

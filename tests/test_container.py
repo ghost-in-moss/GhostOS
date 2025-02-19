@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, get_args, get_origin, ClassVar
 
 from ghostos.container import Container, Provider, provide
+from pydantic import BaseModel
 
 
 def test_container_baseline():
@@ -188,3 +189,44 @@ def test_container_shutdown():
     assert Foo.instance_count == 1
     container.shutdown()
     assert Foo.instance_count == 0
+
+
+class Foo:
+
+    def __init__(self, a: int = 0):
+        self.a = a
+
+
+class Bar:
+    def __init__(self, foo: Foo, b: int = 0):
+        self.foo = foo
+        self.b = b
+
+
+class Zoo(BaseModel):
+    a: int
+    b: int
+
+
+def test_container_make_baseline():
+    container = Container()
+    container.set(Foo, Foo(123))
+    bar = container.make(Bar)
+    assert bar.b == 0
+    assert bar.foo.a == 123
+
+    bar2 = container.make(Bar, b=456)
+    assert bar2.b == 456
+
+    zoo = container.make(Zoo, a=123, b=456)
+    assert zoo.a == 123
+    assert zoo.b == 456
+
+
+def test_container_call_baseline():
+    def zoo(bar: Bar, c: int) -> int:
+        return bar.foo.a + bar.b + c
+
+    container = Container()
+    v = container.call(zoo, c=3)
+    assert v > 0
