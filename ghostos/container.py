@@ -1,7 +1,7 @@
 from __future__ import annotations
 import inspect
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable
+from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable, Tuple
 from typing import get_args, get_origin, ClassVar
 import warnings
 
@@ -15,6 +15,8 @@ __all__ = [
     'get_container',
     'set_container',
 ]
+
+from sympy.testing.runtests import DependencyError
 
 INSTRUCTION = """
 打算实现一个 IoC 容器用来管理大量可替换的中间库. 
@@ -130,6 +132,26 @@ class IoCContainer(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def make(self, cls: Type[INSTANCE], *args, **kwargs) -> INSTANCE:
+        """
+        make an instance and inject the dependencies to the __init__ automatically
+        experimental feature.
+        :param cls: the class of the instance
+        :param args: more arguments for the __init__
+        :param kwargs: more arguments for the __init__
+        :return: the instance of it.
+        """
+        pass
+
+    @abstractmethod
+    def call(self, caller: Callable, *args, **kwargs) -> Any:
+        """
+        call a method or function, and inject the dependencies to the kwargs.
+        :return: the caller result.
+        """
+        pass
+
 
 class Container(IoCContainer):
     """
@@ -171,6 +193,7 @@ class Container(IoCContainer):
         self._aliases: Dict[Any, Any] = {}
         self._is_shutdown: bool = False
         self._shutdown: List[Callable[[], None]] = []
+        self._making_count: int = 0
         if inherit and parent is not None:
             self._inherit(parent)
 
@@ -408,6 +431,70 @@ class Container(IoCContainer):
     def _check_destroyed(self) -> None:
         if self._is_shutdown:
             raise RuntimeError(f"container {self.bloodline} is called after destroyed")
+
+    def make(self, cls: Type[INSTANCE], *args, **kwargs) -> INSTANCE:
+        try:
+            self._making_count += 1
+            if self._making_count > 10:
+                self._making_count = 0
+                raise RuntimeError(f"container class making looped too many times, raised at {cls}")
+            named_kwargs = {name: value for name, value in kwargs.items()}
+            return self._make(cls, list(args), named_kwargs)
+        finally:
+            if self._making_count > 0:
+                self._making_count -= 1
+
+    def _make(self, cls: Type[INSTANCE], args: list, named_kwargs: dict) -> INSTANCE:
+        if instance := self.get(cls):
+            return instance
+
+        if not isinstance(cls, type):
+            raise TypeError(f"Arguments cls: {type(cls)} should be class")
+
+        init_fn = getattr(cls, '__init__', None)
+        if init_fn is None:
+            raise TypeError(f"class {cls} does not implement __init__")
+        target_module = inspect.getmodule(cls)
+        named_kwargs = self._reflect_callable_args(init_fn, named_kwargs, target_module.__dict__)
+
+        return cls(*args, **named_kwargs)
+
+    def _reflect_callable_args(
+            self,
+            caller: Callable,
+            named_kwargs: Dict,
+            local_values: Dict,
+    ) -> Dict:
+        empty = inspect.Parameter.empty
+        for name, param in inspect.signature(caller).parameters.items():
+            # ignore which already in kwargs
+            if name in named_kwargs:
+                continue
+            if name == "self":
+                continue
+            injection = param.default
+            annotation = param.annotation
+            if annotation and annotation is not empty:
+                typehint = annotation
+                if isinstance(typehint, str) and typehint in local_values:
+                    typehint = local_values[typehint]
+                if isinstance(typehint, str):
+                    continue
+                got = self.make(typehint)
+                if got is not None:
+                    injection = got
+                elif not inspect.isabstract(got):
+                    # try to init it as default.
+                    injection = got()
+            if injection is not empty:
+                named_kwargs[name] = injection
+        return named_kwargs
+
+    def call(self, caller: Callable, *args, **kwargs) -> Any:
+        target_module = inspect.getmodule(caller)
+        named_kwargs = {name: value for name, value in kwargs.items()}
+        named_kwargs = self._reflect_callable_args(caller, named_kwargs, target_module.__dict__)
+        return caller(*args, **named_kwargs)
 
     def shutdown(self) -> None:
         """
