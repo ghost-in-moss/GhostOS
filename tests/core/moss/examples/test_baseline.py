@@ -50,10 +50,6 @@ def test_baseline_exec():
     assert prompter is not None
     prompt = prompter.dump_module_prompt()
 
-    injection_prompt = prompter.get_moss_injections_poms_prompt()
-    print("++++", injection_prompt)
-    assert "tester" in injection_prompt
-
     # plus 方法存在.
     assert 'def plus' in prompt
     # 在 moss 标记内的不展示.

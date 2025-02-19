@@ -1,4 +1,4 @@
-from typing import Union, Optional, ClassVar
+from typing import Union, Optional, ClassVar, Dict
 
 from pydantic import BaseModel, Field
 from ghostos.abcd.concepts import Operator, Session, Action, SessionPyContext
@@ -14,6 +14,7 @@ import json
 
 __all__ = [
     "MossAction", 'MOSS_INTRODUCTION', 'MOSS_FUNCTION_DESC', 'MOSS_CONTEXT_TEMPLATE', 'get_moss_context_pom',
+    'get_moss_injections_poms', 'get_moss_injections_poms',
 ]
 
 MOSS_INTRODUCTION = """
@@ -234,3 +235,28 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
         title=title,
         content=content,
     ).with_children(*children)
+
+
+def get_moss_injections_poms(runtime: MossRuntime) -> Dict[str, PromptObjectModel]:
+    poms = {}
+    injections = runtime.moss_injections()
+    for name, injection in injections.items():
+        if isinstance(injection, PromptObjectModel):
+            poms[name] = injection
+    return poms
+
+
+def get_moss_injections_poms_prompt(runtime: MossRuntime) -> str:
+    container = runtime.container()
+    children = []
+    # replace the pom title.
+    for name, pom in get_moss_injections_poms(runtime).items():
+        children.append(TextPOM(
+            title=f"moss.{name}",
+            content=pom.self_prompt(container),
+        ))
+
+    prompter = TextPOM(
+        title="Moss Injections",
+    ).with_children(*children)
+    return prompter.get_prompt(container)

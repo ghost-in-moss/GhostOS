@@ -527,29 +527,6 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
 
         return "\n\n".join(blocks)
 
-    def get_moss_injections_poms(self) -> Dict[str, PromptObjectModel]:
-        poms = {}
-        injections = self.moss_injections()
-        for name, injection in injections.items():
-            if isinstance(injection, PromptObjectModel):
-                poms[name] = injection
-        return poms
-
-    def get_moss_injections_poms_prompt(self) -> str:
-        container = self.container()
-        children = []
-        # replace the pom title.
-        for name, pom in self.get_moss_injections_poms().items():
-            children.append(TextPOM(
-                title=f"moss.{name}",
-                content=pom.self_prompt(container),
-            ))
-
-        prompter = TextPOM(
-            title="Moss Injections",
-        ).with_children(*children)
-        return prompter.get_prompt(container)
-
     @staticmethod
     def _parse_pycontext_code(code: str, exclude_hide_code: bool = True) -> str:
         if not exclude_hide_code:

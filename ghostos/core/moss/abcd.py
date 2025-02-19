@@ -8,7 +8,6 @@ from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.prompts import (
     AttrPrompts, reflect_locals_imported, compile_attr_prompts
 )
-from ghostos.prompter import PromptObjectModel
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -315,22 +314,6 @@ class MossPrompter(ABC):
         """
         get the default prompt of the imported attrs.
         :return:
-        """
-        pass
-
-    @abstractmethod
-    def get_moss_injections_poms(self) -> Dict[str, PromptObjectModel]:
-        """
-        get prompt object models that bound to moss
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def get_moss_injections_poms_prompt(self) -> str:
-        """
-        generate prompt from the injections bound to Moss
-        iterate each injection that extends PromptObjectModel to get prompt.
         """
         pass
 

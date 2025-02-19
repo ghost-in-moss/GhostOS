@@ -1,9 +1,9 @@
 from typing import Iterable, Dict, Any, List
 
-from ghostos.abcd import Session, Action, Thought, Operator
+from ghostos.abcd import Session, Thought
 from ghostos_container import Provider
 from ghostos.core.moss import Moss as Parent, MossRuntime
-from ghostos.libraries.pyeditor import PyInspector, LocalPyMI, PyModuleEditor
+from ghostos.libraries.pyeditor import PyInspector, PyMI, PyModuleEditor
 from ghostos.libraries.replier import Replier
 
 
@@ -11,7 +11,7 @@ class Moss(Parent):
     inspector: PyInspector
     """the inspector that you can inspect python value by it"""
 
-    pymi: LocalPyMI
+    pymi: PyMI
     """the module index that you can edit module with it"""
 
     replier: Replier
