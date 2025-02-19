@@ -2,7 +2,7 @@ from typing import Union, Iterable, ClassVar, List, Optional
 
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
 from ghostos.abcd.thoughts import ActionThought, Thought
-from ghostos.container import Provider
+from ghostos_container import Provider
 from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.messages import Role
 from ghostos.core.llms import Prompt, LLMFunc

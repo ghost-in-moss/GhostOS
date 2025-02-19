@@ -158,7 +158,7 @@ class Route(SessionStateValue, BaseModel, ABC):
         return None
 
     def bind(self, session_state: MutableMapping) -> None:
-        from ghostos.container import get_caller_info
+        from ghostos_container import get_caller_info
         key = self.session_state_key()
         session_state[key] = self.model_dump(exclude_defaults=True)
 

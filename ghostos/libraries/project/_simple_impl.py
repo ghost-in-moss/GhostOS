@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Iterable, TypedDict, Tuple
 from typing_extensions import Self
 
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.contracts.logger import LoggerItf
 from ghostos.libraries.project.abcd import Project
 from ghostos.libraries.terminal import Terminal

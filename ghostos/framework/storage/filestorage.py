@@ -1,7 +1,7 @@
 import os
 import re
 from typing import Optional, Iterable
-from ghostos.container import Provider, Container, ABSTRACT
+from ghostos_container import Provider, Container, ABSTRACT
 from ghostos.contracts.storage import Storage, FileStorage
 
 __all__ = ["FileStorageProvider", "FileStorageImpl"]

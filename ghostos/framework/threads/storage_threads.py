@@ -4,7 +4,7 @@ from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
 from ghostos.helpers import yaml_pretty_dump
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 import yaml
 import os
 

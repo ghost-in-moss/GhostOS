@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 from ghostos.contracts.configs import Configs
 from ghostos.contracts.storage import Storage
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.contracts.workspace import Workspace
 from .basic import BasicConfigs
 

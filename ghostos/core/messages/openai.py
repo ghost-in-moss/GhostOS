@@ -18,7 +18,7 @@ from ghostos.core.messages.message_classes import (
     FunctionOutput, VariableMessage, ImageAssetMessage,
 )
 from ghostos.contracts.logger import LoggerItf, FakeLogger
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.helpers import import_class_from_path
 
 __all__ = [

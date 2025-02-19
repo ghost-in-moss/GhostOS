@@ -3,7 +3,7 @@ from typing_extensions import Self
 from pydantic import BaseModel, Field
 from typing import Dict, Optional
 from ghostos.abcd import Session
-from ghostos.container import Container, Provider, INSTANCE
+from ghostos_container import Container, Provider, INSTANCE
 from ghostos.libraries.notebook.abcd import Notebook
 from ghostos.contracts.storage import FileStorage
 from ghostos.contracts.workspace import Workspace

@@ -3,7 +3,7 @@ from ghostos.framework.storage import MemStorage, Storage
 from ghostos.framework.logger import FakeLogger, LoggerItf
 from ghostos.core.messages import Message
 from ghostos.core.moss import PyContext
-from ghostos.container import Container
+from ghostos_container import Container
 
 
 def _prepare_container() -> Container:

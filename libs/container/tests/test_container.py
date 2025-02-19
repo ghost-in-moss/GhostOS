@@ -3,8 +3,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, get_args, get_origin, ClassVar
 
-from ghostos.container import Container, Provider, provide
-from pydantic import BaseModel
+from ghostos_container import Container, Provider, provide
 
 
 def test_container_baseline():
@@ -203,9 +202,14 @@ class Bar:
         self.b = b
 
 
-class Zoo(BaseModel):
-    a: int
-    b: int
+class Zoo:
+    def __init__(
+            self,
+            a: int = 123,
+            b: int = 456,
+    ):
+        self.a = a
+        self.b = b
 
 
 def test_container_make_baseline():

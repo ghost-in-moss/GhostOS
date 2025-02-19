@@ -1,7 +1,7 @@
 from typing import List, Dict, Optional, Callable
 from ghostos.core.moss.abcd import MossCompiler, Execution
 from ghostos.core.moss.pycontext import PyContext
-from ghostos.container import Container
+from ghostos_container import Container
 from queue import Queue
 from threading import Thread
 

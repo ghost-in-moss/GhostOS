@@ -4,7 +4,7 @@ from types import ModuleType
 from typing import Optional, Any, Dict, get_type_hints, Type, List, Callable, ClassVar
 import io
 
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 from ghostos.contracts.modules import Modules, ImportWrapper
 from ghostos.core.moss.abcd import (
     Moss,

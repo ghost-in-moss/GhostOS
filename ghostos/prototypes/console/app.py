@@ -3,7 +3,7 @@ import asyncio
 from typing import Optional, List
 
 from ghostos.abcd import GhostOS, Ghost, Background
-from ghostos.container import Provider
+from ghostos_container import Provider
 from ghostos.contracts.logger import get_console_logger
 from ghostos.core.messages import Message, Role, MessageType, Receiver
 from ghostos.framework.messages import TaskPayload

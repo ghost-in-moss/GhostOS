@@ -3,7 +3,7 @@ from typing import Protocol
 from .tasks import GoTasks
 from .threads import GoThreads
 from .processes import GoProcesses
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.core.messages.transport import Stream
 
 

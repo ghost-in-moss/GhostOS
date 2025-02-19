@@ -1,6 +1,6 @@
 import streamlit as st
 from typing import Callable, List
-from ghostos.container import Container, Contracts
+from ghostos_container import Container, Contracts
 from ghostos.contracts.configs import Configs
 from ghostos.prototypes.streamlitapp.utils.session import expect, SingletonContracts, Singleton
 from ghostos.prototypes.streamlitapp.utils.route import Router

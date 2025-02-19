@@ -5,7 +5,7 @@ from ghostos.core.runtime import TaskState, TaskBrief, GoTaskStruct, GoTasks
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.storage import Storage
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.core.runtime.tasks import TaskLocker
 from ghostos.helpers import uuid, timestamp
 

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from importlib import import_module, reload
 import pkgutil
 
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 
 __all__ = [
     'Modules', 'ImportWrapper', 'DefaultModules', 'DefaultModulesProvider',

@@ -3,7 +3,7 @@ from typing import Optional, Dict, Tuple, List, Union
 from enum import Enum
 from pydantic import BaseModel, Field
 import streamlit as st
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.contracts.assets import ImageAssets, FileInfo, AudioAssets

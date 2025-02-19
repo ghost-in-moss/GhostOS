@@ -1,4 +1,4 @@
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.core.moss.abcd import (
     Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
     AttrPrompts, Injection,

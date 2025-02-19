@@ -4,7 +4,7 @@ from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.contracts.workspace import Workspace
 from ghostos.framework.workspaces import BasicWorkspace
 from ghostos.framework.storage import MemStorage
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.demo import aifuncs_demo
 
 

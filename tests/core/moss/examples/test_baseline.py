@@ -5,7 +5,7 @@ from ghostos.core.moss.abcd import MossCompiler, Moss, MOSS_TYPE_NAME, MossRunti
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.examples import baseline
 from ghostos.contracts.modules import ImportWrapper
-from ghostos.container import Container
+from ghostos_container import Container
 
 
 def test_baseline_exec():

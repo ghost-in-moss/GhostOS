@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List
 
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.abcd import Subtasks, Session, Ghost
 from ghostos.abcd import get_ghost_driver
 from ghostos.core.runtime import GoTaskStruct, GoTasks, EventTypes, TaskBrief, TaskState

@@ -1,7 +1,7 @@
 同步调用的例子: 
 
 ```python 
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.core.aifunc import AIFuncExecutor
 from ghostos.demo.aifuncs.weather import WeatherAIFunc, WeatherAIFuncResult
 
@@ -18,7 +18,7 @@ def call_example(con: Container, req: WeatherAIFunc) -> WeatherAIFuncResult:
 异步调用的例子: 
 
 ```python 
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.core.aifunc import AIFuncExecutor, ExecFrame
 from ghostos.core.messages import new_basic_connection
 from ghostos.demo.aifuncs.weather import WeatherAIFunc, WeatherAIFuncResult

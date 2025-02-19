@@ -13,7 +13,7 @@ from ghostos.core.llms import LLMs, Prompt
 from ghostos.core.moss.abcd import MossRuntime
 from ghostos.core.runtime import GoThreadInfo, EventTypes, GoThreads, thread_to_prompt
 from ghostos.core.messages import Role, Message, Stream
-from ghostos.container import Container
+from ghostos_container import Container
 
 __all__ = [
     'DefaultAIFuncDriverImpl',

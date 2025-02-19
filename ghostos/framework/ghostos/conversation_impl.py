@@ -1,6 +1,6 @@
 from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable, Dict
 
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.abcd import Conversation, Scope, Ghost, Context, EntityType
 from ghostos.abcd import default_init_event_operator
 from ghostos.errors import SessionError

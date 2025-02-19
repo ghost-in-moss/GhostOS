@@ -22,7 +22,7 @@ from ghostos.core.llms import (
     PromptPipe, AssistantNamePipe, run_prompt_pipeline, ModelConf,
 )
 from ghostos.core.model_funcs import TruncateThreadByLLM
-from ghostos.container import Provider
+from ghostos_container import Provider
 from ghostos.helpers import md5, yaml_pretty_dump
 
 __all__ = ['MossGhost', 'MossGhostDriver', 'BaseMossGhostMethods']

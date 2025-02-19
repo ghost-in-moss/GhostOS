@@ -5,7 +5,7 @@ from ghostos.contracts.assets import (
     StorageFileAssets, FileAssets,
 )
 from ghostos.contracts.workspace import Workspace
-from ghostos.container import Container, Provider, INSTANCE
+from ghostos_container import Container, Provider, INSTANCE
 
 
 class WorkspaceFileAssetsProvider(Provider, ABC):

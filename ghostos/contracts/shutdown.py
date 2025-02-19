@@ -1,6 +1,6 @@
 from typing import Callable, Optional, Type, Set
 from abc import ABC, abstractmethod
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 
 
 class Shutdown(ABC):

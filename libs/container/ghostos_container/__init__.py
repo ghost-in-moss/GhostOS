@@ -623,8 +623,8 @@ class ProviderAdapter(Generic[INSTANCE], Provider[INSTANCE]):
 
     def __repr__(self):
         if self._lineinfo:
-            return f" <ghostos.container.ProviderAdapter for {self.contract()} at {self._lineinfo}>"
-        return f" <ghostos.container.ProviderAdapter for {self.contract()}>"
+            return f" <ghostos_container.ProviderAdapter for {self.contract()} at {self._lineinfo}>"
+        return f" <ghostos_container.ProviderAdapter for {self.contract()}>"
 
 
 def get_caller_info(backtrace: int = 1, with_full_file: bool = True) -> str:

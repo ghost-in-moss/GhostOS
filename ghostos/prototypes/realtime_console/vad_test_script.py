@@ -13,8 +13,8 @@ console = Console()
 if __name__ == "__main__":
     ghostos = get_ghostos()
     logger = get_console_logger(debug=True)
-    ghostos.container().set(LoggerItf, logger)
-    configs = ghostos.container().force_fetch(Configs)
+    ghostos_container().set(LoggerItf, logger)
+    configs = ghostos_container().force_fetch(Configs)
     app_conf = configs.get(OpenAIRealtimeAppConf)
     # app_conf.listening = False
     app_conf.ws_conf.proxy = "socks5://127.0.0.1:1080"

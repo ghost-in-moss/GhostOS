@@ -3,7 +3,7 @@ from typing import Dict, Any, Union, List, Optional, NamedTuple, Type, Callable,
 from typing_extensions import Self
 from types import ModuleType, FunctionType
 from abc import ABC, abstractmethod
-from ghostos.container import Container, Provider, Factory, provide
+from ghostos_container import Container, Provider, Factory, provide
 from ghostos.core.moss.pycontext import PyContext
 from ghostos.core.moss.prompts import (
     AttrPrompts, reflect_locals_imported, compile_attr_prompts

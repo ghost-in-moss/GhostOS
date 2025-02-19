@@ -10,7 +10,7 @@ from ghostos.core.runtime import (
     Event, EventTypes,
 )
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.helpers import gettext as _
 import inspect
 

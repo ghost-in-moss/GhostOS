@@ -7,7 +7,7 @@ from typing_extensions import Self, Literal
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 from ghostos.helpers import uuid
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.entity import EntityType
 from copy import deepcopy
 

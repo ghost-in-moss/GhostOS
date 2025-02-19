@@ -1,6 +1,6 @@
 import inspect
 from typing import Callable, Optional, Dict
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.prototypes.ghostfunc.driver import (
     GhostFuncDriver, GhostFuncCache, get_ghost_func_cache, save_ghost_func_cache,
 )

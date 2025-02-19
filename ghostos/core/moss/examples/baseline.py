@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.core.moss.abcd import Moss as Parent
 from ghostos.prompter import BasePOM
 from inspect import getmembers, getsource
@@ -71,7 +71,7 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
         def foo(self) -> str:
             return "hello"
 
-    from ghostos.container import provide
+    from ghostos_container import provide
     # 用这种方式, 可以预期 Moss 被依赖注入了 Foo, 注入的是 FooImpl
     provider = provide(Foo, singleton=False)(lambda con: FooImpl())
     compiler.register(provider)

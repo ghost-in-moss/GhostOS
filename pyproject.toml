@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ghostos"
-version = "0.4.0-dev3"
+version = "0.4.0-dev4"
 description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 authors = ["zhuming <thirdgerb@gmail.com>", "Nile Zhou <nilezhou123@gmail.com>"]
 license = "MIT"
@@ -13,7 +13,8 @@ Documentation = "https://ghost-in-moss.github.io/GhostOS/#/en/"
 Issues = "https://github.com/ghost-in-moss/GhostOS/issues"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.14"
+python = ">=3.10"
+ghostos-container = { path = "libs/container" }
 pydantic = "^2.7.0"
 openai = "^1.59.0"
 pyyaml = "^6.0.1"

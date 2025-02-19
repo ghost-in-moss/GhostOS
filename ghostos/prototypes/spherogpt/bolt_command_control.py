@@ -18,7 +18,7 @@ from ghostos.contracts.logger import LoggerItf
 from ghostos.core.runtime import EventBus, EventTypes
 from ghostos.core.messages import MessageType
 from ghostos.core.moss.prompts import reflect_class_with_methods, reflect_code_prompt
-from ghostos.container import BootstrapProvider, Container
+from ghostos_container import BootstrapProvider, Container
 from threading import Thread
 
 __all__ = [

@@ -2,7 +2,7 @@
 
 `GhostOS` follows the concept of `interface-oriented programming` to build the project.
 Most modules are divided into `interface` and `implementation`.
-Register and get implementations by [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/container.py).
+Register and get implementations by [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libs/container/ghostos_container/__init__.py).
 
 About IoC: [Inverse of Control](https://en.wikipedia.org/wiki/Inversion_of_control)
 
@@ -89,7 +89,7 @@ The actual instances are only injected through the container during runtime:
 ```python
 from abc import ABC, abstractmethod
 from typing import Type
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 
 
 def test_container_baseline():
@@ -118,12 +118,12 @@ def test_container_baseline():
 Implementations registered through the `Container.set` method are singletons.
 In scenarios oriented towards composition,
 a factory method is needed to obtain dependencies and generate instances.
-In this case, `ghostos.container.Provider` can be used:
+In this case, `ghostos_container.Provider` can be used:
 
 ```python
 from abc import ABC, abstractmethod
 from typing import Type
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 
 
 def test_container_baseline():
@@ -163,11 +163,11 @@ def test_container_baseline():
     assert foo.foo() is 123
 ```
 
-And syntax sugar `ghostos.container.provide` could decorate a factory function into a `Provider`.
+And syntax sugar `ghostos_container.provide` could decorate a factory function into a `Provider`.
 
 ```python
 from abc import ABC, abstractmethod
-from ghostos.container import Container, provide
+from ghostos_container import Container, provide
 
 
 class Abstract(ABC):
@@ -207,7 +207,7 @@ assert foo.foo() is 123
 `Container` is inheritable:
 
 ```python
-from ghostos.container import Container
+from ghostos_container import Container
 
 container = Container(name="parent")
 container.set("foo", "foo")
@@ -222,7 +222,7 @@ it will recursively search for it in the parent Container.
 And `Provider` can also be inherited by child container:
 
 ```python
-from ghostos.container import Provider
+from ghostos_container import Provider
 
 
 class MyProvider(Provider):
@@ -238,7 +238,7 @@ All inheritable providers registered in the parent container are also automatica
 A `Container` can also serve as a container for starting and shutting down components.
 
 ```python
-from ghostos.container import Bootstrapper, Container
+from ghostos_container import Bootstrapper, Container
 
 container = Container()
 
@@ -253,7 +253,7 @@ class MyBootstrapper(Bootstrapper):
 container.bootstrap()
 ```
 
-`Bootstrapper` can also be defined by `ghostos.container.BootstrapProvider`.
+`Bootstrapper` can also be defined by `ghostos_container.BootstrapProvider`.
 
 Container use`Container.add_shutdown` register shutdown callback,
 they are called when `Container.shutdown` is called.

@@ -4,7 +4,7 @@ from typing_extensions import Self
 from ghostos.identifier import Identifier
 from ghostos.contracts.storage import FileStorage
 from ghostos.contracts.documents import Documents, DocumentRegistry
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.contracts.configs import Configs, YamlConfig
 from ghostos.contracts.workspace import Workspace
 from pydantic import BaseModel, Field

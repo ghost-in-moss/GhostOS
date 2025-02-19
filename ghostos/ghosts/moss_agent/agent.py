@@ -22,7 +22,7 @@ from ghostos.ghosts.moss_agent.instructions import (
     get_agent_identity,
 )
 import json
-from ghostos.container import Provider
+from ghostos_container import Provider
 
 if TYPE_CHECKING:
     from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods

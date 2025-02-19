@@ -5,7 +5,7 @@ from ghostos.core.runtime.processes import GoProcesses
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.workspace import Workspace
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.helpers import yaml_pretty_dump
 
 __all__ = ['StorageGoProcessesImpl', 'StorageProcessImplProvider', 'WorkspaceProcessesProvider']

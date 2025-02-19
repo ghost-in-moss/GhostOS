@@ -5,7 +5,7 @@ from ghostos.identifier import get_identifier
 from ghostos.entity import to_entity_meta
 from ghostos.abcd.concepts import Ghost, GhostDriver, Session, Operator
 from ghostos.core.runtime import Event
-from ghostos.container import Provider
+from ghostos_container import Provider
 
 __all__ = [
     'get_ghost_driver', 'get_ghost_driver_type', 'is_ghost',

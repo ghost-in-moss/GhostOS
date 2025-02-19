@@ -104,7 +104,7 @@ Each `MossCompiler` inherits an independent IoC Container, which can be used for
 
 ```python
 from ghostos.core.moss import MossCompiler
-from ghostos.container import Provider
+from ghostos_container import Provider
 
 compiler: MossCompiler = ...
 

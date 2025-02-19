@@ -1,6 +1,6 @@
 from typing import Optional, Type
 
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.contracts.workspace import Workspace
 from os.path import join

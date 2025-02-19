@@ -12,7 +12,7 @@ def home():
 
 def helloworld():
     import streamlit as st
-    from ghostos.container import Container
+    from ghostos_container import Container
     from ghostos.prototypes.streamlitapp.utils.session import Singleton
 
     st.write("hello world!")

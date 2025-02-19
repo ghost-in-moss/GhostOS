@@ -1,5 +1,5 @@
 from typing import Optional
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.core.moss import moss_container, MossCompiler
 
 from ghostos.core.llms import LLMs
@@ -7,7 +7,7 @@ from ghostos.framework.configs import ConfigsByStorageProvider
 from ghostos.framework.storage import FileStorageProvider
 from ghostos.framework.llms import ConfigBasedLLMsProvider
 from ghostos.prototypes.ghostfunc.decorator import GhostFunc
-from ghostos.container import Contracts
+from ghostos_container import Contracts
 
 __all__ = ["init_ghost_func_container", "init_ghost_func", 'ghost_func_contracts']
 

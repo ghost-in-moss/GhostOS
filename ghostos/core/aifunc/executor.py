@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Any, Optional, Type, Callable, Iterable
 from typing_extensions import Self
 
-from ghostos.container import Container, Provider, ABSTRACT
+from ghostos_container import Container, Provider, ABSTRACT
 from ghostos.core.llms import LLMApi, LLMs
 from ghostos.core.moss import MossCompiler
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult, get_aifunc_result_type

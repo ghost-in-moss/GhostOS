@@ -1,6 +1,6 @@
 from typing import Optional
 
-from ghostos.container import Container, Provider, INSTANCE
+from ghostos_container import Container, Provider, INSTANCE
 from ghostos.libraries.terminal.abcd import Terminal, TerminalContext
 from ghostos.prompter import POM
 from ghostos.contracts.logger import LoggerItf

@@ -2,7 +2,7 @@ from typing import Optional, Type
 
 from ghostos.contracts.workspace import Workspace
 from ghostos.framework.storage import FileStorage, FileStorageImpl
-from ghostos.container import Provider, Container, INSTANCE
+from ghostos_container import Provider, Container, INSTANCE
 
 
 class BasicWorkspace(Workspace):

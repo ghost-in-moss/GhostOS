@@ -4,7 +4,7 @@ from ghostos.libraries.pyeditor.abcd import PyMI
 from ghostos.libraries.pyeditor.simple_module_editor import SimplePyModuleEditor
 from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.helpers import import_from_path
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 
 __all__ = ['SimpleLocalPyMIProvider', 'SimplePyMI']
 

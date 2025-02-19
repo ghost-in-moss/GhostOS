@@ -4,7 +4,7 @@ from ghostos.ghosts.moss_agent.agent import MossAgent
 from ghostos.core.moss import MossRuntime
 from ghostos.abcd.concepts import Session, Operator
 from ghostos.core.runtime import GoThreadInfo, Event
-from ghostos.container import Provider
+from ghostos_container import Provider
 
 A = TypeVar("A", bound=MossAgent)
 F = TypeVar("F")

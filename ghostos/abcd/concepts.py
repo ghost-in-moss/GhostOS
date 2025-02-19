@@ -19,7 +19,7 @@ from ghostos.core.moss import PyContext
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
 from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role, Pipe as MsgPipe
 from ghostos.contracts.logger import LoggerItf
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 from ghostos.identifier import get_identifier
 from pydantic import BaseModel
 

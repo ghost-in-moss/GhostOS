@@ -6,7 +6,7 @@ from .sphero_edu_api_patch import SpheroEduAPI
 from ghostos.prototypes.spherogpt.bolt.bolt_shell import LedMatrix, Animation
 from ghostos.prototypes.spherogpt.bolt.runtime import BoltLedMatrixCommand, SpheroBoltRuntime
 from ghostos.prototypes.spherogpt.bolt.sphero_edu_api_patch import Color
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 from pydantic import BaseModel, Field
 
 

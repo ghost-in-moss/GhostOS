@@ -10,7 +10,7 @@ from ghostos.contracts.modules import Modules
 from ghostos.contracts.storage import Storage
 from ghostos.contracts.workspace import Workspace
 from ghostos.helpers import generate_module_and_attr_name
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from pydantic import Field
 from os.path import join
 import time

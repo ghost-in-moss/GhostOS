@@ -4,7 +4,7 @@ from typing_extensions import Self, Literal
 
 from ghostos.contracts.variables import Variables
 from ghostos.contracts.assets import FileInfo
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.prompter import get_defined_prompt
 from ghostos.core.messages.message import Message, MessageClass, MessageType, FunctionOutput, MessageKind, Role, \
     FunctionCaller

@@ -2,7 +2,7 @@ import time
 from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.contracts.pool import Pool, DefaultPool
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
 from ghostos.abcd.utils import get_ghost_driver
 from ghostos.core.messages import Message, Receiver, Role

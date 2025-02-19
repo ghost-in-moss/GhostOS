@@ -1,21 +1,27 @@
+# GhostOS Container
+
+IoC container for [GhostOS](https://github.com/ghost-in-moss/GhostOS). 
+
 # IoC Container
 
-`GhostOS` 遵循 `面向接口编程` 的思路构建项目.
-大多数模块分为 `interface` 与 `implementation`,
-通过 [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libs/container/ghostos_container/__init__.py) (控制反转容器) 来注册与获取实现.
+`GhostOS` follows the concept of `interface-oriented programming` to build the project.
+Most modules are divided into `interface` and `implementation`.
+Register and get implementations by IoC Container.
 
-关于 IoC 详见: [Inverse of Control](https://en.wikipedia.org/wiki/Inversion_of_control)
+About IoC: [Inverse of Control](https://en.wikipedia.org/wiki/Inversion_of_control)
 
 ## Why?
 
-在 `Java` 和 `PHP` 的项目中, `IoC Contaienr` 是被大规模使用的. 比如:
+In Java and PHP projects, IoC Container is widely used. For example:
 
 * [Java Spring](https://docs.spring.io/spring-framework/docs/3.2.x/spring-framework-reference/html/beans.html)
 * [PHP Laravel](https://laravel.com/docs/11.x/container)
 
-但 Python 项目中很少使用, 通常用单例和工厂方法替代.
+However, in Python projects, it is rarely used, often replaced by singletons and factory methods.
 
-`GhostOS` 引入 `IoC Container`, 最核心的动机是实现`面向接口编程` 和 `运行时依赖注入`. 我们以 SpheroBoltGPT 为例:
+`GhostOS` introduces the `IoC Container`, with the most fundamental motivation
+being to achieve `interface-oriented programming` and `runtime dependency injection`. Taking SpheroBoltGPT as an
+example:
 
 ```python
 from ghostos.prototypes.spherogpt.bolt import (
@@ -40,6 +46,13 @@ class Moss(Parent):
 尤其是当一个 Meta-Agent 需要分析这段代码时, 它不应该在阅读代码时导致创建和 Sphero Bolt 的连接.
 
 所以 `Ball` 和 `LedMatrix` 可以用抽象来设计:
+
+This part of the code will be automatically reflected as a prompt provided to the large language model.
+However, `Ball` and `LedMatrix` should not be instantiated before the project officially starts.
+
+Especially when a Meta-Agent needs to analyze this code,
+it should not cause the creation of a connection with `Sphero Bolt` while reading the code.
+Therefore, `Ball` and `LedMatrix` can be designed abstractly:
 
 ```python
 class Ball(ABC):
@@ -71,7 +84,7 @@ class Ball(ABC):
         pass
 ```
 
-而真正的实例, 只在项目运行时才通过 container 注入:
+The actual instances are only injected through the container during runtime:
 
 ![ioc container](../../assets/ioc_container.png)
 
@@ -106,8 +119,10 @@ def test_container_baseline():
 
 ## Provider
 
-通过 `Container.set` 方法注册的实现是单例. 在面向组合的场景中, 需要用 `工厂方法` 来获取依赖生成实例.
-这时可以使用 `ghostos_container.Provider`:
+Implementations registered through the `Container.set` method are singletons.
+In scenarios oriented towards composition,
+a factory method is needed to obtain dependencies and generate instances.
+In this case, `ghostos_container.Provider` can be used:
 
 ```python
 from abc import ABC, abstractmethod
@@ -152,7 +167,7 @@ def test_container_baseline():
     assert foo.foo() is 123
 ```
 
-此外有语法糖 `ghostos_container.provide` 可以方便封装一个工厂方法为 Provider.
+And syntax sugar `ghostos_container.provide` could decorate a factory function into a `Provider`.
 
 ```python
 from abc import ABC, abstractmethod
@@ -193,7 +208,7 @@ assert foo.foo() is 123
 
 ## Inheritance
 
-`Container` 是可以嵌套的:
+`Container` is inheritable:
 
 ```python
 from ghostos_container import Container
@@ -205,9 +220,10 @@ child_container = Container(parent=container, name="child")
 assert child_container.get("foo") == "foo"
 ```
 
-当一个后代 Container 查找一个注册的依赖时, 如果没找到, 它会递归地去父级 Container 中查找.
+When a descendant Container looks for a registered dependency and does not find it,
+it will recursively search for it in the parent Container.
 
-此外 `Provider` 也有继承机制:
+And `Provider` can also be inherited by child container:
 
 ```python
 from ghostos_container import Provider
@@ -219,11 +235,11 @@ class MyProvider(Provider):
         return not self.singleton()
 ```
 
-所有在父级 container 中注册的 `inheritable provider` 也会自动注册到 子级 container.
+All inheritable providers registered in the parent container are also automatically registered in the child container.
 
 ## Bootstrap and Shutdown
 
-Container 同时可以作为启动和关闭运行的容器.
+A `Container` can also serve as a container for starting and shutting down components.
 
 ```python
 from ghostos_container import Bootstrapper, Container
@@ -241,49 +257,21 @@ class MyBootstrapper(Bootstrapper):
 container.bootstrap()
 ```
 
-`Bootstrapper` 也可以用 `ghostos_container.BootstrapProvider` 来定义.
+`Bootstrapper` can also be defined by `ghostos_container.BootstrapProvider`.
 
-同样的, Container 可以用 `Container.add_shutdown` 注册关闭事件, 调用 `Container.shutdown` 时会依次执行它们.
-我们以 `SpheroRuntime` 为例, 它需要全局运行, 作为 [SpheroBolt](https://sphero.com/products/sphero-bolt) 的驱动.
-
-```python
-
-
-class SpheroBoltProvider(BootstrapProvider):
-    """
-    Sphero Bolt Provider interface
-    """
-    ...
-
-    @staticmethod
-    def bootstrap(container: Container) -> None:
-        # get singleton
-        sphero_bolt = container.force_fetch(SpheroBolt)
-        if isinstance(sphero_bolt, SpheroBoltImpl):
-            # register shutdown method
-            container.add_shutdown(sphero_bolt.destroy)
-            # bootstrap sphero bolt
-            sphero_bolt.bootstrap()
-
-```
+Container use`Container.add_shutdown` register shutdown callback,
+they are called when `Container.shutdown` is called.
 
 ## Container Tree
 
-在 `GhostOS` 中, 有不同层级的 Container, 每个 Container 继承自父级 Container, 又管理一个独立的依赖关系.
+In App, there are Containers at different levels, with each Container inheriting from its parent Container and managing its own
+independent set of dependencies.
 
-* 当子级 Container 注册依赖时, 不会污染父级或兄弟级 Container.
-* 当子级 Container 销毁的时候, 并不会影响父级或兄弟级 Container.
+* When a child Container registers dependencies, it does not pollute the parent or sibling Containers.
+* When a child Container is destroyed, it does not affect the parent or sibling Containers.
 
-这样 `Container` 类似于 Python `contextvar`, 可以管理一个独立的运行上下文.
+In this way, Container is similar to Python `contextvars`, which can manage a separate execution context, for example:
 
-`GhostOS` 里的 Container 继承层级关系如下:
-
-* Root level: [ghostos.bootstrap.app_container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/bootstrap.py)
-* GhostOS level: [ghostos.abcd.GhostOS:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-* Shell level: [ghostos.abcd.Shell:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-* Conversation
-  level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-* Moss
-  level: [ghostos.core.moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py)
-
-在正确的层级注册 Container 和 Provider, 可以用来管理需要继承或隔离的依赖关系. 
+* Process level
+* Thread level
+* Coroutine level

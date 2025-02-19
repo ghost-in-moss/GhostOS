@@ -7,7 +7,7 @@ from ghostos.contracts.workspace import Workspace
 from ghostos.core.llms import LLMs, Prompt, LLMApi
 from ghostos.core.messages import Role
 from ghostos.helpers import md5, import_from_path, generate_import_path, yaml_pretty_dump
-from ghostos.container import Container, Provider, INSTANCE
+from ghostos_container import Container, Provider, INSTANCE
 from pydantic import BaseModel, Field
 import yaml
 

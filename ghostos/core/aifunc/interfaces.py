@@ -8,7 +8,7 @@ from ghostos.core.runtime import GoThreadInfo
 from ghostos.core.messages import Message, Stream, Payload
 from ghostos.identifier import Identifier
 from ghostos.helpers import generate_import_path, uuid
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.entity import EntityMeta, to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 

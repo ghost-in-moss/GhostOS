@@ -4,7 +4,7 @@ from warnings import warn
 from typing import List, Optional, Tuple
 from os.path import dirname, join, exists, abspath, isdir
 from ghostos.abcd import GhostOS
-from ghostos.container import Container, Provider, Contracts
+from ghostos_container import Container, Provider, Contracts
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
 from pydantic import BaseModel, Field
 

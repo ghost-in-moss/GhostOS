@@ -3,7 +3,7 @@ from typing_extensions import Self
 
 from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.libraries.pyeditor.abcd import PyModuleEditor
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.prompter import POM
 import inspect
 
