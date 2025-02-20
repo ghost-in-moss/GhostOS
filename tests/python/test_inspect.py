@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Union, Type
+from typing import Union, Type, Protocol, TypedDict, NamedTuple
 import inspect
 
 
@@ -167,3 +167,54 @@ SubClass.__add_info = "test"
 def test_getsource_without_added_code():
     code = inspect.getsource(SubClass)
     assert "__add_info" not in code
+
+
+def test_get_signature():
+    value = inspect.signature(SomeClass)
+    assert value is not None
+
+
+def test_get_source_from_union():
+    a = Union[int, str]
+    e = None
+    try:
+        data = inspect.getsource(a)
+    except TypeError as exp:
+        e = exp
+    assert e is not None
+
+
+def test_get_source_from_protocol():
+    class Foo(Protocol):
+        a: int
+
+    source = inspect.getsource(Foo)
+    assert len(source) > 0
+
+
+def test_get_source_from_typed_dict():
+    class Foo(TypedDict):
+        a: int
+
+    source = inspect.getsource(Foo)
+    assert len(source) > 0
+
+
+def test_get_source_from_named_tuple():
+    class Foo(NamedTuple):
+        a: int
+
+    source = inspect.getsource(Foo)
+    assert len(source) > 0
+    assert inspect.isclass(Foo)
+
+
+def test_get_source_from_method():
+    class Foo:
+        def method(self, a: int) -> int:
+            return a
+
+    source = inspect.getsource(Foo.method)
+    assert len(source) > 0
+    assert not inspect.ismethod(Foo.method)
+    assert inspect.isfunction(Foo.method)

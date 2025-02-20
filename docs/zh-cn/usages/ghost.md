@@ -205,7 +205,7 @@ conversation.talk("your query to edit the project", project_context)
 
 ```python
 from ghostos.abcd import Context
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from pydantic import Field
 
 

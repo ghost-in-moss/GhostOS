@@ -1,5 +1,5 @@
 import streamlit as st
-from ghostos.helpers import gettext as _, yaml_pretty_dump
+from ghostos_common.helpers import gettext as _, yaml_pretty_dump
 from ghostos.core.messages import CompletionUsagePayload
 from ghostos.core.messages import Message
 from ghostos.prototypes.streamlitapp.widgets.renderer import render_empty
@@ -36,7 +36,7 @@ def open_prompt_info_dialog(prompt_id: str):
     import streamlit_react_jsonschema as srj
     from ghostos.prototypes.streamlitapp.utils.session import Singleton
     from ghostos.prototypes.streamlitapp.widgets.messages import render_messages
-    from ghostos.container import Container
+    from ghostos_container import Container
     from ghostos.core.llms import PromptStorage
 
     prefix = "prompt-info"

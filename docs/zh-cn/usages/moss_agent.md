@@ -93,7 +93,7 @@ MossAgent 会自动将目标 Python 模块反射成 Prompt, 提供给大模型.
 2. 抽象类反射出源代码
 
 大模型会根据 instruction, 调用名为 `moss` 的工具, 生成代码.
-生成的代码会在 [Moss](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py) 编译的临时模块中执行.
+生成的代码会在 [Moss](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py) 编译的临时模块中执行.
 
 源码请看 [MossAction](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/agent.py#MossAction).
 
@@ -124,7 +124,7 @@ def __moss_attr_prompts__():
 ```
 
 [MOSS Protocol](/zh-cn/concepts/moss_protocol.md) 系统默认的魔术方法在
-[lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/lifecycle.py).
+[lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/lifecycle.py).
 
 ## Magic lifecycle functions
 
@@ -148,7 +148,7 @@ def __moss_attr_prompts__():
     - `__moss_agent_thought__`: 定义思维链
     - `__moss_agent_instruction__`: 定义 instruction 获取方法
     - `__moss_agent_persona__`: 定义 persona 获取方法
-- [moss lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/lifecycle.py): Moss 库的生命周期方法.
+- [moss lifecycle](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/lifecycle.py): Moss 库的生命周期方法.
 
 复制这些方法到当前文件, 既可以生效自定义魔术方法.
 所有这些魔术方法都是 `可选的`. 如果能用来解决问题, 则可以使用它们.
@@ -166,7 +166,7 @@ def __moss_attr_prompts__():
 在目标文件中定义一个 Moss 类:
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 # 名为 Moss 的类是一个特殊的类. 
@@ -204,7 +204,7 @@ Moss 类上挂载的 `str`, `float`, `int`, `bool`, `str` 和 `pydantic.BaseMode
 注意这些变量类型必须保证可以序列化. 举例:
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from pydantic import BaseModel, Field
 
 
@@ -231,7 +231,7 @@ Moss 类上挂载的 `abstract class` 会自动从 [IoC Container](/zh-cn/concep
 - 定义时传入实例:
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Foo:
@@ -247,7 +247,7 @@ class Moss(Parent):
 - 通过魔术方法 `__moss_agent_injections__`, 手动定义注入的实例
 
 ```python
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from foo import Foo
 
 
@@ -300,7 +300,7 @@ def __moss_agent_injections__(agent, session) -> Dict[str, Any]:
 - [Session](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 运行时生成的 Session, 管理主要的 API
 - [Scope](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 当前对话的座标.
 - [Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 当前 Agent 自身
-- [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py): moss 编译器
+- [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py): moss 编译器
 - [Tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/tasks.py): 任务存储
 - [Threads](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/threads.py): 历史消息存储
 - [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py): 事件总线.

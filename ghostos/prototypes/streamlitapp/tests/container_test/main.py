@@ -1,5 +1,5 @@
 import streamlit as st
-from ghostos.container import Container
+from ghostos_container import Container
 
 
 

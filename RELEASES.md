@@ -1,6 +1,19 @@
 # Releases
 
-# v0.4.0-dev1
+# v0.4.0
+
+## v0.4.0-dev4
+
+split `ghostos_moss`, `ghostos_container` and `ghostos_common`. implements multi-ghosts baseline. 
+
+## v0.4.0-dev3
+* remove some huge packages from dependencies.
+
+## v0.4.0-dev2
+
+* temporary dev branch for llm func tests
+
+## v0.4.0-dev1
 
 * done a lot of experiments about `meta-prompt` on agent level reasoning
 * add `MossGhost` and deprecate `MossAgent`, make the logic much more simple and clear. 
@@ -22,7 +35,7 @@
 * add `ghostos.facade` for future encapsule
 * remove some useless expired code with heart break. 
 
-# v0.4.0-dev0
+## v0.4.0-dev0
 
 Features: 
 * Restore the feature `functional token` for models that do not support function call.

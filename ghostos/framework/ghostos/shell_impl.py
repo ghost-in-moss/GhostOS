@@ -2,7 +2,7 @@ import time
 from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.contracts.pool import Pool, DefaultPool
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
 from ghostos.abcd.utils import get_ghost_driver
 from ghostos.core.messages import Message, Receiver, Role
@@ -11,9 +11,9 @@ from ghostos.core.runtime import (
     GoTasks, TaskState, GoTaskStruct,
 )
 from ghostos.core.messages import Stream
-from ghostos.helpers import uuid, Timeleft, import_from_path
-from ghostos.identifier import get_identifier
-from ghostos.entity import to_entity_meta
+from ghostos_common.helpers import uuid, Timeleft, import_from_path
+from ghostos_common.identifier import get_identifier
+from ghostos_common.entity import to_entity_meta
 from threading import Lock
 from pydantic import BaseModel, Field
 from .conversation_impl import ConversationImpl, ConversationConf
@@ -104,9 +104,10 @@ class ShellImpl(Shell):
             *,
             username: str = "",
             user_role: str = Role.USER.value,
+            task_id: str = None,
             force: bool = False,
     ) -> Conversation:
-        task = self.get_or_create_task(ghost, context, always_create=False, save=False)
+        task = self.get_or_create_task(ghost, context, always_create=False, save=False, task_id=task_id)
         conversation = self._sync_task(
             task,
             throw=True,
@@ -116,6 +117,12 @@ class ShellImpl(Shell):
             force=force,
         )
         return conversation
+
+    def tasks(self) -> GoTasks:
+        return self._tasks
+
+    def eventbus(self) -> EventBus:
+        return self._eventbus
 
     def get_or_create_task(
             self,

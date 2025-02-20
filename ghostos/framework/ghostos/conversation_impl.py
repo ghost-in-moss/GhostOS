@@ -1,7 +1,7 @@
-from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable
+from typing import Optional, Iterable, List, TypeVar, Tuple, Union, Callable, Dict
 
-from ghostos.container import Container
-from ghostos.abcd import Conversation, Scope, Ghost, Context
+from ghostos_container import Container
+from ghostos.abcd import Conversation, Scope, Ghost, Context, EntityType
 from ghostos.abcd import default_init_event_operator
 from ghostos.errors import SessionError
 from ghostos.contracts.variables import Variables
@@ -17,7 +17,7 @@ from ghostos.core.runtime import (
 from ghostos.core.llms import LLMFunc
 from ghostos.contracts.pool import Pool
 from ghostos.contracts.logger import LoggerItf, wrap_logger
-from ghostos.entity import to_entity_meta, get_entity
+from ghostos_common.entity import to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 from .session_impl import SessionImpl
 from threading import Lock, Thread
@@ -94,11 +94,8 @@ class ConversationImpl(Conversation[G]):
         self._bootstrap()
 
     def _bootstrap(self):
-        providers = self.get_ghost_driver().providers()
         # bind self
         self._container.set(Conversation, self)
-        for provider in providers:
-            self._container.register(provider)
         self._container.bootstrap()
 
     def container(self) -> Container:
@@ -108,6 +105,15 @@ class ConversationImpl(Conversation[G]):
     def get_task(self) -> GoTaskStruct:
         self._validate_closed()
         return self._tasks.get_task(self.scope.task_id)
+
+    def get_state_values(self) -> Dict[str, EntityType]:
+        from ghostos_common.entity import from_entity_meta
+        self._validate_closed()
+        values = {}
+        metas = self.get_task().state_values
+        for key, meta in metas.items():
+            values[key] = from_entity_meta(meta)
+        return values
 
     def get_thread(self, truncated: bool = False) -> GoThreadInfo:
         self._validate_closed()

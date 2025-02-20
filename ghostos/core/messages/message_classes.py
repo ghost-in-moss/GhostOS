@@ -4,7 +4,7 @@ from typing_extensions import Self, Literal
 
 from ghostos.contracts.variables import Variables
 from ghostos.contracts.assets import FileInfo
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.prompter import get_defined_prompt
 from ghostos.core.messages.message import Message, MessageClass, MessageType, FunctionOutput, MessageKind, Role, \
     FunctionCaller
@@ -34,6 +34,7 @@ class FunctionCallMessage(MessageClass):
         message.call_id = self.caller.call_id
         message.content = self.caller.arguments
         message.name = self.caller.name
+        message.attrs["functional_token"] = self.caller.functional_token
         return message
 
     @classmethod
@@ -46,6 +47,7 @@ class FunctionCallMessage(MessageClass):
                 call_id=message.call_id,
                 name=message.name,
                 arguments=message.content,
+                functional_token=message.attrs.get("functional_token", False),
             )
         )
 
@@ -58,7 +60,7 @@ class FunctionCallMessage(MessageClass):
         return [ChatCompletionAssistantMessageParam(
             role="assistant",
             tool_calls=[ChatCompletionMessageToolCallParam(
-                id=self.caller.id,
+                id=self.caller.call_id,
                 function=FunctionCall(
                     name=self.caller.name,
                     arguments=self.caller.arguments,

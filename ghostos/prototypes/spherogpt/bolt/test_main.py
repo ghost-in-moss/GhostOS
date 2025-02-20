@@ -7,7 +7,7 @@ from ghostos.framework.workspaces import BasicWorkspace
 from ghostos.framework.storage import MemStorage
 from ghostos.contracts.logger import get_console_logger
 from ghostos.contracts.workspace import Workspace
-from ghostos.container import Container
+from ghostos_container import Container
 
 if __name__ == "__main__":
     eventbus = MemEventBusImpl()

@@ -1,5 +1,5 @@
 import streamlit as st
-from ghostos.helpers import yaml_pretty_dump
+from ghostos_common.helpers import yaml_pretty_dump
 from ghostos.prototypes.streamlitapp.pages.router import ShowThreadRoute, GhostChatRoute
 from ghostos.prototypes.streamlitapp.resources import get_container, get_app_conf
 from ghostos.prototypes.streamlitapp.widgets.renderer import render_thread

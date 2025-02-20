@@ -1,9 +1,9 @@
-from typing import Union, Optional, ClassVar
+from typing import Union, Optional, ClassVar, Dict
 
 from pydantic import BaseModel, Field
 from ghostos.abcd.concepts import Operator, Session, Action, SessionPyContext
 from ghostos.prompter import PromptObjectModel, TextPOM
-from ghostos.core.moss import MossRuntime
+from ghostos_moss import MossRuntime
 from ghostos.core.messages import FunctionCaller
 from ghostos.core.llms import (
     Prompt, PromptPipe,
@@ -14,6 +14,7 @@ import json
 
 __all__ = [
     "MossAction", 'MOSS_INTRODUCTION', 'MOSS_FUNCTION_DESC', 'MOSS_CONTEXT_TEMPLATE', 'get_moss_context_pom',
+    'get_moss_injections_poms', 'get_moss_injections_poms',
 ]
 
 MOSS_INTRODUCTION = """
@@ -22,7 +23,7 @@ Which provides you a way to control your body / tools / thoughts through Python 
 
 basic usage: 
 1. you will get the python code context that MOSS provide to you below. 
-2. you can generate code by `moss` tool, then the `GhostOS` will execute them for you.
+2. you can generate code with `moss` tool, then the `GhostOS` will execute them for you.
 3. if you print anything in your generated code, the output will be shown in further messages.
 
 """
@@ -31,8 +32,15 @@ MOSS_CONTEXT_TEMPLATE = """
 The python context `{modulename}` that MOSS provides to you are below:
 
 ```python
-{code_context}
+{source_code}
 ```
+
+interfaces of some imported attrs are:
+```python
+{imported_attrs_prompt}
+```
+
+{magic_prompt_info}
 
 Notices:
 * the imported functions are only shown with signature, the source code is omitted.
@@ -64,8 +72,8 @@ Notices:
 * in your code generation, comments is not required, comment only when necessary.
 """
 
-MOSS_FUNCTION_DESC = """useful to execute your generated code in moss protocol. The code must include a `run` function.
-"""
+MOSS_FUNCTION_DESC = ("Useful to execute code in the python context that MOSS provide to you."
+                      "The code must include a `run` function.")
 
 
 class MossAction(Action, PromptPipe):
@@ -185,7 +193,7 @@ class MossAction(Action, PromptPipe):
 
     @staticmethod
     def fire_error(session: Session, caller: FunctionCaller, error: str) -> Operator:
-        message = caller.new_output(error)
+        message = caller.new_output("Function Error: %s" % error)
         session.respond([message])
         return session.mindflow().error()
 
@@ -197,7 +205,13 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
     :param runtime:
     :return:
     """
-    code_context = runtime.prompter().dump_module_prompt()
+    prompter = runtime.prompter()
+    source_code = prompter.get_source_code()
+    imported_attrs_prompt = prompter.get_imported_attrs_prompt([Operator])
+    magic_prompt = prompter.get_magic_prompt()
+    magic_prompt_info = ""
+    if magic_prompt:
+        magic_prompt_info = f"more information about the module:\n```text\n{magic_prompt}\n```\n"
 
     injections = runtime.moss_injections()
     children = []
@@ -213,10 +227,37 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
 
     content = MOSS_CONTEXT_TEMPLATE.format(
         modulename=runtime.module().__name__,
-        code_context=code_context,
+        source_code=source_code,
+        imported_attrs_prompt=imported_attrs_prompt,
+        magic_prompt_info=magic_prompt_info,
     )
 
     return TextPOM(
         title=title,
         content=content,
     ).with_children(*children)
+
+
+def get_moss_injections_poms(runtime: MossRuntime) -> Dict[str, PromptObjectModel]:
+    poms = {}
+    injections = runtime.moss_injections()
+    for name, injection in injections.items():
+        if isinstance(injection, PromptObjectModel):
+            poms[name] = injection
+    return poms
+
+
+def get_moss_injections_poms_prompt(runtime: MossRuntime) -> str:
+    container = runtime.container()
+    children = []
+    # replace the pom title.
+    for name, pom in get_moss_injections_poms(runtime).items():
+        children.append(TextPOM(
+            title=f"moss.{name}",
+            content=pom.self_prompt(container),
+        ))
+
+    prompter = TextPOM(
+        title="Moss Injections",
+    ).with_children(*children)
+    return prompter.get_prompt(container)

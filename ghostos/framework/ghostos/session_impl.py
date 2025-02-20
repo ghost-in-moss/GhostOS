@@ -22,9 +22,9 @@ from ghostos.core.runtime import (
 from ghostos.prompter import PromptObjectModel
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.variables import Variables
-from ghostos.container import Container, provide, Contracts
-from ghostos.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
-from ghostos.identifier import get_identifier
+from ghostos_container import Container, provide, Contracts
+from ghostos_common.entity import to_entity_meta, from_entity_meta, get_entity, EntityType
+from ghostos_common.identifier import get_identifier
 from ghostos.framework.messengers import DefaultMessenger
 from ghostos.framework.ghostos.mindflow_impl import MindflowImpl
 from ghostos.framework.ghostos.subtasks_impl import SubtasksImpl
@@ -118,6 +118,11 @@ class SessionImpl(Session[Ghost]):
         self.container.register(provide(Mindflow, False)(lambda c: self.mindflow()))
         self.container.register(provide(Subtasks, False)(lambda c: self.subtasks()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
+
+        # register session level providers.
+        providers = self.ghost_driver.providers()
+        for provider in providers:
+            self.container.register(provider)
         self.container.bootstrap()
         # truncate thread.
 
@@ -138,7 +143,7 @@ class SessionImpl(Session[Ghost]):
             return False
         return self._alive_check() and (self.upstream is None or self.upstream.alive())
 
-    def allow_stream(self) -> bool:
+    def allow_streaming(self) -> bool:
         return self.upstream.allow_streaming() if self.upstream else False
 
     def _validate_alive(self):
@@ -314,7 +319,12 @@ class SessionImpl(Session[Ghost]):
             output_pipes=self.ghost_driver.output_pipes()
         )
 
-    def respond(self, messages: Iterable[MessageKind], stage: str = "") -> Tuple[List[Message], List[FunctionCaller]]:
+    def respond(
+            self,
+            messages: Iterable[MessageKind],
+            stage: str = "",
+            save: bool = True,
+    ) -> Tuple[List[Message], List[FunctionCaller]]:
         self._validate_alive()
         messages = self._message_parser.parse(messages)
         with self._respond_lock:
@@ -326,7 +336,8 @@ class SessionImpl(Session[Ghost]):
 
             buffer, callers = messenger.flush()
             self.logger.debug("append messages to thread: %s", buffer)
-            self.thread.append(*buffer)
+            if save:
+                self.thread.append(*buffer)
             return buffer, callers
 
     def respond_buffer(self, messages: Iterable[MessageKind], stage: str = "") -> None:
@@ -361,7 +372,7 @@ class SessionImpl(Session[Ghost]):
         for task in tasks:
             self._creating_tasks[task.task_id] = task
 
-    def create_threads(self, *threads: GoThreadInfo) -> None:
+    def save_threads(self, *threads: GoThreadInfo) -> None:
         self._validate_alive()
         for t in threads:
             self._saving_threads[t.id] = t
@@ -477,13 +488,14 @@ class SessionImpl(Session[Ghost]):
         tasks = self.container.force_fetch(GoTasks)
         if self._creating_tasks:
             tasks.save_task(*self._creating_tasks.values())
-            self._creating_tasks = []
+            self._creating_tasks = {}
 
     def _do_save_threads(self) -> None:
         threads = self.container.force_fetch(GoThreads)
         if self._saving_threads:
-            threads.save_thread(*self._saving_threads.values())
-            self._saving_threads = []
+            for saving in self._saving_threads.values():
+                threads.save_thread(saving)
+            self._saving_threads = {}
 
     def _do_fire_events(self) -> None:
         if not self._firing_events:

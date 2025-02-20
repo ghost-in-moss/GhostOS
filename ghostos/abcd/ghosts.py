@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar
-from ghostos.identifier import Identifier
+from ghostos_common.identifier import Identifier
 from pydantic import BaseModel
 from ghostos.abcd.concepts import Ghost
 

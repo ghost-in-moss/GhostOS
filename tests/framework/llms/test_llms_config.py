@@ -2,7 +2,7 @@ import os
 
 import yaml
 
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.core.llms import LLMsConfig, ServiceConf, ModelConf, LLMs
 from ghostos.contracts.configs import YamlConfig, Configs
 from ghostos.framework.configs import ConfigsByStorageProvider

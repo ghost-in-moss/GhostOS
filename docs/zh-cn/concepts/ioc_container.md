@@ -2,7 +2,7 @@
 
 `GhostOS` 遵循 `面向接口编程` 的思路构建项目.
 大多数模块分为 `interface` 与 `implementation`,
-通过 [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/container.py) (控制反转容器) 来注册与获取实现.
+通过 [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libs/container/ghostos_container/__init__.py) (控制反转容器) 来注册与获取实现.
 
 关于 IoC 详见: [Inverse of Control](https://en.wikipedia.org/wiki/Inversion_of_control)
 
@@ -25,7 +25,7 @@ from ghostos.prototypes.spherogpt.bolt import (
     LedMatrix,
     Animation,
 )
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Moss(Parent):
@@ -80,7 +80,7 @@ class Ball(ABC):
 ```python
 from abc import ABC, abstractmethod
 from typing import Type
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 
 
 def test_container_baseline():
@@ -107,12 +107,12 @@ def test_container_baseline():
 ## Provider
 
 通过 `Container.set` 方法注册的实现是单例. 在面向组合的场景中, 需要用 `工厂方法` 来获取依赖生成实例.
-这时可以使用 `ghostos.container.Provider`:
+这时可以使用 `ghostos_container.Provider`:
 
 ```python
 from abc import ABC, abstractmethod
 from typing import Type
-from ghostos.container import Container, Provider
+from ghostos_container import Container, Provider
 
 
 def test_container_baseline():
@@ -152,11 +152,11 @@ def test_container_baseline():
     assert foo.foo() is 123
 ```
 
-此外有语法糖 `ghostos.container.provide` 可以方便封装一个工厂方法为 Provider.
+此外有语法糖 `ghostos_container.provide` 可以方便封装一个工厂方法为 Provider.
 
 ```python
 from abc import ABC, abstractmethod
-from ghostos.container import Container, provide
+from ghostos_container import Container, provide
 
 
 class Abstract(ABC):
@@ -196,7 +196,7 @@ assert foo.foo() is 123
 `Container` 是可以嵌套的:
 
 ```python
-from ghostos.container import Container
+from ghostos_container import Container
 
 container = Container(name="parent")
 container.set("foo", "foo")
@@ -210,7 +210,7 @@ assert child_container.get("foo") == "foo"
 此外 `Provider` 也有继承机制:
 
 ```python
-from ghostos.container import Provider
+from ghostos_container import Provider
 
 
 class MyProvider(Provider):
@@ -226,7 +226,7 @@ class MyProvider(Provider):
 Container 同时可以作为启动和关闭运行的容器.
 
 ```python
-from ghostos.container import Bootstrapper, Container
+from ghostos_container import Bootstrapper, Container
 
 container = Container()
 
@@ -241,7 +241,7 @@ class MyBootstrapper(Bootstrapper):
 container.bootstrap()
 ```
 
-`Bootstrapper` 也可以用 `ghostos.container.BootstrapProvider` 来定义.
+`Bootstrapper` 也可以用 `ghostos_container.BootstrapProvider` 来定义.
 
 同样的, Container 可以用 `Container.add_shutdown` 注册关闭事件, 调用 `Container.shutdown` 时会依次执行它们.
 我们以 `SpheroRuntime` 为例, 它需要全局运行, 作为 [SpheroBolt](https://sphero.com/products/sphero-bolt) 的驱动.
@@ -284,6 +284,6 @@ class SpheroBoltProvider(BootstrapProvider):
 * Conversation
   level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
 * Moss
-  level: [ghostos.core.moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/moss/abcd.py)
+  level: [ghostos_moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py)
 
 在正确的层级注册 Container 和 Provider, 可以用来管理需要继承或隔离的依赖关系. 

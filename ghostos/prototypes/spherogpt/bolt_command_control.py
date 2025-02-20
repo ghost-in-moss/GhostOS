@@ -12,13 +12,13 @@ from abc import ABC, abstractmethod
 from typing import Optional, List
 from spherov2.sphero_edu import SpheroEduAPI
 from pydantic import BaseModel, Field
-from ghostos.helpers import Timeleft
+from ghostos_common.helpers import Timeleft
 from ghostos.abcd import Conversation
 from ghostos.contracts.logger import LoggerItf
 from ghostos.core.runtime import EventBus, EventTypes
 from ghostos.core.messages import MessageType
-from ghostos.core.moss.prompts import reflect_class_with_methods, get_prompt
-from ghostos.container import BootstrapProvider, Container
+from ghostos_moss.prompts import reflect_class_with_methods, reflect_code_prompt
+from ghostos_container import BootstrapProvider, Container
 from threading import Thread
 
 __all__ = [
@@ -252,13 +252,13 @@ class SpheroBoltProvider(BootstrapProvider):
 
 
 exports = {
-    Command.__name__: get_prompt(Command),
-    SpheroBolt.__name__: get_prompt(SpheroBolt),
+    Command.__name__: reflect_code_prompt(Command),
+    SpheroBolt.__name__: reflect_code_prompt(SpheroBolt),
     SpheroEduAPI.__name__: reflect_class_with_methods(SpheroEduAPI),
 }
 
 if __name__ == "__exports__":
-    from ghostos.helpers import yaml_pretty_dump
+    from ghostos_common.helpers import yaml_pretty_dump
 
     print(yaml_pretty_dump(exports))
 

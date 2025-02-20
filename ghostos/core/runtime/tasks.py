@@ -3,10 +3,10 @@ from typing_extensions import Self
 from abc import ABC, abstractmethod
 from enum import Enum
 from pydantic import BaseModel, Field
-from ghostos.identifier import Identifier, Identical
-from ghostos.entity import EntityMeta
+from ghostos_common.identifier import Identifier, Identical
+from ghostos_common.entity import EntityMeta
 from ghostos.core.messages import Payload
-from ghostos.helpers import timestamp
+from ghostos_common.helpers import timestamp
 from contextlib import contextmanager
 
 __all__ = [

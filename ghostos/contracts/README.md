@@ -10,7 +10,7 @@ So every class depend on them can fetch them from Container.
 - Libraries: the libraries for `GhostOS`'s applications, depending on `GhostOS` and `Contracts` interfaces.
 
 The implementations provided by this project are defined at `ghostos.framework`.
-There are providers (`ghostos.container.Provider`) managing implementations of the library interfaces,
+There are providers (`ghostos_container.Provider`) managing implementations of the library interfaces,
 develop should choose wanted providers and register them to the `IoCContainer`.
 By `IoCContainer` we can switch the implementations without too much pain.
 

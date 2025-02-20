@@ -1,7 +1,7 @@
 from typing import Union, TypeVar, Type, Optional, Any
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from ghostos.entity import EntityType
+from ghostos_common.entity import EntityType
 
 T = TypeVar("T", bound=object)
 

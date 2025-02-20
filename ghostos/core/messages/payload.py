@@ -39,6 +39,10 @@ class Payload(BaseModel, ABC):
     def set_payload(self, message: Union[Message, HasPayloads]) -> None:
         message.payloads[self.key] = self.model_dump()
 
+    def set_payload_if_none(self, message: Union[Message, HasPayloads]) -> None:
+        if not self.payload_exists(message):
+            self.set_payload(message)
+
     @classmethod
     def payload_exists(cls, message: Union[Message, HasPayloads]) -> bool:
         if not hasattr(message, "payloads"):

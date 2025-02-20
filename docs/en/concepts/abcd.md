@@ -10,7 +10,7 @@ The basic interrelationships of these abstractions and their usage logic are as 
 
 ```python
 from ghostos.abcd import GhostOS, Shell, Conversation, Ghost
-from ghostos.container import Container
+from ghostos_container import Container
 from ghostos.bootstrap import make_app_container, get_ghostos
 
 # create your own root ioc container.

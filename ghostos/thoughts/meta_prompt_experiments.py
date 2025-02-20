@@ -1,13 +1,12 @@
 from typing import Tuple, Optional, List
 
-from ghostos.abcd import Session, Operator
-from ghostos.abcd.thoughts import Thought, T
+from ghostos.abcd import Session, Operator, OpThought
 from ghostos.core.llms import Prompt, LLMs
 from ghostos.core.messages import Role, MessageStage
 from pydantic import BaseModel, Field
 
 
-class MetaPromptExp1(BaseModel, Thought[Operator]):
+class MetaPromptExp1(BaseModel, OpThought):
     """
     实现一个用来做基线测试, 只能进行线性思考的 Reasoning Thought.
     """
@@ -49,7 +48,7 @@ class MetaPromptExp1(BaseModel, Thought[Operator]):
         return prompt, None
 
 
-class MetaPromptExp2(BaseModel, Thought[Operator]):
+class MetaPromptExp2(BaseModel, OpThought):
     """
     实验2, 只思考一步.
     """
@@ -66,7 +65,7 @@ class MetaPromptExp2(BaseModel, Thought[Operator]):
 现在请给出你写的 Chain of thoughts:
 """)
 
-    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[T]]:
+    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[Operator]]:
         _prompt = prompt.model_copy(deep=True)
         _reasoning = []
         instruction = Role.new_system(content=self.instruction)
@@ -246,7 +245,7 @@ Please output your thoughts:
 """
 
 
-class MetaPromptExp3(BaseModel, Thought[Operator]):
+class MetaPromptExp3(BaseModel, OpThought):
     """
     实验3, 一步一步思考.
     """
@@ -257,7 +256,7 @@ class MetaPromptExp3(BaseModel, Thought[Operator]):
         default=cn_step_meta_instruction,
     )
 
-    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[T]]:
+    def think(self, session: Session, prompt: Prompt) -> Tuple[Prompt, Optional[Operator]]:
         _reasoning = []
         instruction = Role.new_system(content=self.start_instruction)
         instruction.stage = MessageStage.REASONING.value

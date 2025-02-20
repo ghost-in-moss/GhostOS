@@ -130,7 +130,7 @@ connect = OpenAIWSConnection
 # some local tests
 if __name__ == "__main__":
     import os
-    from ghostos.helpers import Timeleft
+    from ghostos_common.helpers import Timeleft
 
     _token = os.environ["OPENAI_API_KEY"]
     print("+++++ token", _token)

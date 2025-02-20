@@ -8,7 +8,7 @@ from ghostos.abcd.realtime import (
 )
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.configs import YamlConfig, Configs
-from ghostos.container import Container, Provider, INSTANCE
+from ghostos_container import Container, Provider, INSTANCE
 
 
 class BasicRealtimeConfig(RealtimeConfig, YamlConfig):

@@ -13,7 +13,7 @@ __all__ = [
     "ReceiverBuffer",
 ]
 
-from ghostos.helpers import Timeleft
+from ghostos_common.helpers import Timeleft
 
 
 class Stream(Protocol):
@@ -435,7 +435,7 @@ def new_basic_connection(
     :param request_timeout: first token timeout. only work when complete_only is False
     :return: created stream and receiver
     """
-    from ghostos.helpers import Timeleft
+    from ghostos_common.helpers import Timeleft
     timeleft = Timeleft(timeout)
     receiver = ArrayReceiver(timeleft, idle, complete_only, request_timeout)
     stream = ArrayStream(receiver, complete_only)

@@ -3,7 +3,7 @@ from typing_extensions import Self
 
 from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.libraries.pyeditor.abcd import PyModuleEditor
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 from ghostos.prompter import POM
 import inspect
 
@@ -99,8 +99,9 @@ class SimplePyModuleEditor(POM, PyModuleEditor):
         return "ok" if ok else "replace failed"
 
     def save(self, reload: bool = True, source: Optional[str] = None) -> None:
+        _source = self._get_module_source()
         if source is None:
-            source = self._get_module_source()
+            source = _source
         self._save_module_source(source)
         if reload:
             self._modules.reload(self._module)

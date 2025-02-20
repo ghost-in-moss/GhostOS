@@ -1,18 +1,18 @@
 from typing import Union, Optional, List, Iterable, Tuple, TYPE_CHECKING
 from warnings import warn
 
-from ghostos.identifier import Identifier
+from ghostos_common.identifier import Identifier
 from pydantic import Field
 
-from ghostos.helpers import import_from_path
+from ghostos_common.helpers import import_from_path
 from ghostos.prompter import TextPOM, PromptObjectModel
 from ghostos.abcd import (
     GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, SessionPyContext,
     MossAction, MOSS_INTRODUCTION, get_moss_context_pom,
 )
 from ghostos.core.runtime import Event, GoThreadInfo
-from ghostos.core.moss import MossCompiler, MossRuntime
-from ghostos.entity import ModelEntity
+from ghostos_moss import MossCompiler, MossRuntime
+from ghostos_common.entity import ModelEntity
 from ghostos.core.messages import Role
 from ghostos.core.llms import (
     PromptPipe, AssistantNamePipe, run_prompt_pipeline,
@@ -22,7 +22,7 @@ from ghostos.ghosts.moss_agent.instructions import (
     get_agent_identity,
 )
 import json
-from ghostos.container import Provider
+from ghostos_container import Provider
 
 if TYPE_CHECKING:
     from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods

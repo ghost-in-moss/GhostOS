@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from pydantic import BaseModel, Field
-from ghostos.entity import EntityMeta
+from ghostos_common.entity import EntityMeta
 from contextlib import contextmanager
-from ghostos.helpers import uuid
+from ghostos_common.helpers import uuid
 
 __all__ = [
     'GoProcess',

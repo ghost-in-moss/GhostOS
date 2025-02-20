@@ -3,7 +3,7 @@ from ghostos.framework.audio.pyaudio_io.listener import PyAudioPCM16Listener
 from ghostos.framework.audio.pyaudio_io.speaker import PyAudioPCM16Speaker
 from pyaudio import PyAudio, paInt16
 from io import BytesIO
-from ghostos.helpers import Timeleft
+from ghostos_common.helpers import Timeleft
 import time
 import wave
 

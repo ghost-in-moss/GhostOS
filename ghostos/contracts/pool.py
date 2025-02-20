@@ -2,7 +2,7 @@ from typing import Callable, Optional, Type
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, Future
-from ghostos.container import Provider, Container
+from ghostos_container import Provider, Container
 
 
 class Pool(ABC):

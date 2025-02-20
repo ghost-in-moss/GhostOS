@@ -73,7 +73,7 @@ class Subtasks(Prompter, ABC):
 
 ```python
 from ghostos.abcd import Subtasks
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 class Moss(Parent):
     

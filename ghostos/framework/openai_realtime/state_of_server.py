@@ -11,7 +11,7 @@ from ghostos.framework.openai_realtime.event_data_objects import (
 from pydantic import ValidationError
 from ghostos.core.messages import Message, MessageType
 from ghostos.contracts.logger import LoggerItf
-from ghostos.container import get_caller_info
+from ghostos_container import get_caller_info
 
 
 class ServerContext(Protocol):

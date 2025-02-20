@@ -2,7 +2,7 @@ from ghostos.framework.storage import MemStorage
 from ghostos.framework.tasks.storage_tasks import StorageGoTasksImpl
 from ghostos.framework.logger import FakeLogger
 from ghostos.core.runtime import GoTaskStruct, TaskBrief
-from ghostos.entity import EntityMeta
+from ghostos_common.entity import EntityMeta
 import time
 
 

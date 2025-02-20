@@ -3,10 +3,10 @@ from typing_extensions import Self
 
 from ghostos.abcd import Session, StateValue
 from ghostos.libraries.pyeditor.abcd import PyInspector
-from ghostos.core.moss import Injection, MossRuntime
+from ghostos_moss import Injection, MossRuntime
 from ghostos.contracts.modules import Modules
-from ghostos.helpers import generate_import_path, import_from_path, get_code_interface_str
-from ghostos.container import Container, Provider
+from ghostos_common.helpers import generate_import_path, import_from_path, get_code_interface_str
+from ghostos_container import Container, Provider
 from pydantic import BaseModel, Field
 import inspect
 

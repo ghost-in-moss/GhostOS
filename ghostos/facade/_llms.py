@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict
 from ghostos.core.llms import LLMsConfig, LLMs, ModelConf, LLMApi
 
 
@@ -32,3 +32,18 @@ def get_llm_configs() -> LLMsConfig:
 
 def set_default_model(model_name: str):
     get_llm_configs().default = model_name
+
+
+def get_llm_api_info() -> List[Dict]:
+    """
+    get all the llm api simple description
+    """
+    configs = get_llm_configs()
+    result = []
+    for api_name, model in configs.models.items():
+        result.append(dict(
+            api_name=api_name,
+            model_name=model.model,
+            description=model.description,
+        ))
+    return result

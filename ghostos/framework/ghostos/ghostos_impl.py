@@ -2,7 +2,7 @@ from typing import Optional, Dict, List
 
 from ghostos.abcd import GhostOS, Shell
 from ghostos.core.runtime import GoProcesses, GoProcess, GoThreads, GoTasks, EventBus
-from ghostos.container import Container, Provider, Contracts, INSTANCE
+from ghostos_container import Container, Provider, Contracts, INSTANCE
 from ghostos.contracts.configs import Configs, YamlConfig
 from ghostos.contracts.modules import Modules
 from ghostos.contracts.variables import Variables

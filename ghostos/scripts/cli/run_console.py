@@ -5,7 +5,7 @@ from ghostos.scripts.cli.utils import (
 )
 from ghostos.bootstrap import get_ghostos
 from ghostos.prototypes.console import ConsoleApp
-from ghostos.entity import get_entity
+from ghostos_common.entity import get_entity
 
 
 def run_console_app(file_or_module: str):

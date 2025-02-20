@@ -6,7 +6,9 @@ from ghostos.abcd import Operator
 
 class Replier(ABC):
     """
-    can send messages in the MOSS executor
+    can send messages in the MOSS executor.
+    not required, just you don't need to repeat a string by your generated tokens, but send the string value directly.
+    useless when you don't run MOSS.
     """
 
     @abstractmethod

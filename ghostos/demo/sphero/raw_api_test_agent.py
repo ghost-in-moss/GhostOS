@@ -1,5 +1,5 @@
 from ghostos.prototypes.spherogpt.bolt_command_control import Command, SpheroBolt, SpheroEduAPI, exports
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 
 
 class Moss(Parent):

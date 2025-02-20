@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, TypeVar, Type, Optional
 from typing_extensions import Self
 from pydantic import BaseModel
-from ghostos.helpers import generate_import_path
+from ghostos_common.helpers import generate_import_path
 
 __all__ = ['Config', 'Configs', 'YamlConfig', 'C']
 

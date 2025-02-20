@@ -6,21 +6,21 @@ from typing import (
 from typing_extensions import Self
 
 from abc import ABC, abstractmethod
-from ghostos.identifier import Identical
-from ghostos.entity import EntityType, EntityClass
+from ghostos_common.identifier import Identical
+from ghostos_common.entity import EntityType, EntityClass
 from ghostos.prompter import PromptObjectModel, BasePOM
 from ghostos.core.runtime import (
     TaskState,
 )
-from ghostos.core.runtime.events import Event
-from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief
+from ghostos.core.runtime.events import Event, EventBus
+from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief, GoTasks
 from ghostos.core.runtime.threads import GoThreadInfo
-from ghostos.core.moss import PyContext
+from ghostos_moss import PyContext
 from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
 from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role, Pipe as MsgPipe
 from ghostos.contracts.logger import LoggerItf
-from ghostos.container import Container, Provider
-from ghostos.identifier import get_identifier
+from ghostos_container import Container, Provider
+from ghostos_common.identifier import get_identifier
 from pydantic import BaseModel
 
 """
@@ -56,7 +56,7 @@ and the Most valuable features about ghost are:
 __all__ = (
     "Ghost", "GhostDriver", "GhostOS", "Shell", "Conversation", "Background",
     "Operator", "Action",
-    "Session", "Messenger", "StateValue", "Scope",
+    "Session", "Messenger", "StateValue", "Scope", "EntityType",
     "Mindflow", "Subtasks",
     "Context",
     "Thought",
@@ -105,7 +105,7 @@ class GhostDriver(Generic[G], ABC):
         """
         generate unique instance id (task id) of the ghost instance.
         """
-        from ghostos.helpers import md5
+        from ghostos_common.helpers import md5
         id_ = get_identifier(self.ghost)
         if id_.id:
             # if ghost instance has id, it is unique in process.
@@ -358,6 +358,7 @@ class Shell(ABC):
             context: Optional[G.ContextType] = None,
             username: str = "",
             user_role: str = Role.USER.value,
+            task_id: str = None,
             force: bool = False,
     ) -> Conversation[G]:
         """
@@ -377,6 +378,14 @@ class Shell(ABC):
             always_create: bool = True,
             save: bool = False,
     ) -> GoTaskStruct:
+        pass
+
+    @abstractmethod
+    def tasks(self) -> GoTasks:
+        pass
+
+    @abstractmethod
+    def eventbus(self) -> EventBus:
         pass
 
     @abstractmethod
@@ -458,6 +467,10 @@ class Conversation(Protocol[G]):
         pass
 
     @abstractmethod
+    def get_state_values(self) -> Dict[str, EntityType]:
+        pass
+
+    @abstractmethod
     def get_thread(self, truncated: bool = False) -> GoThreadInfo:
         pass
 
@@ -512,6 +525,10 @@ class Conversation(Protocol[G]):
 
     @abstractmethod
     def update_context(self, context: Context) -> None:
+        """
+        update the current context pom of the task
+        :param context: context pom
+        """
         pass
 
     @abstractmethod
@@ -715,7 +732,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def allow_stream(self) -> bool:
+    def allow_streaming(self) -> bool:
         """
         :return: if allow stream responding
         """
@@ -832,9 +849,14 @@ class Session(Generic[G], ABC):
             self,
             messages: Iterable[MessageKind],
             stage: str = "",
+            save: bool = True,
     ) -> Tuple[List[Message], List[FunctionCaller]]:
         """
-        发送消息, 但不影响运行状态.
+        sending messages to client side.
+        :param messages: the items to send. streaming or complete message.
+        :param stage: set the stage of the all the messages.
+        :param save: save the messages to session.thread. If false, shall handle the messages manually
+        :return: join the chunks, return parsed (complete messages, function callers)
         """
         pass
 
@@ -852,7 +874,7 @@ class Session(Generic[G], ABC):
         pass
 
     @abstractmethod
-    def create_threads(
+    def save_threads(
             self,
             *threads: GoThreadInfo,
     ) -> None:
@@ -1004,6 +1026,7 @@ class Mindflow(PromptObjectModel, ABC):
         :param kwargs:
         :return:
         """
+        pass
 
     @abstractmethod
     def error(self, *messages: MessageKind) -> Operator:

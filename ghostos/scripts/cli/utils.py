@@ -6,10 +6,10 @@ from types import ModuleType
 
 from ghostos.bootstrap import expect_workspace_dir
 from ghostos.contracts.logger import get_console_logger
-from ghostos.helpers import create_module, import_from_path
+from ghostos_common.helpers import create_module, import_from_path
 from ghostos.abcd import Ghost
 from pydantic import BaseModel, Field
-from ghostos.entity import EntityMeta, to_entity_meta
+from ghostos_common.entity import EntityMeta, to_entity_meta
 from ghostos.ghosts.moss_agent import new_moss_agent
 from streamlit.web.cli import main_run as run_streamlit_web
 from os import path

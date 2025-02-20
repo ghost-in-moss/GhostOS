@@ -1,15 +1,14 @@
 from typing import Any, Optional, Tuple, Dict, Type, List, Iterable, Callable
 from abc import ABC, abstractmethod
 from ghostos.core.aifunc.func import AIFunc, AIFuncResult
-from ghostos.core.moss.decorators import cls_source_code
-from ghostos.core.moss import MossCompiler, PyContext
+from ghostos_moss import MossCompiler, PyContext
 from ghostos.core.llms import LLMApi, Prompt
 from ghostos.core.runtime import GoThreadInfo
 from ghostos.core.messages import Message, Stream, Payload
-from ghostos.identifier import Identifier
-from ghostos.helpers import generate_import_path, uuid
-from ghostos.container import Container
-from ghostos.entity import EntityMeta, to_entity_meta, get_entity
+from ghostos_common.identifier import Identifier
+from ghostos_common.helpers import generate_import_path, uuid
+from ghostos_container import Container
+from ghostos_common.entity import EntityMeta, to_entity_meta, get_entity
 from pydantic import BaseModel, Field
 
 __all__ = [
@@ -25,7 +24,6 @@ class TooManyFailureError(RuntimeError):
     pass
 
 
-@cls_source_code()
 class AIFuncCtx(ABC):
     """
     System context that could execute an AIFunc and keep result in it during multi-turns thinking.

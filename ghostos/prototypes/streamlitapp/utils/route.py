@@ -4,11 +4,11 @@ from typing import ClassVar, Callable, Optional, MutableMapping, TypeVar, List, 
 from abc import ABC
 from typing_extensions import Self
 from ghostos.prototypes.streamlitapp.utils.session import SessionStateValue
-from ghostos.helpers import generate_import_path, import_from_path
+from ghostos_common.helpers import generate_import_path, import_from_path
 from pydantic import BaseModel, Field
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
-from ghostos.helpers import gettext as _
+from ghostos_common.helpers import gettext as _
 import streamlit_antd_components as sac
 from urllib.parse import urlencode
 
@@ -158,7 +158,7 @@ class Route(SessionStateValue, BaseModel, ABC):
         return None
 
     def bind(self, session_state: MutableMapping) -> None:
-        from ghostos.container import get_caller_info
+        from ghostos_container import get_caller_info
         key = self.session_state_key()
         session_state[key] = self.model_dump(exclude_defaults=True)
 

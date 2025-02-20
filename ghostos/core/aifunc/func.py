@@ -2,12 +2,12 @@ from __future__ import annotations
 from typing import Callable, Type, Optional, TYPE_CHECKING
 from abc import ABC
 from pydantic import BaseModel
-from ghostos.helpers import generate_import_path, import_from_path
+from ghostos_common.helpers import generate_import_path, import_from_path
 from ghostos.prompter import PromptAbleClass
 from ghostos.core.llms import LLMs, LLMApi
-from ghostos.core.moss.utils import make_class_prompt, add_comment_mark
-from ghostos.core.moss.prompts import get_prompt
-from ghostos.core.moss.pycontext import PyContext
+from ghostos_moss.utils import make_class_prompt, add_comment_mark
+from ghostos_moss.prompts import reflect_code_prompt
+from ghostos_moss.pycontext import PyContext
 import inspect
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ class AIFunc(PromptAbleClass, BaseModel, ABC):
             return make_class_prompt(source=source, doc=AIFunc.__doc__, attrs=[])
         source = inspect.getsource(cls)
         result_type = cls.__aifunc_result__ if cls.__aifunc_result__ is not None else get_aifunc_result_type(cls)
-        result_prompt = get_prompt(result_type)
+        result_prompt = reflect_code_prompt(result_type)
         result_prompt = f"result type of {cls.__name__} (which maybe not imported yet) is :\n{result_prompt}"
         return source + "\n\n" + add_comment_mark(result_prompt)
 

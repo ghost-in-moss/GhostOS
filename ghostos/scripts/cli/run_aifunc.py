@@ -1,12 +1,12 @@
 from sys import argv
 from os import path
 from typing import Optional, NamedTuple
-from ghostos.helpers import import_from_path
+from ghostos_common.helpers import import_from_path
 from ghostos.scripts.cli.utils import check_ghostos_workspace_exists
 from ghostos.prototypes.streamlitapp import cli
 from ghostos.core.aifunc import AIFunc
 from pydantic import BaseModel, Field
-from ghostos.helpers import create_module, generate_import_path
+from ghostos_common.helpers import create_module, generate_import_path
 from streamlit.web.cli import main_run
 
 import inspect

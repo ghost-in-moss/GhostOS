@@ -4,7 +4,7 @@ from warnings import warn
 from typing import List, Optional, Tuple
 from os.path import dirname, join, exists, abspath, isdir
 from ghostos.abcd import GhostOS
-from ghostos.container import Container, Provider, Contracts
+from ghostos_container import Container, Provider, Contracts
 from ghostos.prototypes.ghostfunc import init_ghost_func, GhostFunc
 from pydantic import BaseModel, Field
 
@@ -152,7 +152,7 @@ class BootstrapConfig(BaseModel):
         return join(workspace_dir, ".example.env")
 
     def save(self, dir_path: str = None) -> str:
-        from ghostos.helpers import yaml_pretty_dump
+        from ghostos_common.helpers import yaml_pretty_dump
         if dir_path is None:
             filename = join(abspath(".ghostos.yml"))
         else:
@@ -187,7 +187,7 @@ def default_application_contracts() -> Contracts:
     """
     Application level contracts
     """
-    from ghostos.core.moss import MossCompiler
+    from ghostos_moss import MossCompiler
     from ghostos.core.messages.openai import OpenAIMessageParser
     from ghostos.contracts.shutdown import Shutdown
     from ghostos.contracts.modules import Modules
@@ -257,7 +257,7 @@ def default_application_providers(
     """
     from ghostos.contracts.shutdown import ShutdownProvider
     from ghostos.contracts.modules import DefaultModulesProvider
-    from ghostos.core.moss import DefaultMOSSProvider
+    from ghostos_moss import DefaultMOSSProvider
     from ghostos.core.messages.openai import DefaultOpenAIParserProvider
     from ghostos.framework.workspaces import BasicWorkspaceProvider
     from ghostos.framework.configs import WorkspaceConfigsProvider

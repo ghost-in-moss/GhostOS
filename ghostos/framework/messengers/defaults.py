@@ -98,7 +98,7 @@ class DefaultMessenger(Messenger):
                 # add payload to complete one
                 if self._payloads:
                     for payload in self._payloads:
-                        payload.set_payload(item)
+                        payload.set_payload_if_none(item)
 
                 # buffer outputs
                 self._sent_message_ids.append(item.msg_id)

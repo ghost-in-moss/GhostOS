@@ -1,7 +1,7 @@
 from ghostos.libraries.pyeditor.abcd import (
     PyModuleEditor,
     PyInspector,
-    LocalPyMI,
+    PyMI,
     PyInterfaceGenerator,
 )
 

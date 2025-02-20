@@ -1,6 +1,6 @@
 from typing import TypeVar, Iterable
 from .agent import MossAgent
-from ghostos.core.moss import Moss
+from ghostos_moss import Moss
 from ghostos.abcd import Action, Thought, ActionThought
 
 A = TypeVar("A")

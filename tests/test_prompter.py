@@ -2,7 +2,7 @@ from ghostos.prompter import (
     TextPOM, PromptAbleClass, PromptAbleObj, BasePOM,
     InspectPOM,
 )
-from ghostos.container import Container
+from ghostos_container import Container
 import inspect
 
 

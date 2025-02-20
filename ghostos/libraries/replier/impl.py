@@ -2,7 +2,7 @@ from typing import Optional
 
 from ghostos.libraries.replier.abcd import Replier
 from ghostos.abcd import Session, Operator
-from ghostos.container import Container, Provider, INSTANCE
+from ghostos_container import Container, Provider, INSTANCE
 
 __all__ = ['ReplierImpl', 'ReplierImplProvider']
 
