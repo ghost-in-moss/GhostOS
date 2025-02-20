@@ -14,9 +14,9 @@ Issues = "https://github.com/ghost-in-moss/GhostOS/issues"
 
 [tool.poetry.dependencies]
 python = ">=3.10"
-ghostos-container = { path = "libs/container" }
-ghostos-common = { path = "libs/common" }
-ghostos-moss = { path = "libs/moss" }
+ghostos-container = "^0.1.2"
+ghostos-common = "^0.1.0"
+ghostos-moss = "^0.1.3"
 openai = "^1.59.0"
 rich = "^13.7.1"
 httpx-socks = "^0.9.1"

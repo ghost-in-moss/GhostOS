@@ -16,8 +16,6 @@ __all__ = [
     'set_container',
 ]
 
-from sympy.testing.runtests import DependencyError
-
 INSTRUCTION = """
 打算实现一个 IoC 容器用来管理大量可替换的中间库. 
 """

@@ -1,6 +1,6 @@
 [project]
 name = "ghostos-moss"
-version = "0.1.2"
+version = "0.1.3"
 description = "the code-driven python interface for llms, agents and project GhostOS"
 authors = [
     {name = "thirdgerb",email = "thirdgerb@gmail.com"}
@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "ghostos-common (>=0.1.0,<0.2.0)",
-    "ghostos-container (>=0.1.0,<0.2.0)"
+    "ghostos-container (>=0.1.2,<0.2.0)"
 ]
 
 
