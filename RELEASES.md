@@ -2,6 +2,10 @@
 
 # v0.4.0
 
+## v0.4.0-dev4
+
+split `ghostos_moss`, `ghostos_container` and `ghostos_common`. implements multi-ghosts baseline. 
+
 ## v0.4.0-dev3
 * remove some huge packages from dependencies.
 

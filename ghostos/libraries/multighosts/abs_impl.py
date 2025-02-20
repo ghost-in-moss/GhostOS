@@ -23,6 +23,9 @@ class BaseMultiGhosts(MultiGhosts, POM, ABC):
 
     def get_ghosts(self, *names: str) -> List[Ghost]:
         ghosts = []
+        names = list(names)
+        if len(names) == 0:
+            names = list(self._data.ghosts.identities.keys())
         for name in names:
             ghost = self._data.ghosts.get_ghost(name)
             ghosts.append(ghost)

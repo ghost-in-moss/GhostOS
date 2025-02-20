@@ -17,7 +17,7 @@ class Character(ModelEntity, Agent):
     playing a character
     """
     # required fields
-    name: str = Field(description="角色的名称，用于标识角色。")
+    name: str = Field(description="角色的名称，用于标识角色。", pattern=r"^[a-zA-Z0-9_-]+$")
 
     # not required fields
 
