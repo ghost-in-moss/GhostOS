@@ -1,7 +1,7 @@
 from typing import Optional, Type, Union, List
 from types import ModuleType
 from ghostos_common.helpers import import_class_from_path
-from ghostos_common.identifier import get_identifier
+from ghostos_common.identifier import get_identifier, Identifier
 from ghostos_common.entity import to_entity_meta
 from ghostos.abcd.concepts import Ghost, GhostDriver, Session, Operator
 from ghostos.core.runtime import Event
@@ -9,6 +9,7 @@ from ghostos_container import Provider
 
 __all__ = [
     'get_ghost_driver', 'get_ghost_driver_type', 'is_ghost',
+    'get_ghost_identifier',
     'default_init_event_operator',
     'get_module_magic_ghost', 'get_module_magic_shell_providers',
 ]
@@ -32,6 +33,13 @@ def get_ghost_driver(ghost: Ghost) -> GhostDriver:
     if not ghost_driver_type or not issubclass(ghost_driver_type, GhostDriver):
         raise NotImplementedError(f"the Ghost {type(ghost)} has no ghost driver type")
     return ghost_driver_type(ghost)
+
+
+def get_ghost_identifier(ghost: Ghost) -> Identifier:
+    """
+    syntax sugar
+    """
+    return get_identifier(ghost)
 
 
 def is_ghost(value) -> bool:

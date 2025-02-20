@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Iterable
 from abc import ABC, abstractmethod
 
 from ghostos.abcd import Operator, Ghost
@@ -10,7 +10,7 @@ from ghostos.prompter import POM
 
 class BaseMultiGhosts(MultiGhosts, POM, ABC):
 
-    def __init__(self, hostname: str, data: MultiGhostData) -> None:
+    def __init__(self, *, hostname: str, data: MultiGhostData) -> None:
         self._hostname = hostname
         self._data = data
 
@@ -28,13 +28,18 @@ class BaseMultiGhosts(MultiGhosts, POM, ABC):
             ghosts.append(ghost)
         return ghosts
 
+    def get_single_ghost(self, name: str) -> Ghost:
+        ghost = self._data.ghosts.get_ghost(name)
+        return ghost
+
     def create_topic(self, name: str, description: str, ghosts: List[Union[Ghost, str]]) -> None:
         ghosts_instances = []
         for ghost in ghosts:
             if isinstance(ghost, Ghost):
                 ghosts_instances.append(ghost)
             elif isinstance(ghost, str):
-                instance = self.get_ghosts(ghost)
+                ghost_name = ghost
+                instance = self.get_single_ghost(ghost_name)
                 ghosts_instances.append(instance)
             else:
                 raise AttributeError(f"Invalid ghost type: {type(ghost)}")
@@ -44,7 +49,13 @@ class BaseMultiGhosts(MultiGhosts, POM, ABC):
         self._data.topics[name] = topic
         self._save_data()
 
-    def public_chat(self, topic: str, message: str, *names: str) -> Operator:
+    def add_log(self, topic: str, message: str) -> None:
+        t = self._data.topics.get(topic, None)
+        if t is None:
+            raise AttributeError(f"Topic {topic} does not exist")
+        t.logs.append(message)
+
+    def public_chat(self, topic: str, message: str, names: Iterable[str]) -> Operator:
         topic_data = self._data.topics.get(topic)
         if topic_data is None:
             raise AttributeError(f"Not found topic: {topic}")
@@ -69,7 +80,11 @@ class BaseMultiGhosts(MultiGhosts, POM, ABC):
     def async_chat(self, topic: str, message: str, *names: str) -> Operator:
         pass
 
-    def clear_topic(self, topic: str) -> None:
+    def clear_topics(self, *topics: str) -> None:
+        for topic in topics:
+            self._clear_topic(topic)
+        self._save_data()
+
+    def _clear_topic(self, topic: str) -> None:
         if topic in self._data.topics:
             del self._data.topics[topic]
-        self._save_data()

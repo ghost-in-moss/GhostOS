@@ -1,5 +1,4 @@
 from typing import Union, Iterable, ClassVar, List, Optional
-
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
 from ghostos.abcd.thoughts import ActionThought, Thought
 from ghostos_container import Provider
@@ -9,17 +8,20 @@ from ghostos.core.llms import Prompt, LLMFunc
 from ghostos_common.entity import ModelEntity
 from ghostos.prompter import TextPOM, PromptObjectModel
 from ghostos_common.identifier import Identifier
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 
 class Chatbot(ModelEntity, Agent):
     """
     simplest chatbot that can chat only
     """
-    name: str = Field(description="name of the chatbot")
-    description: str = Field(description="description of the chatbot")
-    persona: str = Field(description="persona of the chatbot")
-    instruction: str = Field(description="instruction of the chatbot")
+    # required fields
+    name: str = Field(description="name of the chatbot", pattern=r"^[a-zA-Z0-9_-]+$")
+    persona: str = Field(default="", description="persona of the chatbot")
+    instruction: str = Field(default="", description="instruction of the chatbot")
+
+    # not required fields
+    description: str = Field(default="", description="description of the chatbot")
     llm_api: str = Field(default="", description="llm api of the chatbot")
     history_turns: int = Field(default=20, description="history turns of thread max turns")
     id: Optional[str] = Field(default=None)
@@ -55,8 +57,9 @@ class ChatbotDriver(GhostDriver[Chatbot]):
 
     def get_system_prompter(self) -> PromptObjectModel:
         return TextPOM().with_children(
-            TextPOM(title="Persona", content=self.ghost.persona),
-            TextPOM(title="Instruction", content=self.ghost.instruction),
+            TextPOM(title="Who are you", content=f"you are `{self.ghost.name}`"),
+            TextPOM(title="Your Persona", content=self.ghost.persona),
+            TextPOM(title="Your Instruction", content=self.ghost.instruction),
         )
 
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:

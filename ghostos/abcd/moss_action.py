@@ -41,6 +41,7 @@ interfaces of some imported attrs are:
 ```
 
 {magic_prompt_info}
+
 Notices:
 * the imported functions are only shown with signature, the source code is omitted.
 * the properties on moss instance, will keep existence. 

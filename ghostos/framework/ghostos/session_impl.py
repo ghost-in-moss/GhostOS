@@ -118,6 +118,11 @@ class SessionImpl(Session[Ghost]):
         self.container.register(provide(Mindflow, False)(lambda c: self.mindflow()))
         self.container.register(provide(Subtasks, False)(lambda c: self.subtasks()))
         self.container.register(provide(Messenger, False)(lambda c: self.messenger()))
+
+        # register session level providers.
+        providers = self.ghost_driver.providers()
+        for provider in providers:
+            self.container.register(provider)
         self.container.bootstrap()
         # truncate thread.
 
@@ -483,13 +488,14 @@ class SessionImpl(Session[Ghost]):
         tasks = self.container.force_fetch(GoTasks)
         if self._creating_tasks:
             tasks.save_task(*self._creating_tasks.values())
-            self._creating_tasks = []
+            self._creating_tasks = {}
 
     def _do_save_threads(self) -> None:
         threads = self.container.force_fetch(GoThreads)
         if self._saving_threads:
-            threads.save_thread(*self._saving_threads.values())
-            self._saving_threads = []
+            for saving in self._saving_threads.values():
+                threads.save_thread(saving)
+            self._saving_threads = {}
 
     def _do_fire_events(self) -> None:
         if not self._firing_events:

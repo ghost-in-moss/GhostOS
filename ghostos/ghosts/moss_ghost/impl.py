@@ -8,7 +8,7 @@ from ghostos_common.identifier import Identifier
 from pydantic import Field
 
 from ghostos_common.helpers import import_from_path
-from ghostos.prompter import TextPOM, PromptObjectModel, PromptAbleClass
+from ghostos.prompter import TextPOM, PromptObjectModel
 from ghostos_common.entity import ModelEntity
 from ghostos.abcd import (
     GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, ActionThought, ChainOfThoughts,
@@ -16,7 +16,7 @@ from ghostos.abcd import (
     OpThought,
 )
 from ghostos.core.runtime import Event, GoThreadInfo
-from ghostos_moss import MossCompiler, PyContext, MossRuntime
+from ghostos_moss import MossCompiler, PyContext, MossRuntime, PromptAbleClass
 from ghostos.core.messages import Role
 from ghostos.core.llms import (
     PromptPipe, AssistantNamePipe, run_prompt_pipeline, ModelConf,
@@ -36,7 +36,7 @@ class MossGhost(ModelEntity, Agent):
     """ subclass of MossAgent could have a GoalType, default is None"""
 
     # optional configs
-    name: str = Field(description="name of the agent")
+    name: str = Field(description="name of the agent", pattern=r"^[a-zA-Z0-9_-]+$")
     module: str = Field(description="Moss module name for the agent")
     description: str = Field(default="", description="description of the agent")
 
@@ -46,10 +46,14 @@ class MossGhost(ModelEntity, Agent):
     model: Optional[ModelConf] = Field(default=None, description="The model to use, instead of the llm_api")
 
     safe_mode: bool = Field(default=False, description="if safe mode, anything unsafe shall be approve first")
+    id: Optional[str] = Field(default=None, description="the id of the agent")
 
     def __identifier__(self) -> Identifier:
         name = self.name if self.name else self.modul
-        _id = md5(f"name:{name}|module:{self.module}|persona:{self.persona}|instruction:{self.instruction}")
+        if self.id:
+            _id = self.id
+        else:
+            _id = md5(f"name:{name}|module:{self.module}|persona:{self.persona}|instruction:{self.instruction}")
         return Identifier(
             id=_id,
             name=name,
@@ -262,7 +266,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
         return
 
     def get_agent_identity(self, title: str, id_: Identifier) -> PromptObjectModel:
-        value = id_.model_dump(exclude_defaults=True)
+        value = id_.model_dump(exclude_defaults=True, exclude={"id"})
         return TextPOM(
             title=title,
             content=f"""

@@ -1,4 +1,4 @@
-from ghostos.ghosts.chatbot import Chatbot, ChatbotDriver
+from ghostos.ghosts.chatbot import Chatbot, ChatbotDriver, Character
 
 """the test simple chatbot implementation"""
 

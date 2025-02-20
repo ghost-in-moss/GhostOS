@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar, Tuple, List, Iterable
+from typing import Optional, Tuple, List, Iterable
 from ghostos.abcd.concepts import Session, Operator, Action, Thought
 from ghostos.core.llms import Prompt, ModelConf, ServiceConf, LLMs, LLMApi
 from ghostos.core.messages import Message
 
-__all__ = ['ActionThought', 'ChainOfThoughts', 'OpThought']
+__all__ = ['ActionThought', 'ChainOfThoughts', 'OpThought', 'Thought']
 
 
 # --- some basic thoughts --- #

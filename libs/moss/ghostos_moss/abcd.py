@@ -89,21 +89,6 @@ class Moss(ABC):
     __ignored__: List[str] = []
     """the ignored module names that do not need to watch the code interface of them"""
 
-    @abstractmethod
-    def fetch(self, abstract: Type[T]) -> Optional[T]:
-        """
-        fetch an implementation from IoC Container
-        if the abstract type is not bound with any implementation, return None.
-        """
-        pass
-
-    @abstractmethod
-    def pprint(self, *args, **kwargs) -> None:
-        """
-        pretty printer
-        """
-        pass
-
 
 class Injection(ABC):
 

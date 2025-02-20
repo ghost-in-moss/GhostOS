@@ -30,7 +30,7 @@ class PublicChatOperator(Operator):
         threads = {}
         added = []
         for ghost in self.ghosts:
-            task_id = self.get_ghost_task_id(ghost)
+            task_id = self.get_ghost_task_id(session, ghost)
             conversation = shell.sync(ghost, task_id=task_id)
             conversations[task_id] = conversation
             # get the task thread
@@ -52,7 +52,7 @@ class PublicChatOperator(Operator):
 
         for thread in threads.values():
             thread.last_turn().added = added
-        session.save_threads(*threads)
+        session.save_threads(*threads.values())
         return session.mindflow().wait()
 
     def destroy(self):

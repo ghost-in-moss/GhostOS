@@ -474,10 +474,12 @@ def render_receive_buffer(buffer: ReceiverBuffer, debug: bool):
 
 
 def _render_single_buffer(buffer: ReceiverBuffer, head: Message, debug: bool, in_expander: bool):
+    if head.name:
+        msg_caption = f"{head.role}: {head.name}"
+        st.caption(msg_caption)
+
     if MessageType.is_text(head):
         with st.empty():
-            msg_caption = f"{head.role}: {head.name}"
-            st.caption(msg_caption)
             contents = chunks_to_st_stream(buffer.chunks())
             st.write_stream(contents)
             with st.container():

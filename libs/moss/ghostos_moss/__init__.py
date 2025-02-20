@@ -9,6 +9,7 @@ from ghostos_moss.testsuite import MossTestSuite
 from ghostos_moss.pycontext import PyContext
 from ghostos_moss.exports import Exporter
 from ghostos_moss.magics import __is_subclass__, __is_instance__, MagicPrompter
+from ghostos_moss.prompts import PromptAbleClass, PromptAbleObj
 
 __all__ = [
     # abstract contracts
@@ -32,6 +33,7 @@ __all__ = [
     __is_instance__,
     MagicPrompter,
 
+    PromptAbleClass, PromptAbleObj,
 ]
 
 

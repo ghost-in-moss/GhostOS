@@ -94,11 +94,8 @@ class ConversationImpl(Conversation[G]):
         self._bootstrap()
 
     def _bootstrap(self):
-        providers = self.get_ghost_driver().providers()
         # bind self
         self._container.set(Conversation, self)
-        for provider in providers:
-            self._container.register(provider)
         self._container.bootstrap()
 
     def container(self) -> Container:
