@@ -515,6 +515,8 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             for item in others:
                 name = reverse_imported[item]
                 prompt = reflect_code_prompt(item)
+                if not prompt:
+                    prompt = inspect.getsource(item)
                 if prompt:
                     type_ = type(item).__name__
                     block = f"#<local name=`{name}` type=`{type_}`>\n{prompt}\n# </local>"

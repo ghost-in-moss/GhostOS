@@ -1,11 +1,16 @@
+from typing import TypedDict
 import inspect
 from ghostos_moss import prompts
-from ghostos_moss.prompts import reflect_locals_imported
+from ghostos_moss.prompts import reflect_locals_imported, reflect_code_prompt
 
 from ghostos_moss.moss_impl import MossRuntimeImpl
 from ghostos_moss.abcd import (
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
+
+
+class Foo(TypedDict):
+    foo: int
 
 
 def test_reflect_locals_imported_baseline():
@@ -23,6 +28,13 @@ def test_reflect_locals_imported_baseline():
     # typing 库本身的不会出现.
     assert "Optional" not in data
     # 引用的抽象类应该存在.
+
+
+def test_typed_dict_reflect_code():
+    pr = reflect_code_prompt(Foo)
+    source = inspect.getsource(Foo)
+    assert len(source) > 0
+    assert len(pr) > 0
 
 
 def test_prompts_mark_judgement():

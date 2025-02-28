@@ -55,23 +55,23 @@ class MossGhostMethods(BaseMossGhostMethods):
         return True
 
     def get_thought_chain(self, session: Session, runtime: MossRuntime) -> List[Thought]:
-        from ghostos.thoughts import SelfQuestionThought, NoticesThought
+        # from ghostos.thoughts import SelfQuestionThought, NoticesThought
         from ghostos.core.runtime.events import EventTypes
         e = session.thread.get_current_event()
         if e.type == EventTypes.INPUT:
             return [
-                SelfQuestionThought(
-                    question="""
-1. 本轮行动是否需要使用 moss 调用代码? (yes/no)
-2. 本轮行动如果需要调用代码, 是否所有涉及的类库, 变量类型已经清晰了 (yes/no). 
-3. 如果有不清晰的地方, 是否要先查询哪些类库或变量的代码?
-""",
-                    llm_api_name=self.agent.llm_api,
-                ),
-                NoticesThought(
-                    notices="如果你需要使用 moss 生成代码, 记得: 1. 不需要向用户描述这些代码, 用户可以看到. 2. 要调用 moss 工具"
-
-                )
+                #                 SelfQuestionThought(
+                #                     question="""
+                # 1. 本轮行动是否需要使用 moss 调用代码? (yes/no)
+                # 2. 本轮行动如果需要调用代码, 是否所有涉及的类库, 变量类型已经清晰了 (yes/no).
+                # 3. 如果有不清晰的地方, 是否要先查询哪些类库或变量的代码?
+                # """,
+                #                     llm_api_name=self.agent.llm_api,
+                #                 ),
+                #                 NoticesThought(
+                #                     notices="如果你需要使用 moss 生成代码, 记得: 1. 不需要向用户描述这些代码, 用户可以看到. 2. 要调用 moss 工具"
+                #
+                #                 )
             ]
         else:
             return []

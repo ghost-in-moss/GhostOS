@@ -2,6 +2,10 @@
 
 initialize.
 
+## v0.1.4
+
+fix TypedDict not reflect.
+
 ## v0.1.3
 
 fix container version.

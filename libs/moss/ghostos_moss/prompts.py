@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Dict, Tuple, Iterable, Union, Callable
-from typing_extensions import Protocol
+from typing_extensions import Protocol, is_typeddict
 from types import ModuleType
 from ghostos_moss.utils import (
     get_modulename,
@@ -222,7 +222,7 @@ def reflect_code_prompt(value: Any) -> Optional[str]:
 
     if inspect.isclass(value):
         # only reflect abstract class
-        if inspect.isabstract(value) or issubclass(value, BaseModel) or is_dataclass(value):
+        if inspect.isabstract(value) or issubclass(value, BaseModel) or is_dataclass(value) or is_typeddict(value):
             source = inspect.getsource(value)
             if source:
                 return source
