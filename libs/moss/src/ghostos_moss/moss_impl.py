@@ -5,13 +5,13 @@ from typing import Optional, Any, Dict, get_type_hints, Type, List, Callable, Cl
 import io
 
 from ghostos_container import Container, Provider
-from ghostos.contracts.modules import Modules, ImportWrapper
 from ghostos_moss.abcd import (
     Moss,
     MossCompiler, MossRuntime, MossPrompter, MOSS_VALUE_NAME, MOSS_TYPE_NAME,
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
     Injection,
 )
+from ghostos_moss.modules import Modules, ImportWrapper
 from ghostos_moss.prompts import reflect_code_prompt
 from ghostos_moss.pycontext import PyContext
 from ghostos_moss.exports import Exporter

@@ -83,7 +83,11 @@ def _get_full_definition(node: TreeSitterNode, docstring: bool = True) -> str:
     definition = node.children[0].text.decode() + ' '
     for child in node.children[1:]:
         if child.type != "block":
-            definition += child.text.decode()
+            text = child.text.decode()
+            if child.type == 'identifier':
+                definition = definition.rstrip() + ' '
+
+            definition += text
         else:
             if len(child.children) > 0 and docstring:
                 doc_node = child.children[0]

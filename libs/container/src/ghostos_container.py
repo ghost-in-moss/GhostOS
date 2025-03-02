@@ -3,11 +3,11 @@ import inspect
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable
 from typing import get_args, get_origin, ClassVar
-import warnings
 
 __all__ = [
     "Container", "IoCContainer",
     "Provider", "Factory", "Bootstrapper", "BootstrapProvider",
+    "FactoryType",
     "INSTANCE", "ABSTRACT",
     "ProviderAdapter", 'provide',
     'Contracts',
@@ -151,6 +151,22 @@ class IoCContainer(metaclass=ABCMeta):
         pass
 
 
+class FactoryType(metaclass=ABCMeta):
+    """
+    factory class
+    """
+
+    @classmethod
+    @abstractmethod
+    def singleton(cls) -> bool:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def factory(cls, con: IoCContainer) -> "FactoryType":
+        pass
+
+
 class Container(IoCContainer):
     """
     一个简单的 IoC 容器.
@@ -259,7 +275,7 @@ class Container(IoCContainer):
         # 进行初始化.
         if not self._bootstrapped:
             caller_info = get_caller_info(4)
-            warnings.warn("container is not bootstrapped before using: %s" % (caller_info,))
+            # warnings.warn("container is not bootstrapped before using: %s" % (caller_info,))
             self.bootstrap()
 
         # get bound instance
@@ -272,6 +288,15 @@ class Container(IoCContainer):
             provider = self._providers[abstract]
             made = provider.factory(self)
             if made is not None and provider.singleton():
+                self._set_instance(abstract, made)
+            return made
+
+        # factory type is self registered
+        if isinstance(abstract, type) and issubclass(abstract, FactoryType):
+            provider = provide(abstract, abstract.singleton(), get_caller_info(2))(abstract.factory)
+            self.register(provider)
+            made = abstract.factory(self)
+            if made is not None and abstract.singleton():
                 self._set_instance(abstract, made)
             return made
 

@@ -74,6 +74,8 @@ def decorated_function(a: int, b: int) -> int:
     assert "__all__" in interface
     assert "T = TypeVar('T')" in interface
     assert "'''hello world'''" in interface
+
+    print("++++", interface)
     assert """
     @abstractmethod
     def abstract(cls):
@@ -82,6 +84,7 @@ def decorated_function(a: int, b: int) -> int:
         '''
         pass
 """ in interface
+
     assert """
     @classmethod
     def classmethod(cls):

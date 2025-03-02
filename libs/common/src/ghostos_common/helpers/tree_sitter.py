@@ -1,9 +1,9 @@
 from typing import Optional, Iterable, List, Set, Dict, Type, ClassVar, Generator
 from abc import ABC, abstractmethod
-from tree_sitter_languages.core import get_parser
 from tree_sitter import (
     Tree, Node as TreeSitterNode,
 )
+from tree_sitter_languages import get_parser
 from enum import Enum
 
 _PythonParser = None

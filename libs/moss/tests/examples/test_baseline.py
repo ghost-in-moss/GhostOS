@@ -4,13 +4,14 @@ from ghostos_moss import moss_container
 from ghostos_moss.abcd import MossCompiler, Moss, MOSS_TYPE_NAME, MossRuntime
 from ghostos_moss.pycontext import PyContext
 from ghostos_moss.examples import baseline
-from ghostos.contracts.modules import ImportWrapper
+from ghostos_moss.modules import ImportWrapper
 from ghostos_container import Container
 
 
 def test_baseline_exec():
     container = moss_container()
     compiler = container.force_fetch(MossCompiler)
+    compiler = compiler.injects(bar=123)
     assert compiler is not None
 
     # join context

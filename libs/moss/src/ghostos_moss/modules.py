@@ -1,6 +1,6 @@
+from abc import ABC, abstractmethod
 from typing import Optional, Type, Union, Iterable, Tuple
 from types import ModuleType
-from abc import ABC, abstractmethod
 from importlib import import_module, reload
 import pkgutil
 

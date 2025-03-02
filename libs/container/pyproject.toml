@@ -1,20 +1,33 @@
 [project]
 name = "ghostos-container"
-version = "0.1.2"
+version = "0.2.0-dev"
 description = "the ioc container useful for Interface oriented programming"
 authors = [
-    {name = "thirdgerb",email = "thirdgerb@gmail.com"}
+    { name = "thirdgerb", email = "thirdgerb@gmail.com" }
 ]
-license = {text = "MIT"}
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
+dependencies = []
+
+[tool.setuptools]
+packages = [
+    { include = "src" },
 ]
 
-[tool.poetry.urls]
+[project.urls]
 Homepage = "https://github.com/ghost-in-moss/GhostOS"
 Repository = "https://github.com/ghost-in-moss/GhostOS"
 
+[tool.pdm.build]
+includes = []
+
+
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]

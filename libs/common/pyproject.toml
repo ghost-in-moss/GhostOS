@@ -1,21 +1,33 @@
 [project]
 name = "ghostos-common"
-version = "0.1.0"
+version = "0.2.0-dev1"
 description = "common library for GhostOS project"
 authors = [
-    {name = "thirdgerb",email = "thirdgerb@gmail.com"}
+    { name = "thirdgerb", email = "thirdgerb@gmail.com" }
 ]
-license = {text = "MIT"}
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "pydantic (>=2.7.0,<3.0.0)",
-    "tree-sitter (>=0.21.3,<0.22.0)",
-    "tree-sitter-languages (>=1.10.2,<1.11.0)",
-    "pyyaml (>=6.0.1,<7.0.0)"
+    "pydantic<3.0.0,>=2.7.0",
+    "pyyaml<7.0.0,>=6.0.1",
+    "tree-sitter>=0.21.3",
+    "tree-sitter-languages>=1.10.2",
 ]
 
+[tool.setuptools]
+packages = [
+    { include = "src" },
+]
+
+[tool.pdm.build]
+includes = []
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]

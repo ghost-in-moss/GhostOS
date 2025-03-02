@@ -48,7 +48,7 @@ def clear_directory(directory: str, recursive=True, depth: int = 0) -> int:
 def clear_assets(sub_path: str) -> int:
     from ghostos.bootstrap import get_bootstrap_config
     bootstrap_config = get_bootstrap_config()
-    asserts_dir = bootstrap_config.abs_asserts_dir()
+    asserts_dir = bootstrap_config.abs_assets_dir()
 
     target_dir = asserts_dir
     if sub_path:

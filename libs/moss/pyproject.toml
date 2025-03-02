@@ -1,19 +1,35 @@
 [project]
 name = "ghostos-moss"
-version = "0.1.4"
+version = "0.2.0-dev"
 description = "the code-driven python interface for llms, agents and project GhostOS"
 authors = [
-    {name = "thirdgerb",email = "thirdgerb@gmail.com"}
+    { name = "thirdgerb", email = "thirdgerb@gmail.com" }
 ]
-license = {text = "MIT"}
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "ghostos-common (>=0.1.0,<0.2.0)",
-    "ghostos-container (>=0.1.2,<0.2.0)"
+    "ghostos-common>=0.2.0.dev0",
+    "ghostos-container>=0.2.0.dev0",
 ]
 
+[tool.setuptools]
+packages = [
+    { include = "src" },
+]
 
+[tool.uv.sources]
+ghostos-container = { path = "../container" }
+ghostos-common = { path = "../common" }
+
+
+[tool.pdm.build]
+includes = []
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]

@@ -139,7 +139,7 @@ class BootstrapConfig(BaseModel):
         workspace_dir = self.abs_workspace_dir()
         return join(workspace_dir, "runtime")
 
-    def abs_asserts_dir(self) -> str:
+    def abs_assets_dir(self) -> str:
         workspace_dir = self.abs_workspace_dir()
         return join(workspace_dir, "assets")
 

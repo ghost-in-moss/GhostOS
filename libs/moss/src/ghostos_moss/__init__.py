@@ -4,6 +4,7 @@ from ghostos_moss.abcd import (
     AttrPrompts, Injection,
     MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
+from ghostos_moss.modules import Modules, ImportWrapper, DefaultModules, DefaultModulesProvider
 from ghostos_moss.moss_impl import DefaultMOSSProvider
 from ghostos_moss.testsuite import MossTestSuite
 from ghostos_moss.pycontext import PyContext
@@ -41,7 +42,7 @@ def moss_container() -> Container:
     """
     test container for Moss
     """
-    from ghostos.contracts.modules import DefaultModulesProvider
+    from ghostos_moss.modules import DefaultModulesProvider
     container = Container()
     container.register(DefaultMOSSProvider())
     container.register(DefaultModulesProvider())

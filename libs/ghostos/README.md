@@ -26,7 +26,8 @@ The demo initially implements the following features:
 ## Introduce
 
 `GhostOS` is an AI Agent framework designed to replace `JSON Schema `
-with a Turing-complete code interaction interface ([Moss Protocol](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/concepts/moss_protocol.md)),
+with a Turing-complete code interaction
+interface ([Moss Protocol](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/concepts/moss_protocol.md)),
 becoming the core method for interaction between LLM and Agent system capabilities. For more details:
 [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
 
@@ -76,6 +77,7 @@ epoxrt MOONSHOT_API_KEY="your moonshot api key"
 ```
 
 Or you can use configuration ui by streamlit:
+
 ```bash
 ghostos config
 ```
@@ -95,6 +97,7 @@ ghostos web [my_path_file_path]
 ```
 
 some demo agents
+
 ```bash
 ghostos web ghostos.demo.agents.jojo
 ghostos web ghostos.demo.test_agents.moonshot         # moonshot-v1-32k model
@@ -105,12 +108,13 @@ ghostos web ghostos.demo.test_agents.openai_o1_mini   # openai o1 mini model
 You can create a local Python file and define your own Agents. For more details
 
 * [Chatbot](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/usages/chatbot.md): simplest chatbot
-* [MossAgent](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/usages/moss_agent.md): an agent that can interact with the python module
+* [MossAgent](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/usages/moss_agent.md): an agent that can
+  interact with the python module
 
-## Install Realtime 
+## Install Realtime
 
 `GhostOS` support [OpenAI Realtime](https://platform.openai.com/docs/guides/realtime),
-using [pyaudio](https://pypi.org/project/PyAudio/) to handle realtime audio i/o. 
+using [pyaudio](https://pypi.org/project/PyAudio/) to handle realtime audio i/o.
 Need to install the dependencies first:
 
 ```bash

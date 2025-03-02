@@ -86,6 +86,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+.pdm-build
 
 # IPython
 profile_default/
@@ -109,6 +110,8 @@ ipython_config.py
 #   commonly ignored for libraries.
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 poetry.lock
+
+uv.lock
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.

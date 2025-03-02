@@ -3,7 +3,6 @@ from typing import List
 
 from ghostos_container import Container
 from ghostos_moss.abcd import Moss as Parent
-from ghostos.prompter import BasePOM
 from inspect import getmembers, getsource
 from pydantic import BaseModel
 
@@ -21,16 +20,6 @@ def plus(a: int, b: int) -> int:
     return a + b
 
 
-class TestPrompter(BasePOM):
-    line: str = "TestPrompter"
-
-    def self_prompt(self, container: Container) -> str:
-        return self.line
-
-    def get_title(self) -> str:
-        return ""
-
-
 class Moss(Parent, ABC):
     """
     本地定义的 Moss 类. 每个 MOSS 文件里都应该有一个 Moss 类, 可以是 import 的也可以是本地定义的.
@@ -41,8 +30,6 @@ class Moss(Parent, ABC):
 
     foo: Foo
     """依赖注入 Foo 的测试用例. """
-
-    tester: TestPrompter
 
 
 # <moss-hide>
@@ -61,8 +48,6 @@ def __moss_compile__(compiler: "MossCompiler") -> "MossCompiler":
 
     主要解决各种注入方面的需求:
     """
-    # 单测里应该有这个. moss.bar == 123
-    compiler.injects(bar=123, tester=TestPrompter())
     # 插入生命周期事件, 直接赋值到 moss 上.
     Moss.life.append("__moss_compile__")
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, get_args, get_origin, ClassVar
 
-from ghostos_container import Container, Provider, provide
+from ghostos_container import Container, Provider, provide, FactoryType, IoCContainer
 
 
 def test_container_baseline():
@@ -43,6 +43,7 @@ def test_container_baseline():
 
     # 初始化
     container = Container()
+    container.bootstrap()
     container.set(Abstract, Foo())
 
     # 获取单例
@@ -78,8 +79,10 @@ def test_sub_container():
             self.foo = foo
 
     container = Container()
+    container.bootstrap()
     container.set(Foo, Foo(1))
     sub = Container(parent=container)
+    sub.bootstrap()
     sub.set(Foo, Foo(2))
 
     # 验证父子互不污染.
@@ -121,6 +124,7 @@ def test_provider_generic_types():
 
 def test_provide_with_lambda():
     container = Container()
+    container.bootstrap()
     container.register(provide(int)(lambda c: 10))
     container.register(provide(str)(lambda c: "hello"))
 
@@ -130,6 +134,7 @@ def test_provide_with_lambda():
 
 def test_provide_in_loop():
     container = Container()
+    container.bootstrap()
     for a, fn in {int: lambda c: 10, str: lambda c: "hello"}.items():
         container.register(provide(a)(fn))
 
@@ -155,10 +160,12 @@ def test_container_inherit():
         bar: str = "hello"
 
     container = Container()
+    container.bootstrap()
     container.register(provide(Bar, singleton=False)(lambda c: Bar(c.force_fetch(Foo))))
     sub_container = Container(container)
     # sub container register Foo that Bar needed
     sub_container.register(provide(Foo, singleton=False)(lambda c: Foo(2)))
+    sub_container.bootstrap()
     bar = sub_container.force_fetch(Bar)
     assert bar.bar == "hello"
     assert bar.foo.foo == 2
@@ -166,6 +173,7 @@ def test_container_inherit():
 
 def test_bloodline():
     container = Container()
+    container.bootstrap()
     assert container.bloodline is not None
     sub = Container(parent=container, name="hello")
     assert len(sub.bloodline) == 2
@@ -214,6 +222,7 @@ class Zoo:
 
 def test_container_make_baseline():
     container = Container()
+    container.bootstrap()
     container.set(Foo, Foo(123))
     bar = container.make(Bar)
     assert bar.b == 0
@@ -232,5 +241,35 @@ def test_container_call_baseline():
         return bar.foo.a + bar.b + c
 
     container = Container()
+    container.bootstrap()
     v = container.call(zoo, c=3)
     assert v > 0
+
+
+def test_container_with_factory_type():
+    class _Foo:
+        def foo(self):
+            return 123
+
+    class _Bar(FactoryType):
+        def __init__(self, foo: _Foo):
+            self.foo = foo
+            self.bar = 123
+
+        @classmethod
+        def singleton(cls) -> bool:
+            return True
+
+        @classmethod
+        def factory(cls, con: IoCContainer) -> "FactoryType":
+            foo = con.force_fetch(_Foo)
+            return cls(foo)
+
+    container = Container()
+    container.set(_Foo, _Foo())
+    bar = container.get(_Bar)
+    assert bar.foo.foo() == 123
+    assert bar.bar == 123
+    bar.bar = 456
+    bar = container.get(_Bar)
+    assert bar.bar == 456
