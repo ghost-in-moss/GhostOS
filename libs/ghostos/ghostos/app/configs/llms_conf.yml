@@ -1,0 +1,279 @@
+# from class: ghostos.framework.llms.providers:LLMsYamlConfig
+services:
+  - base_url: https://api.moonshot.cn/v1
+    driver: openai_driver
+    name: moonshot
+    token: $MOONSHOT_API_KEY
+  - base_url: https://api.openai.com/v1
+    driver: openai_driver
+    name: openai
+    proxy: $OPENAI_PROXY
+    token: $OPENAI_API_KEY
+    compatible:
+      use_developer_role: true
+  - base_url: https://api.anthropic.com/v1
+    driver: lite_llm_driver
+    name: anthropic
+    proxy: $ANTHROPIC_PROXY
+    token: $ANTHROPIC_API_KEY
+  - base_url: https://api.deepseek.com/beta
+    driver: deepseek_driver
+    name: deepseek
+    token: $DEEPSEEK_API_KEY
+  - name: siliconflow-deepseek
+    base_url: https://api.siliconflow.cn/v1
+    driver: deepseek_driver
+    token: $SILICONFLOW_API_KEY
+  - name: aliyun-deepseek
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    driver: deepseek_driver
+    token: $ALIYUN_DASHSCOPE_API_KEY
+  - base_url: $AZURE_ENDPOINT
+    name: azure
+    driver: openai_driver
+    azure:
+      api_key: $AZURE_API_KEY
+      api_version: 2023-07-01-preview
+default: gpt-4o
+models:
+  gpt-4o-2024-08-06:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: gpt-4o-2024-08-06
+    n: 1
+    request_timeout: 40
+    service: azure
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  claude-3-5-sonnet:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: claude-3-5-sonnet-20240620
+    n: 1
+    request_timeout: 40
+    service: anthropic
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  claude-3-haiku:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: claude-3-haiku-20240307
+    n: 1
+    request_timeout: 40
+    service: anthropic
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  deepseek-chat:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: deepseek-chat
+    n: 1
+    request_timeout: 40
+    service: deepseek
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  deepseek-chat-func-tokens:
+    kwargs: { }
+    max_tokens: 2000
+    model: deepseek-chat
+    request_timeout: 40
+    service: deepseek
+    temperature: 0.7
+    timeout: 30
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+  deepseek-reasoner:
+    max_tokens: 3400
+    model: deepseek-reasoner
+    service: deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: false
+      allow_system_in_messages: false
+      last_message_shall_be_assistant_or_user: true
+  deepseek-reasoner-fc:
+    max_tokens: 3400
+    model: deepseek-reasoner
+    service: deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+      message_parser: ghostos.framework.model_compatible:deepseek_reasoner_support_functions
+  gpt-3.5-turbo:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: gpt-3.5-turbo
+    n: 1
+    request_timeout: 40
+    service: openai
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  gpt-4:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: gpt-4
+    n: 1
+    request_timeout: 40
+    service: openai
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  gpt-4-turbo:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: gpt-4-turbo
+    n: 1
+    request_timeout: 40
+    service: openai
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  gpt-4-turbo-reason:
+    kwargs: { }
+    max_tokens: 4000
+    message_types: null
+    model: gpt-4-turbo
+    n: 1
+    request_timeout: 50
+    service: openai
+    temperature: 0.8
+    timeout: 30
+  openai-o1-mini:
+    model: o1-mini
+    service: openai
+    reasoning: { }
+    compatible:
+      allow_system_message: false
+  gpt-o1:
+    model: o1
+    service: openai
+    reasoning: { }
+    compatible:
+      allow_system_message: false
+  gpt-4o:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: gpt-4o
+    n: 1
+    request_timeout: 40
+    service: openai
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  moonshot-v1-128k:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: moonshot-v1-128k
+    n: 1
+    request_timeout: 40
+    service: moonshot
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  moonshot-v1-32k:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: moonshot-v1-32k
+    n: 1
+    request_timeout: 40
+    service: moonshot
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  moonshot-v1-8k:
+    kwargs: { }
+    max_tokens: 2000
+    message_types: null
+    model: moonshot-v1-8k
+    n: 1
+    request_timeout: 40
+    service: moonshot
+    temperature: 0.7
+    timeout: 30
+    use_tools: true
+  siliconflow-deepseek-chat:
+    kwargs: { }
+    max_tokens: 3000
+    message_types: null
+    model: deepseek-ai/DeepSeek-V3
+    n: 1
+    request_timeout: 50
+    service: siliconflow-deepseek
+    temperature: 0.7
+    timeout: 50
+    compatible:
+      function_call_use_tool: false
+  siliconflow-deepseek-r1:
+    max_tokens: 3400
+    model: deepseek-ai/DeepSeek-R1
+    service: siliconflow-deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: false
+      allow_system_in_messages: false
+      last_message_shall_be_assistant_or_user: true
+  siliconflow-deepseek-r1-fc:
+    max_tokens: 3400
+    model: deepseek-ai/DeepSeek-R1
+    service: siliconflow-deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+      message_parser: ghostos.framework.model_compatible:deepseek_reasoner_support_functions
+  aliyun-deepseek-chat:
+    kwargs: { }
+    max_tokens: 3000
+    message_types: null
+    model: deepseek-v3
+    n: 1
+    request_timeout: 50
+    allow_streaming: false
+    service: aliyun-deepseek
+    temperature: 0.7
+    timeout: 50
+    compatible:
+      function_call_use_tool: false
+  aliyun-deepseek-chat-func-token:
+    kwargs: { }
+    max_tokens: 3000
+    message_types: null
+    model: deepseek-v3
+    n: 1
+    request_timeout: 50
+    allow_streaming: false
+    service: aliyun-deepseek
+    temperature: 0.7
+    timeout: 50
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+  aliyun-deepseek-reasoner-fc:
+    max_tokens: 3400
+    model: deepseek-r1
+    service: aliyun-deepseek
+    reasoning: { }
+    compatible:
+      support_function_call: false
+      support_functional_tokens: true
+      message_parser: ghostos.framework.model_compatible:deepseek_reasoner_support_functions
+

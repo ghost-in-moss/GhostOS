@@ -1,0 +1,82 @@
+[project]
+name = "ghostos"
+description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
+readme = "README.md"
+version = "v0.4.0-dev6"
+authors = [
+    { name = "zhuming", email = "thirdgerb@gmail.com" },
+    { name = "Nile Zhou", email = "nilezhou123@gmail.com" },
+]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "openai<2.0.0,>=1.59.0",
+    "rich<14.0.0,>=13.7.1",
+    "httpx-socks<1.0.0,>=0.9.1",
+    "datasets<3.0.0,>=2.20.0",
+    "anthropic<1.0.0,>=0.31.2",
+    "prompt-toolkit<4.0.0,>=3.0.47",
+    "streamlit<2.0.0,>=1.39.0",
+    "pydantic-settings<3.0.0,>=2.5.2",
+    "streamlit-antd-components<1.0.0,>=0.3.2",
+    "streamlit-react-jsonschema<1.0.0,>=0.1.3",
+    "python-dotenv<2.0.0,>=1.0.1",
+    "websockets<14.0,>=13.1",
+    "pysocks<2.0.0,>=1.7.1",
+    "requests[socks]<3.0.0,>=2.32.3",
+    "streamlit-paste-button<1.0.0,>=0.1.2",
+    "ghostos-moss>=0.2.0.dev0",
+    "ghostos-container>=0.2.0.dev0",
+    "ghostos-common>=0.2.0.dev1",
+]
+
+[tool.setuptools]
+packages = [
+    { include = "src" },
+]
+
+[project.urls]
+Homepage = "https://github.com/ghost-in-moss/GhostOS"
+Repository = "https://github.com/ghost-in-moss/GhostOS"
+Documentation = "https://ghost-in-moss.github.io/GhostOS/#/en/"
+Issues = "https://github.com/ghost-in-moss/GhostOS/issues"
+
+[project.optional-dependencies]
+realtime = [
+    "pyaudio<1.0.0,>=0.2.14",
+    "scipy<2.0.0,>=1.15.1",
+]
+sphero = [
+    "spherov2<1.0.0,>=0.12.1",
+    "bleak<1.0.0,>=0.22.3; python_version >= \"3.10\" and python_version < \"3.14\"",
+]
+
+
+[tool.uv.sources]
+ghostos-container = { path = "../container" }
+ghostos-common = { path = "../common" }
+ghostos-moss = { path = "../moss" }
+
+
+[project.scripts]
+ghostos = "ghostos.scripts.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.1.1,<9.0.0",
+    "mypy<2.0.0,>=1.13.0",
+]
+
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest<9.0.0,>=8.1.1",
+    "mypy<2.0.0,>=1.13.0",
+]
+
+[tool.pdm.build]
+includes = []
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+

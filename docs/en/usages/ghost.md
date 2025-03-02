@@ -212,7 +212,7 @@ If necessary, MossAgent can manipulate a Context through `Moss`:
 
 ```python
 from ghostos.abcd import Context
-from ghostos.core.moss import Moss as Parent
+from ghostos_moss import Moss as Parent
 from pydantic import Field
 
 

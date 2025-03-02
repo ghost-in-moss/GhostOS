@@ -14,7 +14,7 @@ Using Python code [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/
 an intelligent robot with a [SpheroBolt](https://sphero.com/products/sphero-bolt) as its body is defined.
 If you have a SpheroBolt, running `ghostos web ghostos.demo.sphero.bolt_gpt` can start this robot.
 
-![SpheroBoltGPT](docs/assets/ask_sphero_spin_gif.gif)
+![SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/main/docsassets/ask_sphero_spin_gif.gif)
 
 The demo initially implements the following features:
 
@@ -26,7 +26,7 @@ The demo initially implements the following features:
 ## Introduce
 
 `GhostOS` is an AI Agent framework designed to replace `JSON Schema `
-with a Turing-complete code interaction interface ([Moss Protocol](docs/zh-cn/concepts/moss_protocol.md)),
+with a Turing-complete code interaction interface ([Moss Protocol](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/concepts/moss_protocol.md)),
 becoming the core method for interaction between LLM and Agent system capabilities. For more details:
 [MOSS: Enabling Code-Driven Evolution and Context Management for AI Agents](https://arxiv.org/abs/2409.16120)
 
@@ -104,8 +104,8 @@ ghostos web ghostos.demo.test_agents.openai_o1_mini   # openai o1 mini model
 
 You can create a local Python file and define your own Agents. For more details
 
-* [Chatbot](docs/zh-cn/usages/chatbot.md): simplest chatbot
-* [MossAgent](docs/zh-cn/usages/moss_agent.md): an agent that can interact with the python module
+* [Chatbot](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/usages/chatbot.md): simplest chatbot
+* [MossAgent](https://github.com/ghost-in-moss/GhostOS/tree/main/docszh-cn/usages/moss_agent.md): an agent that can interact with the python module
 
 ## Install Realtime 
 
@@ -197,7 +197,7 @@ Therefore, a Meta-Agent can develop other Agents just like a normal programming 
 Ideally, the Meta-Agent can write code, write its own tools, define memories and chain of thoughts with data structures,
 and develop other Agents for itself.
 
-![meta-agent-cycle](docs/assets/meta-agent-cycle.png)
+![meta-agent-cycle](https://github.com/ghost-in-moss/GhostOS/tree/main/docsassets/meta-agent-cycle.png)
 
 Furthermore, most complex tasks with rigorous steps can be described using tree or graph data structures.
 Constructing a nested graph or tree using methods like JSON is very difficult,

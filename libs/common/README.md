@@ -1,0 +1,1 @@
+GhostOS common class and functions.
