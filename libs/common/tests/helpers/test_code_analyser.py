@@ -1,4 +1,4 @@
-from ghostos_common.helpers import get_code_interface_str
+from ghostos_common.helpers import get_code_interface_str, code_syntax_check
 import inspect
 
 
@@ -9,3 +9,4 @@ def test_get_code_interface_str():
     code = inspect.getsource(foo)
     interface = get_code_interface_str(code)
     assert "async def foo()" in interface
+    assert code_syntax_check(code) is None

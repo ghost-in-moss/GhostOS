@@ -5,11 +5,11 @@ authors = [
 ]
 license = { text = "MIT" }
 dependencies = [
-    "ghostos==0.4.0.dev5",
+    "ghostos==0.4.0.dev8",
 ]
 requires-python = ">=3.10"
 name = "ghostos-monorepo"
-version = "0.4.0-dev5"
+version = "0.4.0"
 description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 readme = "README.md"
 

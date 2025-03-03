@@ -3,8 +3,9 @@ from abc import ABC, abstractmethod
 from tree_sitter import (
     Tree, Node as TreeSitterNode,
 )
-from tree_sitter_languages import get_parser
 from enum import Enum
+import tree_sitter_python as tspython
+from tree_sitter import Language, Parser
 
 _PythonParser = None
 
@@ -18,7 +19,8 @@ __all__ = [
 def tree_sitter_parse(code: str) -> Tree:
     global _PythonParser
     if _PythonParser is None:
-        _PythonParser = get_parser('python')
+        PY_LANGUAGE = Language(tspython.language())
+        _PythonParser = Parser(PY_LANGUAGE)
     return _PythonParser.parse(code.encode())
 
 
