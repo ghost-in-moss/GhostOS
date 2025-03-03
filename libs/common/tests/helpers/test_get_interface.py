@@ -75,7 +75,6 @@ def decorated_function(a: int, b: int) -> int:
     assert "T = TypeVar('T')" in interface
     assert "'''hello world'''" in interface
 
-    print("++++", interface)
     assert """
     @abstractmethod
     def abstract(cls):
