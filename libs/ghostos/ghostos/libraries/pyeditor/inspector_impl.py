@@ -30,8 +30,8 @@ class PyInspectorSessionImpl(Injection, PyInspector):
             session: Session,
             modules: Modules,
     ):
-        self.reading_source = []
-        self.reading_interface = []
+        self.watching_source = []
+        self.watching_interface = []
         self._modules = modules
         self._property_name = generate_import_path(self.__class__)
         self._session: Session = session
@@ -39,15 +39,15 @@ class PyInspectorSessionImpl(Injection, PyInspector):
     def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
         self._property_name = property_name
         bound = self._get_inspecting()
-        self.reading_source = bound.watching_source
-        self.reading_interface = bound.watching_interface
+        self.watching_source = bound.watching_source
+        self.watching_interface = bound.watching_interface
         return self
 
     def _get_inspecting(self) -> Inspecting:
         return Inspecting(
             property_name=self._property_name,
-            watching_source=list(set(self.reading_source)),
-            watching_interface=list(set(self.reading_interface)),
+            watching_source=list(set(self.watching_source)),
+            watching_interface=list(set(self.watching_interface)),
         )
 
     def on_destroy(self) -> None:
@@ -71,7 +71,7 @@ class PyInspectorSessionImpl(Injection, PyInspector):
 
     def dump_context(self) -> str:
         source_code_context = ""
-        for inspecting in self.reading_source:
+        for inspecting in self.watching_source:
             source_code = self.get_source(inspecting)
             source_code_context += f"""
 - `{inspecting}`:
@@ -80,7 +80,7 @@ class PyInspectorSessionImpl(Injection, PyInspector):
 ```
 """
         interface_context = ""
-        for inspecting in self.reading_interface:
+        for inspecting in self.watching_interface:
             interface = self.get_interface(inspecting)
             interface_context += f"""
 - `{inspecting}`:
