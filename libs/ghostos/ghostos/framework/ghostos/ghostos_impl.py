@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List
 
-from ghostos.abcd import GhostOS, Shell
+from ghostos.abcd import GhostOS, Matrix
 from ghostos.core.runtime import GoProcesses, GoProcess, GoThreads, GoTasks, EventBus
 from ghostos_container import Container, Provider, Contracts, INSTANCE
 from ghostos.contracts.configs import Configs, YamlConfig
@@ -9,7 +9,7 @@ from ghostos.contracts.variables import Variables
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from pydantic import Field
-from .shell_impl import ShellImpl, ShellConf
+from .shell_impl import MatrixImpl, ShellConf
 
 __all__ = ['GhostOS', "GhostOSImpl", "GhostOSConfig", "GhostOSProvider"]
 
@@ -51,14 +51,14 @@ class GhostOSImpl(GhostOS):
     def container(self) -> Container:
         return self._container
 
-    def create_shell(
+    def create_matrix(
             self,
             name: str,
             *,
             shell_id: str = "",
             providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
-    ) -> Shell:
+    ) -> Matrix:
         if name not in self._ghostos_config.shells:
             shell_conf = ShellConf()
         else:
@@ -78,7 +78,7 @@ class GhostOSImpl(GhostOS):
 
         # prepare container
         providers = providers or []
-        return ShellImpl(
+        return MatrixImpl(
             config=shell_conf,
             container=self._container,
             process=process,

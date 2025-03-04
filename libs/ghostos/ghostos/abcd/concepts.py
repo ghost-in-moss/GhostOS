@@ -54,7 +54,7 @@ and the Most valuable features about ghost are:
 """
 
 __all__ = (
-    "Ghost", "GhostDriver", "GhostOS", "Shell", "Conversation", "Background",
+    "Ghost", "GhostDriver", "GhostOS", "Matrix", "Conversation", "Background",
     "Operator", "Action",
     "Session", "Messenger", "StateValue", "Scope", "EntityType",
     "Mindflow", "Subtasks",
@@ -304,14 +304,14 @@ class GhostOS(Protocol):
         pass
 
     @abstractmethod
-    def create_shell(
+    def create_matrix(
             self,
             name: str,
             *,
             shell_id: str = "",
             providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
-    ) -> Shell:
+    ) -> Matrix:
         pass
 
 
@@ -334,7 +334,7 @@ class Background(ABC):
         pass
 
 
-class Shell(ABC):
+class Matrix(ABC):
 
     @abstractmethod
     def container(self) -> Container:

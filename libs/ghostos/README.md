@@ -139,7 +139,7 @@ ghostos = get_ghostos(container)
 
 # Create a shell instance, which managing sessions that keep AI Ghost inside it.
 # and initialize the shell level dependency providers.
-shell = ghostos.create_shell("your robot shell")
+shell = ghostos.create_matrix("your robot shell")
 # Shell can handle parallel ghosts running, and communicate them through an EventBus.
 # So the Multi-Agent swarm in GhostOS is asynchronous.
 shell.background_run()  # Optional
@@ -153,8 +153,8 @@ conversation = shell.sync(my_chatbot)
 # use the conversation channel to talk
 event, receiver = conversation.talk("hello?")
 with receiver:
-    for chunk in receiver.recv():
-        print(chunk.content)
+  for chunk in receiver.recv():
+    print(chunk.content)
 ```
 
 ## Developing Features

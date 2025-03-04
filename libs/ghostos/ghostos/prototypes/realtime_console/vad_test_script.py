@@ -24,7 +24,7 @@ if __name__ == "__main__":
         persona="you are an LLM-driven cute girl, named jojo",
         instruction="remember talk to user with user's language."
     )
-    shell = ghostos.create_shell("realtime_test")
+    shell = ghostos.create_matrix("realtime_test")
     conversation = shell.sync(jojo)
     realtime_app = RealtimeAppImpl(
         conf=app_conf,

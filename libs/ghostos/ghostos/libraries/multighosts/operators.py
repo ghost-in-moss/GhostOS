@@ -1,6 +1,6 @@
 from typing import Union, List, Dict
 
-from ghostos.abcd import Operator, Session, Ghost, Shell
+from ghostos.abcd import Operator, Session, Ghost, Matrix
 from ghostos.core.runtime import GoTaskStruct, EventTypes, GoThreads
 from ghostos.core.messages import Message, Role
 from ghostos_common.identifier import get_identifier
@@ -25,7 +25,7 @@ class PublicChatOperator(Operator):
             content=self.message,
             name=self.hostname,
         )
-        shell = session.container.force_fetch(Shell)
+        shell = session.container.force_fetch(Matrix)
         conversations = {}
         threads = {}
         added = []

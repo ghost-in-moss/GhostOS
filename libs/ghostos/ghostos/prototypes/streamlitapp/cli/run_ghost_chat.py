@@ -9,7 +9,7 @@ from ghostos.bootstrap import get_ghostos, get_container
 from ghostos.prototypes.streamlitapp.main import main_run
 from ghostos.prototypes.streamlitapp.pages.router import default_router, GhostChatRoute
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
-from ghostos.abcd import Shell, Background
+from ghostos.abcd import Matrix, Background
 from ghostos.abcd.utils import get_module_magic_shell_providers
 from ghostos_common.entity import from_entity_meta
 import importlib
@@ -64,16 +64,16 @@ def bootstrap():
     logger.debug(f"generate ghostos app container at workspace {app_arg.workspace_dir}")
 
     ghostos = get_ghostos()
-    shell = Singleton.get(Shell, st.session_state, force=False)
+    shell = Singleton.get(Matrix, st.session_state, force=False)
     container = get_container()
     if shell is None:
         logger.debug("start shell background run")
-        shell = ghostos.create_shell(
+        shell = ghostos.create_matrix(
             "ghostos_streamlit_app",
             providers=shell_providers,
         )
         shell.background_run(4, StreamlitBackgroundApp())
-        Singleton(shell, Shell).bind(st.session_state)
+        Singleton(shell, Matrix).bind(st.session_state)
 
     ghost = from_entity_meta(app_arg.ghost_meta)
     context = from_entity_meta(app_arg.context_meta)

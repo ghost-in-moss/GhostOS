@@ -1,7 +1,7 @@
 from typing import Optional, List, Iterable, Tuple, TypeVar, Dict, Union, Any, Callable
 from ghostos.errors import StreamingError
 from ghostos.abcd import (
-    Session, Ghost, GhostDriver, Shell, Scope, Mindflow, Operator, Subtasks,
+    Session, Ghost, GhostDriver, Matrix, Scope, Mindflow, Operator, Subtasks,
     Messenger,
 )
 from ghostos.abcd import get_ghost_driver
@@ -379,7 +379,7 @@ class SessionImpl(Session[Ghost]):
 
     def call(self, ghost: Ghost, ctx: Ghost.ContextType) -> Ghost.ArtifactType:
         self._validate_alive()
-        shell = self.container.force_fetch(Shell)
+        shell = self.container.force_fetch(Matrix)
         return shell.call(ghost, ctx)
 
     def fire_events(self, *events: "Event") -> None:
