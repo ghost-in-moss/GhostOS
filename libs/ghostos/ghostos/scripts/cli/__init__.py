@@ -5,7 +5,7 @@ import os.path
 import click
 import sys
 from os import getcwd
-from os.path import join, abspath
+from os.path import abspath
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -120,7 +120,7 @@ The Workspace meant to save local files such as configs, logs, cache files.
     cwd = getcwd()
     result = Prompt.ask(
         f"\n>> will init ghostos workspace at `{cwd}`. input directory name:",
-        default="ghostos_ws",
+        default=".ghostos_ws",
     )
     source_dir = app_stub_dir()
     real_workspace_dir = abspath(result)

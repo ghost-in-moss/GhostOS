@@ -1,7 +1,7 @@
 from typing import List, Iterable, Union, Type, Optional, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
-from ghostos.prompter import POM
+from ghostos_common.prompter import POM
 
 __all__ = [
     'PyInspector',

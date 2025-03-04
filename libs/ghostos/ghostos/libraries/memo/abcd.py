@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from abc import ABC, abstractmethod
 from contextlib import redirect_stdout
-from ghostos.prompter import POM
+from ghostos_common.prompter import POM
 from io import StringIO
 
 

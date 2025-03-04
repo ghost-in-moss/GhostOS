@@ -26,11 +26,11 @@ __all__ = [
     'get_defined_prompt',
     'set_prompt', 'set_class_prompt',
     'PromptAbleObj', 'PromptAbleClass',
+    'PromptAbleProtocol',
+    'PromptAbleClassProtocol',
+    'PromptAble',
 ]
 
-
-# todo: 我不太喜欢早期用 `prompt` 这个概念人为定义类的反射结果. 本意是想达到 "拒绝反射" 或者 "自定义反射" 的效果, 但太侵入源码了.
-# todo: 而且 `prompt` 这个词也过于狭窄. 考虑未来整体拿掉, 用关联反射替代.
 
 def get_defined_prompt(value: Any, container: Optional[Container] = None) -> Union[str, None]:
     attr = get_defined_prompt_attr(value, container)

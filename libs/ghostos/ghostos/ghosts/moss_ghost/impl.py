@@ -8,7 +8,7 @@ from ghostos_common.identifier import Identifier
 from pydantic import Field
 
 from ghostos_common.helpers import import_from_path
-from ghostos.prompter import TextPOM, PromptObjectModel
+from ghostos_common.prompter import TextPOM, PromptObjectModel
 from ghostos_common.entity import ModelEntity
 from ghostos.abcd import (
     GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, ActionThought, ChainOfThoughts,
@@ -38,6 +38,10 @@ class MossGhost(ModelEntity, Agent):
     # optional configs
     name: str = Field(description="name of the agent", pattern=r"^[a-zA-Z0-9_-]+$")
     module: str = Field(description="Moss module name for the agent")
+    default_moss_type: Optional[str] = Field(
+        default=None,
+        description="default moss type for the module if Moss class not defined",
+    )
     description: str = Field(default="", description="description of the agent")
 
     persona: str = Field(default="", description="Persona for the agent, if not given, use global persona")
@@ -250,7 +254,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
         """
         :return: if the ghost is safe mode.
         """
-        return False
+        return self.agent.safe_mode
 
     def get_persona(self, session: Session, runtime: MossRuntime) -> str:
         return self.agent.persona
@@ -294,6 +298,8 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
 
         compiler = compiler.join_context(pycontext)
         compiler = compiler.with_locals(Optional=Optional, Operator=Operator)
+        if self.agent.default_moss_type is not None:
+            compiler = compiler.with_default_moss_type(self.agent.default_moss_type)
 
         # register moss level providers.
         for provider in self.get_moss_providers():

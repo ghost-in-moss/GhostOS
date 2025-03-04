@@ -8,7 +8,7 @@ from typing_extensions import Self
 from abc import ABC, abstractmethod
 from ghostos_common.identifier import Identical
 from ghostos_common.entity import EntityType, EntityClass
-from ghostos.prompter import PromptObjectModel, BasePOM
+from ghostos_common.prompter import PromptObjectModel, BasePOM
 from ghostos.core.runtime import (
     TaskState,
 )

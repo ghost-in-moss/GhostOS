@@ -17,7 +17,7 @@
 
 这个技术实现不是 `GhostOS` 自身的目标, 但由于开源社区还没提供成熟的 `Prompt Object Model` 实现, 因此作者先实现了一个简单版.
 
-详见: [ghostos.prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py)
+详见: [ghostos_common.prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py)
 
 
 以 [MossAgent](/zh-cn/usages/moss_agent.md) 为例, 它默认的 Prompter 是如下结构: 

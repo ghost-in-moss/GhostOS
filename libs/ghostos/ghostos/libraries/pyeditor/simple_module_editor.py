@@ -4,7 +4,7 @@ from typing_extensions import Self
 from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.libraries.pyeditor.abcd import PyModuleEditor
 from ghostos_container import Provider, Container
-from ghostos.prompter import POM
+from ghostos_common.prompter import POM
 import inspect
 
 __all__ = ['SimplePyModuleEditor', 'SimplePyModuleEditorProvider']

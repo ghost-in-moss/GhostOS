@@ -5,7 +5,7 @@ from ghostos_common.identifier import Identifier
 from pydantic import Field
 
 from ghostos_common.helpers import import_from_path
-from ghostos.prompter import TextPOM, PromptObjectModel
+from ghostos_common.prompter import TextPOM, PromptObjectModel
 from ghostos.abcd import (
     GhostDriver, Operator, Agent, Session, Action, Thought, Ghost, SessionPyContext,
     MossAction, MOSS_INTRODUCTION, get_moss_context_pom,

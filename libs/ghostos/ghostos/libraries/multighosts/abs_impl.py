@@ -5,7 +5,7 @@ from ghostos.abcd import Operator, Ghost
 from ghostos.libraries.multighosts.abcd import MultiGhosts
 from ghostos.libraries.multighosts.data import MultiGhostData, Topic
 from ghostos.libraries.multighosts.operators import PublicChatOperator
-from ghostos.prompter import POM
+from ghostos_common.prompter import POM
 
 
 class BaseMultiGhosts(MultiGhosts, POM, ABC):

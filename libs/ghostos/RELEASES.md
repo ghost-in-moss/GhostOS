@@ -2,6 +2,10 @@
 
 # v0.4.0
 
+## v0.4.0-dev9
+
+move `ghostos.prompter` to `ghostos_common.prompter`
+
 ## v0.4.0-dev4
 
 split `ghostos_moss`, `ghostos_container` and `ghostos_common`. implements multi-ghosts baseline. 
@@ -18,7 +22,7 @@ split `ghostos_moss`, `ghostos_container` and `ghostos_common`. implements multi
 * done a lot of experiments about `meta-prompt` on agent level reasoning
 * add `MossGhost` and deprecate `MossAgent`, make the logic much more simple and clear. 
 * build `PyEditorAgent` and test about modify existing modules with code-driven tools.
-* refact `ghostos.prompter` about `PromptObjectModel`.
+* refact `ghostos_common.prompter` about `PromptObjectModel`.
 * move `loop_session_event` and `handle_callers` to `Session` helping us to understand the logic. 
 * llm services support `siliconflow` and `aliyun`
 * modify a lot of methods and functions names, make it more clear, at least to me

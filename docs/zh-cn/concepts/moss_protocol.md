@@ -203,7 +203,7 @@ def __moss_module_prompt__(prompter: "MossPrompter") -> str:
 * Abstract class: 反射源码
 * pydantic.BaseModel: 反射源码
 
-此外, 任何一个类如果实现了 `ghostos.prompter.PromptAbleClass`, 会使用它的 `__class_prompt__` 方法生成反射结果.
+此外, 任何一个类如果实现了 `ghostos_common.prompter.PromptAbleClass`, 会使用它的 `__class_prompt__` 方法生成反射结果.
 
 #### Custom Attr Prompt
 

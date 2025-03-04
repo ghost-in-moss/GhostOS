@@ -1,4 +1,4 @@
-from ghostos.prompter import PromptObjectModel, TextPOM
+from ghostos_common.prompter import PromptObjectModel, TextPOM
 from ghostos_common.identifier import Identifier
 
 AGENT_META_INTRODUCTION = """

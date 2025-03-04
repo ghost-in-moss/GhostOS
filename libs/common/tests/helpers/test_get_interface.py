@@ -1,4 +1,7 @@
-from ghostos_common.helpers.code_analyser import get_code_interface
+from ghostos_common.helpers.code_analyser import (
+    get_code_interface, get_attr_source_from_code, get_attr_interface_from_code,
+    get_code_interface_str,
+)
 
 
 def test_get_code_interface_baseline():
@@ -93,3 +96,19 @@ def decorated_function(a: int, b: int) -> int:
 class MyClass(Generic[T], ABC):
     \"\"\"This is class doc.\"\"\"
 """ in interface
+
+    attr_sources = get_attr_source_from_code(code)
+    assert 'MyClass' in attr_sources
+    assert 'my_function' in attr_sources
+    assert 'decorated_function' in attr_sources
+
+    attr_interfaces = get_attr_interface_from_code(code)
+    assert 'MyClass' in attr_interfaces
+    assert 'my_function' in attr_interfaces
+    assert 'decorated_function' in attr_interfaces
+
+    for name in attr_sources:
+        source = attr_sources[name]
+        interface = get_code_interface_str(source)
+        attr_interface = attr_interfaces[name]
+        assert interface == attr_interface

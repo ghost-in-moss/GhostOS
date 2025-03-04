@@ -19,7 +19,7 @@ from ghostos.core.runtime import (
     GoThreads,
     GoThreadInfo,
 )
-from ghostos.prompter import PromptObjectModel
+from ghostos_common.prompter import PromptObjectModel
 from ghostos.contracts.logger import LoggerItf
 from ghostos.contracts.variables import Variables
 from ghostos_container import Container, provide, Contracts

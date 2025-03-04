@@ -2,7 +2,7 @@ from typing import Union, Optional, ClassVar, Dict
 
 from pydantic import BaseModel, Field
 from ghostos.abcd.concepts import Operator, Session, Action, SessionPyContext
-from ghostos.prompter import PromptObjectModel, TextPOM
+from ghostos_common.prompter import PromptObjectModel, TextPOM
 from ghostos_moss import MossRuntime
 from ghostos.core.messages import FunctionCaller
 from ghostos.core.llms import (
@@ -70,6 +70,7 @@ Notices:
 * you can reply as usual without calling the tool `moss`. use it only when you know what you're doing.
 * don't copy the main function's __doc__, they are instruction to you only.
 * in your code generation, comments is not required, comment only when necessary.
+* You code generation will not modify your provided module's source, unless you got tools to do so.
 """
 
 MOSS_FUNCTION_DESC = ("Useful to execute code in the python context that MOSS provide to you."

@@ -29,10 +29,13 @@ dev = [
 ]
 
 [tool.uv.sources]
-ghostos-container = { path = "libs/container" }
-ghostos-common = { path = "libs/common" }
-ghostos-moss = { path = "libs/moss" }
-ghostos = { path = "libs/ghostos" }
+ghostos-container = { workspace = true }
+ghostos-common = { workspace = true }
+ghostos-moss = { workspace = true }
+ghostos = { workspace = true }
+
+[tool.uv.workspace]
+members = ["libs/*"]
 
 [tool.pdm.dev-dependencies]
 dev = [

@@ -224,7 +224,7 @@ The current rules are as follows:
 * Abstract class: Reflect the source code
 * pydantic.BaseModel: Reflect the source code
 
-Additionally, any class that implements `ghostos.prompter.PromptAbleClass` will use its `__class_prompt__` method to
+Additionally, any class that implements `ghostos_common.prompter.PromptAbleClass` will use its `__class_prompt__` method to
 generate the reflection result.
 
 #### Custom Attr Prompt

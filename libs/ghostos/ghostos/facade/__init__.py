@@ -18,7 +18,6 @@ from ghostos.facade._model_funcs_facade import (
 # ghostos.facade is a composer of all the application level functions.
 # easy to use, but more likely are the tutorials of how to use ghostos
 # ghostos 内部所有模块都不能依赖 facade.
-def get_default_llm_config() -> dict:
-    return get_llm_configs().get("default", {})
+
 
 # todo: a facade agent is required

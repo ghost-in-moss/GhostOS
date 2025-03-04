@@ -1,20 +1,8 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List, Dict, Tuple
+from typing import List
 from typing_extensions import Self
-from ghostos.prompter import POM
-from ghostos.libraries.terminal import Terminal
-from pydantic import BaseModel, Field
 import pathlib
-
-
-class Project(POM, ABC):
-    """
-    the manager useful for managing a filesystem based project.
-    """
-
-    root: Directory
-    """root path of the project"""
 
 
 class Directory(ABC):
@@ -36,33 +24,6 @@ class Directory(ABC):
 
     watching: List[str]
     """watching filenames (relative to this directory), the content of the file will display in the context."""
-
-    @abstractmethod
-    def dump_context(self) -> str:
-        """
-        get the context of this directory. `context` means:
-
-        * `instruction.md` instructions of how to maintain this directory.
-        * list of sub filenames and directories (in Markdown list pattern), filtered by ignores.
-        * the watching files contents in this directory.
-        * the specialist agents for the maintainer of this directory.
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def instruction(self) -> str:
-        """
-        :return: the content of the instruction.md
-        """
-        pass
-
-    @abstractmethod
-    def ignored(self) -> List[str]:
-        """
-        :return: the ignore patterns combine self.ignores with `.gitignore`
-        """
-        pass
 
     @abstractmethod
     def lists(
@@ -92,15 +53,6 @@ class Directory(ABC):
         pass
 
     @abstractmethod
-    def abspath(self, path: str = "") -> pathlib.Path:
-        """
-        get the absolute path object from a relative one
-        :param path: path relative to this directory.
-        :return: pathlib.Path object
-        """
-        pass
-
-    @abstractmethod
     def describe(self, path: str, desc: str) -> None:
         """
         describe a sub file or directory. then you can see the description in the context.
@@ -109,17 +61,32 @@ class Directory(ABC):
         """
         pass
 
+    @abstractmethod
+    def file(self, filename: str) -> FileEditor:
+        """
+        get file editor.
 
-class File(ABC):
+        """
+        pass
+
+
+class FileEditor(ABC):
+    """
+    edit a file.
+    """
+
     path: pathlib.Path
+    """the file path object"""
 
     editable: bool
     """if the file is editable"""
 
     @abstractmethod
-    def read(self) -> str:
+    def read(self, with_line_num: bool = True) -> str:
         """
         read a readable (text mainly) file content.
+        if the file is image or audio, send a message of it.
+        :param with_line_num: if True, display line number (like 1|... ) at the beginning of each line.
         :return: the content of the file.
         """
         pass
@@ -130,6 +97,17 @@ class File(ABC):
         write content to the editable file.
         :param content: the content of the file.
         :param desc: description for this file.
+        """
+        pass
+
+    @abstractmethod
+    def insert(self, start: int, end: int, content: str) -> None:
+        """
+        write content into the editable file, replace the origin block from start line to end line.
+        if start line equals end line, insert content at the start line.
+        :param start: the start line of content.
+        :param end: the end line of content. if negative, count from the end of the file.
+        :param content: the content of the file.
         """
         pass
 

@@ -27,7 +27,10 @@ from ghostos_common.helpers.trans import gettext, ngettext, GHOSTOS_DOMAIN
 from ghostos_common.helpers.coding import reflect_module_code, unwrap
 from ghostos_common.helpers.openai import get_openai_key
 from ghostos_common.helpers.tree_sitter import tree_sitter_parse, code_syntax_check
-from ghostos_common.helpers.code_analyser import get_code_interface, get_code_interface_str
+from ghostos_common.helpers.code_analyser import (
+    get_code_interface, get_code_interface_str,
+    get_attr_source_from_code, get_attr_interface_from_code,
+)
 from ghostos_common.helpers.files import generate_directory_tree, list_dir, match_pathname
 
 if TYPE_CHECKING:

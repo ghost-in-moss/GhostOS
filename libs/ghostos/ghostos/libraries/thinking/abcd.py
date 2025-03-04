@@ -1,7 +1,7 @@
 from typing import List, Optional
 from abc import ABC, abstractmethod
 from ghostos.abcd import Operator
-from ghostos.prompter import POM
+from ghostos_common.prompter import POM
 
 
 class Reasoning(ABC):

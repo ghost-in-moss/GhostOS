@@ -2,7 +2,7 @@
 name = "ghostos"
 description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 readme = "README.md"
-version = "v0.4.0-dev8"
+version = "v0.4.0-dev10"
 authors = [
     { name = "zhuming", email = "thirdgerb@gmail.com" },
     { name = "Nile Zhou", email = "nilezhou123@gmail.com" },
@@ -25,9 +25,9 @@ dependencies = [
     "pysocks<2.0.0,>=1.7.1",
     "requests[socks]<3.0.0,>=2.32.3",
     "streamlit-paste-button<1.0.0,>=0.1.2",
-    "ghostos-moss>=0.2.0",
-    "ghostos-container>=0.2.0",
-    "ghostos-common>=0.2.3",
+    "ghostos-moss>=0.3.0",
+    "ghostos-container>=0.2.3",
+    "ghostos-common>=0.3.0",
 ]
 
 [tool.setuptools]
@@ -53,10 +53,9 @@ sphero = [
 
 
 [tool.uv.sources]
-ghostos-container = { path = "../container" }
-ghostos-common = { path = "../common" }
-ghostos-moss = { path = "../moss" }
-
+ghostos-container = { workspace = true }
+ghostos-common = { workspace = true }
+ghostos-moss = { workspace = true }
 
 [project.scripts]
 ghostos = "ghostos.scripts.cli:main"

@@ -20,7 +20,7 @@ def plus(a: int, b: int) -> int:
     return a + b
 
 
-class Moss(Parent, ABC):
+class Moss(Parent):
     """
     本地定义的 Moss 类. 每个 MOSS 文件里都应该有一个 Moss 类, 可以是 import 的也可以是本地定义的.
     记得它要继承自 Moss.

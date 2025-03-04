@@ -1,10 +1,13 @@
-from abc import ABC, abstractmethod
-from typing import Any, Optional, Dict, Tuple, Iterable, Union, Callable
-from typing_extensions import Protocol, is_typeddict
-from types import ModuleType
+from typing import Any, Optional, Dict, Tuple, Iterable
+from typing_extensions import is_typeddict
 from ghostos_moss.utils import (
     get_modulename,
     get_callable_definition,
+)
+from ghostos_common.prompter import (
+    get_defined_prompt,
+    PromptAbleObj,
+    PromptAbleClass,
 )
 from pydantic import BaseModel
 from dataclasses import is_dataclass
@@ -53,74 +56,6 @@ name 是为了去重, prompt 应该就是原有的 prompt.
 ignore_modules = {
     "pydantic",
 }
-
-
-def get_defined_prompt(value: Any) -> Union[str, None]:
-    attr = get_defined_prompt_attr(value)
-    if attr is None:
-        return None
-    if isinstance(attr, str):
-        return attr
-    return attr()
-
-
-def get_defined_prompt_attr(value: Any) -> Union[None, str, Callable[[], str]]:
-    if value is None:
-        return None
-    elif isinstance(value, PromptAbleObj):
-        return value.__prompt__
-
-    elif isinstance(value, type):
-        if issubclass(value, PromptAbleClass):
-            return value.__class_prompt__
-        # class without __class_prompt__ is not defined as prompter
-        if hasattr(value, "__class_prompt__"):
-            return getattr(value, "__class_prompt__")
-
-    elif hasattr(value, "__prompt__"):
-        prompter = getattr(value, "__prompt__")
-        if inspect.isfunction(value) or inspect.ismethod(value) or hasattr(prompter, '__self__'):
-            return prompter
-    elif isinstance(value, ModuleType) and '__prompt__' in value.__dict__:
-        prompter = value.__dict__['__prompt__']
-        return prompter
-    return None
-
-
-class PromptAbleObj(ABC):
-    """
-    拥有 __prompt__ 方法的类.
-    这里只是一个示范, 并不需要真正继承这个类, 只需要有 __prompt__ 方法或属性.
-    """
-
-    @abstractmethod
-    def __prompt__(self) -> str:
-        pass
-
-
-class PromptAbleProtocol(Protocol):
-    @abstractmethod
-    def __prompt__(self) -> str:
-        pass
-
-
-class PromptAbleClass(ABC):
-
-    @classmethod
-    @abstractmethod
-    def __class_prompt__(cls) -> str:
-        pass
-
-
-class PromptAbleClassProtocol(Protocol):
-
-    @classmethod
-    @abstractmethod
-    def __class_prompt__(cls) -> str:
-        pass
-
-
-PromptAble = Union[PromptAbleClass, PromptAbleObj, PromptAbleProtocol, PromptAbleClassProtocol]
 
 
 # todo: change function name

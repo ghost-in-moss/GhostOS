@@ -51,9 +51,6 @@ class MossGhostMethods(BaseMossGhostMethods):
             "editing": SimplePyModuleEditor("ghostos.facade")
         }
 
-    def is_safe_mode(self) -> bool:
-        return True
-
     def get_thought_chain(self, session: Session, runtime: MossRuntime) -> List[Thought]:
         # from ghostos.thoughts import SelfQuestionThought, NoticesThought
         from ghostos.core.runtime.events import EventTypes
