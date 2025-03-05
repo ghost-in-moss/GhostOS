@@ -2,7 +2,7 @@ from typing import Optional
 
 from ghostos_container import Container, Provider, INSTANCE
 from ghostos.libraries.terminal.abcd import Terminal, TerminalContext
-from ghostos.prompter import POM
+from ghostos_common.prompter import POM
 from ghostos.contracts.logger import LoggerItf
 import subprocess
 import shlex

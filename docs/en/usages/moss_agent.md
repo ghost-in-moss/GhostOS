@@ -227,7 +227,7 @@ class Moss(Parent):
 ```
 
 Furthermore, if the mounted data object
-implements [ghostos.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py),
+implements [ghostos_common.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py),
 MossAgent will automatically generate a prompt in the system instruction to be provided to the large model.
 
 For more information on this logic, see the `ghostos.ghosts.moss_agent.instructions.get_moss_context_prompter` function.

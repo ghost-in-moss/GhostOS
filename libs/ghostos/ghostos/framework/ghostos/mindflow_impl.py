@@ -12,7 +12,7 @@ from ghostos.core.messages import MessageKind, MessageKindParser, Message, Role
 from pprint import pprint
 from contextlib import redirect_stdout
 from io import StringIO
-from ghostos.prompter import PromptObjectModel
+from ghostos_common.prompter import PromptObjectModel
 
 
 class MindflowImpl(Mindflow, PromptObjectModel, Injection):

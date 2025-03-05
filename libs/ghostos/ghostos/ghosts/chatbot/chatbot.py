@@ -6,7 +6,7 @@ from ghostos.core.runtime import Event, GoThreadInfo
 from ghostos.core.messages import Role
 from ghostos.core.llms import Prompt, LLMFunc
 from ghostos_common.entity import ModelEntity
-from ghostos.prompter import TextPOM, PromptObjectModel
+from ghostos_common.prompter import TextPOM, PromptObjectModel
 from ghostos_common.identifier import Identifier
 from pydantic import Field
 

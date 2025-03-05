@@ -218,7 +218,7 @@ class Moss(Parent):
 ```
 
 进一步的,
-如果挂载的数据对象实现了 [ghostos.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py),
+如果挂载的数据对象实现了 [ghostos_common.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py),
 MossAgent 会自动在 system instruction 中生成 prompt 提供给大模型.
 
 相关逻辑详见 `ghostos.ghosts.moss_agent.instructions.get_moss_context_prompter` 函数.

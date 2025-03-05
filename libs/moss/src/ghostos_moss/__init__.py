@@ -1,3 +1,4 @@
+from typing import Optional
 from ghostos_container import Container
 from ghostos_moss.abcd import (
     Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
@@ -45,8 +46,16 @@ def moss_container() -> Container:
     from ghostos_moss.modules import DefaultModulesProvider
     container = Container()
     container.register(DefaultMOSSProvider())
-    container.register(DefaultModulesProvider())
     return container
+
+
+def get_moss_compiler(container: Optional[Container] = None) -> MossCompiler:
+    """
+    get moss compiler from container or make one.
+    """
+    if container is None:
+        container = moss_container()
+    return container.force_fetch(MossCompiler)
 
 
 def moss_test_suite() -> MossTestSuite:

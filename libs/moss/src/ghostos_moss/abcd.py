@@ -8,6 +8,7 @@ from ghostos_moss.pycontext import PyContext
 from ghostos_moss.prompts import (
     AttrPrompts, reflect_locals_imported, compile_attr_prompts
 )
+from ghostos_common.prompter import PromptObjectModel
 
 """
 MOSS 是 Model-oriented Operating System Simulation 的简写. 
@@ -56,6 +57,7 @@ __all__ = [
     'MOSS_TYPE_NAME', 'MOSS_VALUE_NAME',
     'MOSS_HIDDEN_MARK', 'MOSS_HIDDEN_UNMARK',
     'Injection',
+    'SelfUpdater',
 ]
 
 MOSS_TYPE_NAME = "Moss"
@@ -89,8 +91,20 @@ class Moss(ABC):
     __ignored__: List[str] = []
     """the ignored module names that do not need to watch the code interface of them"""
 
+    @abstractmethod
+    def pprint(self, *args, **kwargs) -> None:
+        """
+        pretty print
+        """
+        pass
+
 
 class Injection(ABC):
+    """
+    the hook interface for classes that bound to Moss
+    when inject into the moss instance, on_inject will be called.
+    when moss instance destroyed, on_destroy will be called.
+    """
 
     @abstractmethod
     def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
@@ -113,6 +127,13 @@ class MossCompiler(ABC):
         """
         MOSS 专用的 IoC 容器.
         用来给 moss 实例实现依赖注入.
+        """
+        pass
+
+    @abstractmethod
+    def with_default_moss_type(self, moss_type: Union[Type[Moss], str]) -> Self:
+        """
+        with default moss type if the Moss subclass is not defined at the module.
         """
         pass
 
@@ -421,9 +442,15 @@ class MossRuntime(ABC):
     @abstractmethod
     def moss_injections(self) -> Dict[str, Any]:
         """
-        get injections from moss
+        get injections that bound to moss
         """
         pass
+
+    def get_moss_injected_poms(self) -> Dict[str, PromptObjectModel]:
+        """
+        get injected PromptObjectModels that bound to moss
+        """
+        return {name: value for name, value in self.moss_injections().items() if isinstance(value, PromptObjectModel)}
 
     @abstractmethod
     def moss(self) -> Moss:
@@ -544,3 +571,49 @@ class Execution(NamedTuple):
     returns: Any
     std_output: str
     pycontext: PyContext
+
+
+class SelfUpdater(ABC):
+    """
+    update moss module code.
+    Notice:
+    * only after save(), the modified code is wrote to the module's source file.
+    * define a function or method without self updater will never be saved to the module.
+    * use code string to save, if you use \''' or \""" to embrace them, WATCH CAREFULLY about indent spaces and slashes.
+    """
+
+    @abstractmethod
+    def append(self, code: str) -> None:
+        """
+        append code to this module.
+        :param code: the code to append.
+        """
+        pass
+
+    @abstractmethod
+    def replace_attr(self, attr_name: str, code: str) -> None:
+        """
+        replace attr (function or class) in this module.
+        """
+        pass
+
+    @abstractmethod
+    def getsource(self) -> str:
+        """
+        get origin source of this module.
+        """
+        pass
+
+    @abstractmethod
+    def rewrite(self, code: str) -> None:
+        """
+        rewrite the whole content of this module.
+        """
+        pass
+
+    @abstractmethod
+    def save(self, reload: bool = False) -> None:
+        """
+        save the changes of this module to the file.
+        """
+        pass

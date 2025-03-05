@@ -1,8 +1,9 @@
 import importlib
 import inspect
-from types import ModuleType
-from typing import Optional, Any, Dict, get_type_hints, Type, List, Callable, ClassVar
+from types import ModuleType, FunctionType
+from typing import Optional, Any, Dict, get_type_hints, Type, List, Callable, ClassVar, Union
 import io
+from typing_extensions import Self
 
 from ghostos_container import Container, Provider
 from ghostos_moss.abcd import (
@@ -11,12 +12,16 @@ from ghostos_moss.abcd import (
     MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
     Injection,
 )
-from ghostos_moss.modules import Modules, ImportWrapper
+from ghostos_moss.modules import Modules, ImportWrapper, DefaultModules
 from ghostos_moss.prompts import reflect_code_prompt
 from ghostos_moss.pycontext import PyContext
 from ghostos_moss.exports import Exporter
 from ghostos_moss.magics import replace_magic_prompter
-from ghostos_common.helpers import generate_module_and_attr_name, code_syntax_check, get_code_interface_str
+from ghostos_moss.self_updater import SelfUpdaterProvider
+from ghostos_common.helpers import (
+    generate_module_and_attr_name, code_syntax_check, get_code_interface_str,
+    import_from_path,
+)
 from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"
@@ -43,7 +48,14 @@ class MossCompilerImpl(MossCompiler):
     def __init__(self, *, container: Container, pycontext: Optional[PyContext] = None):
         self._container = Container(parent=container, name="moss")
         self._pycontext = pycontext if pycontext else PyContext()
-        self._modules: Modules = container.force_fetch(Modules)
+        modules = container.get(Modules)
+        if modules is None:
+            modules = DefaultModules()
+            self._container.set(Modules, modules)
+        self._modules: Modules = modules
+        self._default_moss_type = Moss
+
+        # prepare values.
         self._predefined_locals: Dict[str, Any] = {
             # 默认代理掉 import.
             '__import__': ImportWrapper(self._modules),
@@ -67,6 +79,14 @@ class MossCompilerImpl(MossCompiler):
 
     def container(self) -> Container:
         return self._container
+
+    def with_default_moss_type(self, moss_type: Union[Type[Moss], str]) -> Self:
+        if isinstance(moss_type, str):
+            moss_type = import_from_path(moss_type, self._modules.import_module)
+        if not isinstance(moss_type, type) or not issubclass(moss_type, Moss):
+            raise TypeError(f"default moss type {moss_type} is not a subclass of Moss")
+        self._default_moss_type = moss_type
+        return self
 
     def pycontext(self) -> PyContext:
         return self._pycontext
@@ -111,6 +131,9 @@ class MossCompilerImpl(MossCompiler):
         module = MossTempModuleType(modulename)
         MossTempModuleType.__instance_count__ += 1
         module.__dict__.update(self._predefined_locals)
+        if MOSS_TYPE_NAME not in module.__dict__:
+            module.__dict__[MOSS_TYPE_NAME] = self._default_moss_type
+        module.__dict__["__origin_moss__"] = Moss
         module.__file__ = filename
         compiled = compile(code, modulename, "exec")
         exec(compiled, module.__dict__)
@@ -136,6 +159,10 @@ class MossCompilerImpl(MossCompiler):
         for attr_name, value in self._attr_prompts:
             attr_prompts[attr_name] = value
         self._compiled = True
+
+        # default moss container bindings
+        self._container.register(SelfUpdaterProvider())
+
         return MossRuntimeImpl(
             container=self._container,
             pycontext=self._pycontext.model_copy(deep=True),
@@ -248,6 +275,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._compiled = compiled
         self._source_code = source_code
         self._pycontext = pycontext
+        self._container.set(PyContext, self._pycontext)
         self._injections = injections
         self._runtime_std_output = ""
         # 初始化之后不应该为 None 的值.
@@ -257,7 +285,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         self._imported_attrs: Optional[Dict[str, Any]] = None
         self._closed: bool = False
         self._injected = set()
-        self._injected_types = set()
+        self._injected_types: Dict[Any, str] = {}
         self._moss: Moss = self._compile_moss()
         self._initialize_moss()
         self._ignored_modules = set(ignored_modules) | set(self._moss.__ignored__)
@@ -304,7 +332,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 continue
 
             # 记录所有定义过的类型.
-            self._injected_types.add(typehint)
+            self._injected_types[typehint] = name
 
             # 已经有的就不再注入.
             if hasattr(moss, name):
@@ -316,7 +344,6 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             inject(name, value)
 
         self._compiled.__dict__[MOSS_VALUE_NAME] = moss
-        self._compiled.__dict__[MOSS_TYPE_NAME] = moss_type
         fn = __moss_compiled__
         if __moss_compiled__.__name__ in self._compiled.__dict__:
             fn = self._compiled.__dict__[__moss_compiled__.__name__]
@@ -415,7 +442,8 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
     def get_imported_attrs_prompt(self, includes: List = None) -> str:
         # todo: make build class later
         imported_attrs = self.get_imported_attrs()
-        reverse_imported = {}
+        reverse_imported: Dict[Any, str] = {Moss: "__origin_moss__"}
+        # the types need to reflect.
         reflection_types = {Moss}
 
         # add all function and method to reflections.
@@ -426,9 +454,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 # only function or methods are reflected automatically
                 if inspect.isfunction(value) or inspect.ismethod(value):
                     reflection_types.add(value)
-                elif inspect.isclass(value) and issubclass(value, Exporter):
+                elif inspect.isclass(value):
                     # Exports class always add to reflect types.
-                    reflection_types.add(value)
+                    if issubclass(value, Exporter) or inspect.isabstract(value):
+                        reflection_types.add(value)
         if includes:
             for value in includes:
                 if value not in reverse_imported:
@@ -438,8 +467,10 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
         # add injected first .
         for injected_type in self._injected_types:
             # only imported value shall be reflected.
-            if injected_type in reverse_imported:
-                reflection_types.add(injected_type)
+            reflection_types.add(injected_type)
+            if injected_type not in reverse_imported:
+                property_name = self._injected_types[injected_type]
+                reverse_imported[injected_type] = f"{Moss}.{property_name}"
 
         for watched in self.moss().__watching__:
             if watched in reverse_imported:
@@ -473,7 +504,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     continue
                 name_desc = f" name=`{name}`" if name != item.__name__ else ""
                 if name_desc:
-                    block = f"#<local{name_desc}>\n{prompt}\n#</local>"
+                    block = f"#<attr{name_desc} module=`{item_module}`>\n{prompt}\n#</attr>"
                 else:
                     block = prompt
                 blocks.append(block)
@@ -490,7 +521,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 if not prompt:
                     continue
                 if name_desc:
-                    block = f"#<local{name_desc}>\n{prompt}\n#</local>"
+                    block = f"#<attr{name_desc} module=`{item_module}`>\n{prompt}\n#</attr>"
                 else:
                     block = prompt
                 blocks.append(block)
@@ -507,7 +538,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     continue
                 prompt = get_code_interface_str(source)
                 if prompt:
-                    block = f"#<local name=`{name}` module=`{item_module}`>\n{prompt}\n#</local>"
+                    block = f"#<attr name=`{name}` module=`{item_module}`>\n{prompt}\n#</attr>"
                     blocks.append(block)
             blocks.append("#</modules>")
         if len(others) > 0:
@@ -515,11 +546,9 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             for item in others:
                 name = reverse_imported[item]
                 prompt = reflect_code_prompt(item)
-                if not prompt:
-                    prompt = inspect.getsource(item)
                 if prompt:
                     type_ = type(item).__name__
-                    block = f"#<local name=`{name}` type=`{type_}`>\n{prompt}\n# </local>"
+                    block = f"#<attr name=`{name}` type=`{type_}`>\n{prompt}\n# </attr>"
                     blocks.append(block)
             blocks.append("#</others>")
 

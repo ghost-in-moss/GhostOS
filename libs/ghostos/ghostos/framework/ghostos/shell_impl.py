@@ -3,7 +3,7 @@ from typing import Union, Optional, Iterable, List, Tuple, TypeVar, Callable
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from ghostos.contracts.pool import Pool, DefaultPool
 from ghostos_container import Container, Provider
-from ghostos.abcd import Shell, Conversation, Ghost, Scope, Background
+from ghostos.abcd import Matrix, Conversation, Ghost, Scope, Background
 from ghostos.abcd.utils import get_ghost_driver
 from ghostos.core.messages import Message, Receiver, Role
 from ghostos.core.runtime import (
@@ -18,7 +18,7 @@ from threading import Lock
 from pydantic import BaseModel, Field
 from .conversation_impl import ConversationImpl, ConversationConf
 
-__all__ = ['ShellConf', 'ShellImpl', 'Shell']
+__all__ = ['ShellConf', 'MatrixImpl', 'Matrix']
 
 
 class ShellConf(BaseModel):
@@ -39,7 +39,7 @@ class ShellConf(BaseModel):
 G = TypeVar("G", bound=Ghost)
 
 
-class ShellImpl(Shell):
+class MatrixImpl(Matrix):
 
     def __init__(
             self,
@@ -76,8 +76,8 @@ class ShellImpl(Shell):
         self._background_started = False
         # bootstrap the container.
         # bind self
-        self._container.set(Shell, self)
-        self._container.set(ShellImpl, self)
+        self._container.set(Matrix, self)
+        self._container.set(MatrixImpl, self)
         self._container.set(ShellConf, config)
         self._container.bootstrap()
         self._conversations: List[Conversation] = []

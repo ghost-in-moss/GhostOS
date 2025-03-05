@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ghostos.prompter import PromptObjectModel
+from ghostos_common.prompter import PromptObjectModel
 
 """
 这里设计一个简单的笔记抽象给 Agent.

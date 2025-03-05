@@ -8,7 +8,7 @@ from ghostos.contracts.workspace import Workspace
 from ghostos.abcd import Conversation
 from ghostos_common.entity import ModelEntityMeta, from_entity_model_meta, to_entity_model_meta
 from ghostos_common.helpers import yaml_pretty_dump
-from ghostos.prompter import PromptObjectModel
+from ghostos_common.prompter import PromptObjectModel
 from ghostos_container import Container, Provider
 from ghostos_moss import Injection, MossRuntime
 from pydantic import BaseModel, Field

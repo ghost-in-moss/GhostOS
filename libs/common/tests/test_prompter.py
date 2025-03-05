@@ -1,4 +1,4 @@
-from ghostos.prompter import (
+from ghostos_common.prompter import (
     TextPOM, PromptAbleClass, PromptAbleObj, BasePOM,
     InspectPOM,
 )

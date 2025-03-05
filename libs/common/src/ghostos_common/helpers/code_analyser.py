@@ -1,11 +1,11 @@
-from typing import List
+from typing import List, Union, Dict
 from tree_sitter import (
     Node as TreeSitterNode,
 )
 from ghostos_common.helpers.tree_sitter import tree_sitter_parse
 from functools import lru_cache
 
-__all__ = ['get_code_interface', 'get_code_interface_str']
+__all__ = ['get_code_interface', 'get_code_interface_str', 'get_attr_source_from_code', 'get_attr_interface_from_code']
 
 
 @lru_cache(maxsize=256)
@@ -31,6 +31,65 @@ def get_code_interface(code: str) -> List[str]:
     except Exception as e:
         # 异常处理
         raise
+
+
+@lru_cache(maxsize=256)
+def get_attr_source_from_code(code: str) -> Dict[str, str]:
+    """
+    get function or class attribute code.
+    """
+    try:
+        data = {}
+        # 解析代码，获取语法树
+        tree = tree_sitter_parse(code)
+        root_node = tree.root_node
+
+        for child in root_node.children:
+            name = _get_func_or_class_name(child)
+            if name is not None:
+                data[name] = child.text.decode()
+        return data
+    except Exception as e:
+        # 异常处理
+        raise
+
+
+def get_attr_interface_from_code(code: str) -> Dict[str, str]:
+    """
+    get function or class interface map from the code.
+    """
+    data = {}
+    # 解析代码，获取语法树
+    tree = tree_sitter_parse(code)
+    root_node = tree.root_node
+
+    for child in root_node.children:
+        name = _get_func_or_class_name(child)
+        if name is not None:
+            interface = _get_child_interface(code, child)
+            if interface:
+                data[name] = interface
+    return data
+
+
+def _get_func_or_class_name(child: TreeSitterNode) -> Union[str, None]:
+    if child.type == 'function_definition':
+        # 处理函数定义
+        func_name = child.child_by_field_name('name').text.decode()
+        return func_name
+    elif child.type == 'class_definition':
+        class_name = child.child_by_field_name('name').text.decode()
+        return class_name
+
+    elif child.type == 'decorated_definition':
+        # 处理装饰器
+        return _get_decorator_target_name(child)
+    return None
+
+
+def _get_decorator_target_name(child: TreeSitterNode) -> str:
+    definition = child.children[1]
+    return _get_func_or_class_name(definition)
 
 
 def _get_child_interface_in_depth(code: str, node: TreeSitterNode, depth: int) -> str:

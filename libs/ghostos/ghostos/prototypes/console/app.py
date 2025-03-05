@@ -58,7 +58,7 @@ class ConsoleApp(Background):
         self._main_task_id = ""
         session = PromptSession("\n\n<<< ", )
         self._prompt_session = session
-        self._shell = self._os.create_shell(
+        self._shell = self._os.create_matrix(
             self._shell_name,
             process_id=self._process_id,
             providers=providers,

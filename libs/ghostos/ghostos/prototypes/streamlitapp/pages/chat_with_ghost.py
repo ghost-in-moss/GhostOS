@@ -27,7 +27,7 @@ from ghostos.core.messages import (
 )
 from streamlit.logger import get_logger
 from ghostos.abcd.realtime import OperatorName, RealtimeApp
-from ghostos.abcd import Shell, Conversation, Context
+from ghostos.abcd import Matrix, Conversation, Context
 from ghostos_common.identifier import get_identifier
 from ghostos_common.entity import to_entity_meta
 from ghostos_common.helpers import generate_import_path, yaml_pretty_dump, uuid, gettext as _
@@ -65,7 +65,7 @@ def main_chat():
             ShowThreadRoute(thread_id=task.thread_id, task_id=task.task_id).switch_page()
             return
         if st.button("Reset Task", use_container_width=True):
-            shell = Singleton.get(Shell, st.session_state, force=True)
+            shell = Singleton.get(Matrix, st.session_state, force=True)
             task = shell.get_or_create_task(conversation.get_ghost(), always_create=True, save=False)
             task.thread_id = uuid()
             shell.tasks().save_task(task)
@@ -314,7 +314,7 @@ def get_realtime_app(conversation: Conversation) -> Optional[RealtimeApp]:
 def get_conversation(route: GhostChatRoute) -> Optional[Conversation]:
     conversation = Singleton.get(Conversation, st.session_state, force=False)
     if not conversation or conversation.is_closed():
-        shell = Singleton.get(Shell, st.session_state)
+        shell = Singleton.get(Matrix, st.session_state)
         # create conversation
         try:
             conversation = shell.sync_task(route.task_id, force=True)

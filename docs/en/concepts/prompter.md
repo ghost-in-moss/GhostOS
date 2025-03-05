@@ -22,7 +22,7 @@ Some foreseeable benefits of `POM`:
 The implementation of this technology is not a goal of `GhostOS` itself, but since the open-source community has not yet
 provided a mature `Prompt Object Model` implementation, the author has implemented a simplified version.
 
-详见: [ghostos.prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py)
+详见: [ghostos_common.prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py)
 
 Take [MossAgent](/en/usages/moss_agent.md) as example:
 

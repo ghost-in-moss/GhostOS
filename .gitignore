@@ -10,6 +10,7 @@ __pycache__/
 *$py.class
 .ghostos.yml
 ghostos_ws/
+.ghostos_ws/
 
 # C extensions
 *.so
