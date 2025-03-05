@@ -41,19 +41,15 @@ class SelfUpdaterImpl(SelfUpdater):
         self.pycontext.code = code
 
     def save(self, reload: bool = False) -> None:
-        try:
-            if not self.pycontext.module:
-                return None
-            module = self.modules.import_module(self.pycontext.module)
-            filename = module.__file__
-            if os.path.exists(filename):
-                with open(filename, "w") as f:
-                    f.write(self.pycontext.code)
-                if reload:
-                    self.modules.reload(module)
-
-        except ImportError:
-            return
+        if not self.pycontext.module:
+            return None
+        module = self.modules.import_module(self.pycontext.module)
+        filename = module.__file__
+        if os.path.exists(filename):
+            with open(filename, "w") as f:
+                f.write(self.pycontext.code)
+            if reload:
+                self.modules.reload(module)
 
 
 class SelfUpdaterProvider(Provider[SelfUpdater]):

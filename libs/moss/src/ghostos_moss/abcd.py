@@ -100,6 +100,11 @@ class Moss(ABC):
 
 
 class Injection(ABC):
+    """
+    the hook interface for classes that bound to Moss
+    when inject into the moss instance, on_inject will be called.
+    when moss instance destroyed, on_destroy will be called.
+    """
 
     @abstractmethod
     def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
@@ -571,7 +576,10 @@ class Execution(NamedTuple):
 class SelfUpdater(ABC):
     """
     update moss module code.
-    Notice: only after save(), the modified code is wrote to the module's source file.
+    Notice:
+    * only after save(), the modified code is wrote to the module's source file.
+    * define a function or method without self updater will never be saved to the module.
+    * use code string to save, if you use \''' or \""" to embrace them, WATCH CAREFULLY about indent spaces and slashes.
     """
 
     @abstractmethod

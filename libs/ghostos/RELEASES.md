@@ -2,15 +2,20 @@
 
 # v0.4.0
 
+## v0.4.0-dev10
+
+defalt ghostos web agent is MossGhost with SelfUpdater
+
 ## v0.4.0-dev9
 
 move `ghostos.prompter` to `ghostos_common.prompter`
 
 ## v0.4.0-dev4
 
-split `ghostos_moss`, `ghostos_container` and `ghostos_common`. implements multi-ghosts baseline. 
+split `ghostos_moss`, `ghostos_container` and `ghostos_common`. implements multi-ghosts baseline.
 
 ## v0.4.0-dev3
+
 * remove some huge packages from dependencies.
 
 ## v0.4.0-dev2
@@ -20,55 +25,60 @@ split `ghostos_moss`, `ghostos_container` and `ghostos_common`. implements multi
 ## v0.4.0-dev1
 
 * done a lot of experiments about `meta-prompt` on agent level reasoning
-* add `MossGhost` and deprecate `MossAgent`, make the logic much more simple and clear. 
+* add `MossGhost` and deprecate `MossAgent`, make the logic much more simple and clear.
 * build `PyEditorAgent` and test about modify existing modules with code-driven tools.
 * refact `ghostos_common.prompter` about `PromptObjectModel`.
-* move `loop_session_event` and `handle_callers` to `Session` helping us to understand the logic. 
+* move `loop_session_event` and `handle_callers` to `Session` helping us to understand the logic.
 * llm services support `siliconflow` and `aliyun`
 * modify a lot of methods and functions names, make it more clear, at least to me
 * add `request_timeout` for stream first token
-* rename `Taskflow` to `Mindflow`, which is the origin name of it. 
+* rename `Taskflow` to `Mindflow`, which is the origin name of it.
 * change `FunctionCaller.id` to `FunctionCaller.call_id` and cause a lot of troubles. Hope worth it.
 * develop `pyeditor` module and test baseline cases.
-* move `MossAction` to `ghostos.abcd` for other agents. 
+* move `MossAction` to `ghostos.abcd` for other agents.
 * develop `notebook` library for some memory-related tests.
-* implements `approve` feature for dangerous agent. 
-* add `safe_mode` concepts for `approve` feature. 
-* fix a lots of annoying issues of `chat_with_ghost` page. 
+* implements `approve` feature for dangerous agent.
+* add `safe_mode` concepts for `approve` feature.
+* fix a lots of annoying issues of `chat_with_ghost` page.
 * refact the way to browse the streamlit web agent, make the pages switchable. I'm wrong about how to switch pages.
 * add `ghostos.facade` for future encapsule
-* remove some useless expired code with heart break. 
+* remove some useless expired code with heart break.
 
 ## v0.4.0-dev0
 
-Features: 
+Features:
+
 * Restore the feature `functional token` for models that do not support function call.
-  * add xml functional token pipe to parse output message chunks, generate `FunctionCaller` by functional tokens.
-  * OpenAIAdapter now support functional token instructions and output parser.
+    * add xml functional token pipe to parse output message chunks, generate `FunctionCaller` by functional tokens.
+    * OpenAIAdapter now support functional token instructions and output parser.
 * `deepseek-reasoner` now support functional token, so it can use MOSS protocol to execute python code.
-  * support `last_message_shall_be_assistant_or_user` feature.
-  * support `support_functional_tokens` feature.
-* Session add `respond_buffer` method, send messages while saving, in case responding message between `function call` and `function output` which many models not support.
+    * support `last_message_shall_be_assistant_or_user` feature.
+    * support `support_functional_tokens` feature.
+* Session add `respond_buffer` method, send messages while saving, in case responding message between `function call`
+  and `function output` which many models not support.
 * Add `Replier` library for agent directly reply in the generated MOSS code.
 
 Test cases:
+
 * `ghostos web ghostos.demo.test_agents.deepseek_chat_func_tokens`
 * `ghostos web ghostos.demo.test_agents.deepseek_chat_r1_func_tokens`
 
 Small changes:
+
 * move `ModelConf.use_tools` to `Compatible.function_call_use_tool`.
-* add more options to llms `Compatible`, to compatible with the shitty features of various models. 
+* add more options to llms `Compatible`, to compatible with the shitty features of various models.
 * rename `ghostos.core.message.pipeline.pipine` function to `run_pipeline`
 * rename `MossAction.unmarshal_arguments` to `MossAction.unmarshal_code`
 * streamlit app module `prompt` now display functional tokens info about prompt.
 
 Breaking Changes:
-* rename MossAgent attribute `instructions` to `instruction` 
+
+* rename MossAgent attribute `instructions` to `instruction`
 * `ghostos web` now do not open browser as default (set streamlit app option `headless` to false as default)
 
 Bug fixes:
-* fix the `OpenAIAdapter` parsed prompt is not the same with the saved prompt.
 
+* fix the `OpenAIAdapter` parsed prompt is not the same with the saved prompt.
 
 # v0.3.0
 

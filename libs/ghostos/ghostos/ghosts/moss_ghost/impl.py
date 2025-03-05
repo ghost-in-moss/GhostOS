@@ -23,7 +23,7 @@ from ghostos.core.llms import (
 )
 from ghostos.core.model_funcs import TruncateThreadByLLM
 from ghostos_container import Provider
-from ghostos_common.helpers import md5, yaml_pretty_dump
+from ghostos_common.helpers import md5, yaml_pretty_dump, parse_import_path_module_and_attr_name
 
 __all__ = ['MossGhost', 'MossGhostDriver', 'BaseMossGhostMethods']
 
@@ -369,7 +369,7 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
     __class_methods: ClassVar[Dict] = {}
 
     @classmethod
-    def find_moss_ghost_methods(cls, module: ModuleType) -> Type[Self]:
+    def find_moss_ghost_methods(cls, module: ModuleType) -> Optional[Type[Self]]:
         name = module.__name__
         if name in cls.__class_methods:
             return cls.__class_methods[name]
@@ -386,14 +386,24 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
                 if issubclass(value, BaseMossAgentMethods):
                     wrapper = value
 
-        if not wrapper:
-            wrapper = cls
-        cls.__class_methods[name] = wrapper
         return wrapper
 
     @classmethod
     def new_from_module(cls, agent: MossGhost, module: ModuleType) -> Self:
+        # 如果当前 module 存在 methods 定义, 用当前的.
         wrapper = cls.find_moss_ghost_methods(module)
+        if wrapper is None:
+            if agent.default_moss_type is not None:
+                # 如果定义了 default moss type, 去目标目录找.
+                default_moss_type_module_name, attr_name = parse_import_path_module_and_attr_name(
+                    agent.default_moss_type,
+                )
+                default_moss_type_module = import_from_path(default_moss_type_module_name)
+                wrapper = cls.find_moss_ghost_methods(default_moss_type_module)
+        # 彻底找不到的话, 用默认的.
+        if wrapper is None:
+            wrapper = cls
+
         return wrapper(agent, module)
 
     def __del__(self):

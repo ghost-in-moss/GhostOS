@@ -182,7 +182,7 @@ class MossAction(Action, PromptPipe):
                 message = caller.new_output(output)
             else:
                 # add empty message since the function output is required.
-                message = caller.new_output("executed")
+                message = caller.new_output("moss executed, no std output")
             session.respond([message])
             if op:
                 return op

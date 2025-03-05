@@ -1,7 +1,8 @@
+import inspect
 from abc import ABC, abstractmethod
 from typing import Optional, Type, Union, Iterable, Tuple
 from types import ModuleType
-from importlib import import_module, reload
+from importlib import import_module, reload as reload_module
 import pkgutil
 
 from ghostos_container import Provider, Container
@@ -14,11 +15,25 @@ __all__ = [
 class Modules(ABC):
 
     @abstractmethod
-    def import_module(self, modulename) -> ModuleType:
+    def import_module(self, modulename: str) -> ModuleType:
         """
         引用一个模块或抛出异常.
         :param modulename: 模块全路径.
         :exception: ModuleNotFoundError
+        """
+        pass
+
+    @abstractmethod
+    def getsource(self, modulename: str) -> str:
+        """
+        get source from a module.
+        """
+        pass
+
+    @abstractmethod
+    def save_source(self, modulename: str, source: str, reload: bool = False) -> None:
+        """
+        save source code to a module, and reload it.
         """
         pass
 
@@ -61,8 +76,21 @@ class ImportWrapper:
 
 
 class DefaultModules(Modules):
-    def import_module(self, modulename) -> ModuleType:
+    def import_module(self, modulename: str) -> ModuleType:
         return import_module(modulename)
+
+    def getsource(self, modulename: str) -> str:
+        module = self.import_module(modulename)
+        source = inspect.getsource(module)
+        return source
+
+    def save_source(self, modulename: str, source: str, reload: bool = False) -> None:
+        module = self.import_module(modulename)
+        file = module.__file__
+        with open(file, 'w') as f:
+            f.write(source)
+        if reload:
+            self.reload(module)
 
     def iter_modules(self, module: Union[str, ModuleType]) -> Iterable[Tuple[str, bool]]:
         if isinstance(module, str):
@@ -81,7 +109,7 @@ class DefaultModules(Modules):
     def reload(self, module: Union[str, ModuleType]):
         if isinstance(module, str):
             module = self.import_module(module)
-        reload(module)
+        reload_module(module)
 
 
 class DefaultModulesProvider(Provider[Modules]):

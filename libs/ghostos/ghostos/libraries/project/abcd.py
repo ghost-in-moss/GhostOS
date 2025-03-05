@@ -1,8 +1,115 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict, Union
+from types import FunctionType, ModuleType
 from typing_extensions import Self
 import pathlib
+
+
+class DevDesk(ABC):
+    """
+    the dev contxt for a certain developing task.
+    You can change the attributes to
+    """
+
+    title: str
+    """title of this dev desk"""
+
+    directory: str
+    """the directory of this dev desk located. """
+
+    description: str
+    """describe what-for of this dev desk"""
+
+    _IMPORT_PATH = str
+    """the python import path in pattern [modulename:attr_name], e.g. 'foo', 'foo.bar', 'foo.bar:baz' """
+
+    watching_interfaces: List[_IMPORT_PATH]
+    """
+    watching a bunch of python module/class/func interfaces. 
+    dev context will provide the interface of them for you
+    """
+
+    watching_source: List[_IMPORT_PATH]
+    """
+    watching a bunch of python module/class/func sources.
+    """
+
+    knowledge: List[str]
+    """
+    filenames of markdown files that providing knowledge in the context. 
+    a markdown file is a piece of knowledge. 
+    """
+
+    reading_files: List[str]
+    """
+    the filenames (relative to the directory) that you are reading.
+    the content of the files will display in context, with line number before each line.
+    """
+
+    notes: Dict[str, str]
+    """
+    write notes that you should not forget. 
+    """
+
+    @abstractmethod
+    def dump_context(self) -> str:
+        """
+        :return: the context of this DevContext as a string
+        """
+        pass
+
+    @abstractmethod
+    def read_interface(
+            self,
+            target: Union[str, FunctionType, ModuleType, type],
+            *,
+            watching: bool = False,
+    ) -> str:
+        """
+        read code interface from a target.
+        :param target:  import path or objects that can be called by inspect.getsource
+        :param watching: if watching, will always watch it.
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def read_source(
+            self,
+            target: Union[str, FunctionType, ModuleType, type],
+            *,
+            watching: bool = False,
+    ) -> str:
+        """
+        read source code from a target.
+        :param target:  import path or objects that can be called by inspect.getsource
+        :param watching: if watching, will always watch it.
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def get_context(self, title: str) -> Self:
+        """
+        get an existing dev context by title, or create one.
+        :param title: the title of the dev context
+        """
+        pass
+
+    @abstractmethod
+    def switch(self, dev_context: Self):
+        """
+        switch self to another dev context.
+        """
+        pass
+
+    @abstractmethod
+    def save(self) -> None:
+        """
+        save the current dev context.
+        """
+        pass
 
 
 class Directory(ABC):
@@ -19,11 +126,18 @@ class Directory(ABC):
     path: pathlib.Path
     """the pathlib.Path object of the directory"""
 
+    default_list_depth: int
+    """the list depth for the directory context"""
+
     ignores: List[str]
     """the patterns to ignore file or directory. combined with `.gitignore`"""
 
-    watching: List[str]
-    """watching filenames (relative to this directory), the content of the file will display in the context."""
+    @abstractmethod
+    def dump_context(self) -> str:
+        """
+        :return: the context of the directory
+        """
+        pass
 
     @abstractmethod
     def lists(
@@ -58,64 +172,5 @@ class Directory(ABC):
         describe a sub file or directory. then you can see the description in the context.
         :param path: relative to this directory.
         :param desc: description.
-        """
-        pass
-
-    @abstractmethod
-    def file(self, filename: str) -> FileEditor:
-        """
-        get file editor.
-
-        """
-        pass
-
-
-class FileEditor(ABC):
-    """
-    edit a file.
-    """
-
-    path: pathlib.Path
-    """the file path object"""
-
-    editable: bool
-    """if the file is editable"""
-
-    @abstractmethod
-    def read(self, with_line_num: bool = True) -> str:
-        """
-        read a readable (text mainly) file content.
-        if the file is image or audio, send a message of it.
-        :param with_line_num: if True, display line number (like 1|... ) at the beginning of each line.
-        :return: the content of the file.
-        """
-        pass
-
-    @abstractmethod
-    def write(self, content: str, desc: str = "") -> None:
-        """
-        write content to the editable file.
-        :param content: the content of the file.
-        :param desc: description for this file.
-        """
-        pass
-
-    @abstractmethod
-    def insert(self, start: int, end: int, content: str) -> None:
-        """
-        write content into the editable file, replace the origin block from start line to end line.
-        if start line equals end line, insert content at the start line.
-        :param start: the start line of content.
-        :param end: the end line of content. if negative, count from the end of the file.
-        :param content: the content of the file.
-        """
-        pass
-
-    @abstractmethod
-    def ask(self, question: str) -> str:
-        """
-        ask question about the file, some llm will answer the question.
-        :param question: your question about the file
-        :return: answer
         """
         pass

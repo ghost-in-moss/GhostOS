@@ -1,6 +1,6 @@
 import importlib
 import inspect
-from types import ModuleType
+from types import ModuleType, FunctionType
 from typing import Optional, Any, Dict, get_type_hints, Type, List, Callable, ClassVar, Union
 import io
 from typing_extensions import Self
