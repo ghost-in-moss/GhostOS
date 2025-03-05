@@ -51,3 +51,11 @@ def test_model_prompters():
 
     t = TestPrompter()
     assert "TestPrompter" in t.get_prompt(Container())
+
+
+def test_pom_with_children():
+    t = TextPOM(title="1", content="")
+    t.add_child(TextPOM(title="2", content="hello world"))
+    c = Container()
+    prompt = t.get_prompt(c)
+    assert "2" in prompt

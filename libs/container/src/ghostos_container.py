@@ -653,6 +653,8 @@ class ProviderAdapter(Generic[INSTANCE], Provider[INSTANCE]):
 def get_caller_info(backtrace: int = 1, with_full_file: bool = True) -> str:
     stack = inspect.stack()
     # 获取调用者的上下文信息
+    if backtrace > len(stack) - 1:
+        backtrace = len(stack) - 1
     caller_frame_record = stack[backtrace]
     frame = caller_frame_record[0]
     info = inspect.getframeinfo(frame)

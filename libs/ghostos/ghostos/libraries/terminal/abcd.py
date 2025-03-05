@@ -27,7 +27,7 @@ class Terminal(ABC):
         Execute a shell command and return structured results.
 
         Args:
-            commands: Command lines to execute
+            commands: Command lines to execute. each command is a full line command.
             (Note: Implementation should handle proper shell escaping)
             timeout: Timeout in seconds
 

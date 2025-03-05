@@ -11,7 +11,7 @@ from ghostos.abcd import Ghost
 from pydantic import BaseModel, Field
 from ghostos_common.entity import EntityMeta, to_entity_meta
 from ghostos.ghosts.moss_ghost import new_moss_ghost
-from ghostos.demo.moss_libs.self_updater_moss import Moss
+from ghostos.moss_libs.self_updater_moss import Moss
 from streamlit.web.cli import main_run as run_streamlit_web
 from os import path
 import inspect
@@ -23,7 +23,7 @@ __all__ = [
     'find_ghost_by_file_or_module',
     'check_ghostos_workspace_exists',
     'parse_args_modulename_or_filename',
-    'GhostsConf', 'GhostInfo',
+    'DirGhostsConf', 'GhostInfo',
     'get_streamlit_config_flag_options',
     'start_streamlit_prototype_cli',
 ]
@@ -51,8 +51,8 @@ def get_ghost_by_cli_argv() -> Tuple[GhostInfo, ModuleType, str, bool]:
 def find_ghost_by_file_or_module(filename_or_modulename: str) -> Tuple[GhostInfo, ModuleType, str, bool]:
     found = get_or_create_module_from_name(filename_or_modulename, "ghostos.temp.ghost")
     # ghost info
-    ghosts_conf = GhostsConf.load_from(filename_or_modulename)
-    ghost_key = GhostsConf.file_ghost_key(filename_or_modulename)
+    ghosts_conf = DirGhostsConf.load_from(filename_or_modulename)
+    ghost_key = DirGhostsConf.file_ghost_key(filename_or_modulename)
     if ghost_key in ghosts_conf.ghosts:
         ghost_info = ghosts_conf.ghosts[ghost_key]
         return ghost_info, found.module, found.filename, found.is_temp
@@ -142,7 +142,7 @@ class GhostInfo(BaseModel):
     context: Optional[EntityMeta] = Field(None)
 
 
-class GhostsConf(BaseModel):
+class DirGhostsConf(BaseModel):
     ghosts: Dict[str, GhostInfo] = Field(
         default_factory=dict,
         description="ghost info dict, from filename to ghost info",

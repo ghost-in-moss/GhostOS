@@ -56,8 +56,8 @@ def run(moss: Moss):
     :param moss: instance of the class `Moss`, the properties on it will be injected with runtime implementations.
     :return: Optional[Operator] 
              if return None, the outer system will perform default action, or observe the values you printed.
-             Otherwise, the outer system will execute the operator. 
-             You shall only return operator by the libraries provided on `moss`.
+             Otherwise, the outer system will execute the Operator, which is your mindflow operator.
+             if some methods return Operator, you can use them to control your mindflow.
     \"""
 ```
 
@@ -222,7 +222,7 @@ def get_moss_context_pom(title: str, runtime: MossRuntime) -> PromptObjectModel:
         if isinstance(injection, PromptObjectModel):
             prompter = TextPOM(
                 title=f"property `moss.{name}`",
-                content=injection.self_prompt(container),
+                content=injection.get_prompt(container),
             )
             children.append(prompter)
 
