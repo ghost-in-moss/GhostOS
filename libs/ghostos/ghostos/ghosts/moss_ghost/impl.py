@@ -366,14 +366,8 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
                 self._moss_runtime = compiler.compile(self.agent.module)
         return self._moss_runtime
 
-    __class_methods: ClassVar[Dict] = {}
-
     @classmethod
     def find_moss_ghost_methods(cls, module: ModuleType) -> Optional[Type[Self]]:
-        name = module.__name__
-        if name in cls.__class_methods:
-            return cls.__class_methods[name]
-
         wrapper = None
         if cls.EXPECT_CLASS_NAME in module.__dict__:
             wrapper = module.__dict__[cls.EXPECT_CLASS_NAME]

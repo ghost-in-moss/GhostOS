@@ -3,61 +3,51 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Union
 from types import FunctionType, ModuleType
 from typing_extensions import Self
+from pydantic import BaseModel, Field
+from ghostos.abcd import Operator
 import pathlib
 
+_IMPORT_PATH = str
+"""the python import path in pattern [modulename:attr_name], e.g. 'foo', 'foo.bar', 'foo.bar:baz' """
 
-class DevDesk(ABC):
+
+class PyDevCtx(BaseModel, ABC):
     """
-    the dev contxt for a certain developing task.
-    You can change the attributes to
-    """
-
-    title: str
-    """title of this dev desk"""
-
-    directory: str
-    """the directory of this dev desk located. """
-
-    description: str
-    """describe what-for of this dev desk"""
-
-    _IMPORT_PATH = str
-    """the python import path in pattern [modulename:attr_name], e.g. 'foo', 'foo.bar', 'foo.bar:baz' """
-
-    watching_interfaces: List[_IMPORT_PATH]
-    """
-    watching a bunch of python module/class/func interfaces. 
-    dev context will provide the interface of them for you
+    python context for a certain kind of develop jobs.
+    you can use it to remember important python context and never forget them in long-term.
     """
 
-    watching_source: List[_IMPORT_PATH]
-    """
-    watching a bunch of python module/class/func sources.
-    """
+    title: str = Field(description="title for this context")
 
-    knowledge: List[str]
-    """
-    filenames of markdown files that providing knowledge in the context. 
-    a markdown file is a piece of knowledge. 
-    """
+    desc: str = Field(default="", description="description for this context")
 
-    reading_files: List[str]
-    """
-    the filenames (relative to the directory) that you are reading.
-    the content of the files will display in context, with line number before each line.
-    """
+    instructions: Dict[str, str] = Field(
+        default_factory=dict,
+        description="write instructions by yourself to follow"
+    )
 
-    notes: Dict[str, str]
-    """
-    write notes that you should not forget. 
-    """
+    notes: Dict[str, str] = Field(
+        default_factory=dict,
+        description="record something in case of forgetting"
+    )
 
-    @abstractmethod
-    def dump_context(self) -> str:
-        """
-        :return: the context of this DevContext as a string
-        """
-        pass
+    examples: List[str] = Field(
+        default_factory=list,
+        description="use python module as examples for developing.",
+    )
+
+    interfaces: List[_IMPORT_PATH] = Field(
+        default_factory=list,
+        description=(
+            "watching a bunch of python module/class/func interfaces."
+            "dev context will provide the interface of them for you"
+        )
+    )
+
+    sources: List[_IMPORT_PATH] = Field(
+        default_factory=list,
+        description="watching a bunch of python module/class/func sources."
+    )
 
     @abstractmethod
     def read_interface(
@@ -70,7 +60,6 @@ class DevDesk(ABC):
         read code interface from a target.
         :param target:  import path or objects that can be called by inspect.getsource
         :param watching: if watching, will always watch it.
-        :return:
         """
         pass
 
@@ -85,29 +74,13 @@ class DevDesk(ABC):
         read source code from a target.
         :param target:  import path or objects that can be called by inspect.getsource
         :param watching: if watching, will always watch it.
-        :return:
         """
         pass
 
     @abstractmethod
-    def get_context(self, title: str) -> Self:
+    def full_context(self) -> str:
         """
-        get an existing dev context by title, or create one.
-        :param title: the title of the dev context
-        """
-        pass
-
-    @abstractmethod
-    def switch(self, dev_context: Self):
-        """
-        switch self to another dev context.
-        """
-        pass
-
-    @abstractmethod
-    def save(self) -> None:
-        """
-        save the current dev context.
+        dump the context into nature language string.
         """
         pass
 
@@ -118,24 +91,34 @@ class Directory(ABC):
     the principles of files management are:
     1. You can manage the files and sub dirs in this directory, but not parent directories.
     2. Markdown as knowledge: the Markdown files in the directory are the knowledge for you.
-    3. Directory library can not add/remove/move files or directory itself. Other library may do.
-
     this library will get more features in future versions.
     """
 
     path: pathlib.Path
     """the pathlib.Path object of the directory"""
 
-    default_list_depth: int
-    """the list depth for the directory context"""
-
-    ignores: List[str]
-    """the patterns to ignore file or directory. combined with `.gitignore`"""
+    ctx: PyDevCtx
+    """the dev context of this directory"""
 
     @abstractmethod
-    def dump_context(self) -> str:
+    def full_context(self) -> str:
         """
         :return: the context of the directory
+        """
+        pass
+
+    @abstractmethod
+    def dev_contexts(self) -> Dict[str, PyDevCtx]:
+        """
+        :return: all the dev contexts in this directory.
+        """
+        pass
+
+    @abstractmethod
+    def new_dev_context(self, title: str, desc: str) -> PyDevCtx:
+        """
+        create a new dev context for some jobs.
+        the context will save to the directory
         """
         pass
 
@@ -170,7 +153,69 @@ class Directory(ABC):
     def describe(self, path: str, desc: str) -> None:
         """
         describe a sub file or directory. then you can see the description in the context.
-        :param path: relative to this directory.
+        :param path: relative to this directory. if `.`, means describe the directory itself
         :param desc: description.
+        """
+        pass
+
+
+class File(ABC):
+    path: pathlib.Path
+    """the pathlib.Path object of the directory"""
+
+    ctx: PyDevCtx
+    """the dev context of this file"""
+
+    @abstractmethod
+    def read(self, line_number: bool = True) -> str:
+        """
+        read content from the file.
+        :return: the real content of the file will be embraced with <content>...</content> mark
+        """
+        pass
+
+    @abstractmethod
+    def write(self, content: str, append: bool = False) -> None:
+        """
+        write content to the file.
+        """
+        pass
+
+    @abstractmethod
+    def insert(self, content: str, start: int, end: int) -> None:
+        """
+        use content to relace the origin content by start line and end line.
+        """
+        pass
+
+
+class ProjectManager(ABC):
+    """
+    project manager
+    you are provided with Directory, and DevContext that helping you to watch useful tools.
+    """
+
+    root: Directory
+    """the root directory of the project."""
+
+    working: Directory
+    """the current directory of the project."""
+
+    editing: Union[File, None]
+    """the editing file of the project."""
+
+    @abstractmethod
+    def work_on(self, dir_path: str) -> Operator:
+        """
+        change the working directory to dir_path, relative to the root directory.
+        :param dir_path: if empty or `~`, will check out to the root.
+        """
+        pass
+
+    @abstractmethod
+    def edit(self, file_path: str) -> Operator:
+        """
+        focus to edit the file in the project
+        :param file_path: relative to the working directory.
         """
         pass

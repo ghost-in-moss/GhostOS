@@ -2,6 +2,10 @@
 
 # v0.4.0
 
+## v0.4.0-dev13
+
+update with project manager baseline. 
+
 ## v0.4.0-dev10
 
 defalt ghostos web agent is MossGhost with SelfUpdater

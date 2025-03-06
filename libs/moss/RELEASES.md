@@ -1,5 +1,9 @@
 # v0.3
 
+## v0.3.2
+
+small fixes
+
 ## v0.3.1 
 
 * add some prompt to SelfUpdater

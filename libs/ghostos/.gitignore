@@ -1,5 +1,6 @@
 # ide
 .idea/
+.ghostos_dir.yml
 dist
 debug.log
 .DS_Store

@@ -1,2 +1,2 @@
-shells:
-  console: {}
+matrices:
+  console: { }

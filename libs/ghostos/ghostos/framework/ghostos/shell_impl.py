@@ -18,10 +18,10 @@ from threading import Lock
 from pydantic import BaseModel, Field
 from .conversation_impl import ConversationImpl, ConversationConf
 
-__all__ = ['ShellConf', 'MatrixImpl', 'Matrix']
+__all__ = ['MatrixConf', 'MatrixImpl', 'Matrix']
 
 
-class ShellConf(BaseModel):
+class MatrixConf(BaseModel):
     max_session_steps: int = Field(
         default=10,
     )
@@ -43,7 +43,7 @@ class MatrixImpl(Matrix):
 
     def __init__(
             self,
-            config: ShellConf,
+            config: MatrixConf,
             container: Container,
             process: GoProcess,
             providers: List[Provider],
@@ -78,7 +78,7 @@ class MatrixImpl(Matrix):
         # bind self
         self._container.set(Matrix, self)
         self._container.set(MatrixImpl, self)
-        self._container.set(ShellConf, config)
+        self._container.set(MatrixConf, config)
         self._container.bootstrap()
         self._conversations: List[Conversation] = []
 

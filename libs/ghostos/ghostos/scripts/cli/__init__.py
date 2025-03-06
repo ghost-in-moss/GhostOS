@@ -198,8 +198,7 @@ or `git clone https://github.com/ghost-in-moss/GhostOS` then `docsify serve`
 # todo: 迁移到子文件.
 @main.command("moss")
 @click.argument('python_file_or_module')
-@click.option("--tokens", "-t", default=False, is_flag=True, help="Show tokens count")
-def dump_moss_context(python_file_or_module: str, tokens: bool):
+def dump_moss_context(python_file_or_module: str):
     """
     dump moss context from a python file or module
     """
@@ -279,13 +278,6 @@ def dump_moss_context(python_file_or_module: str, tokens: bool):
                 title="pycontext",
             )
         )
-
-        if tokens:
-            from tiktoken import get_encoding
-            enc = get_encoding("gpt2")
-            code_tokens_count = len(enc.encode(code))
-            imported_prompt_tokens_count = len(enc.encode(imported_prompt))
-            console.print(f"code tokens:{code_tokens_count}, imported tokens:{imported_prompt_tokens_count}")
 
 
 @main.command("help")

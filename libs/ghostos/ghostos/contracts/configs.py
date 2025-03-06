@@ -97,7 +97,7 @@ class YamlConfig(Config, BaseModel):
         return cls.relative_path
 
     @classmethod
-    def unmarshal(cls, content: str) -> "Config":
+    def unmarshal(cls, content: str) -> Self:
         value = yaml.safe_load(content)
         return cls(**value)
 

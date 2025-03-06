@@ -5,7 +5,7 @@ authors = [
 ]
 license = { text = "MIT" }
 dependencies = [
-    "ghostos==0.4.0.dev8",
+    "ghostos",
 ]
 requires-python = ">=3.10"
 name = "ghostos-monorepo"

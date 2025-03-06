@@ -71,7 +71,7 @@ def get_module_attr(module, attr_name: str) -> Optional[Any]:
 def generate_module_and_attr_name(value: Any) -> Tuple[str, Optional[str]]:
     if inspect.ismodule(value):
         return value.__name__, None
-    elif inspect.isclass(value) or inspect.isfunction(value):
+    elif inspect.isclass(value) or inspect.isfunction(value) or hasattr(value, "__module__"):
         modulename = getattr(value, '__module__', '')
         if modulename.endswith(".__init__"):
             modulename = modulename[:-len(".__init__")]

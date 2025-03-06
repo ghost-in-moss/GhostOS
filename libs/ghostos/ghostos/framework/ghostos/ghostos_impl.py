@@ -9,14 +9,17 @@ from ghostos.contracts.variables import Variables
 from ghostos.contracts.workspace import Workspace
 from ghostos.contracts.logger import LoggerItf, get_ghostos_logger
 from pydantic import Field
-from .shell_impl import MatrixImpl, ShellConf
+from .shell_impl import MatrixImpl, MatrixConf
 
 __all__ = ['GhostOS', "GhostOSImpl", "GhostOSConfig", "GhostOSProvider"]
 
 
 class GhostOSConfig(YamlConfig):
     relative_path = "ghostos_conf.yml"
-    shells: Dict[str, ShellConf] = Field(
+    matrices: Dict[str, MatrixConf] = Field(
+        default_factory=lambda: dict(
+            example=MatrixConf()
+        ),
         description="the shell configurations",
     )
 
@@ -59,10 +62,10 @@ class GhostOSImpl(GhostOS):
             providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
     ) -> Matrix:
-        if name not in self._ghostos_config.shells:
-            shell_conf = ShellConf()
+        if name not in self._ghostos_config.matrices:
+            shell_conf = MatrixConf()
         else:
-            shell_conf = self._ghostos_config.shells[name]
+            shell_conf = self._ghostos_config.matrices[name]
         if not shell_id:
             shell_id = name
         process = self._processes.get_process(shell_id)

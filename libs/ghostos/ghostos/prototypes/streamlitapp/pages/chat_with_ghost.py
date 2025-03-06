@@ -32,7 +32,7 @@ from ghostos_common.identifier import get_identifier
 from ghostos_common.entity import to_entity_meta
 from ghostos_common.helpers import generate_import_path, yaml_pretty_dump, uuid, gettext as _
 from ghostos.core.runtime import GoTasks
-from ghostos.scripts.cli.utils import GhostsConf, GhostInfo
+from ghostos.scripts.cli.utils import DirGhostsConf, GhostInfo
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 from pydantic import BaseModel
 import inspect
@@ -513,7 +513,7 @@ def render_ghost_settings(conversation: Conversation, route: GhostChatRoute):
         if isinstance(ghost, BaseModel):
             data, submitted = srj.pydantic_instance_form(ghost)
             if route.filename and submitted:
-                ghosts_conf = GhostsConf.load_from(route.filename)
+                ghosts_conf = DirGhostsConf.load_from(route.filename)
                 key = ghosts_conf.file_ghost_key(route.filename)
                 info = GhostInfo(ghost=to_entity_meta(data))
                 ghosts_conf.ghosts[key] = info
