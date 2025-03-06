@@ -9,7 +9,7 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "ghostos-container>=0.2.1",
+    "ghostos-container>=0.2.4",
     "pydantic<3.0.0,>=2.7.0",
     "pyyaml<7.0.0,>=6.0.1",
     "tree-sitter<=0.24.0,>=0.23.0",
