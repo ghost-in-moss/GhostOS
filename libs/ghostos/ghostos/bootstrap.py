@@ -1,7 +1,11 @@
 from __future__ import annotations
+
+import os
+import sys
+
 import yaml
 from warnings import warn
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from os.path import dirname, join, exists, abspath, isdir
 from ghostos.abcd import GhostOS
 from ghostos_container import Container, Provider, Contracts
@@ -44,7 +48,7 @@ from pydantic import BaseModel, Field
 
 __all__ = [
     'expect_workspace_dir',
-    'app_stub_dir',
+    'workspace_stub_dir',
     'BootstrapConfig',
     'get_bootstrap_config',
 
@@ -59,7 +63,6 @@ __all__ = [
     # - Ghost level (a Ghost is an instance frame of the Agent's thought)
     # - Moss level (each MossCompiler has it own container)
     # <<<
-    'application_container',
     'make_app_container',
 
     # reset ghostos default application instances.
@@ -79,11 +82,15 @@ __all__ = [
     # We develop it for early experiments.
     # Check example_ghost_func.py
     # <<<
-    'ghost_func',
     'GhostFunc',
     'init_ghost_func',
 
 ]
+
+_application_container = None
+
+DEFAULT_WORKSPACE_DIR = "ghostos_ws"
+WORKSPACE_STUB = "workspace_stub"
 
 
 # --- prepare application paths --- #
@@ -93,24 +100,24 @@ def expect_workspace_dir() -> Tuple[str, bool]:
     """
     :return: (workspace dir: str, exists: bool)
     """
-    expect_dir = abspath("app")
+    expect_dir = abspath(DEFAULT_WORKSPACE_DIR)
     return expect_dir, exists(expect_dir) and isdir(expect_dir)
 
 
-def app_stub_dir() -> str:
-    return join(dirname(__file__), "app")
+def workspace_stub_dir() -> str:
+    return join(dirname(__file__), WORKSPACE_STUB)
 
 
 def find_workspace_dir() -> str:
     expected, ok = expect_workspace_dir()
     if ok:
         return expected
-    return app_stub_dir()
+    return workspace_stub_dir()
 
 
 class BootstrapConfig(BaseModel):
     workspace_dir: str = Field(
-        default="app",
+        default=DEFAULT_WORKSPACE_DIR,
         description="ghostos relative workspace directory",
     )
     dotenv_file_path: str = Field(".env", description="ghostos workspace .env file")
@@ -121,6 +128,14 @@ class BootstrapConfig(BaseModel):
     workspace_runtime_dir: str = Field(
         "runtime",
         description="ghostos workspace relative path for runtime directory",
+    )
+    python_paths: List[str] = Field(
+        default_factory=list,
+        description="load the python path to sys.path"
+    )
+    app_container_maker: Union[str, None] = Field(
+        default=None,
+        description="import path to generate ghostos app container, Callable[[], Container]",
     )
 
     __from_file__: str = ""
@@ -342,21 +357,8 @@ def make_app_container(
     """
     make application global container
     """
-
     if bootstrap_conf is None:
         bootstrap_conf = get_bootstrap_config(local=True)
-    workspace_dir = bootstrap_conf.workspace_dir
-    if workspace_dir.startswith(bootstrap_conf.abs_ghostos_dir()):
-        warn(
-            f"GhostOS workspace dir is not found, better run `ghostos init` at first."
-            f"Currently using `{workspace_dir}` as workspace."
-        )
-
-    # load env from dotenv file
-    env_path = join(bootstrap_conf.workspace_dir, bootstrap_conf.dotenv_file_path)
-    if exists(env_path):
-        import dotenv
-        dotenv.load_dotenv(dotenv_path=env_path)
 
     # default logger name for GhostOS application
     if app_providers is None:
@@ -370,26 +372,53 @@ def make_app_container(
     _container.register(*app_providers)
     # contracts validation
     app_contracts.validate(_container)
-    # bootstrap.
-    _container.bootstrap()
     return _container
 
 
-application_container = make_app_container()
-""" the global static application container. reset it before application usage"""
+def bootstrap() -> Container:
+    bootstrap_conf = get_bootstrap_config(local=True)
+    workspace_dir = bootstrap_conf.workspace_dir
+    if workspace_dir.startswith(bootstrap_conf.abs_ghostos_dir()):
+        warn(
+            f"GhostOS workspace dir is not found, better run `ghostos init` at first."
+            f"Currently using `{workspace_dir}` as workspace."
+        )
 
-ghost_func = init_ghost_func(application_container)
-""" the default ghost func on default container"""
+    if bootstrap_conf.python_paths:
+        cwd = os.getcwd()
+        for python_path in bootstrap_conf.python_paths:
+            real_path = abspath(join(cwd, python_path))
+            sys.path.append(real_path)
+
+    # load env from dotenv file
+    env_path = join(bootstrap_conf.workspace_dir, bootstrap_conf.dotenv_file_path)
+    if exists(env_path):
+        import dotenv
+        dotenv.load_dotenv(dotenv_path=env_path)
+
+    # use app container maker to make a container.
+    if bootstrap_conf.app_container_maker:
+        from ghostos_common.helpers import import_from_path
+        maker = import_from_path(bootstrap_conf.app_container_maker)
+        container = maker()
+    else:
+        container = make_app_container(bootstrap_conf=bootstrap_conf)
+    # bootstrap.
+    container.bootstrap()
+    return container
 
 
 def get_ghostos(container: Optional[Container] = None) -> GhostOS:
     if container is None:
-        container = application_container
+        container = bootstrap()
     return container.force_fetch(GhostOS)
 
 
 def get_container() -> Container:
-    return application_container
+    global _application_container
+    if _application_container is None:
+        _application_container = bootstrap()
+    return _application_container
 
 
 def reset(con: Container) -> Container:
@@ -398,17 +427,10 @@ def reset(con: Container) -> Container:
     :param con: a container with application level contract bindings, shall be validated outside.
     :return:
     """
-    global application_container, ghost_func
+    global _application_container
     # reset global container
-    application_container = con
+    _application_container = con
     # reset global ghost func
-    ghost_func = init_ghost_func(application_container)
-    return application_container
-
+    return _application_container
 
 # --- test the module by python -i --- #
-
-if __name__ == '__main__':
-    """
-    run `python -i __init__.py` to interact with the current file
-    """

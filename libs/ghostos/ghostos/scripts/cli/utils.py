@@ -121,8 +121,13 @@ def get_or_create_module_from_name(
             relative_path = filename[len(root_dir) + 1:]
             relative_path_basename, _ = path.splitext(relative_path)
             temp_modulename = relative_path_basename.replace("/", ".")
-        module = create_module(temp_modulename, filename)
-        is_temp = True
+            if temp_modulename.endswith(".__init__"):
+                temp_modulename = temp_modulename[:-len(".__init__")]
+        if temp_modulename in sys.modules:
+            module = sys.modules[temp_modulename]
+        else:
+            module = create_module(temp_modulename, filename)
+            is_temp = True
         value = None
     else:
         imported = import_from_path(filename_or_modulename)

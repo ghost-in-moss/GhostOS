@@ -2,6 +2,11 @@
 
 # v0.4.0
 
+## v0.4.0-dev15
+
+* refact `ghostos.bootstrap`, lasy boostrap. 
+* rename `ghostos.app` to `ghostos.workspace_stub` for less confusing.
+
 ## v0.4.0-dev13
 
 update with project manager baseline. 

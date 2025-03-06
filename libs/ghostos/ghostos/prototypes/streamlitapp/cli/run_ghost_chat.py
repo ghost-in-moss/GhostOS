@@ -49,7 +49,7 @@ def bootstrap():
     app_arg = RunGhostChatApp(**data)
 
     started_module = None
-    if app_arg.is_temp and app_arg.module:
+    if app_arg.is_temp and app_arg.modulename:
         # create temp module
         logger.debug(f"Create Temp module {app_arg.modulename}")
         started_module = create_and_bind_module(app_arg.modulename, app_arg.filename)

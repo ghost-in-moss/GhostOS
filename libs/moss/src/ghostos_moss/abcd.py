@@ -612,8 +612,9 @@ class SelfUpdater(ABC):
         pass
 
     @abstractmethod
-    def save(self, reload: bool = False) -> None:
+    def save(self, reload: bool = True) -> None:
         """
         save the changes of this module to the file.
+        :param reload: reload the changes of this module to the current process. otherwise it not work yet.
         """
         pass
