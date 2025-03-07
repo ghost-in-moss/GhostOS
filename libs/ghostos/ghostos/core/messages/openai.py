@@ -281,6 +281,7 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
             yield from []
             return
         buffer = None
+        finish_reason = None
         for item in messages:
             parsed_chunks = []
             self.logger.debug("openai parser receive chat completion chunk: %s", item)
@@ -292,11 +293,12 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                     continue
             elif len(item.choices) > 0:
                 choice = item.choices[0]
+                finish_reason = choice.finish_reason
                 delta = choice.delta
                 if delta is None:
                     self.logger.error("openai parser received invalid chat completion chunk: %s", item)
                     continue
-                parsed_chunks = self._new_chunk_from_delta(delta)
+                parsed_chunks = list(self._new_chunk_from_delta(delta))
             else:
                 continue
 
@@ -326,7 +328,9 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
                         continue
 
         if buffer:
-            yield buffer.as_tail(copy=False)
+            tail = buffer.as_tail(copy=False)
+            tail.finish_reason = finish_reason
+            yield tail
 
     @staticmethod
     def _new_chunk_from_delta(delta: ChoiceDelta) -> Iterable[Message]:

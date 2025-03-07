@@ -11,7 +11,6 @@ from ghostos.abcd import Ghost
 from pydantic import BaseModel, Field
 from ghostos_common.entity import EntityMeta, to_entity_meta
 from ghostos.ghosts.moss_ghost import new_moss_ghost
-from ghostos.moss_libs.self_updater_moss import Moss
 from streamlit.web.cli import main_run as run_streamlit_web
 from os import path
 import inspect
@@ -68,7 +67,6 @@ def find_ghost_by_file_or_module(filename_or_modulename: str) -> Tuple[GhostInfo
     else:
         ghost = new_moss_ghost(
             found.module.__name__,
-            default_moss_type=Moss,
         )
 
     ghost_info = GhostInfo(

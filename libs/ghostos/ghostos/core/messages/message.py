@@ -234,6 +234,7 @@ class Message(BaseModel):
     index: Optional[int] = Field(default=None, description="the index of the message.")
     type: str = Field(default="", description="default message type, if empty, means text")
     stage: str = Field(default="", description="message stage")
+    finish_reason: Optional[str] = Field(default=None, description="message finish reason.")
 
     role: str = Field(default="", description="Message role", enum=Role.all())
     name: Optional[str] = Field(default=None, description="Message sender name")
