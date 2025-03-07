@@ -1,6 +1,6 @@
 # GhostOS
 
-> The AI `Ghosts` wonder in the `Shells`.
+> The AI `Ghosts` wander in the `Shells`.
 
 * [Documents](https://ghost-in-moss.github.io/GhostOS/#/)
 * [Discord Server](https://discord.gg/NG6VKwd5jV)
