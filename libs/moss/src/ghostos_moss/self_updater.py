@@ -40,7 +40,7 @@ class SelfUpdaterImpl(SelfUpdater):
     def rewrite(self, code: str) -> None:
         self.pycontext.code = code
 
-    def save(self, reload: bool = False) -> None:
+    def save(self, reload: bool = True) -> None:
         if not self.pycontext.module:
             return None
         module = self.modules.import_module(self.pycontext.module)

@@ -11,7 +11,6 @@ from ghostos.abcd import Ghost
 from pydantic import BaseModel, Field
 from ghostos_common.entity import EntityMeta, to_entity_meta
 from ghostos.ghosts.moss_ghost import new_moss_ghost
-from ghostos.moss_libs.self_updater_moss import Moss
 from streamlit.web.cli import main_run as run_streamlit_web
 from os import path
 import inspect
@@ -68,7 +67,6 @@ def find_ghost_by_file_or_module(filename_or_modulename: str) -> Tuple[GhostInfo
     else:
         ghost = new_moss_ghost(
             found.module.__name__,
-            default_moss_type=Moss,
         )
 
     ghost_info = GhostInfo(
@@ -121,8 +119,13 @@ def get_or_create_module_from_name(
             relative_path = filename[len(root_dir) + 1:]
             relative_path_basename, _ = path.splitext(relative_path)
             temp_modulename = relative_path_basename.replace("/", ".")
-        module = create_module(temp_modulename, filename)
-        is_temp = True
+            if temp_modulename.endswith(".__init__"):
+                temp_modulename = temp_modulename[:-len(".__init__")]
+        if temp_modulename in sys.modules:
+            module = sys.modules[temp_modulename]
+        else:
+            module = create_module(temp_modulename, filename)
+            is_temp = True
         value = None
     else:
         imported = import_from_path(filename_or_modulename)

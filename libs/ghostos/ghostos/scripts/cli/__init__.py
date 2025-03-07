@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import os.path
 
 import click
@@ -34,11 +35,31 @@ def show_thread_info(thread_id: str):
     start_ghostos_thread_info(thread_id)
 
 
+@main.command("tinker")
+def tinker():
+    """
+    test only
+    """
+    from ghostos.bootstrap import get_container
+    container = get_container()
+    while True:
+        value = Prompt.ask("> ")
+        if value == "quit()":
+            break
+        r = eval(value)
+        if r is not None:
+            print(r)
+
+
 @main.command("web")
 @click.argument("python_file_or_module")
 @click.option("--src", "-s", default=".", show_default=True,
               help="load the directory to python path, make sure can import relative packages")
-def start_streamlit_web(python_file_or_module: str, src: str):
+@click.option(
+    "--bootstrap", "-b", default="", show_default=True,
+    help="load a python module for bootstrap",
+)
+def start_streamlit_web(python_file_or_module: str, src: str, bootstrap: str = ""):
     """
     turn a python file or module into a streamlit web agent
     """
@@ -49,6 +70,8 @@ def start_streamlit_web(python_file_or_module: str, src: str):
     if src:
         # add source path to system so to import the source code.
         sys.path.append(abspath(src))
+    if bootstrap:
+        importlib.import_module(bootstrap)
 
     ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
     start_streamlit_app_by_ghost_info(ghost_info, module.__name__, filename, is_temp)
@@ -105,24 +128,25 @@ def init_app(path: str):
     init ghostos workspace
     """
     from ghostos.scripts.copy_workspace import copy_workspace
-    from ghostos.bootstrap import expect_workspace_dir, app_stub_dir, get_bootstrap_config
+    from ghostos.bootstrap import expect_workspace_dir, workspace_stub_dir, get_bootstrap_config
     console = Console()
     console.print(Panel(
         Markdown("""
-`GhostOS` need an `app` directory as workspace. 
+`GhostOS` need an `workspace` directory as workspace. 
 
 The Workspace meant to save local files such as configs, logs, cache files.
 """),
         title="Initialize GhostOS",
     ))
 
+    ws, ok = expect_workspace_dir()
     conf = get_bootstrap_config(local=False)
     cwd = getcwd()
     result = Prompt.ask(
         f"\n>> will init ghostos workspace at `{cwd}`. input directory name:",
-        default=".ghostos_ws",
+        default=ws,
     )
-    source_dir = app_stub_dir()
+    source_dir = workspace_stub_dir()
     real_workspace_dir = abspath(result)
     console.print("start to init ghostos workspace")
     copy_workspace(source_dir, real_workspace_dir)

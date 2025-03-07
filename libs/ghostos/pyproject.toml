@@ -2,7 +2,7 @@
 name = "ghostos"
 description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 readme = "README.md"
-version = "v0.4.0-dev13"
+version = "v0.4.0-dev15"
 authors = [
     { name = "zhuming", email = "thirdgerb@gmail.com" },
     { name = "Nile Zhou", email = "nilezhou123@gmail.com" },
@@ -25,7 +25,7 @@ dependencies = [
     "pysocks<2.0.0,>=1.7.1",
     "requests[socks]<3.0.0,>=2.32.3",
     "streamlit-paste-button<1.0.0,>=0.1.2",
-    "ghostos-moss>=0.3.1",
+    "ghostos-moss>=0.3.3",
     "ghostos-container>=0.2.4",
     "ghostos-common>=0.3.1",
 ]

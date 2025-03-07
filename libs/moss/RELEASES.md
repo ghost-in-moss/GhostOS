@@ -1,5 +1,9 @@
 # v0.3
 
+## v0.3.3
+
+fix: element in `__all__` must be string
+
 ## v0.3.2
 
 small fixes

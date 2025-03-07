@@ -13,7 +13,7 @@ Print out almost every thing.
 """
 
 if __name__ == '__main__':
-    from ghostos.bootstrap import application_container
+    from ghostos.bootstrap import get_container
     from ghostos.demo.aifuncs_demo import AgentFn
     from rich.console import Console
     from rich.markdown import Markdown
@@ -24,8 +24,9 @@ if __name__ == '__main__':
     from threading import Thread
 
     debug = False
+    container = get_container()
 
-    executor = application_container.force_fetch(AIFuncExecutor)
+    executor = container.force_fetch(AIFuncExecutor)
     fn = AgentFn(
         request="help me to find news about OpenAI O1 model",
     )
