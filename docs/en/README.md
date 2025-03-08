@@ -10,7 +10,7 @@
 
 ## Example
 
-Using Python code [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/demo/sphero/bolt_gpt.py),
+Using Python code [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/demo/sphero/bolt_gpt.py),
 an intelligent robot with a [SpheroBolt](https://sphero.com/products/sphero-bolt) as its body is defined.
 If you have a SpheroBolt, running `ghostos web ghostos.demo.sphero.bolt_gpt` can start this robot.
 

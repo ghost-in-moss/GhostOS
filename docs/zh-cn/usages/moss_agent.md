@@ -28,7 +28,7 @@ ghostos web ghostos.demo.agents.jojo
 ```
 
 命令执行时, 如果目标文件不存在 `__ghost__` 属性, 则会反射目标文件,
-生成 [MossAgent](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/agent.py) 实例.
+生成 [MossAgent](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/agent.py) 实例.
 这个 Agent 可以调用目标文件提供的函数和类, 执行你用自然语言提出的任务.
 
 源码如下:
@@ -95,7 +95,7 @@ MossAgent 会自动将目标 Python 模块反射成 Prompt, 提供给大模型.
 大模型会根据 instruction, 调用名为 `moss` 的工具, 生成代码.
 生成的代码会在 [Moss](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py) 编译的临时模块中执行.
 
-源码请看 [MossAction](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/agent.py#MossAction).
+源码请看 [MossAction](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/agent.py#MossAction).
 
 如果一部分源码不想让 LLM 看到, 可以使用`# <moss-hide>` 和 `# </moss-hide>` 标记:
 
@@ -133,7 +133,7 @@ def __moss_attr_prompts__():
 
 所有的生命周期方法可以查看以下三个文件:
 
-- [for developer](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/for_developer.py): 面向开发者的生命周期管理
+- [for developer](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/for_developer.py): 面向开发者的生命周期管理
     - `__moss_agent_providers__`
     - `__shell_providers__`
     - `__moss_agent_creating__`
@@ -141,7 +141,7 @@ def __moss_attr_prompts__():
     - `__moss_agent_parse_event__`: 事件拦截
     - `__moss_agent_injections__`: 手动依赖注入
     - `__moss_agent_on_[event_type]__`: 自定义事件处理
-- [for meta ai](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/for_meta_ai.py): 面向开发者和 AI
+- [for meta ai](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/for_meta_ai.py): 面向开发者和 AI
   的生命周期管理
     - `__moss_agent_artifact__`: 定义 agent 的输出
     - `__moss_agent_actions__`: 定义 moss 之外的工具
@@ -154,7 +154,7 @@ def __moss_attr_prompts__():
 所有这些魔术方法都是 `可选的`. 如果能用来解决问题, 则可以使用它们.
 
 如果一切魔术方法都不够用, 那么最好的办法是自己实现 `Ghost` 和 `GhostDriver` 类,
-详见 [concepts.py](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+详见 [concepts.py](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 
 ## Define Moss Class
 
@@ -194,7 +194,7 @@ def run(moss: Moss):
 \```
 ```
 
-详见 [instructions](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/instructions.py)
+详见 [instructions](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/instructions.py)
 
 ### Define Variables On Moss
 
@@ -218,7 +218,7 @@ class Moss(Parent):
 ```
 
 进一步的,
-如果挂载的数据对象实现了 [ghostos_common.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py),
+如果挂载的数据对象实现了 [ghostos_common.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/prompter.py),
 MossAgent 会自动在 system instruction 中生成 prompt 提供给大模型.
 
 相关逻辑详见 `ghostos.ghosts.moss_agent.instructions.get_moss_context_prompter` 函数.
@@ -278,7 +278,7 @@ def __moss_agent_injections__(agent, session) -> Dict[str, Any]:
 
 `GhostOS` 在运行时通过可继承的 `IoC Container Tree` 来隔离不同级别的依赖. 系统默认存在的容器有以下几个级别:
 
-- [App Root Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/bootstrap.py) : 进程唯一容器
+- [App Root Container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/bootstrap.py) : 进程唯一容器
 - `GhostOS.container` : 进程唯一容器, 基本和 App Root Container 相等.
 - `Shell.container` : 对于同一个进程内, 所有平行运行的 Ghost 共享的容器. 通常用来启动和躯体相关的单例.
 - `Conversation.container`: 对于单个 Ghost 拥有的依赖.
@@ -288,22 +288,22 @@ def __moss_agent_injections__(agent, session) -> Dict[str, Any]:
 
 部分 `GhostOS` 系统提供的依赖如下:
 
-- [LoggerItf](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/logger.py): 日志
-- [Configs](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/configs.py): 配置文件
-- [Workspace](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/workspace.py): 工作区
-- [Variables](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/variables.py): 持久化变量存储
-- [LLMs](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/llms/llms.py): 大模型
-- [Assets](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/assets.py): 图片和音频
-- [GhostOS](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): GhostOS 自身
-- [Shell](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 运行时生成的 Shell
-- [Conversation](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 运行时生成的 conversation
-- [Session](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 运行时生成的 Session, 管理主要的 API
-- [Scope](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 当前对话的座标.
-- [Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py): 当前 Agent 自身
+- [LoggerItf](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/logger.py): 日志
+- [Configs](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/configs.py): 配置文件
+- [Workspace](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/workspace.py): 工作区
+- [Variables](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/variables.py): 持久化变量存储
+- [LLMs](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/llms/llms.py): 大模型
+- [Assets](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/assets.py): 图片和音频
+- [GhostOS](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py): GhostOS 自身
+- [Shell](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py): 运行时生成的 Shell
+- [Conversation](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py): 运行时生成的 conversation
+- [Session](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py): 运行时生成的 Session, 管理主要的 API
+- [Scope](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py): 当前对话的座标.
+- [Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py): 当前 Agent 自身
 - [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py): moss 编译器
-- [Tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/tasks.py): 任务存储
-- [Threads](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/threads.py): 历史消息存储
-- [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py): 事件总线.
+- [Tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/tasks.py): 任务存储
+- [Threads](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/threads.py): 历史消息存储
+- [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/events.py): 事件总线.
 
 更多系统级绑定可调用 `Container.contracts(recursively=True)` 来调试.
 

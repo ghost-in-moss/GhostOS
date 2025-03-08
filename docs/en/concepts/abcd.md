@@ -41,7 +41,7 @@ with receiver:
 
 ```
 
-For detailed content, please check the source code. [ghostos.abcd.concepts](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+For detailed content, please check the source code. [ghostos.abcd.concepts](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 
 > Abstract design-related introductions can be quite complex; 
 > only complete the documentation when I have the energy (T_T).

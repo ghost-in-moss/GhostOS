@@ -31,7 +31,7 @@ ghostos web ghostos.demo.agents.jojo
 
 When the command is executed, if the target file does not have a `__ghost__` attribute, it will reflect the target file
 and generate an instance
-of [MossAgent](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/agent.py). This Agent can
+of [MossAgent](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/agent.py). This Agent can
 call the functions and classes provided by the target file to perform tasks you propose in natural language.
 
 Here is the source code:
@@ -101,7 +101,7 @@ The generated code will be executed in the temporary module compiled
 by [Moss](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py).
 
 Source
-Code: [MossAction](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/agent.py#MossAction).
+Code: [MossAction](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/agent.py#MossAction).
 
 If some code you want hide from LLM, use `# <moss-hide>` and `# </moss-hide>` markers:
 
@@ -138,7 +138,7 @@ the workload when creating an Agent.
 
 All lifecycle methods can be found in the following three files:
 
-- [for developer](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/for_developer.py):
+- [for developer](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/for_developer.py):
   Lifecycle management for developers.
     - `__moss_agent_providers__`
     - `__shell_providers__`
@@ -147,7 +147,7 @@ All lifecycle methods can be found in the following three files:
     - `__moss_agent_parse_event__`
     - `__moss_agent_injections__`
     - `__moss_agent_on_[event_type]__`:
-- [for meta ai](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/for_meta_ai.py): for
+- [for meta ai](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/for_meta_ai.py): for
   developer and Meta AI
     - `__moss_agent_artifact__`
     - `__moss_agent_actions__`
@@ -161,7 +161,7 @@ All these magic methods are **optional**. If they can solve the problem, then yo
 
 If all magic methods are insufficient, then the best approach is to implement your own `Ghost` and `GhostDriver`
 classes,
-see [concepts.py](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py).
+see [concepts.py](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py).
 
 ## Define Moss Class
 
@@ -203,7 +203,7 @@ You shall only return operator by the libraries provided on `moss`.
 \```
 ```
 
-详见 [instructions](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/ghosts/moss_agent/instructions.py)
+详见 [instructions](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/instructions.py)
 
 ### Define Variables On Moss
 
@@ -227,7 +227,7 @@ class Moss(Parent):
 ```
 
 Furthermore, if the mounted data object
-implements [ghostos_common.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/prompter.py),
+implements [ghostos_common.prompter.Prompter](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/prompter.py),
 MossAgent will automatically generate a prompt in the system instruction to be provided to the large model.
 
 For more information on this logic, see the `ghostos.ghosts.moss_agent.instructions.get_moss_context_prompter` function.
@@ -289,7 +289,7 @@ several ways to register dependencies:
 `GhostOS` isolates dependencies at different levels during runtime through an inheritable `IoC Container Tree`. The
 system has the following default container levels:
 
-- [App Root Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/bootstrap.py): Unique container for
+- [App Root Container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/bootstrap.py): Unique container for
   the process
 - `GhostOS.container`: Unique container for the process, essentially the same as the App Root Container.
 - `Shell.container`: A container shared by all ghosts running in parallel within the same process. Typically used to
@@ -303,22 +303,22 @@ registered dependencies from each parent container and can also override them.
 
 Some dependencies provided by the `GhostOS` system are as follows:
 
-- [LoggerItf](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/logger.py)
-- [Configs](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/configs.py)
-- [Workspace](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/workspace.py)
-- [Variables](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/variables.py)
-- [LLMs](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/llms/llms.py)
-- [Assets](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/assets.py)
-- [GhostOS](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-- [Shell](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-- [Conversation](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-- [Session](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-- [Scope](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-- [Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+- [LoggerItf](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/logger.py)
+- [Configs](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/configs.py)
+- [Workspace](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/workspace.py)
+- [Variables](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/variables.py)
+- [LLMs](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/llms/llms.py)
+- [Assets](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/assets.py)
+- [GhostOS](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
+- [Shell](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
+- [Conversation](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
+- [Session](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
+- [Scope](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
+- [Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 - [MossCompiler](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py)
-- [Tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/tasks.py)
-- [Threads](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/threads.py)
-- [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py)
+- [Tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/tasks.py)
+- [Threads](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/threads.py)
+- [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/events.py)
 
 More system-level bindings can be debugged by calling `Container.contracts(recursively=True)`.
 

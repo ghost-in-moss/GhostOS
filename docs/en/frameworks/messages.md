@@ -6,7 +6,7 @@ be handled on the server side.
 
 To address issues such as streaming message protocol, model compatibility, storage, and reading; `GhostOS` has designed
 its own message container.
-For more details, see [ghostos.core.messages](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/messages/message.py)
+For more details, see [ghostos.core.messages](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/messages/message.py)
 
 At present, there is no energy to introduce all the details, so I will focus on introducing a few key concepts:
 
@@ -20,7 +20,7 @@ including:
 
 In the historical records, the LLM can see the `vid` parameter of the variable,
 and the corresponding variable can be obtained using
-the [ghostos/contracts/variables](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/variables.py) library.
+the [ghostos/contracts/variables](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/variables.py) library.
 This enables interaction based on variables.
 
 Examples:
@@ -35,7 +35,7 @@ Examples:
 
 In `GhostOS`, images and audio messages in the historical records are stored in centralized storage, with the message ID
 serving as the storage ID for both images and audio. For more details,
-see [ghostos/contracts/assets](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/assets.py).
+see [ghostos/contracts/assets](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/assets.py).
 
 It is expected that in the future, Audio and Image will also support `variable type messages`, allowing large language
 models to manipulate them through code.

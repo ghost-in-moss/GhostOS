@@ -73,4 +73,4 @@ copy [workspace]/.example.env [workspace]/.env
 vim [workspace]/.env
 ```
 
-More details: [.example.env](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/.example.env)
+More details: [.example.env](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/app/.example.env)

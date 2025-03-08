@@ -1,7 +1,7 @@
 # EventBus
 
 `GhostOS` manages event communication between Agents, between Agents and the external world, and within Agents
-themselves through the [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py) class.
+themselves through the [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/events.py) class.
 
 Based on the event bus, we can implement a fully asynchronous Agent. Taking the example of a time-consuming network
 car-hailing:
@@ -25,7 +25,7 @@ Communication from external systems can include:
 # Event Object
 
 GhostOS
-中的事件对象定义在 [ghostos.core.runtime.events.Event](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py).
+中的事件对象定义在 [ghostos.core.runtime.events.Event](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/events.py).
 相关 API 详见代码.
 
 # EventBus Registrar
@@ -40,7 +40,7 @@ The `EventBus` can be implemented using various technologies, including file-bas
 or other KV storage-based implementations to achieve an event bus for distributed systems.
 
 Since `GhostOS` lacks development resources, the current implementation is a memory-based dictionary. For more details,
-see [MemEventBusImpl](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/framework/eventbuses/memimpl.py). This means that
+see [MemEventBusImpl](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/framework/eventbuses/memimpl.py). This means that
 shutting down a running program will result in the loss of events.
 
 In the future, it is hoped that the default implementation of EventBus can be made configurable, allowing users to

@@ -68,4 +68,4 @@ copy [workspace]/.example.env [workspace]/.env
 vim [workspace]/.env
 ```
 
-配置项详见 [.example.env](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/.example.env)
+配置项详见 [.example.env](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/app/.example.env)

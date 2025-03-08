@@ -48,7 +48,7 @@ Their common characteristics are:
 
 In `GhostOS`, the prototype of a `Ghost` needs to be defined through at least two classes.
 
-[Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py):
+[Ghost](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py):
 
 ```python
 
@@ -73,7 +73,7 @@ class Ghost(Identical, EntityClass, ABC):
 
 ```
 
-[GhostDriver](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py) :
+[GhostDriver](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py) :
 
 ```python
 
@@ -175,7 +175,7 @@ Agent.
 
 ## Ghost Context
 
-The [Context](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py) can be understood as the
+The [Context](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py) can be understood as the
 input parameters for the `Ghost` runtime. It accepts strongly-typed data structures and generates system prompts for the
 Large Language Model to understand the context. At the same time, the Large Language Model can manipulate the context as
 a variable.
@@ -227,7 +227,7 @@ class Moss(Parent):
 
 ## Ghost Artifact
 
-The [Artifact](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py) can be understood as the
+The [Artifact](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py) can be understood as the
 output parameter of `Ghost` at runtime. However, this output parameter is subject to continuous changes.
 
 Through `Conversation`, you can obtain the `Artifact` object of `Ghost` at runtime for rendering on the client side.

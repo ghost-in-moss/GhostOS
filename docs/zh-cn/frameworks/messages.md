@@ -4,7 +4,7 @@
 因此历史消息的传输和存取不能仅仅在客户端, 还需要在服务端.
 
 为了解决消息协议的流式传输, 模型兼容, 存储与读取等问题; `GhostOS` 设计了自己的消息容器. 
-详见 [ghostos.core.messages](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/messages/message.py)
+详见 [ghostos.core.messages](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/messages/message.py)
 
 目前没有精力介绍所有的细节, 重点介绍几个关键概念: 
 
@@ -17,7 +17,7 @@
 2. 传输给其它的 Agent
 
 在历史记录中, LLM 可以看到变量的 `vid` 参数, 
-使用 [ghostos/contracts/variables](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/variables.py) 库可以获取对应的变量. 
+使用 [ghostos/contracts/variables](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/variables.py) 库可以获取对应的变量. 
 从而可以实现基于变量的交互. 
 
 举例: 
@@ -30,7 +30,7 @@
 ## Audio & Image Message
 
 `GhostOS` 历史消息中的图片和音频都会使用中心化的存储, 消息 id 就是 图片 & 音频 的存储 id.
-详见 [ghostos/contracts/assets](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/contracts/assets.py).
+详见 [ghostos/contracts/assets](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/contracts/assets.py).
 
 预期未来 Audio 和 Image 也支持 `变量类型消息`, 从而大模型可以用代码来操作它们. 
 

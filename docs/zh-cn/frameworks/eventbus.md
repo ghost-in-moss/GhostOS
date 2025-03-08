@@ -1,6 +1,6 @@
 # EventBus
 
-`GhostOS` 通过 [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py) 类来管理 Agent 之间,
+`GhostOS` 通过 [EventBus](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/events.py) 类来管理 Agent 之间,
 Agent 和外部世界, Agent 自身的事件通讯.
 
 基于事件总线, 我们可以实现一个全异步的 Agent. 以耗时较长的网络叫车为例子:
@@ -23,7 +23,7 @@ Agent 和外部世界, Agent 自身的事件通讯.
 # Event 对象的设计
 
 GhostOS
-中的事件对象定义在 [ghostos.core.runtime.events.Event](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/events.py).
+中的事件对象定义在 [ghostos.core.runtime.events.Event](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/events.py).
 相关 API 详见代码.
 
 # EventBus 的注册
@@ -36,7 +36,7 @@ GhostOS
 `EventBus` 可以有各种技术实现, 包括基于文件的, 基于关系型数据库的, 基于 Redis 等 KV 存储的. 从而实现分布式系统的事件总线.
 
 由于 `GhostOS` 没有开发人力, 目前的实现是基于内存的 dict.
-详见 [MemEventBusImpl](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/framework/eventbuses/memimpl.py).
+详见 [MemEventBusImpl](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/framework/eventbuses/memimpl.py).
 这意味着关闭运行中的程序, 就会导致事件丢失.
 
 # EventBus 的配置化
