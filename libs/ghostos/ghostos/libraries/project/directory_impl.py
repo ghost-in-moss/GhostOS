@@ -6,7 +6,8 @@ import pathlib
 from ghostos.libraries.project.abcd import Directory, File, PyDevCtx
 from ghostos.libraries.project.dev_context import PyDevCtxData
 from ghostos.contracts.configs import YamlConfig
-from ghostos_common.helpers import generate_directory_tree, yaml_pretty_dump
+from ghostos_common.helpers import generate_directory_tree, yaml_pretty_dump, get_module_fullname_from_path
+from ghostos_moss import moss_runtime_ctx
 from pydantic import Field
 
 
@@ -54,7 +55,11 @@ class FileImpl(File):
         ".yml", ".toml", ".json"
     ]
 
-    def __init__(self, filepath: pathlib.Path, dev_ctx: PyDevCtxData):
+    def __init__(
+            self,
+            filepath: pathlib.Path,
+            dev_ctx: PyDevCtxData,
+    ):
         if filepath.is_dir():
             raise TypeError(f"{filepath} is not a directory")
         self.path = filepath
@@ -84,7 +89,17 @@ class FileImpl(File):
                 updated.append(f"{idx}|{line}")
             content = "\n".join(updated)
 
-        return f'<content length="{length}">{content}{suffix}</content>'
+        modulename = get_module_fullname_from_path(str(self.path), use_longest_match=True)
+        py_info = ""
+        if modulename is None:
+            py_info = f"\n\nfile is also python module `{modulename}`."
+            # add moss imported attrs reflection
+            with moss_runtime_ctx(modulename) as runtime:
+                imported_prompt = runtime.prompter().get_imported_attrs_prompt()
+                if imported_prompt is None:
+                    py_info += f"\n<imported_attr_info>\n{imported_prompt}\n</imported_attr_info>"
+
+        return f'<content length="{length}">{content}{suffix}</content>{py_info}'
 
     def is_readable(self):
         allowed = False
@@ -138,13 +153,18 @@ class DirectoryImpl(Directory):
         if not self.ctx.desc:
             self.ctx.desc = "dev context of this directory"
         if ignores is None:
-            ignores = self.default_ignores
+            ignores = self.default_ignores.copy()
         gitignore = path.joinpath(".gitignore")
         if gitignore.exists():
             with open(gitignore, "r") as f:
                 content = f.read()
                 ignores.extend(content.splitlines())
-        self._ignores = ignores
+        self._ignores = []
+        for ignore in ignores:
+            ignore = ignore.strip()
+            if ignore.startswith('#'):
+                continue
+            self._ignores.append(ignore)
 
     def full_context(self) -> str:
         return f"""
@@ -152,7 +172,7 @@ full context of the Directory instance on `{self.relative}`:
 
 <Context>
 
-sub files and directories in recursion 1: 
+The sub-files and sub-dirs of the current directory are as follows (recursion depth 1).
 ```
 {self.lists(recursion=1)}
 ```
@@ -162,7 +182,7 @@ DevContext at `Directory.ctx` are:
 {self.ctx.full_context()}
 </dev-context>
 
-all the dev contexts are: 
+all the dev contexts from name to description are: 
 ```yaml
 {yaml_pretty_dump(self.existing_dev_contexts())}
 ```
@@ -198,6 +218,10 @@ all the dev contexts are:
             real_path.relative_to(self.path)
         except ValueError:
             raise ValueError(f"'{path}' is not a sub directory")
+        if not real_path.is_dir():
+            raise ValueError(f"'{path}' is not a directory")
+        if not real_path.exists():
+            raise ValueError(f"'{path}' does not exist")
         return DirectoryImpl(real_path, self._ignores)
 
     def describe(self, path: str, desc: str) -> None:

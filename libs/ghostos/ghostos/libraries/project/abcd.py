@@ -5,6 +5,7 @@ from types import FunctionType, ModuleType
 from typing_extensions import Self
 from pydantic import BaseModel, Field
 from ghostos.abcd import Operator
+from ghostos.libraries.pyeditor import PyModuleEditor
 from ghostos_moss import Exporter
 import pathlib
 
@@ -145,8 +146,10 @@ class Directory(ABC):
     def subdir(self, path: str) -> Self:
         """
         get subdirectory instance by path relative to this directory.
-        :param path: the relative path which must be a directory.
+        :param path: the relative path which must be a directory. must exist or raise ValueError.
         :return: Directory instance.
+
+        if you want to create directory, use terminal if you got one.
         """
         pass
 
@@ -214,16 +217,31 @@ class ProjectManager(ABC):
         pass
 
     @abstractmethod
+    def edit_pymodule(self, modulename: str) -> PyModuleEditor:
+        """
+        edit a python module, if editable.
+        :param modulename: the full import name of the module
+        """
+        pass
+
+    @abstractmethod
     def edit(self, file_path: str) -> Operator:
         """
         focus to edit the file in the project
         :param file_path: relative to the working directory.
+        the file must exist or raise FileNotFoundError.
+        if you want to create file, use terminal if you got one.
         """
         pass
 
 
-class ProjectExporter(ABC):
-    ProjectManager: ProjectManager
-    PyDevCtx: PyDevCtx
-    File: File
-    Directory: Directory
+class ProjectExports(Exporter):
+    """
+    the exports for projects.
+    """
+
+    ProjectManager = ProjectManager
+    PyDevCtx = PyDevCtx
+    File = File
+    Directory = Directory
+    PyModuleEditor = PyModuleEditor

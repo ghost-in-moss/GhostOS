@@ -11,6 +11,7 @@ from ghostos_common.helpers.modules import (
     get_module_attr,
     generate_module_and_attr_name,
     generate_import_path,
+    get_module_fullname_from_path,
     Importer,
     is_method_belongs_to_class,
     get_calling_modulename,
@@ -31,7 +32,7 @@ from ghostos_common.helpers.code_analyser import (
     get_code_interface, get_code_interface_str,
     get_attr_source_from_code, get_attr_interface_from_code,
 )
-from ghostos_common.helpers.files import generate_directory_tree, list_dir, match_pathname
+from ghostos_common.helpers.files import generate_directory_tree, list_dir, is_pathname_ignored
 
 if TYPE_CHECKING:
     from typing import Callable

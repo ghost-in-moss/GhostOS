@@ -1030,6 +1030,9 @@ class Mindflow(PromptObjectModel, ABC):
 
     @abstractmethod
     def error(self, *messages: MessageKind) -> Operator:
+        """
+        think on the error message.
+        """
         pass
 
 

@@ -579,7 +579,8 @@ class SelfUpdater(ABC):
     Notice:
     * only after save(), the modified code is wrote to the module's source file.
     * define a function or method without self updater will never be saved to the module.
-    * use code string to save, if you use \''' or \""" to embrace them, WATCH CAREFULLY about indent spaces and slashes.
+    * use code string to save
+    * BETTER use Implicit String Concatenation use Implicit String Concatenation to avoid messing up the indentation of strings.
     """
 
     @abstractmethod

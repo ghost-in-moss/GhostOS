@@ -3,6 +3,7 @@ from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar, Type,
 from typing_extensions import Self
 from types import ModuleType
 
+from ghostos.core.llms import Prompt
 from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
 from ghostos_common.identifier import Identifier
 from pydantic import Field
@@ -63,6 +64,17 @@ class MossGhost(ModelEntity, Agent):
             name=name,
             description=self.description,
         )
+
+
+class ContextPromptPipe(PromptPipe):
+    def __init__(self, prompt_context: str):
+        self.context = prompt_context
+
+    def update_prompt(self, prompt: Prompt) -> Prompt:
+        prompt.inputs.append(Role.new_system(
+            content=self.context
+        ))
+        return prompt
 
 
 class BaseMossGhostMethods(PromptAbleClass):
@@ -154,8 +166,6 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
                 TextPOM(title="Instruction", content=self.get_developer_instruction(session, runtime)),
             ),
 
-            # the context pom
-            session.get_context(),
         )
 
     def get_prompt_pipes(self, session: Session, runtime: MossRuntime) -> Iterable[PromptPipe]:
@@ -166,6 +176,11 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
         :return:
         """
         # clear agent self name from messages.
+        context = session.get_context()
+        if context is not None:
+            prompt = context.get_prompt(session.container)
+            yield ContextPromptPipe(prompt_context=prompt)
+
         yield AssistantNamePipe(self.agent.name)
 
     def providers(self) -> Iterable[Provider]:

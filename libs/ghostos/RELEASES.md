@@ -2,6 +2,10 @@
 
 # v0.4.0
 
+## v0.4.0-dev18
+
+* `ghostos project` baseline
+
 ## v0.4.0-dev15
 
 * refact `ghostos.bootstrap`, lasy boostrap. 

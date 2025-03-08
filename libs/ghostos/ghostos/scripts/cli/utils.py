@@ -48,6 +48,10 @@ def get_ghost_by_cli_argv() -> Tuple[GhostInfo, ModuleType, str, bool]:
 
 
 def find_ghost_by_file_or_module(filename_or_modulename: str) -> Tuple[GhostInfo, ModuleType, str, bool]:
+    """
+    :param filename_or_modulename:
+    :return: (ghost_info, found_module, found_file, file_is_temp)
+    """
     found = get_or_create_module_from_name(filename_or_modulename, "ghostos.temp.ghost")
     # ghost info
     ghosts_conf = DirGhostsConf.load_from(filename_or_modulename)

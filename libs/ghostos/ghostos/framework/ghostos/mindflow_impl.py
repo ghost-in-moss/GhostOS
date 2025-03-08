@@ -13,6 +13,7 @@ from pprint import pprint
 from contextlib import redirect_stdout
 from io import StringIO
 from ghostos_common.prompter import PromptObjectModel
+from ghostos_common.helpers import yaml_pretty_dump
 
 
 class MindflowImpl(Mindflow, PromptObjectModel, Injection):
@@ -28,15 +29,17 @@ class MindflowImpl(Mindflow, PromptObjectModel, Injection):
         return f"""
 You are handling a task `{brief.name}`:
 
-description: {brief.description}
-state: {brief.state}
-status_desc: {brief.status_desc}
+```yaml
+{yaml_pretty_dump(brief.model_dump(include={"name", "description", "status_desc"}))}
+```
+If your task `description` is empty, means endless task, you shall not operate it;
+Otherwise you shall `finish` or `cancel` it while the task is done or canceled by user.  
 
-use Taskflow to change the task state if you need.
+use Mindflow to operate the task state if you need.
 """
 
     def get_title(self) -> str:
-        return "Taskflow"
+        return "Mindflow"
 
     def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
         self.container = runtime.container()

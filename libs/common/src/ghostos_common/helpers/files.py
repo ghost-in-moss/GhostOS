@@ -2,7 +2,7 @@ import pathlib
 from typing import List, Tuple, Iterable, Dict, Union
 import fnmatch
 
-__all__ = ['list_dir', 'match_pathname', 'generate_directory_tree']
+__all__ = ['list_dir', 'is_pathname_ignored', 'generate_directory_tree']
 
 
 def list_dir(
@@ -47,10 +47,10 @@ def list_dir(
     # 3. 遍历目标目录
     for path in target_dir.iterdir():
         # 检查路径是否被忽略
-        if match_pathname(path.name, ignores):
+        if is_pathname_ignored(path.name, ignores, path.is_dir()):
             continue
 
-        if includes and not match_pathname(path.name, includes):
+        if includes and not is_pathname_ignored(path.name, includes):
             continue
 
         # 如果是文件且 files=True，则返回
@@ -66,7 +66,7 @@ def list_dir(
                 )
 
 
-def match_pathname(path: Union[pathlib.Path, str], pattern: Iterable[str]) -> bool:
+def is_pathname_ignored(path: Union[pathlib.Path, str], pattern: Iterable[str], is_dir: bool) -> bool:
     if not pattern:
         return False
     if isinstance(path, pathlib.Path):
@@ -74,8 +74,14 @@ def match_pathname(path: Union[pathlib.Path, str], pattern: Iterable[str]) -> bo
     else:
         name = str(path)
     for pattern in pattern:
+        matched = True
+        if pattern.startswith('!'):
+            matched = False
+            pattern = pattern[1:]
+        if is_dir and pattern.endswith('/'):
+            pattern = pattern[:-1]
         if fnmatch.fnmatch(name, pattern):
-            return True
+            return matched
     return False
 
 

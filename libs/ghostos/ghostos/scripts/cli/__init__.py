@@ -53,8 +53,7 @@ def tinker():
 
 @main.command("web")
 @click.argument("python_file_or_module")
-@click.option("--src", "-s", default=".", show_default=True,
-              help="load the directory to python path, make sure can import relative packages")
+@click.option("--src", "-s", default=".", show_default=True)
 @click.option(
     "--bootstrap", "-b", default="", show_default=True,
     help="load a python module for bootstrap",
@@ -75,6 +74,31 @@ def start_streamlit_web(python_file_or_module: str, src: str, bootstrap: str = "
 
     ghost_info, module, filename, is_temp = find_ghost_by_file_or_module(python_file_or_module)
     start_streamlit_app_by_ghost_info(ghost_info, module.__name__, filename, is_temp)
+
+
+@main.command("project")
+@click.argument(
+    "working_on",
+    type=str,
+    default="",
+)
+@click.option(
+    "--unsafe-mode", '-u', is_flag=True, default=False, show_default=True,
+    help="run ghostos project agent in unsafe mode, can run moss protocol without approve",
+)
+def start_project_streamlit_agent(working_on: str = "", unsafe_mode: bool = False):
+    """
+    start ghostos project agent on the current working directory.
+    """
+    from ghostos.ghosts.project_manager import ProjectManagerGhost
+    from ghostos.scripts.cli.run_streamlit_app import start_streamlit_app_by_ghost
+
+    ghost = ProjectManagerGhost.new(
+        None,
+        working_on=working_on if working_on else None,
+        safe_mode=not unsafe_mode,
+    )
+    start_streamlit_app_by_ghost(ghost)
 
 
 @main.command("console")
