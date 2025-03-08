@@ -1,6 +1,6 @@
 import inspect
 import re
-from typing import Any, Callable, Optional, List, Iterable
+from typing import Any, Callable, Optional, List, Iterable, get_origin, get_args
 from typing_extensions import is_typeddict
 from pydantic import BaseModel
 
@@ -149,9 +149,9 @@ def get_class_def_from_source(source: str) -> str:
 
 
 def is_typing(value: Any) -> bool:
-    if hasattr(value, "__module__"):
-        return getattr(value, "__module__") == "typing"
-    return False
+    origin = get_origin(value)
+    args = get_args(value)
+    return origin is not None or bool(args)
 
 
 def is_builtin(value: Any) -> bool:

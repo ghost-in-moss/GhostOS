@@ -456,8 +456,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                     reflection_types.add(value)
                 elif inspect.isclass(value):
                     # Exports class always add to reflect types.
-                    if issubclass(value, Exporter) or inspect.isabstract(value):
-                        reflection_types.add(value)
+                    reflection_types.add(value)
         if includes:
             for value in includes:
                 if value not in reverse_imported:
