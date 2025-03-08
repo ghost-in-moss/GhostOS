@@ -43,7 +43,7 @@ When you converse with an agent using `GhostOS`, the system generates various ru
 * logs: runtime logs.
 
 All these runtime files are saved in
-the [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/runtime) directory.
+the [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/app/runtime) directory.
 
 If you need to clear them, please run:
 

@@ -8,7 +8,7 @@
 
 ## Example
 
-使用 Python 代码 [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/demo/sphero/bolt_gpt.py),
+使用 Python 代码 [SpheroBoltGPT](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/demo/sphero/bolt_gpt.py),
 定义了一个以 [SpheroBolt](https://sphero.com/products/sphero-bolt) 玩具为躯体的智能机器人.
 
 如果你有 SpheroBolt, 运行 `ghostos web ghostos.demo.sphero.bolt_gpt` 可以启动这个机器人:

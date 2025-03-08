@@ -5,7 +5,7 @@ its simplicity.
 It is the simplest implementation of [Ghost](/en/usages/ghost.md).
 
 To create your own conversational robot, you can refer to the file
-[ghostos/demo/agents/jojo.py](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/demo/agents/jojo.py).
+[ghostos/demo/agents/jojo.py](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/demo/agents/jojo.py).
 
 ```python
 from ghostos.ghosts.chatbot import Chatbot

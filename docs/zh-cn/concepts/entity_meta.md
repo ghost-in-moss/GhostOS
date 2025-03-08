@@ -4,7 +4,7 @@
 考虑到 `分布式系统` 或是 `可中断 Agent`, 这些数据需要有长期存储的方案. 
 
 `GhostOS` 以 `pickle` 和 `pydantic` 为基础, 
-实现了 [EntityMeta](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/entity.py).
+实现了 [EntityMeta](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/entity.py).
 
 它旨在: 
 1. 把绝大部分可存取的 python 数据结构进行序列化和反序列化

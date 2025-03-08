@@ -43,7 +43,7 @@ ghostos web ghostos.demo.agents.jojo
 * logs: 运行时日志.
 
 所有这类运行时文件,
-都保存在 [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/app/runtime) 目录.
+都保存在 [\[workspace\]/runtime](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/app/runtime) 目录.
 
 如果需要清空它们, 请运行:
 

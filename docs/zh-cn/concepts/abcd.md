@@ -41,6 +41,6 @@ with receiver:
 ```
 
 
-详细内容请直接看代码 [ghostos.abcd.concepts](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+详细内容请直接看代码 [ghostos.abcd.concepts](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 
 > 抽象设计的相关介绍非常繁杂, 有精力再完成文档. 

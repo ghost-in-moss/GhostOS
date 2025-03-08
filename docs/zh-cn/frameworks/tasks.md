@@ -149,4 +149,4 @@ class Subtasks(Prompter, ABC):
 
 从而让多个 Agent 之间以 `Task` 为单位进行交流和互动. 
 
-相关实现详见 [ghostos.core.runtime.tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/core/runtime/tasks.py)
+相关实现详见 [ghostos.core.runtime.tasks](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/core/runtime/tasks.py)

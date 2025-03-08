@@ -2,7 +2,7 @@
 
 `GhostOS` 遵循 `面向接口编程` 的思路构建项目.
 大多数模块分为 `interface` 与 `implementation`,
-通过 [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libs/container/ghostos_container/__init__.py) (控制反转容器) 来注册与获取实现.
+通过 [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/libs/container/ghostos_container/__init__.py) (控制反转容器) 来注册与获取实现.
 
 关于 IoC 详见: [Inverse of Control](https://en.wikipedia.org/wiki/Inversion_of_control)
 
@@ -278,11 +278,11 @@ class SpheroBoltProvider(BootstrapProvider):
 
 `GhostOS` 里的 Container 继承层级关系如下:
 
-* Root level: [ghostos.bootstrap.app_container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/bootstrap.py)
-* GhostOS level: [ghostos.abcd.GhostOS:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-* Shell level: [ghostos.abcd.Shell:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+* Root level: [ghostos.bootstrap.app_container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/bootstrap.py)
+* GhostOS level: [ghostos.abcd.GhostOS:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
+* Shell level: [ghostos.abcd.Shell:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 * Conversation
-  level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+  level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 * Moss
   level: [ghostos_moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py)
 

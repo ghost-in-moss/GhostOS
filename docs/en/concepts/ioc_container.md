@@ -2,7 +2,7 @@
 
 `GhostOS` follows the concept of `interface-oriented programming` to build the project.
 Most modules are divided into `interface` and `implementation`.
-Register and get implementations by [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libs/container/ghostos_container/__init__.py).
+Register and get implementations by [IoC Container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/libs/container/ghostos_container/__init__.py).
 
 About IoC: [Inverse of Control](https://en.wikipedia.org/wiki/Inversion_of_control)
 
@@ -295,11 +295,11 @@ independent set of dependencies.
 In this way, Container is similar to Python `contextvars`, which can manage a separate execution context.
 The inheritance hierarchy of Containers in GhostOS is as follows:
 
-* Root level: [ghostos.bootstrap.app_container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/bootstrap.py)
-* GhostOS level: [ghostos.abcd.GhostOS:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
-* Shell level: [ghostos.abcd.Shell:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+* Root level: [ghostos.bootstrap.app_container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/bootstrap.py)
+* GhostOS level: [ghostos.abcd.GhostOS:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
+* Shell level: [ghostos.abcd.Shell:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 * Conversation
-  level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/abcd/concepts.py)
+  level: [ghostos.abcd.Conversation:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/abcd/concepts.py)
 * Moss
   level: [ghostos_moss.MossRuntime:container](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/moss/ghostos_moss/abcd.py)
 

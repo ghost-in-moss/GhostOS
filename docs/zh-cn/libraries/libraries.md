@@ -92,4 +92,4 @@ class Moss(Parent):
 ## Developing Libraries
 
 `GhostOS` 开箱自带的 libraries 还在开发和测试中. 
-这些工具预期都会放入 [ghostos/libraries]((https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libraries))
+这些工具预期都会放入 [ghostos/libraries]((https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/libraries))

@@ -5,7 +5,7 @@ nd also be able to restore variables in subsequent operations.
 Considering a distributed system or an interruptible Agent, these data need a long-term storage solution.
 
 `GhostOS`, based on `pickle` and `pydantic`, has
-implemented [EntityMeta](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/entity.py).
+implemented [EntityMeta](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/entity.py).
 
 It aims to:
 

@@ -99,4 +99,4 @@ repositories.
 
 The libraries that come with GhostOS out of the box are still under development and testing.
 These tools are expected to be placed
-in [ghostos/libraries](https://github.com/ghost-in-moss/GhostOS/tree/main/ghostos/libraries).
+in [ghostos/libraries](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/libraries).
