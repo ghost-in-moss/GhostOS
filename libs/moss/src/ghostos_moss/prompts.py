@@ -155,13 +155,13 @@ def reflect_code_prompt(value: Any, throw: bool = False) -> Optional[str]:
     try:
         if inspect.isbuiltin(value):
             return None
+        elif is_typing(value):
+            return str(value)
 
         prompt = get_defined_prompt(value)
         if prompt is not None:
             return prompt
 
-        if is_typing(value):
-            return str(value)
         elif inspect.isclass(value):
             # only reflect abstract class
             if inspect.isabstract(value) or issubclass(value, BaseModel) or is_dataclass(value) or is_typeddict(value):

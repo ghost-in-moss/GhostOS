@@ -181,8 +181,6 @@ class MossCompilerImpl(MossCompiler):
                 return ""
             module = self._modules.import_module(self._pycontext.module)
             code = inspect.getsource(module)
-        if not code.lstrip().startswith(IMPORT_FUTURE):
-            code = IMPORT_FUTURE + "\n\n" + code.lstrip("\n")
         return code if code else ""
 
     def close(self) -> None:
@@ -331,13 +329,12 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             if name.startswith('_'):
                 continue
 
-            # 记录所有定义过的类型.
-            self._injected_types[typehint] = name
-
             # 已经有的就不再注入.
             if hasattr(moss, name):
                 continue
 
+            # 记录所有定义过的类型.
+            self._injected_types[typehint] = name
             # 为 None 才依赖注入.
             value = self._container.force_fetch(typehint)
             # 依赖注入.
@@ -423,7 +420,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
                 elif inspect.ismodule(value):
                     # module can not get itself
                     self._imported_attrs[name] = value
-                elif hasattr(value, "__module__") and hasattr(value, "__name__"):
+                elif hasattr(value, "__module__"):
                     value_module = value.__module__
                     if value_module == self_modulename:
                         continue
@@ -452,11 +449,7 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             if value not in reverse_imported:
                 reverse_imported[value] = key
                 # only function or methods are reflected automatically
-                if inspect.isfunction(value) or inspect.ismethod(value):
-                    reflection_types.add(value)
-                elif inspect.isclass(value):
-                    # Exports class always add to reflect types.
-                    reflection_types.add(value)
+                reflection_types.add(value)
         if includes:
             for value in includes:
                 if value not in reverse_imported:

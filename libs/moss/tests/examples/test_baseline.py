@@ -18,8 +18,7 @@ def test_baseline_exec():
     compiler.join_context(PyContext(module=baseline.__name__))
     assert compiler.pycontext().module == baseline.__name__
     # 获取目标代码.
-    code = compiler.pycontext_code()
-    assert "from __future__" in code
+    # code = compiler.pycontext_code()
 
     runtime = compiler.compile(None)
     assert runtime is not None

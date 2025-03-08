@@ -1,5 +1,5 @@
-from typing import Optional
-from ghostos_container import Container
+from typing import Optional, List
+from ghostos_container import Container, Provider
 from ghostos_moss.abcd import (
     Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
     AttrPrompts, Injection,
@@ -12,6 +12,7 @@ from ghostos_moss.pycontext import PyContext
 from ghostos_moss.exports import Exporter
 from ghostos_moss.magics import __is_subclass__, __is_instance__, MagicPrompter
 from ghostos_moss.prompts import PromptAbleClass, PromptAbleObj
+from contextlib import contextmanager
 
 __all__ = [
     # abstract contracts
@@ -36,6 +37,8 @@ __all__ = [
     'MagicPrompter',
 
     'PromptAbleClass', 'PromptAbleObj',
+
+    'get_moss_compiler', 'moss_runtime_ctx',
 ]
 
 
@@ -56,6 +59,26 @@ def get_moss_compiler(container: Optional[Container] = None) -> MossCompiler:
     if container is None:
         container = moss_container()
     return container.force_fetch(MossCompiler)
+
+
+@contextmanager
+def moss_runtime_ctx(
+        modulename: str,
+        *,
+        container: Optional[Container] = None,
+        providers: Optional[List[Provider]] = None,
+        pycontext: Optional[PyContext] = None,
+) -> MossRuntime:
+    compiler = get_moss_compiler(container)
+    if pycontext is not None:
+        compiler = compiler.join_context(pycontext)
+    if providers is not None:
+        for provider in providers:
+            compiler.register(provider)
+    with compiler:
+        runtime = compiler.compile(modulename)
+        with runtime:
+            yield runtime
 
 
 def moss_test_suite() -> MossTestSuite:
