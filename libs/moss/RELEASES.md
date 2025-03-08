@@ -1,5 +1,9 @@
 # v0.3
 
+## v0.3.6
+
+fix: fix reflect too much from imported attrs.
+
 ## v0.3.5
 
 fix: `dict[str, int]` is a class but not suitable for `issubclass`

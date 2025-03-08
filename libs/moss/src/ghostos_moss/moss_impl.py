@@ -22,6 +22,7 @@ from ghostos_common.helpers import (
     generate_module_and_attr_name, code_syntax_check, get_code_interface_str,
     import_from_path,
 )
+from ghostos_moss.utils import is_typing, is_subclass
 from contextlib import contextmanager, redirect_stdout
 
 IMPORT_FUTURE = "from __future__ import annotations"
@@ -449,7 +450,13 @@ class MossRuntimeImpl(MossRuntime, MossPrompter):
             if value not in reverse_imported:
                 reverse_imported[value] = key
                 # only function or methods are reflected automatically
-                reflection_types.add(value)
+                if isinstance(value, type):
+                    if inspect.isabstract(value) or is_subclass(value, Exporter):
+                        reflection_types.add(value)
+                elif inspect.isroutine(value):
+                    reflection_types.add(value)
+                elif is_typing(value):
+                    reflection_types.add(value)
         if includes:
             for value in includes:
                 if value not in reverse_imported:

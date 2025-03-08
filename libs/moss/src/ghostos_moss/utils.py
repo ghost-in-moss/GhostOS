@@ -1,6 +1,6 @@
 import inspect
 import re
-from typing import Any, Callable, Optional, List, Iterable, get_origin, get_args
+from typing import Any, Callable, Optional, List, Iterable, get_origin, get_args, Type
 from typing_extensions import is_typeddict
 from pydantic import BaseModel
 
@@ -9,7 +9,7 @@ __all__ = [
     'unwrap_str',
     'get_modulename',
 
-    'is_typing', 'is_builtin', 'is_classmethod',
+    'is_typing', 'is_builtin', 'is_classmethod', 'is_subclass',
     'is_model_class',
     'parse_comments',
     'parse_doc_string', 'escape_string_quotes',
@@ -152,6 +152,13 @@ def is_typing(value: Any) -> bool:
     origin = get_origin(value)
     args = get_args(value)
     return origin is not None or bool(args)
+
+
+def is_subclass(value: Any, parent: Type) -> bool:
+    try:
+        return issubclass(value, parent)
+    except TypeError:
+        return False
 
 
 def is_builtin(value: Any) -> bool:
