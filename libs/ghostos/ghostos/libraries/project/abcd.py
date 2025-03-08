@@ -5,6 +5,7 @@ from types import FunctionType, ModuleType
 from typing_extensions import Self
 from pydantic import BaseModel, Field
 from ghostos.abcd import Operator
+from ghostos_moss import Exporter
 import pathlib
 
 _IMPORT_PATH = str
@@ -219,3 +220,10 @@ class ProjectManager(ABC):
         :param file_path: relative to the working directory.
         """
         pass
+
+
+class ProjectExporter(ABC):
+    ProjectManager: ProjectManager
+    PyDevCtx: PyDevCtx
+    File: File
+    Directory: Directory
