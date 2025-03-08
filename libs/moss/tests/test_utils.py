@@ -3,6 +3,7 @@ from ghostos_moss.utils import (
     get_class_def_from_source, replace_class_def_name, strip_source_indent, count_source_indent,
     parse_doc_string,
     escape_string_quotes,
+    is_typing,
 )
 
 
@@ -211,3 +212,27 @@ def test_parse_doc_string():
     for c in cases:
         assert parse_doc_string(c.doc, inline=c.inline) == c.expect.strip()
 
+
+def test_is_class_and_is_subclass():
+    import inspect
+    a = dict[str, int]
+    assert inspect.isclass(a)
+    assert not inspect.isabstract(a)
+    e = False
+    b = None
+    try:
+        b = issubclass(a, dict)
+    except TypeError:
+        e = True
+    assert b is False
+    assert e is False
+
+
+def test_is_typing():
+    import inspect
+    a = dict[str, int]
+    assert inspect.isclass(a)
+    assert not inspect.isbuiltin(a)
+    assert is_typing(a)
+    assert str(a) == "dict[str, int]"
+    assert a.__module__ == "builtins"

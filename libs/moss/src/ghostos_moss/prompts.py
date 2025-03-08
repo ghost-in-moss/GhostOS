@@ -11,6 +11,7 @@ from ghostos_common.prompter import (
 )
 from pydantic import BaseModel
 from dataclasses import is_dataclass
+from ghostos_moss.utils import is_typing
 import inspect
 
 """
@@ -142,7 +143,7 @@ def reflect_imported_attr(
     return reflect_code_prompt(value)
 
 
-def reflect_code_prompt(value: Any) -> Optional[str]:
+def reflect_code_prompt(value: Any, throw: bool = False) -> Optional[str]:
     """
     get prompt from value.
     only:
@@ -151,21 +152,31 @@ def reflect_code_prompt(value: Any) -> Optional[str]:
     3. function or method
     will generate prompt
     """
-    prompt = get_defined_prompt(value)
-    if prompt is not None:
-        return prompt
+    try:
+        if inspect.isbuiltin(value):
+            return None
+        elif is_typing(value):
+            return str(value)
 
-    if inspect.isclass(value):
-        # only reflect abstract class
-        if inspect.isabstract(value) or issubclass(value, BaseModel) or is_dataclass(value) or is_typeddict(value):
-            source = inspect.getsource(value)
-            if source:
-                return source
-    elif inspect.isfunction(value) or inspect.ismethod(value):
-        # 默认都给方法展示 definition.
-        return get_callable_definition(value)
+        prompt = get_defined_prompt(value)
+        if prompt is not None:
+            return prompt
 
-    return None
+        elif inspect.isclass(value):
+            # only reflect abstract class
+            if inspect.isabstract(value) or issubclass(value, BaseModel) or is_dataclass(value) or is_typeddict(value):
+                source = inspect.getsource(value)
+                if source:
+                    return source
+        elif inspect.isfunction(value) or inspect.ismethod(value):
+            # 默认都给方法展示 definition.
+            return get_callable_definition(value)
+
+        return None
+    except Exception as e:
+        if throw:
+            raise e
+        return None
 
 
 def join_prompt_lines(*prompts: Optional[str]) -> str:

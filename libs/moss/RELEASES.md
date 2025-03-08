@@ -1,5 +1,17 @@
 # v0.3
 
+## v0.3.6
+
+fix: fix reflect too much from imported attrs.
+
+## v0.3.5
+
+fix: `dict[str, int]` is a class but not suitable for `issubclass`
+
+## v0.3.4
+
+fix: reflect is typing
+
 ## v0.3.3
 
 fix: element in `__all__` must be string
