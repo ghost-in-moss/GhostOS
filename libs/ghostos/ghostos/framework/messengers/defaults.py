@@ -33,6 +33,7 @@ class DefaultMessenger(Messenger):
         self._stage = stage
         self._destroyed = False
         self._output_pipes = output_pipes
+        self.finish_reason = None
 
     def flush(self) -> Tuple[List[Message], List[FunctionCaller]]:
         messages = []
@@ -107,6 +108,8 @@ class DefaultMessenger(Messenger):
             # skip chunk
             if self._upstream and self._upstream.completes_only() and not item.is_complete():
                 continue
+            if item.is_complete() and item.finish_reason:
+                self.finish_reason = item.finish_reason
             yield item
 
     def completes_only(self) -> bool:

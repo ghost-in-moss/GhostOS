@@ -79,7 +79,7 @@ the information from this PyDevCtx instance:
                 source = self.read_source(from_, watching=False)
                 lines.append(f"<source from=`{from_}`>\n{source}\n</source>")
 
-        return "\n".join(lines)
+        return "\n\n".join(lines)
 
     def self_prompt(self, container: Container) -> str:
         return self.full_context()

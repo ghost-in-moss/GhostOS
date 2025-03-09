@@ -59,12 +59,15 @@ the available functional tokens are:
 
 DEFAULT_FUNCTIONAL_TOKEN_INSTRUCTION = """
 # Functional Token
-You are equipped with `functional tokens` parser to understand your outputs.
+You are equipped with `functional tokens` parser to execute your command, kind like json schema function call.
 
 A functional token is a set of special tokens that corresponds to a system callback function. 
 When a functional token is present in your response, the subsequent output is treated as input parameters for this 
 callback function. 
-You shall embrace the parameter tokens in xml pattern. For example:
+
+If some useful tools provided to you by functional tokens, you can use them by functional tokens.
+
+When you are generate tokens with functional tokens, notice to embrace the argument tokens in xml pattern. For example:
 1. a functional token is `foo`
 2. parameter tokens are `print("hello world")`
 3. the output should be: `say something if necessary...<foo>print("hello world")</foo>`

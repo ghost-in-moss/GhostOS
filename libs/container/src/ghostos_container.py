@@ -641,6 +641,9 @@ class ProviderAdapter(Generic[INSTANCE], Provider[INSTANCE]):
     def contract(self) -> Type[INSTANCE]:
         return self._contract_type
 
+    def inheritable(self) -> bool:
+        return False
+
     def factory(self, con: Container) -> Optional[INSTANCE]:
         return self._factory(con)
 

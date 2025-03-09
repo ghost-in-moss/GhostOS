@@ -1,28 +1,26 @@
-from typing import Union, Optional
+from typing import Optional
 from typing_extensions import Self
 
 from ghostos.abcd import Operator, Session
 from ghostos.libraries.project.abcd import ProjectManager
 from ghostos.libraries.pyeditor import PyModuleEditor
 from ghostos.libraries.terminal import Terminal
-from ghostos.libraries.project.directory_impl import DirectoryImpl, FileImpl
+from ghostos.libraries.project.directory_impl import DirectoryImpl
 from ghostos.libraries.pyeditor.simple_module_editor import SimplePyModuleEditor
 from pydantic import BaseModel, Field
 from ghostos_common.helpers import generate_import_path
 from ghostos_common.prompter import PromptObjectModel, TextPOM
-from ghostos_moss import Injection, MossRuntime, Modules
+from ghostos_moss import MossRuntime, Modules
 from ghostos_container import Container, Provider
 import pathlib
-import os
 
 
 class ProjectData(BaseModel):
     root_dir: str = Field(description="Root path")
     working_dir: str = Field(description="Working directory")
-    editing_file: Union[str, None] = Field(default=None, description="Editing file")
 
 
-class ProjectManagerImpl(ProjectManager, PromptObjectModel, Injection):
+class ProjectManagerImpl(ProjectManager, PromptObjectModel):
 
     def __init__(
             self,
@@ -45,7 +43,6 @@ class ProjectManagerImpl(ProjectManager, PromptObjectModel, Injection):
         data = ProjectData(
             root_dir=str(root_dir.absolute()),
             working_dir=str(working_dir.absolute()),
-            editing_file=editing_file,
         )
         if self._session_key in session.state:
             _data = session.state[self._session_key]
@@ -58,11 +55,13 @@ class ProjectManagerImpl(ProjectManager, PromptObjectModel, Injection):
         self.working: DirectoryImpl = DirectoryImpl(
             path=pathlib.Path(self._data.working_dir),
         )
+        self.working.focus(editing_file)
 
         self.add_child(TextPOM(
             title="Root Directory Info",
             content=self.root.full_context(),
         ))
+
         if self._data.working_dir != self._data.root_dir:
             self.add_child(TextPOM(
                 title="Working Directory Info",
@@ -72,14 +71,6 @@ class ProjectManagerImpl(ProjectManager, PromptObjectModel, Injection):
             self.add_child(TextPOM(
                 title="Working Directory Info",
                 content=f"working directory is the root directory",
-            ))
-
-        self.editing: Union[FileImpl, None] = None
-        if self._data.editing_file:
-            self._set_editing(self._data.editing_file, exists=False)
-            self.add_child(TextPOM(
-                title="Editing File",
-                content=self.editing.read(line_number=True),
             ))
 
     def _set_working_on(self, working_path: pathlib.Path):
@@ -94,36 +85,16 @@ class ProjectManagerImpl(ProjectManager, PromptObjectModel, Injection):
             relative=str(working_path.relative_to(root_dir)),
         )
 
-    def _set_editing(self, filename: str, exists: bool):
-        filepath = self.working.path.joinpath(filename)
-        if filepath.is_dir():
-            raise ValueError(f"{filename} exists but is a directory")
-        if not filepath.exists():
-            if exists:
-                raise FileNotFoundError(f"File {filename} does not exist")
-            else:
-                filepath.touch()
-        working_path = filepath.parent
-        filename = str(filepath.relative_to(self.working.path))
-        file_dev_ctx = self.working.dev_contexts().get(filename)
-        if file_dev_ctx is None:
-            file_dev_ctx = self.working.new_dev_context(filename, f"file dev context on {filename}")
-        self.editing = FileImpl(
-            filepath,
-            dev_ctx=file_dev_ctx,
-        )
-
     def work_on(self, dir_path: str) -> Operator:
+        dir_root = self.working.path
         if dir_path == '.' or dir_path == '~':
-            self.working = self.root
-        else:
-            self.working = self.root.subdir(dir_path)
-        self._data.working_dir = str(self.working.path.absolute())
-        self._data.editing_file = None
-        return self._session.mindflow().think()
+            dir_root = self.root.path
+            dir_path = dir_path[1:]
+        working_path = dir_root.joinpath(dir_path).absolute()
+        working_path.relative_to(self.root.path)
 
-    def edit(self, file_path: str) -> Operator:
-        self._set_editing(file_path, exists=False)
+        self.working = DirectoryImpl(working_path, self.root.get_ignores())
+        self._data.working_dir = str(self.working.path.absolute())
         return self._session.mindflow().think()
 
     def edit_pymodule(self, modulename: str) -> PyModuleEditor:
@@ -144,14 +115,6 @@ class ProjectManagerImpl(ProjectManager, PromptObjectModel, Injection):
 
     def get_title(self) -> str:
         return "Project Manager Instance"
-
-    def on_inject(self, runtime: MossRuntime, property_name: str) -> Self:
-        return self
-
-    def on_destroy(self) -> None:
-        self.working.save_dev_contexts()
-        self.root.save_dev_contexts()
-        self._session.state[self._session_key] = self._data
 
 
 class ProjectManagerProvider(Provider[ProjectManager]):

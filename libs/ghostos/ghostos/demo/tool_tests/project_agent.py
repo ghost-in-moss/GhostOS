@@ -4,7 +4,7 @@ from typing import Iterable
 
 from ghostos_container import Provider
 
-from ghostos.libraries.project import ProjectExports
+from ghostos.libraries.project import contracts
 from ghostos.libraries.terminal import Terminal
 from ghostos.abcd import Mindflow
 from ghostos_moss import Moss as Parent
@@ -15,7 +15,7 @@ class Moss(Parent, ABC):
     管理一个项目的工具界面.
     """
 
-    project: ProjectExports.ProjectManager
+    project: contracts.ProjectManager
     """ manage the project"""
 
     mindflow: Mindflow

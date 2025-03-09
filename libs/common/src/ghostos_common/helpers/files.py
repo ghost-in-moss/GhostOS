@@ -1,8 +1,9 @@
+from abc import abstractmethod
 import pathlib
-from typing import List, Tuple, Iterable, Dict, Union
+from typing import List, Tuple, Iterable, Dict, Union, Protocol, Any
 import fnmatch
 
-__all__ = ['list_dir', 'is_pathname_ignored', 'generate_directory_tree']
+__all__ = ['list_dir', 'is_pathname_ignored', 'generate_directory_tree', 'DescriptionsGetter']
 
 
 def list_dir(
@@ -85,10 +86,17 @@ def is_pathname_ignored(path: Union[pathlib.Path, str], pattern: Iterable[str], 
     return False
 
 
+class DescriptionsGetter(Protocol):
+
+    @abstractmethod
+    def get(self, path: pathlib.Path, default: Union[str, None] = None) -> Union[str, None]:
+        pass
+
+
 def generate_directory_tree(
         current: Union[pathlib.Path, str],
         recursion: int = -1,
-        descriptions: Dict[str, str] = None,
+        descriptions: Union[Dict[str, str], DescriptionsGetter, None] = None,
         *,
         prefix: str = "",
         ignores: List[str] = None,
@@ -124,17 +132,22 @@ def generate_directory_tree(
         current_indent = indent * current_depth
 
         desc = ""
-        if descriptions:
+        if descriptions is not None:
             relative = path.relative_to(current)
             relative_path = str(relative)
-            if relative_path in descriptions:
-                got = descriptions.get(relative_path, "")
-                got.strip()
+            desc = ""
+            got = ""
+            if isinstance(descriptions, dict):
+                if relative_path in descriptions:
+                    got = descriptions.get(relative_path, "")
+            else:
+                got = descriptions.get(path, "")
+            got.strip()
+            if got:
                 got = got.replace("\n", " ")
                 if len(got) > 150:
                     got = got[:150] + "..."
-                if got:
-                    desc = f" : `{got}`"
+                desc = f" : `{got}`"
 
         if path.is_dir():
             tree.append(f"{current_indent}📁 {path.name}{desc}")

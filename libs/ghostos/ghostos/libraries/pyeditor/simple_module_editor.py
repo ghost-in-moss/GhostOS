@@ -5,6 +5,7 @@ from ghostos.contracts.modules import Modules, DefaultModules
 from ghostos.libraries.pyeditor.abcd import PyModuleEditor
 from ghostos_container import Provider, Container
 from ghostos_common.prompter import POM
+from ghostos_moss import moss_runtime_ctx
 import inspect
 
 __all__ = ['SimplePyModuleEditor', 'SimplePyModuleEditorProvider']
@@ -28,6 +29,10 @@ class SimplePyModuleEditor(POM, PyModuleEditor):
 
     def new_from(self, modulename: str) -> Self:
         return SimplePyModuleEditor(modulename, modules=self._modules)
+
+    def get_imported_attrs_interfaces(self) -> str:
+        with moss_runtime_ctx(self.modulename) as rtm:
+            return rtm.prompter().get_imported_attrs_prompt()
 
     def get_source(self, show_line_num: bool = False, start_line: int = 0, end_line: int = -1) -> str:
         source = self._get_module_source()

@@ -57,7 +57,7 @@ def run(moss: Moss):
     :return: Optional[Operator] 
              if return None, the outer system will perform default action, or observe the values you printed.
              Otherwise, the outer system will execute the Operator, which is your mindflow operator.
-             if some methods return Operator, you can use them to control your mindflow.
+             if some methods return Operator, you can use them to control your mindflow, REMEMBER to return the operator instance.
     \"""
 ```
 

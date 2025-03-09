@@ -1,9 +1,10 @@
 import inspect
 from typing import Union, Optional, Dict, List, Iterable, Tuple, ClassVar, Type, Any
+
 from typing_extensions import Self
 from types import ModuleType
 
-from ghostos.core.llms import Prompt
+from ghostos.core.llms import Prompt, LLMs, LLMApi
 from ghostos.ghosts.moss_agent.for_developer import BaseMossAgentMethods
 from ghostos_common.identifier import Identifier
 from pydantic import Field
@@ -344,19 +345,9 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
             if ok:
                 return op or session.mindflow().wait()
 
-            # prepare thread
             thread = session.thread
             thread.new_turn(event)
-
-            # prepare prompt
-            instruction = self.make_system_instruction(session, rtm)
-            prompt = thread.to_prompt([
-                Role.SYSTEM.new(content=instruction)],
-                truncate=True,
-            )
-            pipes = self.get_prompt_pipes(session, rtm)
-            prompt = run_prompt_pipeline(prompt, pipes)
-
+            prompt = self._get_current_prompt(session, rtm)
             # prepare actions
             actions = self.get_actions(session)
             thought = self.thought(session, rtm, actions=actions)
@@ -366,6 +357,25 @@ providing llm connections, body shell, tools, memory etc and specially the `MOSS
 
             # wait for response as default.
             return session.mindflow().wait()
+
+    def get_current_prompt(self, session: Session) -> Prompt:
+        rtm = self.get_moss_runtime(session)
+        with rtm:
+            return self._get_current_prompt(session, rtm)
+
+    def _get_current_prompt(self, session: Session, rtm: MossRuntime) -> Prompt:
+        # prepare thread
+        thread = session.thread
+
+        # prepare prompt
+        instruction = self.make_system_instruction(session, rtm)
+        prompt = thread.to_prompt([
+            Role.SYSTEM.new(content=instruction)],
+            truncate=True,
+        )
+        pipes = self.get_prompt_pipes(session, rtm)
+        prompt = run_prompt_pipeline(prompt, pipes)
+        return prompt
 
     @classmethod
     def __class_prompt__(cls) -> str:
@@ -450,6 +460,12 @@ class MossGhostDriver(GhostDriver[MossGhost], PromptAbleClass):
 
     def on_creating(self, session: Session) -> None:
         return self.get_methods().on_creating(session)
+
+    def get_current_prompt(self, session: Session) -> Prompt:
+        return self.get_methods().get_current_prompt(session)
+
+    def get_llm_api(self, session: Session) -> LLMApi:
+        return session.container.force_fetch(LLMs).get_api(self.ghost.llm_api)
 
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
         return self.get_methods().on_event(session, event)
