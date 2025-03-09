@@ -1,6 +1,7 @@
 from ghostos_common.helpers import (
     get_calling_modulename,
     generate_module_and_attr_name,
+    get_module_fullname_from_path,
 )
 
 
@@ -26,3 +27,10 @@ def test_generate_module_name_and_attr():
 
     modulename, attr = generate_module_and_attr_name(bar)
     assert "bar" in attr
+
+
+def test_get_module_fullname_from_path():
+    from ghostos_common import helpers
+    modulename = get_module_fullname_from_path(helpers.__file__, use_longest_match=True)
+    assert modulename is not None
+    assert modulename.endswith("ghostos_common.helpers")

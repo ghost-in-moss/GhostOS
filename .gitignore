@@ -1,4 +1,5 @@
 # ide
+.ghostos_dir.yml
 .idea/
 dist
 debug.log

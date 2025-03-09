@@ -1,6 +1,6 @@
 [project]
 name = "ghostos-common"
-version = "0.3.1"
+version = "0.3.4"
 description = "common library for GhostOS project"
 authors = [
     { name = "thirdgerb", email = "thirdgerb@gmail.com" }

@@ -61,6 +61,11 @@ class Prompt(BaseModel):
     ) -> Prompt:
         return Prompt(history=messages)
 
+    def clear_callable(self):
+        self.function_call = None
+        self.functions = []
+        self.functional_tokens = []
+
     def system_prompt(self) -> str:
         contents = []
         if self.system:

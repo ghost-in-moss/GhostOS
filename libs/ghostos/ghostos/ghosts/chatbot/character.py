@@ -1,4 +1,6 @@
 from typing import Union, Iterable, List, Optional
+
+from ghostos.core.llms import LLMApi, LLMs
 from ghostos.abcd import Agent, GhostDriver, Session, Operator
 from ghostos.abcd.thoughts import ActionThought, Thought
 from ghostos_container import Provider
@@ -133,6 +135,9 @@ class CharacterDriver(GhostDriver[Character]):
 
     def on_creating(self, session: Session) -> None:
         return
+
+    def get_llm_api(self, session: Session) -> LLMApi:
+        return session.container.force_fetch(LLMs).get_api(self.ghost.llm_api)
 
     def thought(self, session: Session) -> Thought:
         thought = ActionThought(llm_api=self.ghost.llm_api)

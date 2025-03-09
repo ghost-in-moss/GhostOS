@@ -1,3 +1,4 @@
+import locale
 from abc import ABC, abstractmethod
 from typing import NamedTuple, List
 from datetime import datetime
@@ -71,6 +72,7 @@ class TerminalContext:
         Compile environmental context into natural language prompt.
         """
         time_context = self.time_context()
+        lang, encoding = locale.getdefaultlocale()
         return (
             "[System Context]\n"
             f"OS: {self.system_info()}\n"
@@ -78,4 +80,6 @@ class TerminalContext:
             f"Pwd: {self.pwd()}\n"
             f"TimeZone: {time_context.astimezone().tzinfo}\n"
             f"Time: {time_context.isoformat(' ', 'seconds')}\n"
+            f"System Lang: {lang}\n"
+            f"System Encoding: {encoding}\n"
         )

@@ -1,4 +1,4 @@
-from typing import List, Iterable, Union, Type, Optional, Any
+from typing import List, Optional, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from ghostos_common.prompter import POM
@@ -91,6 +91,14 @@ class PyModuleEditor(ABC):
         :param start_line: start line number
         :param end_line: end line number, if < 0, means end line number
         :return: source code
+        """
+        pass
+
+    @abstractmethod
+    def get_imported_attrs_interfaces(self) -> str:
+        """
+        get imported attrs source code interfaces (definitions and signatures)
+        convenient way to use imported attrs without read source code from them.
         """
         pass
 

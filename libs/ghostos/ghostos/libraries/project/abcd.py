@@ -5,6 +5,7 @@ from types import FunctionType, ModuleType
 from typing_extensions import Self
 from pydantic import BaseModel, Field
 from ghostos.abcd import Operator
+from ghostos.libraries.pyeditor import PyModuleEditor
 from ghostos_moss import Exporter
 import pathlib
 
@@ -145,8 +146,10 @@ class Directory(ABC):
     def subdir(self, path: str) -> Self:
         """
         get subdirectory instance by path relative to this directory.
-        :param path: the relative path which must be a directory.
+        :param path: the relative path which must be a directory. must exist or raise ValueError.
         :return: Directory instance.
+
+        if you want to create directory, use terminal if you got one.
         """
         pass
 
@@ -159,6 +162,34 @@ class Directory(ABC):
         """
         pass
 
+    @abstractmethod
+    def mkdir(self, subdir: str, desc: str, dev_ctx: Union[PyDevCtx, None] = None) -> bool:
+        """
+        make a subdirectory with description and dev_ctx
+        :param subdir: directory path relative to this directory.
+        :param desc: description of the directory.
+        :param dev_ctx: pass the dev_ctx to this directory. not neccessary, do it only if you know what you're doing.
+        :return: if False, directory already exists.
+        """
+        pass
+
+    @abstractmethod
+    def touch(self, sub_file: str, desc: str, dev_ctx: Union[PyDevCtx, None] = None) -> bool:
+        """
+        touch a file with description and Optional[dev_ctx]
+        """
+        pass
+
+    @abstractmethod
+    def edit(self, file_path: str) -> File:
+        """
+        focus to edit the file in the directory
+        the file must exist or raise FileNotFoundError.
+
+        :param file_path: relative to the working directory. if None, don't focus on any file.
+        """
+        pass
+
 
 class File(ABC):
     path: pathlib.Path
@@ -168,10 +199,11 @@ class File(ABC):
     """the dev context of this file"""
 
     @abstractmethod
-    def read(self, line_number: bool = True) -> str:
+    def read(self, line_number: bool = True, detail: bool = True) -> str:
         """
         read content from the file.
-        :return: the real content of the file will be embraced with <content>...</content> mark
+        :param line_number: if True, add line number at the beginning of each line like `1|...`
+        :param detail: if True, add more information about the file, the real content of the file will be embraced with <content>...</content> mark
         """
         pass
 
@@ -183,9 +215,22 @@ class File(ABC):
         pass
 
     @abstractmethod
-    def insert(self, content: str, start: int, end: int) -> None:
+    def insert(self, content: str, start: int = -1, end: int = -1) -> None:
         """
-        use content to relace the origin content by start line and end line.
+        use content to relace the origin content lines > start line and <= end line.
+        """
+        pass
+
+    @abstractmethod
+    def continuous_write(self, instruction: str, start: int = -1, end: int = -1, max_round: int = 10) -> Operator:
+        """
+        considering your output is limited, you can use this method to start a continuous writing in multi-turns.
+        only use it when you are planning to write something beyond your max-tokens limit.
+        :param instruction: about what you are doing, will remind it to you at each turn
+        :param start: start index: the writing start at line
+        :param end: end index: the writing end before (eqt) line
+        :param max_round: maximum round for this writing.
+        :return: remember to return the mind operator, which will operate the multi-turns writing.
         """
         pass
 
@@ -202,9 +247,6 @@ class ProjectManager(ABC):
     working: Directory
     """the current directory of the project."""
 
-    editing: Union[File, None]
-    """the editing file of the project."""
-
     @abstractmethod
     def work_on(self, dir_path: str) -> Operator:
         """
@@ -214,16 +256,21 @@ class ProjectManager(ABC):
         pass
 
     @abstractmethod
-    def edit(self, file_path: str) -> Operator:
+    def edit_pymodule(self, modulename: str) -> PyModuleEditor:
         """
-        focus to edit the file in the project
-        :param file_path: relative to the working directory.
+        edit a python module, if editable.
+        :param modulename: the full import name of the module
         """
         pass
 
 
-class ProjectExporter(ABC):
-    ProjectManager: ProjectManager
-    PyDevCtx: PyDevCtx
-    File: File
-    Directory: Directory
+class ProjectExports(Exporter):
+    """
+    the exports for projects.
+    """
+
+    ProjectManager = ProjectManager
+    PyDevCtx = PyDevCtx
+    File = File
+    Directory = Directory
+    PyModuleEditor = PyModuleEditor

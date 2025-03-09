@@ -1,8 +1,8 @@
 from typing import Union, Optional, ClassVar
 
 from abcd import Session, Operator
-from core.llms import Prompt, LLMFunc
-from core.messages import FunctionCaller
+ import Prompt, LLMFunc
+from ghostos.core.messages import FunctionCaller
 from ghostos.abcd import Action
 from pydantic import BaseModel, Field
 from ghostos_moss import Modules

@@ -1,6 +1,8 @@
 import inspect
 from typing import Any, Tuple, Optional, Dict, Callable, Type, TypeVar
 from types import ModuleType
+import os
+import sys
 
 __all__ = [
     'Importer',
@@ -18,6 +20,7 @@ __all__ = [
     'rewrite_module_by_path',
     'create_module',
     'create_and_bind_module',
+    'get_module_fullname_from_path',
 ]
 
 Importer = Callable[[str], ModuleType]
@@ -102,6 +105,59 @@ def create_module(module_name: str, file_path: str):
     spec.loader.exec_module(module)
 
     return module
+
+
+def get_module_fullname_from_path(file_path: str, use_longest_match: bool = True) -> Optional[str]:
+    """
+    根据文件的绝对路径反解出模块名。
+
+    Args:
+        file_path (str): 文件的绝对路径。
+        use_longest_match (bool): 是否优先使用最长匹配路径。默认为 True。
+
+    Returns:
+        Optional[str]: 模块名，如果无法反解则返回 None。
+    """
+    # 获取文件的绝对路径
+    abs_path = os.path.abspath(file_path)
+
+    # 获取模块名（去掉 .py 后缀）
+    module_name = inspect.getmodulename(abs_path)
+    if not module_name:
+        return None
+
+    # 如果文件是 __init__.py，模块名应该是其所在目录的名称
+    if module_name == "__init__":
+        module_name = os.path.basename(os.path.dirname(abs_path))
+        abs_path = os.path.dirname(abs_path)
+
+    # 找到 sys.path 中匹配的前缀路径
+    matches = []
+    for path in sys.path:
+        if not path:
+            continue  # 跳过空路径
+        path = os.path.abspath(path)  # 确保路径是绝对路径
+        if abs_path.startswith(path):
+            matches.append(path)
+
+    if not matches:
+        # 如果没有匹配的路径，直接返回模块名
+        return module_name
+
+    # 根据 use_longest_match 选择最长或最短匹配路径
+    if use_longest_match:
+        best_match = max(matches, key=len)  # 最长路径
+    else:
+        best_match = min(matches, key=len)  # 最短路径
+
+    # 获取文件路径相对于最佳匹配路径的相对路径
+    relative_path = os.path.relpath(abs_path, best_match)
+
+    # 将路径中的目录分隔符替换为点，并去掉 .py 后缀
+    module_path = os.path.splitext(relative_path)[0]
+    module_path = module_path.replace(os.sep, ".")
+
+    return module_path
 
 
 def create_and_bind_module(modulename: str, filename: str, force: bool = False):

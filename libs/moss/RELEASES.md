@@ -1,5 +1,9 @@
 # v0.3
 
+## v0.3.7
+
+update dependencies.
+
 ## v0.3.6
 
 fix: fix reflect too much from imported attrs.

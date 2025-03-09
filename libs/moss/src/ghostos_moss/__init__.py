@@ -2,7 +2,7 @@ from typing import Optional, List
 from ghostos_container import Container, Provider
 from ghostos_moss.abcd import (
     Moss, MossCompiler, MossRuntime, MossPrompter, Execution,
-    AttrPrompts, Injection,
+    AttrPrompts, Injection, SelfUpdater,
     MOSS_VALUE_NAME, MOSS_TYPE_NAME, MOSS_HIDDEN_MARK, MOSS_HIDDEN_UNMARK,
 )
 from ghostos_moss.modules import Modules, ImportWrapper, DefaultModules, DefaultModulesProvider
@@ -17,6 +17,8 @@ from contextlib import contextmanager
 __all__ = [
     # abstract contracts
     'Moss', 'MossCompiler', 'MossRuntime', 'MossPrompter', 'Execution',
+    'Injection',
+    'SelfUpdater',
     # constants
     'MOSS_VALUE_NAME', 'MOSS_TYPE_NAME', 'MOSS_HIDDEN_MARK', 'MOSS_HIDDEN_UNMARK',
     # types
@@ -26,6 +28,8 @@ __all__ = [
     # testing
     'DefaultMOSSProvider',
     'MossTestSuite',
+
+    'Modules', 'DefaultModules', 'DefaultModulesProvider',
 
     'Exporter',  # useful to exports values in group, and other module will reflect them in moss_imported_attrs_prompt
     'moss_container',

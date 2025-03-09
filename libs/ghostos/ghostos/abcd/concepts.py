@@ -16,7 +16,7 @@ from ghostos.core.runtime.events import Event, EventBus
 from ghostos.core.runtime.tasks import GoTaskStruct, TaskBrief, GoTasks
 from ghostos.core.runtime.threads import GoThreadInfo
 from ghostos_moss import PyContext
-from ghostos.core.llms import PromptPipe, Prompt, LLMFunc
+from ghostos.core.llms import PromptPipe, Prompt, LLMFunc, LLMApi, LLMs
 from ghostos.core.messages import MessageKind, Message, Stream, FunctionCaller, Payload, Receiver, Role, Pipe as MsgPipe
 from ghostos.contracts.logger import LoggerItf
 from ghostos_container import Container, Provider
@@ -170,6 +170,23 @@ class GhostDriver(Generic[G], ABC):
         """
         pass
 
+    def get_llm_api(self, session: Session) -> LLMApi:
+        """
+        get the llm api from the ghost default settings.
+        some ghost does not need it.
+        """
+        return session.container.force_fetch(LLMs).get_api("")
+
+    def get_current_prompt(self, session: Session) -> Prompt:
+        """
+        get ghost current thread as prompt from session.
+        """
+        thread = session.thread
+        instruction = self.get_system_instruction(session)
+        return thread.to_prompt(
+            [Role.new_system(content=instruction)]
+        )
+
     @abstractmethod
     def on_event(self, session: Session, event: Event) -> Union[Operator, None]:
         """
@@ -239,21 +256,14 @@ class Thought(Generic[T], ABC):
 class Operator(ABC):
     """
     Operator to operating the GhostOS through the Session encapsulation.
-
     The Operator is just like the primitives of any coding language.
-    for example, GhostOS have some operators work like python's `return`, `yield`, `await` .
-
-    I'm not capable to develop a real OS or a new coding language for AI,
-    GhostOS is built above python with the additional complexities.
-
-    Operators should be predefined, offer to user-level developer, or AI-models.
+    like python's `return`, `yield`, `await`.
     """
 
     @abstractmethod
     def run(self, session: Session) -> Union[Operator, None]:
         """
         :return: None means stop the loop, otherwise keep going.
-
         operator returns an operator is a way to encapsulate repetitive codes.
         """
         pass
@@ -266,6 +276,16 @@ class Operator(ABC):
         I prefer to del the object attributes in the end of the object lifecycle.
         """
         pass
+
+    @classmethod
+    def __class_prompt__(cls) -> str:
+        return '''
+class Operator(ABC):
+    """
+    return operator to outside system to operate your thought by agent system. 
+    """
+    pass
+'''
 
 
 class Action(PromptPipe, ABC):
@@ -624,6 +644,8 @@ class Messenger(Stream, ABC):
     there may be more abilities during streaming are needed,
     this project can only provide a basic one.
     """
+
+    finish_reason: Optional[str] = None
 
     @abstractmethod
     def flush(self) -> Tuple[List[Message], List[FunctionCaller]]:
@@ -1030,6 +1052,9 @@ class Mindflow(PromptObjectModel, ABC):
 
     @abstractmethod
     def error(self, *messages: MessageKind) -> Operator:
+        """
+        think on the error message.
+        """
         pass
 
 
