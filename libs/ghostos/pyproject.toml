@@ -2,7 +2,7 @@
 name = "ghostos"
 description = "A framework offers an operating system simulator with a Python Code Interface for AI Agents"
 readme = "README.md"
-version = "v0.4.0-dev20"
+version = "v0.4.0-dev21"
 authors = [
     { name = "zhuming", email = "thirdgerb@gmail.com" },
     { name = "Nile Zhou", email = "nilezhou123@gmail.com" },

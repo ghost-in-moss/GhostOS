@@ -12,6 +12,8 @@ from ghostos_common.helpers import generate_directory_tree, yaml_pretty_dump, ge
 from ghostos_common.helpers.files import DescriptionsGetter
 from ghostos_moss import moss_runtime_ctx
 from pydantic import Field
+from contextlib import contextmanager
+import time
 
 
 class DirectoryData(YamlConfig):
@@ -28,10 +30,16 @@ class DirectoryData(YamlConfig):
         default=None,
         description="the editing filename relative to the current directory",
     )
+    updated: int = Field(
+        default=0,
+        description="the updated timestamp",
+    )
 
     def save_to(self, path: pathlib.Path) -> None:
         if not path.is_dir():
             raise NotADirectoryError(f'{path} is not a directory')
+        now = int(time.time())
+        self.updated = now
         content = yaml_pretty_dump(self.model_dump(exclude_defaults=True))
         file = path.joinpath(self.relative_path)
         with open(file, "w") as f:
@@ -286,11 +294,12 @@ class DirectoryImpl(Directory):
         '.idea/',
     ]
 
-    def __init__(self, path: pathlib.Path, ignores: List[str] = None, relative: Union[str, None] = None):
+    def __init__(self, path: pathlib.Path, ignores: List[str] = None):
+        editing_file = None
+        if not path.is_dir():
+            editing_file = path.name
+            path = path.parent
         self.path = path
-        if relative is None:
-            relative = self.path.absolute()
-        self.relative = relative
         self.data = DirectoryData.get_from(path)
         self.ctx = self.data.get_dev_context('.')
         if not self.ctx.desc:
@@ -308,6 +317,7 @@ class DirectoryImpl(Directory):
             if ignore.startswith('#'):
                 continue
             self._ignores.append(ignore)
+        self.focus(editing_file)
 
     def get_ignores(self) -> List[str]:
         return self._ignores
@@ -436,24 +446,31 @@ all the available dev contexts from name (or path) to description are:
     def save_dev_contexts(self):
         self.data.save_to(self.path)
 
+    def save_data(self) -> None:
+        self.data.save_to(self.path)
+
 
 if __name__ == "__main__":
     current = pathlib.Path(__file__)
     d = DirectoryImpl(current.parent)
-    d.focus(current.name)
-    print(d.lists())
-    print(d.ctx.full_context())
-    d.describe("abcd.py", "abstract classes")
-    d.save_dev_contexts()
+    with d:
+        d.focus(current.name)
+        print(d.lists())
+        print(d.ctx.full_context())
+        d.describe("abcd.py", "abstract classes")
+        d.save_dev_contexts()
 
-    print("+++++")
-    print(d.dev_contexts())
+        print("+++++")
+        print(d.dev_contexts())
 
-    print("+++++")
-    print(d.full_context())
+        print("+++++")
+        print(d.full_context())
 
-    editing = d.edit(current.name)
-    print("+++++++++++ path", editing.path)
+        editing = d.edit(current.name)
+        print("+++++++++++ path", editing.path)
 
-    editing.write("hello", append=True)
-    insert_content(editing.path, "world", -1, -1)
+        editing.write("hello", append=True)
+        insert_content(editing.path, "world", -1, -1)
+
+hello
+world

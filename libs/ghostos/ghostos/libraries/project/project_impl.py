@@ -81,11 +81,10 @@ class ProjectManagerImpl(ProjectManager, PromptObjectModel):
         self.working: DirectoryImpl = DirectoryImpl(
             working_path,
             ignores=None,
-            relative=str(working_path.relative_to(root_dir)),
         )
 
     def work_on(self, dir_path: str) -> Operator:
-        dir_root = self.working.path
+        dir_root = self.root.path
         if dir_path == '.' or dir_path == '~':
             dir_root = self.root.path
             dir_path = dir_path[1:]
