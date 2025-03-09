@@ -1,5 +1,4 @@
 from typing import Optional
-from typing_extensions import Self
 
 from ghostos.abcd import Operator, Session
 from ghostos.libraries.project.abcd import ProjectManager
@@ -10,7 +9,7 @@ from ghostos.libraries.pyeditor.simple_module_editor import SimplePyModuleEditor
 from pydantic import BaseModel, Field
 from ghostos_common.helpers import generate_import_path
 from ghostos_common.prompter import PromptObjectModel, TextPOM
-from ghostos_moss import MossRuntime, Modules
+from ghostos_moss import Modules
 from ghostos_container import Container, Provider
 import pathlib
 

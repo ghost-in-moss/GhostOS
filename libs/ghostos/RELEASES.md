@@ -2,6 +2,10 @@
 
 # v0.4.0
 
+## v0.4.0-dev20
+
+project now read detail info (code reflections) on editing file.
+
 ## v0.4.0-dev19
 
 prove project manager.

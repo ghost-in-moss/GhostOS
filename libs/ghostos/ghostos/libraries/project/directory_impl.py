@@ -131,9 +131,14 @@ class FileImpl(File):
 
         modulename = get_module_fullname_from_path(str(self.path), use_longest_match=True)
         if modulename is not None:
-            py_info = f"\n\nfile is python module `{modulename}`."
+            py_info = f"\nfile is python module `{modulename}`."
+            with moss_runtime_ctx(modulename) as rtm:
+                imported_prompt = rtm.prompter().get_imported_attrs_prompt()
+                if imported_prompt:
+                    py_info += "imported attr information are: \n```python\n" + imported_prompt + "\n```"
+
             return (f'content of file `{self.path}` are:'
-                    f'\n\n<content length="{length}">\n{content}{suffix}\n</content>{py_info}')
+                    f'\n\n<content length="{length}">\n{content}{suffix}\n</content>\n{py_info}')
 
         return f'<content length="{length}">\n{content}{suffix}\n</content>'
 
@@ -277,6 +282,8 @@ class DirectoryImpl(Directory):
         ".gitignore",
         DirectoryData.relative_path,
         "__pycache__",
+        '.git/',
+        '.idea/',
     ]
 
     def __init__(self, path: pathlib.Path, ignores: List[str] = None, relative: Union[str, None] = None):
@@ -309,9 +316,10 @@ class DirectoryImpl(Directory):
         editing_context = "empty"
         if self.data.editing:
             try:
-                editing_context = self.edit(self.data.editing).read(line_number=True, detail=False)
-            except Exception:
-                pass
+                file = self.edit(self.data.editing)
+                editing_context = file.read(line_number=True, detail=True)
+            except Exception as e:
+                editing_context = f"can not read content on error {e}"
 
         return f"""
 full context of the Directory instance:
