@@ -190,6 +190,33 @@ class Directory(ABC):
         """
         pass
 
+    @abstractmethod
+    def focus(self, file_path: Union[str, None]) -> Union[File, None]:
+        """
+        focus on a file and create editing file object.
+        :param file_path: if None, focus on nothing, spare tokens.
+        :return: if file_path is None, return None
+        """
+        pass
+
+    @abstractmethod
+    def save_data(self) -> None:
+        """
+        save the changes from dev context changes/describe/focus
+        better way to call save_data by use `with statement`
+        """
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        if exit the directory context without errors, the dev data of this directory will be saved.
+        """
+        if not exc_val:
+            self.save_data()
+
 
 class File(ABC):
     path: pathlib.Path
@@ -250,7 +277,7 @@ class ProjectManager(ABC):
     @abstractmethod
     def work_on(self, dir_path: str) -> Operator:
         """
-        change the working directory to dir_path, relative to the root directory.
+        change the working directory to dir_path, always relative to the root directory.
         :param dir_path: if empty or `~`, will check out to the root.
         """
         pass

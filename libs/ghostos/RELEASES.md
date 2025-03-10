@@ -2,6 +2,15 @@
 
 # v0.4.0
 
+## v0.4.0-dev21
+
+* fix project work_on from working_dir, not root dir
+* fix directory not save dev_data to the file. 
+
+## v0.4.0-dev20
+
+project now read detail info (code reflections) on editing file.
+
 ## v0.4.0-dev19
 
 prove project manager.
