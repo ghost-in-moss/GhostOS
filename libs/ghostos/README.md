@@ -1,6 +1,6 @@
 # GhostOS
 
-> The AI `Ghosts` wonder in the `Shells`.
+> The AI `Ghosts` wander in the `Shells`.
 
 * [Documents](https://ghost-in-moss.github.io/GhostOS/#/)
 * [Discord Server](https://discord.gg/NG6VKwd5jV)
@@ -137,18 +137,18 @@ container = make_app_container(...)
 # fetch the GhostOS instance.
 ghostos = get_ghostos(container)
 
-# Create a shell instance, which managing sessions that keep AI Ghost inside it.
+# Create a matrix instance, which managing all the ghosts.
 # and initialize the shell level dependency providers.
-shell = ghostos.create_matrix("your robot shell")
+matrix = ghostos.create_matrix("your robot shell")
 # Shell can handle parallel ghosts running, and communicate them through an EventBus.
 # So the Multi-Agent swarm in GhostOS is asynchronous.
-shell.background_run()  # Optional
+matrix.background_run()  # Optional
 
 # need an instance implements `ghostos.abcd.Ghost` interface.
 my_chatbot: Chatbot = ...
 
 # use Shell to create a synchronous conversation channel with the Ghost.
-conversation = shell.sync(my_chatbot)
+conversation = matrix.sync(my_chatbot)
 
 # use the conversation channel to talk
 event, receiver = conversation.talk("hello?")

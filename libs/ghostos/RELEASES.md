@@ -2,6 +2,10 @@
 
 # v0.4.0
 
+## 0.4.0-dev24
+
+* rename all the `shell` to `matrix` because GhostOS 
+
 ## 0.4.0-dev23
 
 * fix get_ghostos with `bootstrap`, `get_container` instead

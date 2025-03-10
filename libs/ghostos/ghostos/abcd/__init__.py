@@ -12,7 +12,7 @@ from ghostos.abcd.ghosts import Agent
 from ghostos.abcd.utils import (
     get_ghost_driver_type, get_ghost_driver, is_ghost,
     default_init_event_operator,
-    get_module_magic_shell_providers,
+    get_module_magic_matrix_providers,
     get_module_magic_ghost,
     get_ghost_identifier,
 )

@@ -15,6 +15,11 @@ __all__ = ['GhostOS', "GhostOSImpl", "GhostOSConfig", "GhostOSProvider"]
 
 
 class GhostOSConfig(YamlConfig):
+    """
+    default system configuration for ghostos.
+    use to define the matrices.
+    """
+
     relative_path = "ghostos_conf.yml"
     matrices: Dict[str, MatrixConf] = Field(
         default_factory=lambda: dict(
@@ -58,31 +63,31 @@ class GhostOSImpl(GhostOS):
             self,
             name: str,
             *,
-            shell_id: str = "",
+            matrix_id: str = "",
             providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
     ) -> Matrix:
         if name not in self._ghostos_config.matrices:
-            shell_conf = MatrixConf()
+            matrix_conf = MatrixConf()
         else:
-            shell_conf = self._ghostos_config.matrices[name]
-        if not shell_id:
-            shell_id = name
-        process = self._processes.get_process(shell_id)
+            matrix_conf = self._ghostos_config.matrices[name]
+        if not matrix_id:
+            matrix_id = name
+        process = self._processes.get_process(matrix_id)
         if process is None:
-            process = GoProcess.new(shell_id=shell_id, process_id=process_id)
-            self.logger.debug(f"Created shell `{shell_id}` process `{process_id}`")
+            process = GoProcess.new(matrix_id=matrix_id, process_id=process_id)
+            self.logger.debug(f"Created matrix `{matrix_id}` process `{process_id}`")
         elif process_id is not None and process.process_id != process_id:
-            process = GoProcess.new(shell_id=shell_id, process_id=process_id)
-            self.logger.debug(f"Created shell `{shell_id}` new process `{process_id}`")
+            process = GoProcess.new(matrix_id=matrix_id, process_id=process_id)
+            self.logger.debug(f"Created matrix `{matrix_id}` new process `{process_id}`")
         else:
-            self.logger.debug(f"get shell `{shell_id}` new process `{process.process_id}`")
+            self.logger.debug(f"get matrix `{matrix_id}` new process `{process.process_id}`")
         self._processes.save_process(process)
 
         # prepare container
         providers = providers or []
         return MatrixImpl(
-            config=shell_conf,
+            config=matrix_conf,
             container=self._container,
             process=process,
             providers=providers,

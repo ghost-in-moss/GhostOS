@@ -141,7 +141,7 @@ All lifecycle methods can be found in the following three files:
 - [for developer](https://github.com/ghost-in-moss/GhostOS/tree/main/libs/ghostos/ghostos/ghosts/moss_agent/for_developer.py):
   Lifecycle management for developers.
     - `__moss_agent_providers__`
-    - `__shell_providers__`
+    - `__matrix_providers__`
     - `__moss_agent_creating__`
     - `__moss_agent_truncate__`
     - `__moss_agent_parse_event__`
@@ -382,11 +382,11 @@ shell = ghostos.create_shell("shell name", providers=[...])
 ```python
 # <moss-hide>
 
-def __shell_providers__() -> Iterable[Provider]:
+def __matrix_providers__() -> Iterable[Provider]:
     """
     return shell level providers that specially required by the Agent.
     if the shell is running by `ghostos web` or `ghostos console`,
-    the script will detect the __shell_providers__ attribute and register them into shell level container.
+    the script will detect the __matrix_providers__ attribute and register them into shell level container.
 
     You can consider the Shell is the body of an agent.
     So shell level providers usually register the body parts singletons, bootstrap them and register shutdown functions.

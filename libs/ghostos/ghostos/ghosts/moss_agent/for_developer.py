@@ -26,11 +26,11 @@ def __moss_agent_providers__(agent: A) -> Iterable[Provider]:
     return []
 
 
-def __shell_providers__() -> Iterable[Provider]:
+def __matrix_providers__() -> Iterable[Provider]:
     """
     return shell level providers that specially required by the Agent.
     if the shell is running by `ghostos web` or `ghostos console`,
-    the script will detect the __shell_providers__ attribute and register them into shell level container.
+    the script will detect the __matrix_providers__ attribute and register them into shell level container.
 
     You can consider the Shell is the body of an agent.
     So shell level providers usually register the body parts singletons, bootstrap them and register shutdown functions.
@@ -135,8 +135,8 @@ class BaseMossAgentMethods(Generic[A]):
         fn = self._get_module_func(__moss_agent_providers__)
         yield from fn(agent)
 
-    def shell_providers(self) -> Iterable[Provider]:
-        fn = self._get_module_func(__shell_providers__)
+    def matrix_providers(self) -> Iterable[Provider]:
+        fn = self._get_module_func(__matrix_providers__)
         yield from fn()
 
     def on_creating(self, agent: A, session: Session) -> None:

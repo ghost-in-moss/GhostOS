@@ -79,7 +79,7 @@ class SubtasksImpl(Subtasks):
             context_meta = to_entity_meta(ctx) if ctx is not None else None
             task = GoTaskStruct.new(
                 task_id=task_id,
-                shell_id=self_task.shell_id,
+                matrix_id=self_task.matrix_id,
                 process_id=self_task.process_id,
                 depth=self_task.depth + 1,
                 name=task_name,

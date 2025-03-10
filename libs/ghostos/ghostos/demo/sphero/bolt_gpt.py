@@ -34,7 +34,7 @@ def __moss_attr_prompts__():
     yield "MossAgent", ""
 
 
-def __shell_providers__():
+def __matrix_providers__():
     """
     shell providers will register to shell container
     when this script is started by ghostos

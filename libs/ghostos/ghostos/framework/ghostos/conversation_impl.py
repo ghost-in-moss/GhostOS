@@ -70,7 +70,7 @@ class ConversationImpl(Conversation[G]):
         )
 
         self.scope = Scope(
-            shell_id=task.shell_id,
+            matrix_id=task.matrix_id,
             process_id=task.process_id,
             task_id=task.task_id,
             parent_task_id=task.parent,

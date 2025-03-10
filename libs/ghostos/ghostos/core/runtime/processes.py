@@ -19,19 +19,19 @@ Stop the process will stop all the tasks that belongs to it.
 """,
     )
 
-    shell_id: str = Field(
+    matrix_id: str = Field(
         description="session id in which the process belongs",
     )
 
     @classmethod
     def new(
             cls, *,
-            shell_id: str,
+            matrix_id: str,
             process_id: Optional[str] = None,
     ) -> "GoProcess":
         process_id = process_id if process_id else uuid()
         return GoProcess(
-            shell_id=shell_id,
+            matrix_id=matrix_id,
             process_id=process_id,
         )
 
@@ -42,10 +42,10 @@ class GoProcesses(ABC):
     """
 
     @abstractmethod
-    def get_process(self, shell_id: str) -> Optional[GoProcess]:
+    def get_process(self, matrix_id: str) -> Optional[GoProcess]:
         """
         get process by id
-        :param shell_id: shell id
+        :param matrix_id: belongs to the matrix
         """
         pass
 

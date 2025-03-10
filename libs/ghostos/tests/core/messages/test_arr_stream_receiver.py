@@ -255,7 +255,7 @@ def test_array_receiver_bad_case_1():
         attrs={},
         payloads={'task_info': {'task_id': '8d98d7772baa6776c7a169ef2028c06a', 'task_name': 'SpheroGPT',
                                 'process_id': '7167a681-cc2e-43aa-aab8-1781f9308e3f',
-                                'shell_id': 'ghostos_streamlit_app', 'thread_id': '8d98d7772baa6776c7a169ef2028c06a'}},
+                                'matrix_id': 'ghostos_streamlit_app', 'thread_id': '8d98d7772baa6776c7a169ef2028c06a'}},
         callers=[],
         seq='chunk',
         created=1732633767.653,
