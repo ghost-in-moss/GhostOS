@@ -471,6 +471,3 @@ if __name__ == "__main__":
 
         editing.write("hello", append=True)
         insert_content(editing.path, "world", -1, -1)
-
-hello
-world

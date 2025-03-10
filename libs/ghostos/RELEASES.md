@@ -2,6 +2,11 @@
 
 # v0.4.0
 
+## v0.4.0-dev22
+
+* fix DirectoryImpl bugs
+* fix ghostos bootstrap 
+
 ## v0.4.0-dev21
 
 * fix project work_on from working_dir, not root dir

@@ -394,7 +394,7 @@ def bootstrap() -> Container:
     env_path = join(bootstrap_conf.workspace_dir, bootstrap_conf.dotenv_file_path)
     if exists(env_path):
         import dotenv
-        dotenv.load_dotenv(dotenv_path=env_path)
+        dotenv.load_dotenv(dotenv_path=env_path, override=True, verbose=True)
 
     # use app container maker to make a container.
     if bootstrap_conf.app_container_maker:
