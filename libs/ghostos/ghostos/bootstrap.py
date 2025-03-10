@@ -410,7 +410,7 @@ def bootstrap() -> Container:
 
 def get_ghostos(container: Optional[Container] = None) -> GhostOS:
     if container is None:
-        container = bootstrap()
+        container = get_container()
     return container.force_fetch(GhostOS)
 
 

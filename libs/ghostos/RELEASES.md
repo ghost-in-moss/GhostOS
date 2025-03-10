@@ -2,6 +2,10 @@
 
 # v0.4.0
 
+## 0.4.0-dev23
+
+* fix get_ghostos with `bootstrap`, `get_container` instead
+
 ## v0.4.0-dev22
 
 * fix DirectoryImpl bugs
