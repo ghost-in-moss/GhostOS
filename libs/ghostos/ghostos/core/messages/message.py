@@ -236,7 +236,7 @@ class Message(BaseModel):
     stage: str = Field(default="", description="message stage")
     finish_reason: Optional[str] = Field(default=None, description="message finish reason.")
 
-    role: str = Field(default="", description="Message role", enum=Role.all())
+    role: str = Field(default="", description="Message role", json_schema_extra=dict(enum=Role.all()))
     name: Optional[str] = Field(default=None, description="Message sender name")
     content: Optional[str] = Field(
         default=None,

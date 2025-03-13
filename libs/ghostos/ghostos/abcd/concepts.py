@@ -667,6 +667,22 @@ class Messenger(Stream, ABC):
         """
         pass
 
+    @abstractmethod
+    def buffer(self, messages: Iterable[Message]) -> Iterable[Message]:
+        """
+        buffer the messages while delivering
+        :param messages: chunks or list messages.
+        :return: the sending messages.
+        """
+        pass
+
+    @abstractmethod
+    def wrap(self, item: Message) -> Message:
+        """
+        wrap the item with the Messenger payloads.
+        """
+        pass
+
 
 class StateValue(ABC):
     """

@@ -236,7 +236,7 @@ def test_print_model():
 
 def test_enum_with_none():
     class Foo(BaseModel):
-        foo: Optional[str] = Field(None, enum={"hello", "world"})
+        foo: Optional[str] = Field(None, json_schema_extra=dict(enum={"hello", "world"}))
 
     f = Foo()
     assert f.foo is None
