@@ -2,6 +2,12 @@
 
 # v0.4.0
 
+## 0.4.0-dev25
+
+* messenger add `buffer`, buffer messages after interruption. 
+* upgrade container dependencies. 
+* fix all the `enum` warning on pydantic.Field. 
+
 ## 0.4.0-dev24
 
 * rename all the `shell` to `matrix` because GhostOS 

@@ -181,21 +181,16 @@ class Container(IoCContainer):
     bloodline: List[str]
 
     def __init__(self, parent: Optional[Container] = None, *, name: str = "", inherit: bool = True):
+        """
+        :param parent: parent container
+        :param name: name of the container
+        :param inherit: inherit the registrar from the parent container if given.
+        """
         self.bloodline = []
         # container extended by children container
-        if parent is not None:
-            if not isinstance(parent, Container):
-                raise AttributeError("container can only initialized with parent Container")
-            if parent is self:
-                raise AttributeError("container's parent must not be itself")
-        self.parent: Optional[Container] = parent
-        if isinstance(self.parent, Container):
-            bloodline = self.parent.bloodline.copy()
-            bloodline.append(name)
-        else:
-            bloodline = [name]
-        self.bloodline: List[str] = bloodline
-
+        self.parent: Optional[Container] = None
+        self.name = name
+        self.bloodline = [name]
         # global singletons.
         self._instances: Dict[Any, Any] = {}
         self._factory: Dict[Any, Factory] = {}
@@ -208,10 +203,27 @@ class Container(IoCContainer):
         self._is_shutdown: bool = False
         self._shutdown: List[Callable[[], None]] = []
         self._making_count: int = 0
-        if inherit and parent is not None:
-            self._inherit(parent)
+        # set parent now.
+        if parent is not None:
+            self.set_parent(parent, inherit)
 
         Container.instance_count += 1
+
+    def set_parent(self, parent: Container, shutdown: bool = True, inherit: bool = True) -> None:
+        if not isinstance(parent, Container):
+            raise AttributeError("container can only initialized with parent Container")
+        if parent is self:
+            raise AttributeError("container's parent must not be itself")
+        self.parent = parent
+        bloodline = self.parent.bloodline.copy()
+        bloodline.append(self.name)
+        self.bloodline = bloodline
+
+        if shutdown:
+            # when parent shutdown, shutdown self
+            parent.add_shutdown(self.shutdown)
+        if inherit and self.parent is not None:
+            self._inherit(self.parent)
 
     def _inherit(self, parent: Container):
         """
@@ -640,9 +652,6 @@ class ProviderAdapter(Generic[INSTANCE], Provider[INSTANCE]):
 
     def contract(self) -> Type[INSTANCE]:
         return self._contract_type
-
-    def inheritable(self) -> bool:
-        return False
 
     def factory(self, con: Container) -> Optional[INSTANCE]:
         return self._factory(con)

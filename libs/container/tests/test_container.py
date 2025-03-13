@@ -159,13 +159,18 @@ def test_container_inherit():
 
         bar: str = "hello"
 
+    # parent register bar, bar depend on foo; so bar can not fetch from parent container.
     container = Container()
     container.bootstrap()
-    container.register(provide(Bar, singleton=False)(lambda c: Bar(c.force_fetch(Foo))))
+    bar_provider = provide(Bar, singleton=False)(lambda c: Bar(c.force_fetch(Foo)))
+    assert bar_provider.inheritable()
+    container.register(bar_provider)
+
     sub_container = Container(container)
     # sub container register Foo that Bar needed
     sub_container.register(provide(Foo, singleton=False)(lambda c: Foo(2)))
     sub_container.bootstrap()
+    # the parent's providers are inherited by sub container.
     bar = sub_container.force_fetch(Bar)
     assert bar.bar == "hello"
     assert bar.foo.foo == 2
