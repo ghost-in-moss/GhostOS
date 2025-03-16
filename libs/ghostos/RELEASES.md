@@ -2,10 +2,35 @@
 
 # v0.4.0
 
+## 0.4.0-dev26
+
+* thread add `name` field
+* use queue stream/receiver instead of deque. 
+* container upgrade to 0.2.6, fix bootstrap lifecycle. 
+
+## 0.4.0-dev25
+
+* messenger add `buffer`, buffer messages after interruption.
+* upgrade container dependencies.
+* fix all the `enum` warning on pydantic.Field.
+
+## 0.4.0-dev24
+
+* rename all the `shell` to `matrix` because GhostOS
+
+## 0.4.0-dev23
+
+* fix get_ghostos with `bootstrap`, `get_container` instead
+
+## v0.4.0-dev22
+
+* fix DirectoryImpl bugs
+* fix ghostos bootstrap
+
 ## v0.4.0-dev21
 
 * fix project work_on from working_dir, not root dir
-* fix directory not save dev_data to the file. 
+* fix directory not save dev_data to the file.
 
 ## v0.4.0-dev20
 

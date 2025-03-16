@@ -62,7 +62,7 @@ class FileStorageImpl(FileStorage):
             for file_name in fs:
                 if self._match_file_pattern(file_name, patten):
                     relative_path = file_name.lstrip(dir_path)
-                    yield relative_path.lstrip('/')
+                    yield relative_path.lstrip(os.path.sep)
 
             # 深入遍历目录.
             if recursive and ds:

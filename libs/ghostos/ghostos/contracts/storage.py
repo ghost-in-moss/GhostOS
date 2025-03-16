@@ -1,10 +1,10 @@
-from typing import Optional, Iterable
-from abc import ABC, abstractmethod
+from typing import Optional, Iterable, Protocol
+from abc import abstractmethod
 
 __all__ = ['Storage', 'FileStorage']
 
 
-class Storage(ABC):
+class Storage(Protocol):
 
     @abstractmethod
     def sub_storage(self, relative_path: str) -> "Storage":
@@ -56,7 +56,7 @@ class Storage(ABC):
         pass
 
 
-class FileStorage(Storage, ABC):
+class FileStorage(Storage, Protocol):
     """
     Storage Based on FileSystem.
     """

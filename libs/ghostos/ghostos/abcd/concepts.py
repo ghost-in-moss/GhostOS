@@ -328,10 +328,21 @@ class GhostOS(Protocol):
             self,
             name: str,
             *,
-            shell_id: str = "",
+            matrix_id: str = "",
             providers: Optional[List[Provider]] = None,
             process_id: Optional[str] = None,
     ) -> Matrix:
+        """
+        matrix is the container for ghosts, running multi-ghosts in background, pull event from EventBus.
+        ghostos instance can create one matrix instance only.
+        when matrix is shutdown, it will shut down ghostos container.
+
+        :param name: name of the matrix. each matrix has its own space.
+        :param matrix_id: id of the matrix, or use name.
+        :param providers: additional providers for the matrix.
+        :param process_id: process id of the matrix, all the tasks and threads are belong to one process.
+        :return:
+        """
         pass
 
 
@@ -656,6 +667,22 @@ class Messenger(Stream, ABC):
         """
         pass
 
+    @abstractmethod
+    def buffer(self, messages: Iterable[Message]) -> Iterable[Message]:
+        """
+        buffer the messages while delivering
+        :param messages: chunks or list messages.
+        :return: the sending messages.
+        """
+        pass
+
+    @abstractmethod
+    def wrap(self, item: Message) -> Message:
+        """
+        wrap the item with the Messenger payloads.
+        """
+        pass
+
 
 class StateValue(ABC):
     """
@@ -700,7 +727,7 @@ class Scope(BaseModel):
     """
     scope of the session.
     """
-    shell_id: str
+    matrix_id: str
     process_id: str
     task_id: str
     parent_task_id: Optional[str] = None

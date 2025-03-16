@@ -1,6 +1,6 @@
 [project]
 name = "ghostos-container"
-version = "0.2.4"
+version = "0.2.6"
 description = "the ioc container useful for Interface oriented programming"
 authors = [
     { name = "thirdgerb", email = "thirdgerb@gmail.com" }

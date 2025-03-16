@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import warnings
 from abc import ABCMeta, abstractmethod
-from typing import Type, Dict, get_args, get_origin, ClassVar
+from typing import Type, Dict, get_args, get_origin, ClassVar, Optional
 
-from ghostos_container import Container, Provider, provide, FactoryType, IoCContainer
+from ghostos_container import Container, Provider, provide, FactoryType, IoCContainer, BootstrapProvider, INSTANCE
 
 
 def test_container_baseline():
@@ -159,13 +160,18 @@ def test_container_inherit():
 
         bar: str = "hello"
 
+    # parent register bar, bar depend on foo; so bar can not fetch from parent container.
     container = Container()
     container.bootstrap()
-    container.register(provide(Bar, singleton=False)(lambda c: Bar(c.force_fetch(Foo))))
+    bar_provider = provide(Bar, singleton=False)(lambda c: Bar(c.force_fetch(Foo)))
+    assert bar_provider.inheritable()
+    container.register(bar_provider)
+
     sub_container = Container(container)
     # sub container register Foo that Bar needed
     sub_container.register(provide(Foo, singleton=False)(lambda c: Foo(2)))
     sub_container.bootstrap()
+    # the parent's providers are inherited by sub container.
     bar = sub_container.force_fetch(Bar)
     assert bar.bar == "hello"
     assert bar.foo.foo == 2
@@ -273,3 +279,53 @@ def test_container_with_factory_type():
     bar.bar = 456
     bar = container.get(_Bar)
     assert bar.bar == 456
+
+
+def test_bootstrap_after_bootstrapped():
+    class Foo:
+        def __init__(self):
+            self.foo: int = 0
+
+        def shutdown(self):
+            self.foo += 1
+
+    class FooProvider(BootstrapProvider):
+
+        def contract(self) -> Type[Foo]:
+            return Foo
+
+        def singleton(self) -> bool:
+            return True
+
+        def factory(self, con: Container) -> Optional[INSTANCE]:
+            foo = Foo()
+            assert foo.foo == 0
+            foo.foo += 1
+            return foo
+
+        def bootstrap(self, container: Container) -> None:
+            f = container.force_fetch(Foo)
+            f.foo += 1
+            container.add_shutdown(f.shutdown)
+
+    warnings.filterwarnings("ignore", category=UserWarning)
+
+    foo = Foo()
+    assert foo.foo == 0
+    container = Container()
+    container.register(FooProvider())
+    foo = container.force_fetch(Foo)
+    assert foo.foo == 1
+    container.bootstrap()
+    assert foo.foo == 2
+    container.shutdown()
+    assert foo.foo == 3
+
+    container = Container()
+    container.bootstrap()
+    container.register(FooProvider())
+    foo = container.force_fetch(Foo)
+    # bootstrap and factory
+    assert foo.foo == 2
+    container.shutdown()
+    assert foo.foo == 3

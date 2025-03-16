@@ -30,7 +30,7 @@ class ConsoleApp(Background):
             username: str,
             debug: bool = False,
             shell_name: str = "console",
-            shell_id: Optional[str] = None,
+            matrix_id: Optional[str] = None,
             process_id: Optional[str] = None,
             worker_num: int = 4,
             welcome_user_message: Optional[str] = None,
@@ -41,7 +41,7 @@ class ConsoleApp(Background):
         self._ghost = ghost
         self._username = username
         self._shell_name = shell_name
-        self._shell_id = shell_id if shell_id else shell_name
+        self._matrix_id = matrix_id if matrix_id else shell_name
         self._process_id = process_id
         self._console = Console()
         self._logger = get_console_logger()

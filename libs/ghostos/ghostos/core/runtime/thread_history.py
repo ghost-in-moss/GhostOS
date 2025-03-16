@@ -49,7 +49,7 @@ class SimpleTurn(BaseModel):
 class ThreadHistory(BaseModel):
     thread_id: str = Field(description="thread id that useful to save & read thread")
     extra: Dict[str, Any] = Field(default_factory=dict)
-    last_turn_system_prompt: str = Field(defualt="", description="system prompt")
+    last_turn_system_prompt: str = Field(default="", description="system prompt")
     turns: List[SimpleTurn] = Field(default_factory=list)
 
     @classmethod

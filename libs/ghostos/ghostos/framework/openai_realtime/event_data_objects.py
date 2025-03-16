@@ -15,7 +15,11 @@ from enum import Enum
 
 
 class RateLimit(BaseModel):
-    name: str = Field("", description="Name of the rate-limited event.", enum={"requests", "tokens"})
+    name: str = Field(
+        "",
+        description="Name of the rate-limited event.",
+        json_schema_extra=dict(enum={"requests", "tokens"}),
+    )
     limit: int = Field(0, description="The maximum allowed value for the rate limit.")
     remaining: int = Field(0, description="The remaining value before the limit is reached.")
     reset_seconds: float = Field(0.0, description="Seconds until the rate limit resets.")
@@ -76,8 +80,8 @@ class MessageItem(BaseModel):
     """
     id: Optional[str] = Field(None)
     type: Literal["message", "function_call", "function_call_output"] = Field("")
-    status: Optional[str] = Field(None, enum={"completed", "incomplete"})
-    role: Optional[str] = Field(default=None, enum={"assistant", "user", "system"})
+    status: Optional[str] = Field(None, json_schema_extra=dict(enum={"completed", "incomplete"}))
+    role: Optional[str] = Field(default=None, json_schema_extra=dict(enum={"assistant", "user", "system"}))
     content: Optional[List[Content]] = Field(None)
     call_id: Optional[str] = Field(None)
     name: Optional[str] = Field(None, description="The name of the function being called (for function_call items).")
@@ -319,19 +323,22 @@ class SessionObjectBase(BaseModel):
     immutable configuration for the openai session object
     """
     model: OpenAIRealtimeModel = Field(OpenAIRealtimeModel.gpt_4o_realtime_preview_2024_12_17)
-    modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
+    modalities: List[str] = Field(
+        default_factory=lambda: ["audio", "text"],
+        json_schema_extra=dict(enum={"text", "audio"}),
+    )
     voice: str = Field(
         default="coral",
         description="Voice to use",
     )
     input_audio_format: str = Field(
         default="pcm16",
-        enum={"pcm16", "g711_ulaw", "g711_alaw"},
+        json_schema_extra=dict(enum={"pcm16", "g711_ulaw", "g711_alaw"}),
         description="only support pcm16 yet",
     )
     output_audio_format: str = Field(
         default="pcm16",
-        enum={"pcm16", "g711_ulaw", "g711_alaw"},
+        json_schema_extra=dict(enum={"pcm16", "g711_ulaw", "g711_alaw"}),
         description="only support pcm16 yet",
     )
     turn_detection: Union[TurnDetection, None] = Field(
@@ -353,14 +360,17 @@ class SessionObjectBase(BaseModel):
 
 
 class ResponseSettings(BaseModel):
-    modalities: List[str] = Field(default_factory=lambda: ["audio", "text"], enum={"text", "audio"})
+    modalities: List[str] = Field(
+        default_factory=lambda: ["audio", "text"],
+        json_schema_extra=dict(enum={"text", "audio"}),
+    )
     voice: Voice = Field(
         default="coral",
         description="Voice to use",
     )
     output_audio_format: str = Field(
         default="pcm16",
-        enum={"pcm16", "g711_ulaw", "g711_alaw"},
+        json_schema_extra=dict(enum={"pcm16", "g711_ulaw", "g711_alaw"}),
         description="only support pcm16 yet",
     )
     instructions: str = Field(default="", description="instructions of the session")

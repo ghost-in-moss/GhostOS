@@ -125,6 +125,10 @@ class GoThreadInfo(BaseModel):
         default_factory=uuid,
         description="The id of the thread, also a fork id",
     )
+    name: str = Field(
+        default="",
+        description="The name of the thread",
+    )
 
     extra: Dict[str, Any] = Field(
         default_factory=dict,

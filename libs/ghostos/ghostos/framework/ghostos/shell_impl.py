@@ -22,18 +22,35 @@ __all__ = ['MatrixConf', 'MatrixImpl', 'Matrix']
 
 
 class MatrixConf(BaseModel):
+    """
+    define the global configuration for all the ghosts in this matrix.
+    """
+
     max_session_steps: int = Field(
         default=10,
+        description="the maximum number of session steps allowed for the ghost",
     )
     max_task_errors: int = Field(
         default=3,
+        description="the maximum number of task errors allowed for the ghost",
     )
-    pool_size: int = 100
-    background_idle_time: float = Field(1)
+    pool_size: int = Field(
+        default=100,
+        description="the maximum number of ghost pool sizes allowed for the ghost",
+    )
+
+    background_idle_time: float = Field(
+        default=1,
+        description="the background idle time",
+    )
     task_lock_overdue: float = Field(
-        default=10.0
+        default=10.0,
+        description="the task lock overdue time for each task",
     )
-    providers: List[str] = []
+    providers: List[str] = Field(
+        default_factory=list,
+        description="the matrix providers names",
+    )
 
 
 G = TypeVar("G", bound=Ghost)
@@ -50,7 +67,8 @@ class MatrixImpl(Matrix):
     ):
         self._conversation_mutex = Lock()
         self._conf = config
-        self._container = Container(parent=container, name="shell")
+        # matrix is the same container as ghostos.
+        self._container = container
         # prepare container
         for provider in providers:
             self._container.register(provider)
@@ -61,10 +79,10 @@ class MatrixImpl(Matrix):
             elif issubclass(p, Provider):
                 self._container.register(p())
 
-        self._shell_id = process.shell_id
+        self._matrix_id = process.matrix_id
         self._process_id = process.process_id
         self._scope = Scope(
-            shell_id=self._shell_id,
+            matrix_id=self._matrix_id,
             process_id=self._process_id,
             task_id=self._process_id,
         )
@@ -270,7 +288,7 @@ class MatrixImpl(Matrix):
         context_meta = to_entity_meta(context) if context else None
         task = GoTaskStruct.new(
             task_id=task_id,
-            shell_id=self._scope.shell_id,
+            matrix_id=self._scope.matrix_id,
             process_id=self._scope.process_id,
             depth=0,
             name=id_.name,
@@ -385,7 +403,7 @@ class MatrixImpl(Matrix):
         self._closed = True
         self.logger.info(
             "start closing shell %s, conversations %d",
-            self._shell_id,
+            self._matrix_id,
             len(self._conversations)
         )
         for conversation in self._conversations:

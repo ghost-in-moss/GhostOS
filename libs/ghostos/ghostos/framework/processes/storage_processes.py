@@ -27,11 +27,11 @@ class StorageGoProcessesImpl(GoProcesses):
         return {}
 
     @staticmethod
-    def _get_process_filename(shell_id: str) -> str:
-        return f"{shell_id}.process.yml"
+    def _get_process_filename(matrix_id: str) -> str:
+        return f"{matrix_id}.process.yml"
 
-    def get_process(self, shell_id: str) -> Optional[GoProcess]:
-        filename = self._get_process_filename(shell_id)
+    def get_process(self, matrix_id: str) -> Optional[GoProcess]:
+        filename = self._get_process_filename(matrix_id)
         if not self._storage.exists(filename):
             return None
         content = self._storage.get(filename)
@@ -40,7 +40,7 @@ class StorageGoProcessesImpl(GoProcesses):
         return process
 
     def save_process(self, process: GoProcess) -> None:
-        filename = self._get_process_filename(process.shell_id)
+        filename = self._get_process_filename(process.matrix_id)
         data = process.model_dump(exclude_defaults=True)
         content = yaml_pretty_dump(data)
         self._storage.put(filename, content.encode())

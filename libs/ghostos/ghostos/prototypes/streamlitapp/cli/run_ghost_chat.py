@@ -10,7 +10,7 @@ from ghostos.prototypes.streamlitapp.main import main_run
 from ghostos.prototypes.streamlitapp.pages.router import default_router, GhostChatRoute
 from ghostos.prototypes.streamlitapp.utils.session import Singleton
 from ghostos.abcd import Matrix, Background
-from ghostos.abcd.utils import get_module_magic_shell_providers
+from ghostos.abcd.utils import get_module_magic_matrix_providers
 from ghostos_common.entity import from_entity_meta
 import importlib
 import streamlit as st
@@ -56,9 +56,9 @@ def bootstrap():
     elif app_arg.modulename:
         started_module = importlib.import_module(app_arg.modulename)
 
-    shell_providers = []
+    matrix_providers = []
     if started_module:
-        shell_providers = get_module_magic_shell_providers(started_module)
+        matrix_providers = get_module_magic_matrix_providers(started_module)
 
     # bootstrap container
     logger.debug(f"generate ghostos app container at workspace {app_arg.workspace_dir}")
@@ -70,7 +70,7 @@ def bootstrap():
         logger.debug("start shell background run")
         shell = ghostos.create_matrix(
             "ghostos_streamlit_app",
-            providers=shell_providers,
+            providers=matrix_providers,
         )
         shell.background_run(4, StreamlitBackgroundApp())
         Singleton(shell, Matrix).bind(st.session_state)

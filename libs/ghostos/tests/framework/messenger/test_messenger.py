@@ -1,3 +1,4 @@
+from typing import Iterable
 from ghostos.framework.messengers import DefaultMessenger
 from ghostos.core.messages import Message, new_basic_connection, MessageType, ReceiverBuffer
 
@@ -55,3 +56,41 @@ def test_messenger_with_function_call():
         assert MessageType.FUNCTION_CALL.match(buffer.head())
         assert len(list(buffer.chunks())) == len(content)
         assert buffer.next() is None
+
+
+def _iter_items(content: str) -> Iterable[Message]:
+    for c in content:
+        yield Message.new_chunk(content=c)
+
+
+def test_messenger_buffer():
+    messenger = DefaultMessenger(None)
+    content = "hello world"
+
+    items = _iter_items(content)
+    output = messenger.buffer(items)
+    # + tail
+    assert len(list(output)) == len(content) + 1
+
+    buffered, callers = messenger.flush()
+    assert len(buffered) == 1
+    assert len(callers) == 0
+    assert buffered[0].content == content
+
+
+def test_messenger_buffer_intercept():
+    messenger = DefaultMessenger(None)
+    content = "hello world"
+
+    items = _iter_items(content)
+    output = messenger.buffer(items)
+    idx = 0
+    for chunk in output:
+        idx += 1
+        if idx >= 5:
+            break
+    items, caller = messenger.flush()
+    assert len(items) == 1
+    assert len(caller) == 0
+    assert items[0].content == "hello"
+    assert messenger.finish_reason == "interrupt"

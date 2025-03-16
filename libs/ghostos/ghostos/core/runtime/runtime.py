@@ -11,7 +11,7 @@ class Runtime(Protocol):
     """
     shell runtime
     """
-    shell_id: str
+    matrix_id: str
     """basic shell id."""
     process_id: str
     """the process id of this instance of shell."""

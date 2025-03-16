@@ -11,7 +11,7 @@ def test_storage_tasks_impl():
     tasks = StorageGoTasksImpl(storage, FakeLogger())
     task = GoTaskStruct.new(
         task_id="task_id",
-        shell_id="shell_id",
+        matrix_id="matrix_id",
         process_id="process_id",
         depth=0,
         name="name",

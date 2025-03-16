@@ -53,7 +53,7 @@ class GoTaskStruct(BaseModel):
         the id of the task. 
         """,
     )
-    shell_id: str = Field(
+    matrix_id: str = Field(
         description="the shell id of the task",
     )
     process_id: str = Field(
@@ -160,7 +160,7 @@ children task ids to wait
     def new(
             cls, *,
             task_id: str,
-            shell_id: str,
+            matrix_id: str,
             process_id: str,
             depth: int,
             name: str,
@@ -172,7 +172,7 @@ children task ids to wait
     ) -> "GoTaskStruct":
         return GoTaskStruct(
             task_id=task_id,
-            shell_id=shell_id,
+            matrix_id=matrix_id,
             process_id=process_id,
             depth=depth,
             thread_id=task_id,
@@ -195,7 +195,7 @@ children task ids to wait
         self.children.append(task_id)
         child = self.new(
             task_id=task_id,
-            shell_id=self.shell_id,
+            matrix_id=self.matrix_id,
             process_id=self.process_id,
             depth=self.depth + 1,
             name=name,
@@ -275,7 +275,7 @@ class TaskPayload(Payload):
     task_id: str = Field(description="the id of the task")
     task_name: str = Field(description="the name of the task")
     process_id: str = Field(description="the id of the process")
-    shell_id: str = Field(description="the session id of the task")
+    matrix_id: str = Field(description="the session id of the task")
     thread_id: str = Field(description="the id of the thread")
 
     @classmethod
@@ -283,7 +283,7 @@ class TaskPayload(Payload):
         return cls(
             task_id=task.task_id,
             task_name=task.name,
-            shell_id=task.shell_id,
+            matrix_id=task.matrix_id,
             process_id=task.process_id,
             thread_id=task.thread_id,
         )

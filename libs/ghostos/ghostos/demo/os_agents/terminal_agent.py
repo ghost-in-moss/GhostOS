@@ -24,7 +24,7 @@ __ghost__ = MossAgent(
 )
 
 
-def __shell_providers__():
+def __matrix_providers__():
     from ghostos.libraries.terminal import TerminalProvider
     yield TerminalProvider()
 

@@ -11,7 +11,7 @@ __all__ = [
     'get_ghost_driver', 'get_ghost_driver_type', 'is_ghost',
     'get_ghost_identifier',
     'default_init_event_operator',
-    'get_module_magic_ghost', 'get_module_magic_shell_providers',
+    'get_module_magic_ghost', 'get_module_magic_matrix_providers',
 ]
 
 
@@ -80,16 +80,16 @@ def get_module_magic_ghost(module: ModuleType) -> Optional[Ghost]:
     return None
 
 
-def __shell_providers__() -> List[Provider]:
+def __matrix_providers__() -> List[Provider]:
     """
     magic method to define shell level providers in a target python file.
     """
     return []
 
 
-def get_module_magic_shell_providers(module: ModuleType) -> List[Provider]:
-    if __shell_providers__.__name__ in module.__dict__:
-        fn = module.__dict__[__shell_providers__.__name__]
+def get_module_magic_matrix_providers(module: ModuleType) -> List[Provider]:
+    if __matrix_providers__.__name__ in module.__dict__:
+        fn = module.__dict__[__matrix_providers__.__name__]
         providers = list(fn())
         return providers
     return []

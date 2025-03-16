@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import os.path
 import sys
 from typing import Tuple, List, NamedTuple, Any, Optional, Dict
 from typing_extensions import Self
@@ -122,7 +124,7 @@ def get_or_create_module_from_name(
         if filename.startswith(root_dir):
             relative_path = filename[len(root_dir) + 1:]
             relative_path_basename, _ = path.splitext(relative_path)
-            temp_modulename = relative_path_basename.replace("/", ".")
+            temp_modulename = relative_path_basename.replace(os.path.sep, ".")
             if temp_modulename.endswith(".__init__"):
                 temp_modulename = temp_modulename[:-len(".__init__")]
         if temp_modulename in sys.modules:
