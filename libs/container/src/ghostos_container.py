@@ -3,6 +3,7 @@ import inspect
 from abc import ABCMeta, abstractmethod
 from typing import Type, Dict, TypeVar, Callable, Set, Optional, List, Generic, Any, Union, Iterable
 from typing import get_args, get_origin, ClassVar
+import warnings
 
 __all__ = [
     "Container", "IoCContainer",
@@ -245,10 +246,6 @@ class Container(IoCContainer):
         if self._bootstrapper:
             for b in self._bootstrapper:
                 b.bootstrap(self)
-        for provider in self._providers.values():
-            # some bootstrapper provider may be override
-            if isinstance(provider, Bootstrapper):
-                provider.bootstrap(self)
 
     def add_shutdown(self, shutdown: Callable):
         self._shutdown.append(shutdown)
@@ -285,10 +282,16 @@ class Container(IoCContainer):
         """
         self._check_destroyed()
         # 进行初始化.
-        if not self._bootstrapped:
+        has_bootstrapper = len(self._bootstrapper)
+        if not self._bootstrapped and has_bootstrapper > 0:
             caller_info = get_caller_info(4)
-            # warnings.warn("container is not bootstrapped before using: %s" % (caller_info,))
-            self.bootstrap()
+            warnings.warn(
+                "container with %d bootstrapper have not bootstrapped before using: %s" % (
+                    has_bootstrapper, caller_info
+                ),
+                UserWarning,
+            )
+            # self.bootstrap()
 
         # get bound instance
         got = self._instances.get(abstract, None)
@@ -371,9 +374,9 @@ class Container(IoCContainer):
         for alias in provider.aliases():
             if alias not in self._bound:
                 self._bind_alias(alias, contract)
-        if isinstance(provider, Bootstrapper) and self._bootstrapped:
+        if isinstance(provider, Bootstrapper):
             # 添加 bootstrapper.
-            provider.bootstrap(self)
+            self.add_bootstrapper(provider)
 
     def _bind_alias(self, alias: Any, contract: Any) -> None:
         self._aliases[alias] = contract
@@ -393,8 +396,10 @@ class Container(IoCContainer):
         :return:
         """
         self._check_destroyed()
-        if not self._bootstrapped:
-            self._bootstrapper.append(bootstrapper)
+        self._bootstrapper.append(bootstrapper)
+        if self._bootstrapped:
+            # add bootstrapper and run it immediately
+            bootstrapper.bootstrap(self)
 
     def fetch(self, abstract: Type[INSTANCE], strict: bool = False) -> Optional[INSTANCE]:
         """
@@ -550,7 +555,6 @@ class Container(IoCContainer):
         del self._providers
         del self._bound
         del self._bootstrapper
-        del self._bootstrapped
         del self._aliases
         Container.instance_count -= 1
 

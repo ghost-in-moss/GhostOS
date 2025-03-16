@@ -38,3 +38,4 @@ def test_return_iterable():
 
     r = list(bar())
     assert r == [1, 2]
+

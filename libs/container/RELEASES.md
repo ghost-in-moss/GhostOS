@@ -2,6 +2,10 @@
 
 prepare uv and monorepo. 
 
+## 0.2.6
+
+fix bootstrapper lifecycle wrong.
+
 ## 0.2.5
 
 add method `set_parent` to container.

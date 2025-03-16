@@ -6,14 +6,14 @@ from abc import abstractmethod
 from ghostos.core.messages.message import Message, MessageType
 from ghostos.core.messages.pipeline import SequencePipe
 from ghostos.errors import StreamingError
+from ghostos_common.helpers import Timeleft
 import time
+import queue
 
 __all__ = [
     "Stream", "Receiver", "ArrayReceiver", "ArrayStream", "new_basic_connection", 'ListReceiver',
     "ReceiverBuffer",
 ]
-
-from ghostos_common.helpers import Timeleft
 
 
 class Stream(Protocol):
@@ -420,6 +420,173 @@ class ReceiverBuffer:
                 return None
 
 
+class QueueReceiver(Receiver):
+
+    def __init__(
+            self,
+            timeleft: Timeleft,
+            idle: float = 0.1,
+            complete_only: bool = False,
+            request_timeout: float = 0.0,
+    ):
+        self._timeleft = timeleft
+        self._idle = idle
+        self._streaming = queue.Queue()
+        self._closed = False
+        self._done = False
+        self._error: Optional[Message] = None
+        self._complete_only = complete_only
+        self._request_timeout = request_timeout
+
+    def recv(self) -> Iterable[Message]:
+        if self._closed:
+            raise RuntimeError("Receiver is closed")
+        received_any = False
+        first_token_timeleft = Timeleft(self._request_timeout if not self._complete_only else 0.0)
+        while not self._done:
+            try:
+                item = self._streaming.get(timeout=self._idle)
+                received_any = True
+                yield item
+            except queue.Empty:
+                if not self._timeleft.alive():
+                    self._error = MessageType.ERROR.new(content=f"Timeout after {self._timeleft.passed()}")
+                    self._done = True
+                    break
+                if self._idle:
+                    if not received_any and not first_token_timeleft.alive():
+                        self._error = MessageType.ERROR.new(
+                            content=f"First token timeout after {self._timeleft.passed()}")
+                        break
+                    time.sleep(self._idle)
+        while not self._streaming.empty():
+            item = self._streaming.get_nowait()
+            yield item
+        if self._error is not None:
+            yield self._error
+
+    def add(self, message: Message) -> bool:
+        if self._closed:
+            return False
+        if MessageType.is_protocol_message(message):
+            self._done = True
+            if MessageType.ERROR.match(message):
+                self._error = message
+            return True
+
+        elif self._done or not self._timeleft.alive():
+            return False
+        else:
+            if message.is_complete() or not self._complete_only:
+                self._streaming.put(message)
+            return True
+
+    def cancel(self):
+        self._done = True
+
+    def fail(self, error: str) -> bool:
+        if self._error is not None:
+            return False
+        self._done = True
+        self._error = MessageType.ERROR.new(content=error)
+        return False
+
+    def closed(self) -> bool:
+        return self._closed
+
+    def error(self) -> Optional[Message]:
+        return self._error
+
+    def wait(self) -> List[Message]:
+        items = list(self.recv())
+        completes = []
+        for item in items:
+            if item.is_complete():
+                completes.append(item)
+        return completes
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        self._done = True
+        self._timeleft = None
+
+
+class QueueStream(Stream):
+
+    def __init__(self, receiver: QueueReceiver, complete_only: bool):
+        self._receiver = receiver
+        self._alive = not receiver.closed()
+        self._closed = False
+        self._error: Optional[Message] = None
+        self._complete_only = complete_only
+
+    def send(self, messages: Iterable[Message]) -> bool:
+        if self._closed or not self._alive:
+            raise RuntimeError("Stream is closed")
+        if self._error is not None:
+            raise RuntimeError(self._error.get_content())
+        items = SequencePipe().across(messages)
+        for item in items:
+            if self._complete_only and not item.is_complete():
+                continue
+            success = self._receiver.add(item)
+            if success:
+                continue
+            self._alive = False
+            self._error = self._receiver.error()
+            if self._error is not None:
+                raise StreamingError(
+                    f"streaming is failed: {self._error.get_content()}, message {item.model_dump_json()} unsent"
+                )
+            elif self._receiver.closed():
+                raise StreamingError(
+                    f"streaming is failed due to receiver is closed: , message {item.model_dump_json()} unsent"
+                )
+            elif not self.alive():
+                raise StreamingError(
+                    f"streaming is closed, message {item.model_dump_json()} unsent",
+                )
+            else:
+                raise StreamingError(f"send stream failed, message {item.model_dump_json()} unsent")
+        return True
+
+    def completes_only(self) -> bool:
+        return self._complete_only
+
+    def alive(self) -> bool:
+        if not self._alive:
+            return False
+        if self._receiver.closed():
+            self._alive = False
+        return self._alive
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        if self._error:
+            self._receiver.add(self._error)
+        else:
+            self._receiver.add(MessageType.final())
+        self._alive = False
+        del self._receiver
+
+    def fail(self, error: str) -> bool:
+        if self._error is not None:
+            return False
+        self._error = MessageType.ERROR.new(content=error)
+        self._alive = False
+        return False
+
+    def error(self) -> Optional[Message]:
+        return self._error
+
+    def closed(self) -> bool:
+        return self._closed
+
+
 def new_basic_connection(
         *,
         timeout: float = 0.0,
@@ -437,6 +604,6 @@ def new_basic_connection(
     """
     from ghostos_common.helpers import Timeleft
     timeleft = Timeleft(timeout)
-    receiver = ArrayReceiver(timeleft, idle, complete_only, request_timeout)
-    stream = ArrayStream(receiver, complete_only)
+    receiver = QueueReceiver(timeleft, idle, complete_only, request_timeout)
+    stream = QueueStream(receiver, complete_only)
     return stream, receiver
