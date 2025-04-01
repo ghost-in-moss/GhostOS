@@ -164,7 +164,7 @@ class FactoryType(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def factory(cls, con: IoCContainer) -> "FactoryType":
+    def factory(cls, con: Container) -> "FactoryType":
         pass
 
 
@@ -203,6 +203,7 @@ class Container(IoCContainer):
         self._aliases: Dict[Any, Any] = {}
         self._is_shutdown: bool = False
         self._shutdown: List[Callable[[], None]] = []
+        self._join_list: List[Callable[[], None]] = []
         self._making_count: int = 0
         # set parent now.
         if parent is not None:
@@ -537,6 +538,9 @@ class Container(IoCContainer):
         named_kwargs = self._reflect_callable_args(caller, named_kwargs, target_module.__dict__)
         return caller(*args, **named_kwargs)
 
+    def add_join(self, join_call: Callable[..., None]) -> None:
+        self._join_list.append(join_call)
+
     def shutdown(self) -> None:
         """
         Manually delete the container to prevent memory leaks.
@@ -544,8 +548,22 @@ class Container(IoCContainer):
         if self._is_shutdown:
             return
         self._is_shutdown = True
-        for shutdown in self._shutdown:
-            shutdown()
+        errors = []
+        if self._shutdown:
+            for shutdown in self._shutdown:
+                try:
+                    shutdown()
+                except Exception as e:
+                    errors.append(e)
+        if self._join_list:
+            for join_call in self._join_list:
+                try:
+                    join_call()
+                except Exception as e:
+                    errors.append(e)
+        if errors:
+            info = ", ".join(str(e) for e in errors)
+            raise RuntimeError(f"container {self.bloodline} shutdown errors: {info}")
 
     def __del__(self):
         self.shutdown()

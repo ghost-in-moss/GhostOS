@@ -2,6 +2,10 @@
 
 prepare uv and monorepo. 
 
+## 0.2.7
+
+add `join` to `shutdown` lifecycle. 
+
 ## 0.2.6
 
 fix bootstrapper lifecycle wrong.

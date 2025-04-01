@@ -5,6 +5,7 @@ from typing import List, Tuple, Iterable, Optional
 from ghostos.core.messages import Message, Stream
 from ghostos.core.llms.configs import ModelConf, ServiceConf, LLMsConfig
 from ghostos.core.llms.prompt import Prompt
+from openai import Client
 
 __all__ = [
     'LLMs', 'LLMApi', 'LLMDriver',
@@ -31,7 +32,14 @@ class LLMApi(ABC):
     def get_service(self) -> ServiceConf:
         """
         get the service configuration of this API
-        Deprecated.
+        """
+        pass
+
+    @abstractmethod
+    def openai_client(self) -> Client:
+        """
+        :return: the openai client for this API
+        :raises NotImplementedError: not implemented yet
         """
         pass
 
@@ -95,16 +103,21 @@ class LLMApi(ABC):
         :return:
         """
         items = self._deliver_chat_completion(prompt, stream)
-        yield from self.parse_delivering_items(prompt, stream, items, stage)
+        yield from self.parse_delivering_items(prompt, items, stage)
 
     @abstractmethod
     def parse_delivering_items(
             self,
             prompt: Prompt,
-            stream: bool,
             items: Iterable[Message],
             stage: str,
     ) -> Iterable[Message]:
+        """
+        parse message stream and make sure the items are parsed by ghostos message rules
+        :param prompt: parse messages by functional tokens rules defined in Prompt
+        :param items: the items to parse
+        :param stage: set the stage to all message item.
+        """
         pass
 
     def _deliver_chat_completion(self, prompt: Prompt, stream: bool) -> Iterable[Message]:
