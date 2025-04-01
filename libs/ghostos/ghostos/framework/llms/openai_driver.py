@@ -1,5 +1,5 @@
 from typing import List, Iterable, Union, Optional, Tuple
-from openai import OpenAI, AzureOpenAI
+from openai import OpenAI, AzureOpenAI, Client as OpenAIClient
 from httpx import Client
 from httpx_socks import SyncProxyTransport
 from openai import NOT_GIVEN, NotGiven, UnprocessableEntityError
@@ -91,30 +91,40 @@ class OpenAIAdapter(LLMApi):
     ):
         self._api_name = api_name
         self.service = service_conf.model_copy(deep=True)
+        self.service.load()
         self.model = model_conf.model_copy(deep=True)
         self._storage: PromptStorage = storage
         self._logger = logger
-        if service_conf.proxy:
-            transport = SyncProxyTransport.from_url(service_conf.proxy)
-            http_client = Client(transport=transport)
-            self._logger.debug("LLMApi `%s` create client by proxy %s", api_name, service_conf.proxy)
-        else:
-            http_client = Client()
+        self._parser = parser
+        self._client: OpenAIClient = self._make_openai_client(service_conf)
+
+    def _make_openai_client(self, service_conf: ServiceConf) -> OpenAIClient:
+        http_client = self._make_http_client(service_conf)
+
         if service_conf.azure.api_key:
-            self._client = AzureOpenAI(
+            _client: OpenAIClient = AzureOpenAI(
                 azure_endpoint=service_conf.base_url,
                 api_version=service_conf.azure.api_version,
                 api_key=service_conf.azure.api_key,
             )
         else:
-            self._client = OpenAI(
+            _client: OpenAIClient = OpenAI(
                 api_key=service_conf.token,
                 base_url=service_conf.base_url,
                 # todo: 未来再做更多细节.
                 max_retries=0,
                 http_client=http_client,
             )
-        self._parser = parser
+        return _client
+
+    def _make_http_client(self, service_conf: ServiceConf) -> Client:
+        if service_conf.proxy:
+            transport = SyncProxyTransport.from_url(service_conf.proxy)
+            http_client = Client(transport=transport)
+            self._logger.debug("LLMApi `%s` create client by proxy %s", self._api_name, service_conf.proxy)
+        else:
+            http_client = Client()
+        return http_client
 
     @property
     def name(self) -> str:
@@ -122,6 +132,9 @@ class OpenAIAdapter(LLMApi):
 
     def get_service(self) -> ServiceConf:
         return self.service
+
+    def openai_client(self) -> OpenAIClient:
+        return self._client
 
     def get_model(self) -> ModelConf:
         return self.model
@@ -487,7 +500,6 @@ class OpenAIAdapter(LLMApi):
     def parse_delivering_items(
             self,
             prompt: Prompt,
-            stream: bool,
             items: Iterable[Message],
             stage: str,
     ) -> Iterable[Message]:

@@ -73,11 +73,10 @@ class DefaultMessenger(Messenger):
         if self._destroyed:
             return
         self._destroyed = True
-        del self._upstream
-        del self._sent_messages
-        del self._sent_message_ids
-        del self._sent_callers
-        del self._payloads
+        self._upstream = None
+        self._sent_messages = {}
+        self._sent_message_ids = []
+        self._sent_callers = []
 
     def send(self, messages: Iterable[Message]) -> bool:
         messages = self.buffer(messages)

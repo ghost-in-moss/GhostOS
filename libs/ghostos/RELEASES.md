@@ -2,6 +2,11 @@
 
 # v0.4.0
 
+## 0.4.0-dev27
+
+* upgrade container to 0.2.7
+* expose openai client from llm api
+
 ## 0.4.0-dev26
 
 * thread add `name` field

@@ -10,7 +10,7 @@ from openai.types.chat import ChatCompletion
 
 class LitellmAdapter(OpenAIAdapter):
     """
-    adapter class wrap openai api to ghostos.blueprint.kernel.llms.LLMApi
+    Deprecated: Use OpenAIAdapter instead. Litellm shall be a proxy not a library (?)
     """
 
     def _chat_completion(self, chat: Prompt, stream: bool) -> ChatCompletion:
