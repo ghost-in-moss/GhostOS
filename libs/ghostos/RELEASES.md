@@ -2,6 +2,11 @@
 
 # v0.4.0
 
+## 0.4.0-dev28
+
+* add `saved` attribute to thread.Turn, for turns saving in the future.
+* set Turn's attribute `pycontext` to None as default, remove it in the future. 
+
 ## 0.4.0-dev27
 
 * upgrade container to 0.2.7
