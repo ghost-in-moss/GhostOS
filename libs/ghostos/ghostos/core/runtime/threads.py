@@ -34,7 +34,7 @@ class Turn(BaseModel):
                     "Shall append to messages after updating.",
     )
     pycontext: Optional[PyContext] = Field(
-        default_factory=None,
+        default=None,
         description="The PyContext instance; Deprecated",
     )
     created: int = Field(
