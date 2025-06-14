@@ -2,8 +2,11 @@
 
 # v0.4.0
 
-## 0.4.0-dev29
+## 0.4.0-dev30
 
+* fix sometimes got None choices of chat completion chunk.  
+
+## 0.4.0-dev29
 
 * add `saved` attribute to thread.Turn, for turns saving in the future.
 * set Turn's attribute `pycontext` to None as default, remove it in the future. 

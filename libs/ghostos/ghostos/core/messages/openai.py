@@ -285,7 +285,10 @@ class DefaultOpenAIMessageParser(OpenAIMessageParser):
         for item in messages:
             parsed_chunks = []
             self.logger.debug("openai parser receive chat completion chunk: %s", item)
-            if len(item.choices) == 0:
+            if item.choices is None:
+                # 接受到了空包.
+                continue
+            elif len(item.choices) == 0:
                 # 接受到了 openai 协议尾包. 但在这个协议里不作为尾包发送.
                 usage = CompletionUsagePayload.from_chunk(item)
                 if usage and buffer:
